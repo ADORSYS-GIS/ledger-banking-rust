@@ -112,10 +112,10 @@ impl ValidationResult {
     
     pub fn add_check(&mut self, field: &str, is_valid: bool, message: String) {
         if !is_valid {
-            self.errors.push(format!("{}: {}", field, message));
+            self.errors.push(format!("{field}: {message}"));
             self.is_valid = false;
         } else {
-            self.warnings.push(format!("{}: {}", field, message));
+            self.warnings.push(format!("{field}: {message}"));
         }
     }
     

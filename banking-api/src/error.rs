@@ -187,7 +187,7 @@ impl From<sqlx::Error> for BankingError {
                     BankingError::Internal(format!("Database error: {}", db_err.message()))
                 }
             },
-            _ => BankingError::Internal(format!("Database error: {}", err)),
+            _ => BankingError::Internal(format!("Database error: {err}")),
         }
     }
 }

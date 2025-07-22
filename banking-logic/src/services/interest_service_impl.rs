@@ -106,7 +106,7 @@ impl InterestService for InterestServiceImpl {
             transaction_type: TransactionType::Credit,
             amount: account.accrued_interest,
             currency: account.currency.clone(),
-            description: format!("Interest posting for period ending {}", today),
+            description: format!("Interest posting for period ending {today}"),
             channel_id: "SYSTEM".to_string(),
             terminal_id: None,
             agent_user_id: None,
@@ -385,7 +385,7 @@ impl InterestServiceImpl {
     /// Get GL code for interest transactions
     async fn get_interest_gl_code(&self, product_code: &str) -> BankingResult<String> {
         // In production, this would come from product catalog GL mapping
-        Ok(format!("INT_{}", product_code))
+        Ok(format!("INT_{product_code}"))
     }
 
     /// Power function for Decimal (simple implementation)
@@ -425,7 +425,7 @@ impl InterestServiceImpl {
             chrono::NaiveDate::from_ymd_opt(date.year() + 1, 1, 1)
         } else {
             chrono::NaiveDate::from_ymd_opt(date.year(), date.month() + 1, 1)
-        }.ok_or(banking_api::BankingError::DateCalculationError(format!("Invalid date: {}", date)))?;
+        }.ok_or(banking_api::BankingError::DateCalculationError(format!("Invalid date: {date}")))?;
 
         use chrono::Datelike;
         let mut check_date = date + chrono::Duration::days(1);
@@ -447,7 +447,7 @@ impl InterestServiceImpl {
             7..=9 => NaiveDate::from_ymd_opt(date.year(), 9, 30),
             10..=12 => NaiveDate::from_ymd_opt(date.year(), 12, 31),
             _ => None,
-        }.ok_or(banking_api::BankingError::DateCalculationError(format!("Invalid date: {}", date)))?;
+        }.ok_or(banking_api::BankingError::DateCalculationError(format!("Invalid date: {date}")))?;
 
         self.is_last_business_day_up_to_date(date, quarter_end).await
     }
@@ -456,7 +456,7 @@ impl InterestServiceImpl {
     async fn is_last_business_day_of_year(&self, date: NaiveDate) -> BankingResult<bool> {
         use chrono::Datelike;
         let year_end = NaiveDate::from_ymd_opt(date.year(), 12, 31)
-            .ok_or(banking_api::BankingError::DateCalculationError(format!("Invalid date: {}", date)))?;
+            .ok_or(banking_api::BankingError::DateCalculationError(format!("Invalid date: {date}")))?;
 
         self.is_last_business_day_up_to_date(date, year_end).await
     }

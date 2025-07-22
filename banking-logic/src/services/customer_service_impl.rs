@@ -40,7 +40,7 @@ impl CustomerService for CustomerServiceImpl {
         {
             return Err(banking_api::BankingError::DuplicateIdentityDocument(
                 format!("Customer with {} '{}' already exists (existing customer ID: {})", 
-                    customer.id_type.to_string(), customer.id_number, existing.customer_id)
+                    customer.id_type, customer.id_number, existing.customer_id)
             ));
         }
 

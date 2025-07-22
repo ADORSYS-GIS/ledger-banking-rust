@@ -7,7 +7,7 @@ use crate::{
     BankingResult,
     domain::{
         AccountHold, HoldType, HoldStatus, HoldPriority, HoldReleaseRequest,
-        BalanceCalculation, HoldSummary, HoldExpiryJob
+        BalanceCalculation, HoldSummary, HoldExpiryJob, PlaceHoldRequest
     },
 };
 
@@ -27,14 +27,7 @@ pub trait HoldService: Send + Sync {
     /// This immediately impacts available balance but not current balance
     async fn place_hold(
         &self,
-        account_id: Uuid,
-        hold_type: HoldType,
-        amount: Decimal,
-        reason: String,
-        placed_by: String,
-        expires_at: Option<DateTime<Utc>>,
-        priority: HoldPriority,
-        source_reference: Option<String>,
+        request: PlaceHoldRequest,
     ) -> BankingResult<AccountHold>;
     
     /// Release a hold completely or partially

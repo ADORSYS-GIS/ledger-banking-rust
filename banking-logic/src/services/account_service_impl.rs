@@ -447,7 +447,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_success() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -457,7 +457,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_empty_product_code() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -476,7 +476,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_whitespace_only_product_code() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -495,7 +495,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_invalid_currency_too_short() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -514,7 +514,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_invalid_currency_too_long() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -533,7 +533,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_empty_currency() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -552,7 +552,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_invalid_balance_relationship() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -575,7 +575,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_valid_balance_relationship_with_overdraft() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -591,7 +591,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_valid_balance_relationship_no_overdraft() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -607,7 +607,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_loan_missing_original_principal() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -628,7 +628,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_loan_missing_outstanding_principal() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -649,7 +649,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_loan_missing_both_principals() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -670,7 +670,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_loan_outstanding_exceeds_original() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -691,7 +691,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_loan_valid_principals() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -706,7 +706,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_loan_equal_principals() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -721,7 +721,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_negative_overdraft_limit() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -743,7 +743,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_zero_overdraft_limit() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -756,7 +756,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_positive_overdraft_limit() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -769,7 +769,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_account_data_savings_account_no_overdraft_needed() {
-        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_repo = Arc::new(MockAccountRepository::new());
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
@@ -822,8 +822,319 @@ mod tests {
         }
     }
 
-    // Mock repository for testing
-    struct MockAccountRepository;
+    // Balance Calculation Tests
+    
+    #[tokio::test]
+    async fn test_calculate_balance_savings_account() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_account_model(AccountType::Savings, Decimal::new(50000, 2), None);
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let balance = service.calculate_balance(account_id).await.unwrap();
+        
+        assert_eq!(balance, Decimal::new(50000, 2)); // $500.00
+    }
+
+    #[tokio::test]
+    async fn test_calculate_balance_current_account() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_account_model(AccountType::Current, Decimal::new(75000, 2), None);
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let balance = service.calculate_balance(account_id).await.unwrap();
+        
+        assert_eq!(balance, Decimal::new(75000, 2)); // $750.00
+    }
+
+    #[tokio::test]
+    async fn test_calculate_balance_loan_account_returns_outstanding_principal() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_loan_account_model(
+            Decimal::new(100000, 2), // original: $1000.00
+            Decimal::new(60000, 2),  // outstanding: $600.00
+            Decimal::new(25000, 2)   // current_balance: $250.00 (ignored for loans)
+        );
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let balance = service.calculate_balance(account_id).await.unwrap();
+        
+        // For loan accounts, should return outstanding principal, not current balance
+        assert_eq!(balance, Decimal::new(60000, 2)); // $600.00
+    }
+
+    #[tokio::test]
+    async fn test_calculate_balance_loan_account_with_zero_outstanding() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_loan_account_model(
+            Decimal::new(100000, 2), // original: $1000.00
+            Decimal::ZERO,           // outstanding: $0.00 (fully paid)
+            Decimal::new(25000, 2)   // current_balance: $250.00 (ignored)
+        );
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let balance = service.calculate_balance(account_id).await.unwrap();
+        
+        assert_eq!(balance, Decimal::ZERO); // Loan fully paid
+    }
+
+    #[tokio::test]
+    async fn test_calculate_balance_account_not_found() {
+        let mock_repo = Arc::new(MockAccountRepository::new()); // Empty repository
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let non_existent_account_id = Uuid::new_v4();
+        let result = service.calculate_balance(non_existent_account_id).await;
+        
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::AccountNotFound(account_id)) = result {
+            assert_eq!(account_id, non_existent_account_id);
+        } else {
+            panic!("Expected AccountNotFound error");
+        }
+    }
+
+    // Available Balance Calculation Tests
+    
+    #[tokio::test]
+    async fn test_calculate_available_balance_current_account_with_overdraft() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_account_model(AccountType::Current, Decimal::new(50000, 2), Some(Decimal::new(25000, 2))); // $500 balance, $250 overdraft
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let available = service.calculate_available_balance(account_id).await.unwrap();
+        
+        // Available = Current ($500) - Holds ($0 since mock returns zero) + Overdraft ($250) = $750
+        assert_eq!(available, Decimal::new(75000, 2)); // $750.00
+    }
+
+    #[tokio::test]
+    async fn test_calculate_available_balance_current_account_no_overdraft() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_account_model(AccountType::Current, Decimal::new(50000, 2), None); // $500 balance, no overdraft
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let available = service.calculate_available_balance(account_id).await.unwrap();
+        
+        // Available = Current ($500) - Holds ($0) + Overdraft ($0) = $500
+        assert_eq!(available, Decimal::new(50000, 2)); // $500.00
+    }
+
+    #[tokio::test]
+    async fn test_calculate_available_balance_savings_account_positive() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_account_model(AccountType::Savings, Decimal::new(50000, 2), None); // $500 balance
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let available = service.calculate_available_balance(account_id).await.unwrap();
+        
+        // Available = Current ($500) - Holds ($0) = $500 (no overdraft for savings)
+        assert_eq!(available, Decimal::new(50000, 2)); // $500.00
+    }
+
+    #[tokio::test]
+    async fn test_calculate_available_balance_savings_account_with_low_balance() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_account_model(AccountType::Savings, Decimal::new(5000, 2), None); // $50 balance
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let available = service.calculate_available_balance(account_id).await.unwrap();
+        
+        // Available = max(Current ($50) - Holds ($0), 0) = $50
+        assert_eq!(available, Decimal::new(5000, 2)); // $50.00
+    }
+
+    #[tokio::test]
+    async fn test_calculate_available_balance_loan_account_always_zero() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_loan_account_model(
+            Decimal::new(100000, 2), // original: $1000.00
+            Decimal::new(60000, 2),  // outstanding: $600.00
+            Decimal::new(25000, 2)   // current_balance: $250.00
+        );
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let available = service.calculate_available_balance(account_id).await.unwrap();
+        
+        // Loan accounts always have zero available balance
+        assert_eq!(available, Decimal::ZERO);
+    }
+
+    #[tokio::test]
+    async fn test_calculate_available_balance_current_account_with_large_overdraft() {
+        let account_id = Uuid::new_v4();
+        let mut account_model = create_test_account_model(AccountType::Current, Decimal::new(-5000, 2), Some(Decimal::new(100000, 2))); // -$50 balance, $1000 overdraft
+        account_model.account_id = account_id;
+        
+        let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let available = service.calculate_available_balance(account_id).await.unwrap();
+        
+        // Available = Current (-$50) - Holds ($0) + Overdraft ($1000) = $950
+        assert_eq!(available, Decimal::new(95000, 2)); // $950.00
+    }
+
+    #[tokio::test]
+    async fn test_calculate_available_balance_account_not_found() {
+        let mock_repo = Arc::new(MockAccountRepository::new()); // Empty repository
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let non_existent_account_id = Uuid::new_v4();
+        let result = service.calculate_available_balance(non_existent_account_id).await;
+        
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::AccountNotFound(account_id)) = result {
+            assert_eq!(account_id, non_existent_account_id);
+        } else {
+            panic!("Expected AccountNotFound error");
+        }
+    }
+
+    // Helper functions for creating test data
+    
+    fn create_test_account_model(account_type: AccountType, current_balance: Decimal, overdraft_limit: Option<Decimal>) -> banking_db::models::AccountModel {
+        banking_db::models::AccountModel {
+            account_id: Uuid::new_v4(),
+            product_code: "TEST001".to_string(),
+            account_type: match account_type {
+                AccountType::Savings => "Savings".to_string(),
+                AccountType::Current => "Current".to_string(),
+                AccountType::Loan => "Loan".to_string(),
+            },
+            account_status: "Active".to_string(),
+            signing_condition: "None".to_string(),
+            currency: "USD".to_string(),
+            open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
+            domicile_branch_id: Uuid::new_v4(),
+            current_balance,
+            available_balance: current_balance,
+            accrued_interest: Decimal::ZERO,
+            overdraft_limit,
+            original_principal: None,
+            outstanding_principal: None,
+            loan_interest_rate: None,
+            loan_term_months: None,
+            disbursement_date: None,
+            maturity_date: None,
+            installment_amount: None,
+            next_due_date: None,
+            penalty_rate: None,
+            collateral_id: None,
+            loan_purpose: None,
+            close_date: None,
+            last_activity_date: None,
+            dormancy_threshold_days: None,
+            reactivation_required: false,
+            pending_closure_reason: None,
+            status_changed_by: None,
+            status_change_reason: None,
+            status_change_timestamp: None,
+            created_at: Utc::now(),
+            last_updated_at: Utc::now(),
+            updated_by: "TEST_USER".to_string(),
+        }
+    }
+
+    fn create_test_loan_account_model(original_principal: Decimal, outstanding_principal: Decimal, current_balance: Decimal) -> banking_db::models::AccountModel {
+        banking_db::models::AccountModel {
+            account_id: Uuid::new_v4(),
+            product_code: "LOAN001".to_string(),
+            account_type: "Loan".to_string(),
+            account_status: "Active".to_string(),
+            signing_condition: "None".to_string(),
+            currency: "USD".to_string(),
+            open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
+            domicile_branch_id: Uuid::new_v4(),
+            current_balance,
+            available_balance: Decimal::ZERO,
+            accrued_interest: Decimal::ZERO,
+            overdraft_limit: None,
+            original_principal: Some(original_principal),
+            outstanding_principal: Some(outstanding_principal),
+            loan_interest_rate: Some(Decimal::new(750, 4)), // 7.5%
+            loan_term_months: Some(36),
+            disbursement_date: Some(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
+            maturity_date: Some(NaiveDate::from_ymd_opt(2027, 1, 1).unwrap()),
+            installment_amount: Some(Decimal::new(30000, 2)),
+            next_due_date: Some(NaiveDate::from_ymd_opt(2024, 2, 1).unwrap()),
+            penalty_rate: Some(Decimal::new(200, 4)), // 2%
+            collateral_id: Some(Uuid::new_v4().to_string()),
+            loan_purpose: Some("Business expansion".to_string()),
+            close_date: None,
+            last_activity_date: Some(NaiveDate::from_ymd_opt(2024, 1, 15).unwrap()),
+            dormancy_threshold_days: None,
+            reactivation_required: false,
+            pending_closure_reason: None,
+            status_changed_by: None,
+            status_change_reason: None,
+            status_change_timestamp: None,
+            created_at: Utc::now(),
+            last_updated_at: Utc::now(),
+            updated_by: "TEST_USER".to_string(),
+        }
+    }
+
+    // Enhanced Mock repository for testing
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+
+    struct MockAccountRepository {
+        accounts: Arc<Mutex<HashMap<Uuid, banking_db::models::AccountModel>>>,
+        should_error: bool,
+    }
+
+    impl MockAccountRepository {
+        fn new() -> Self {
+            Self {
+                accounts: Arc::new(Mutex::new(HashMap::new())),
+                should_error: false,
+            }
+        }
+        
+        fn with_account(self, account: banking_db::models::AccountModel) -> Self {
+            self.accounts.lock().unwrap().insert(account.account_id, account);
+            self
+        }
+    }
 
     #[async_trait]
     impl AccountRepository for MockAccountRepository {
@@ -831,16 +1142,24 @@ mod tests {
             unimplemented!()
         }
 
-        async fn find_by_id(&self, _account_id: Uuid) -> BankingResult<Option<banking_db::models::AccountModel>> {
-            unimplemented!()
+        async fn find_by_id(&self, account_id: Uuid) -> BankingResult<Option<banking_db::models::AccountModel>> {
+            if self.should_error {
+                return Err(banking_api::BankingError::Internal("Mock error".to_string()));
+            }
+            
+            Ok(self.accounts.lock().unwrap().get(&account_id).cloned())
         }
 
         async fn update_status(&self, _account_id: Uuid, _status: &str, _reason: &str, _authorized_by: &str) -> BankingResult<()> {
             Ok(())
         }
 
-        async fn exists(&self, _account_id: Uuid) -> BankingResult<bool> {
-            Ok(true)
+        async fn exists(&self, account_id: Uuid) -> BankingResult<bool> {
+            if self.should_error {
+                return Err(banking_api::BankingError::Internal("Mock error".to_string()));
+            }
+            
+            Ok(self.accounts.lock().unwrap().contains_key(&account_id))
         }
 
         async fn update(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> {
