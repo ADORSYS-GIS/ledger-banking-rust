@@ -1,0 +1,9 @@
+# Rust build artifacts
+/target
+.DS_Store
+.idea
+.vscode
+
+
+# Temporary files
+/tmp/

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO customer_audit_trail (\n                    audit_id, customer_id, field_name, old_value, new_value,\n                    changed_at, changed_by, reason\n                ) VALUES ($1, $2, 'status', $3, $4, NOW(), 'SYSTEM', $5)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e67253edc9031c1a903f1003b48e6d13c9b141bb7d906a6a2cb5801832ab155e"
+}

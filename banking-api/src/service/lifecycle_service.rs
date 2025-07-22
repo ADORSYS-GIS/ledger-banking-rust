@@ -1,0 +1,79 @@
+use async_trait::async_trait;
+use uuid::Uuid;
+
+use crate::{
+    domain::{
+        AccountWorkflow, AccountOpeningRequest, ClosureRequest, 
+        FinalSettlement, DormancyAssessment, AccountStatus, 
+        StatusChangeRecord, KycResult
+    },
+    error::BankingResult,
+};
+
+/// Enhanced Account Lifecycle Service from banking enhancements
+#[async_trait]
+pub trait AccountLifecycleService: Send + Sync {
+    /// Account origination workflow
+    async fn initiate_account_opening(&self, request: AccountOpeningRequest) -> BankingResult<AccountWorkflow>;
+    async fn complete_kyc_verification(&self, account_id: Uuid, verification_result: KycResult) -> BankingResult<()>;
+    async fn activate_account(&self, account_id: Uuid, authorized_by: String) -> BankingResult<()>;
+    
+    /// Dormancy management (automated)
+    async fn check_dormancy_eligibility(&self, account_id: Uuid) -> BankingResult<DormancyAssessment>;
+    async fn mark_account_dormant(&self, account_id: Uuid, system_triggered: bool) -> BankingResult<()>;
+    
+    /// Reactivation workflow (requires human intervention)
+    async fn initiate_reactivation(&self, account_id: Uuid, requested_by: String) -> BankingResult<AccountWorkflow>;
+    async fn complete_mini_kyc(&self, account_id: Uuid, verification_result: KycResult) -> BankingResult<()>;
+    
+    /// Account closure workflow
+    async fn initiate_closure(&self, account_id: Uuid, closure_request: ClosureRequest) -> BankingResult<AccountWorkflow>;
+    async fn calculate_final_settlement(&self, account_id: Uuid) -> BankingResult<FinalSettlement>;
+    async fn process_final_disbursement(&self, account_id: Uuid, disbursement: crate::domain::DisbursementInstructions) -> BankingResult<()>;
+    async fn finalize_closure(&self, account_id: Uuid) -> BankingResult<()>;
+    
+    /// Status management
+    async fn update_account_status(&self, account_id: Uuid, new_status: AccountStatus, reason: String, authorized_by: String) -> BankingResult<()>;
+    async fn get_status_history(&self, account_id: Uuid) -> BankingResult<Vec<StatusChangeRecord>>;
+
+    /// Workflow management
+    async fn find_workflow_by_id(&self, workflow_id: Uuid) -> BankingResult<Option<AccountWorkflow>>;
+    async fn find_workflows_by_account(&self, account_id: Uuid) -> BankingResult<Vec<AccountWorkflow>>;
+    async fn update_workflow_status(&self, workflow_id: Uuid, status: crate::domain::WorkflowStatus) -> BankingResult<()>;
+    
+    /// Workflow step progression
+    async fn advance_workflow_step(&self, workflow_id: Uuid, completed_by: String, notes: Option<String>) -> BankingResult<()>;
+    async fn reject_workflow(&self, workflow_id: Uuid, reason: String, rejected_by: String) -> BankingResult<()>;
+    
+    /// Account lifecycle queries
+    async fn find_pending_activations(&self) -> BankingResult<Vec<AccountWorkflow>>;
+    async fn find_pending_closures(&self) -> BankingResult<Vec<AccountWorkflow>>;
+    async fn find_accounts_eligible_for_dormancy(&self, threshold_days: i32) -> BankingResult<Vec<Uuid>>;
+    
+    /// Batch processing for EOD
+    async fn batch_process_dormancy(&self, processing_date: chrono::NaiveDate) -> BankingResult<crate::service::DormancyReport>;
+    async fn batch_process_closures(&self, processing_date: chrono::NaiveDate) -> BankingResult<crate::service::MaintenanceReport>;
+    
+    /// Compliance integration
+    async fn trigger_compliance_check(&self, account_id: Uuid, check_type: String) -> BankingResult<()>;
+    async fn handle_compliance_result(&self, account_id: Uuid, result: ComplianceCheckResult) -> BankingResult<()>;
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ComplianceCheckResult {
+    pub check_id: Uuid,
+    pub account_id: Uuid,
+    pub check_type: String,
+    pub result: LifecycleComplianceResult,
+    pub details: Option<String>,
+    pub performed_at: chrono::DateTime<chrono::Utc>,
+    pub requires_manual_review: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum LifecycleComplianceResult {
+    Pass,
+    Fail,
+    Warning,
+    RequiresEscalation,
+}

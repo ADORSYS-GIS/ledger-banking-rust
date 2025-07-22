@@ -1,0 +1,25 @@
+pub mod customer;
+pub mod account;
+pub mod agent_network;
+pub mod account_relations;
+pub mod transaction;
+pub mod calendar;
+pub mod workflow;
+pub mod compliance;
+pub mod channel;
+pub mod fee;
+pub mod casa;
+pub mod loan;
+
+pub use customer::*;
+pub use account::*;
+pub use agent_network::*;
+pub use account_relations::*;
+pub use transaction::*;
+pub use calendar::*;
+pub use workflow::*;
+pub use compliance::*;
+pub use channel::*;
+pub use fee::*;
+pub use casa::*;
+pub use loan::*;

@@ -1,0 +1,38 @@
+[package]
+name = "banking-logic"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Core dependencies
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+
+# Banking crates
+banking-api = { path = "../banking-api" }
+banking-db = { path = "../banking-db" }
+
+# External integrations
+reqwest = { workspace = true }
+moka = { workspace = true }
+tracing = { workspace = true }
+rand = { workspace = true }
+
+# Configuration
+config = { workspace = true }
+
+# Optional database implementations
+banking-db-postgres = { path = "../banking-db-postgres", optional = true }
+
+[features]
+postgres_tests = ["banking-db-postgres"]

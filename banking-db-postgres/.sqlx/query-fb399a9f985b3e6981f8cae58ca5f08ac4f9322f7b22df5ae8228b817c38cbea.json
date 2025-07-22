@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM customer_audit_trail WHERE customer_id = $1 ORDER BY changed_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "audit_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "customer_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "field_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "old_value",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "new_value",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "changed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "changed_by",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "reason",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "fb399a9f985b3e6981f8cae58ca5f08ac4f9322f7b22df5ae8228b817c38cbea"
+}

@@ -1,0 +1,55 @@
+use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
+use uuid::Uuid;
+
+/// Agent Network database model
+#[derive(Debug, Clone)]
+pub struct AgentNetworkModel {
+    pub network_id: Uuid,
+    pub network_name: String,
+    pub network_type: String, // Internal, Partner, ThirdParty
+    pub status: String,       // Active, Suspended, Terminated
+    pub contract_id: Option<Uuid>,
+    pub aggregate_daily_limit: Decimal,
+    pub current_daily_volume: Decimal,
+    pub settlement_gl_code: String,
+    pub created_at: DateTime<Utc>,
+    pub last_updated_at: DateTime<Utc>,
+    pub updated_by: String,
+}
+
+/// Agency Branch database model
+#[derive(Debug, Clone)]
+pub struct AgencyBranchModel {
+    pub branch_id: Uuid,
+    pub network_id: Uuid,
+    pub parent_branch_id: Option<Uuid>,
+    pub branch_name: String,
+    pub branch_code: String,
+    pub branch_level: i32,
+    pub gl_code_prefix: String,
+    pub geolocation: Option<String>,
+    pub status: String, // Active, Suspended, Closed
+    pub daily_transaction_limit: Decimal,
+    pub current_daily_volume: Decimal,
+    pub created_at: DateTime<Utc>,
+    pub last_updated_at: DateTime<Utc>,
+    pub updated_by: String,
+}
+
+/// Agent Terminal database model
+#[derive(Debug, Clone)]
+pub struct AgentTerminalModel {
+    pub terminal_id: Uuid,
+    pub branch_id: Uuid,
+    pub agent_user_id: Uuid,
+    pub terminal_type: String, // Pos, Mobile, Atm, WebPortal
+    pub terminal_name: String,
+    pub daily_transaction_limit: Decimal,
+    pub current_daily_volume: Decimal,
+    pub status: String, // Active, Maintenance, Suspended, Decommissioned
+    pub last_sync_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub last_updated_at: DateTime<Utc>,
+    pub updated_by: String,
+}

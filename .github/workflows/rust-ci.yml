@@ -1,0 +1,65 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Start PostgreSQL Database
+      run: docker compose up -d postgres
+
+    # - name: Start MariaDB Database
+    #   run: docker compose up -d mariadb
+
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        echo "Waiting for PostgreSQL to start..."
+        until docker compose exec postgres pg_isready -U user -d mydb; do
+          sleep 2
+        done
+        echo "PostgreSQL is ready."
+
+    # - name: Wait for MariaDB to be ready
+    #   run: |
+    #     echo "Waiting for MariaDB to start..."
+    #     until docker compose exec mariadb mysqladmin ping -h localhost -u user --password=password; do
+    #       sleep 2
+    #     done
+    #     echo "MariaDB is ready."
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: clippy
+        
+    - name: Build
+      run: cargo build --workspace --verbose
+
+    - name: Run tests for PostgreSQL
+      env:
+        DATABASE_URL: postgresql://user:password@localhost:5432/mydb
+      run: cargo test --workspace --features postgres_tests --verbose
+
+    # - name: Run tests for MariaDB
+    #   env:
+    #     DATABASE_URL: mysql://user:password@localhost:3306/mydb
+    #   run: cargo test --workspace --features mariadb_tests --verbose
+
+    - name: Stop Databases
+      if: always()
+      run: docker compose down
+
+    - name: Run clippy
+      run: cargo clippy --workspace -- -D warnings

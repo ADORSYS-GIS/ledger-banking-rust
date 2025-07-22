@@ -1,0 +1,40 @@
+[package]
+name = "banking-db-postgres"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+postgres_tests = []
+
+[dependencies]
+# Workspace dependencies
+banking-api = { path = "../banking-api", features = ["sqlx"] }
+banking-db = { path = "../banking-db" }
+
+# Database
+sqlx.workspace = true
+tokio.workspace = true
+
+# Serialization
+uuid.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Async traits
+async-trait.workspace = true
+
+# Logging
+tracing.workspace = true
+
+[dev-dependencies]
+tokio-test.workspace = true

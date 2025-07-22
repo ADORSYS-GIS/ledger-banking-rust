@@ -1,0 +1,29 @@
+[package]
+name = "banking-db"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["sqlx"]
+sqlx = []
+
+[dependencies]
+# Core dependencies
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+
+# Banking API
+banking-api = { path = "../banking-api" }
+
+# Database
+sqlx = { workspace = true }
+diesel = { workspace = true }
