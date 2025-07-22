@@ -446,12 +446,344 @@ mod tests {
     use chrono::{NaiveDate, Utc};
 
     #[tokio::test]
-    async fn test_validate_account_data() {
+    async fn test_validate_account_data_success() {
         let mock_repo = Arc::new(MockAccountRepository {});
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
-        let valid_account = Account {
+        let valid_account = create_valid_test_account();
+        assert!(service.validate_account_data(&valid_account).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_empty_product_code() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.product_code = "".to_string();
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "product_code");
+            assert_eq!(message, "Product code is required");
+        } else {
+            panic!("Expected ValidationError for empty product code");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_whitespace_only_product_code() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.product_code = "   ".to_string();
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "product_code");
+            assert_eq!(message, "Product code is required");
+        } else {
+            panic!("Expected ValidationError for whitespace-only product code");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_invalid_currency_too_short() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.currency = "US".to_string();
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "currency");
+            assert_eq!(message, "Currency must be a 3-character ISO code");
+        } else {
+            panic!("Expected ValidationError for short currency code");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_invalid_currency_too_long() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.currency = "USDX".to_string();
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "currency");
+            assert_eq!(message, "Currency must be a 3-character ISO code");
+        } else {
+            panic!("Expected ValidationError for long currency code");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_empty_currency() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.currency = "".to_string();
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "currency");
+            assert_eq!(message, "Currency must be a 3-character ISO code");
+        } else {
+            panic!("Expected ValidationError for empty currency");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_invalid_balance_relationship() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        // Set available balance higher than current balance + overdraft
+        invalid_account.current_balance = Decimal::new(1000, 2); // $10.00
+        invalid_account.available_balance = Decimal::new(1200, 2); // $12.00
+        invalid_account.overdraft_limit = Some(Decimal::new(100, 2)); // $1.00
+        // Available ($12.00) > Current ($10.00) + Overdraft ($1.00) = $11.00
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "available_balance");
+            assert_eq!(message, "Available balance cannot exceed current balance plus overdraft limit");
+        } else {
+            panic!("Expected ValidationError for invalid balance relationship");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_valid_balance_relationship_with_overdraft() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut valid_account = create_valid_test_account();
+        valid_account.current_balance = Decimal::new(1000, 2); // $10.00
+        valid_account.available_balance = Decimal::new(1100, 2); // $11.00
+        valid_account.overdraft_limit = Some(Decimal::new(100, 2)); // $1.00
+        // Available ($11.00) = Current ($10.00) + Overdraft ($1.00)
+
+        let result = service.validate_account_data(&valid_account).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_valid_balance_relationship_no_overdraft() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut valid_account = create_valid_test_account();
+        valid_account.current_balance = Decimal::new(1000, 2); // $10.00
+        valid_account.available_balance = Decimal::new(1000, 2); // $10.00
+        valid_account.overdraft_limit = None;
+        // Available ($10.00) = Current ($10.00) + Overdraft ($0.00)
+
+        let result = service.validate_account_data(&valid_account).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_loan_missing_original_principal() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.account_type = AccountType::Loan;
+        invalid_account.original_principal = None; // Missing
+        invalid_account.outstanding_principal = Some(Decimal::new(5000, 2));
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "loan_principals");
+            assert_eq!(message, "Loan accounts must have original and outstanding principal amounts");
+        } else {
+            panic!("Expected ValidationError for missing original principal");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_loan_missing_outstanding_principal() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.account_type = AccountType::Loan;
+        invalid_account.original_principal = Some(Decimal::new(10000, 2));
+        invalid_account.outstanding_principal = None; // Missing
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "loan_principals");
+            assert_eq!(message, "Loan accounts must have original and outstanding principal amounts");
+        } else {
+            panic!("Expected ValidationError for missing outstanding principal");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_loan_missing_both_principals() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.account_type = AccountType::Loan;
+        invalid_account.original_principal = None;
+        invalid_account.outstanding_principal = None;
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "loan_principals");
+            assert_eq!(message, "Loan accounts must have original and outstanding principal amounts");
+        } else {
+            panic!("Expected ValidationError for missing both principals");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_loan_outstanding_exceeds_original() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        invalid_account.account_type = AccountType::Loan;
+        invalid_account.original_principal = Some(Decimal::new(10000, 2)); // $100.00
+        invalid_account.outstanding_principal = Some(Decimal::new(15000, 2)); // $150.00
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "outstanding_principal");
+            assert_eq!(message, "Outstanding principal cannot exceed original principal");
+        } else {
+            panic!("Expected ValidationError for outstanding exceeding original");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_loan_valid_principals() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut valid_account = create_valid_test_account();
+        valid_account.account_type = AccountType::Loan;
+        valid_account.original_principal = Some(Decimal::new(10000, 2)); // $100.00
+        valid_account.outstanding_principal = Some(Decimal::new(7500, 2)); // $75.00
+
+        let result = service.validate_account_data(&valid_account).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_loan_equal_principals() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut valid_account = create_valid_test_account();
+        valid_account.account_type = AccountType::Loan;
+        valid_account.original_principal = Some(Decimal::new(10000, 2)); // $100.00
+        valid_account.outstanding_principal = Some(Decimal::new(10000, 2)); // $100.00
+
+        let result = service.validate_account_data(&valid_account).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_negative_overdraft_limit() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut invalid_account = create_valid_test_account();
+        // Set balances so that balance validation passes
+        invalid_account.current_balance = Decimal::new(1000, 2);
+        invalid_account.available_balance = Decimal::new(500, 2); // Less than current balance
+        invalid_account.overdraft_limit = Some(Decimal::new(-500, 2)); // Negative overdraft
+
+        let result = service.validate_account_data(&invalid_account).await;
+        assert!(result.is_err());
+        if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
+            assert_eq!(field, "overdraft_limit");
+            assert_eq!(message, "Overdraft limit cannot be negative");
+        } else {
+            panic!("Expected ValidationError for negative overdraft limit");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_zero_overdraft_limit() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut valid_account = create_valid_test_account();
+        valid_account.overdraft_limit = Some(Decimal::ZERO); // Zero is valid
+
+        let result = service.validate_account_data(&valid_account).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_positive_overdraft_limit() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut valid_account = create_valid_test_account();
+        valid_account.overdraft_limit = Some(Decimal::new(100000, 2)); // $1000.00
+
+        let result = service.validate_account_data(&valid_account).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_account_data_savings_account_no_overdraft_needed() {
+        let mock_repo = Arc::new(MockAccountRepository {});
+        let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let service = AccountServiceImpl::new(mock_repo, mock_catalog);
+
+        let mut valid_account = create_valid_test_account();
+        valid_account.account_type = AccountType::Savings;
+        valid_account.overdraft_limit = None; // Savings typically don't have overdraft
+
+        let result = service.validate_account_data(&valid_account).await;
+        assert!(result.is_ok());
+    }
+
+    // Helper function to create valid test account
+    fn create_valid_test_account() -> Account {
+        Account {
             account_id: Uuid::new_v4(),
             product_code: "SAV001".to_string(),
             account_type: AccountType::Savings,
@@ -487,9 +819,7 @@ mod tests {
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
             updated_by: "TEST_USER".to_string(),
-        };
-
-        assert!(service.validate_account_data(&valid_account).await.is_ok());
+        }
     }
 
     // Mock repository for testing
