@@ -6,7 +6,6 @@ use validator::Validate;
 
 /// CASA (Current & Savings Account) specialized functionality
 /// Building upon the Unified Account Model
-
 /// Overdraft facility configuration and management
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct OverdraftFacility {
@@ -253,4 +252,18 @@ pub enum PostingStatus {
     Posted,
     Reversed,
     Adjusted,
+}
+
+/// Request parameters for creating an overdraft facility
+#[derive(Debug, Clone, Validate)]
+pub struct CreateOverdraftFacilityRequest {
+    pub account_id: Uuid,
+    pub approved_limit: Decimal,
+    pub interest_rate: Decimal,
+    #[validate(length(max = 100))]
+    pub approved_by: String,
+    pub expiry_date: Option<NaiveDate>,
+    pub security_required: bool,
+    #[validate(length(max = 255))]
+    pub security_details: Option<String>,
 }

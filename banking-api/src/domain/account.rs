@@ -222,3 +222,18 @@ pub struct StatusChangeRecord {
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
 }
+
+/// Request parameters for placing a hold on an account
+#[derive(Debug, Clone, Validate)]
+pub struct PlaceHoldRequest {
+    pub account_id: Uuid,
+    pub hold_type: HoldType,
+    pub amount: Decimal,
+    #[validate(length(max = 500))]
+    pub reason: String,
+    #[validate(length(max = 100))]
+    pub placed_by: String,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub priority: HoldPriority,
+    pub source_reference: Option<String>,
+}

@@ -9,7 +9,7 @@ use crate::{
         OverdraftFacility, OverdraftUtilization, OverdraftInterestCalculation,
         CasaAccountSummary, OverdraftProcessingJob, OverdraftLimitAdjustment,
         CasaTransactionValidation, InterestPostingRecord, InterestType,
-        CompoundingFrequency, ReviewFrequency
+        CompoundingFrequency, ReviewFrequency, CreateOverdraftFacilityRequest
     },
 };
 
@@ -30,13 +30,7 @@ pub trait CasaService: Send + Sync {
     /// Create or setup an overdraft facility for a current account
     async fn create_overdraft_facility(
         &self,
-        account_id: Uuid,
-        approved_limit: Decimal,
-        interest_rate: Decimal,
-        approved_by: String,
-        expiry_date: Option<NaiveDate>,
-        security_required: bool,
-        security_details: Option<String>,
+        request: CreateOverdraftFacilityRequest,
     ) -> BankingResult<OverdraftFacility>;
     
     /// Update overdraft facility terms (limit, rate, expiry)

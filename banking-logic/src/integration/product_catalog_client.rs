@@ -95,7 +95,7 @@ impl ProductCatalogClient {
             .json()
             .await
             .map_err(|e| banking_api::BankingError::NetworkError {
-                error_details: format!("Failed to parse response: {}", e),
+                error_details: format!("Failed to parse response: {e}"),
                 retry_possible: false,
             })?;
 
@@ -122,7 +122,7 @@ impl ProductCatalogClient {
             .json()
             .await
             .map_err(|e| banking_api::BankingError::NetworkError {
-                error_details: format!("Failed to parse interest rate response: {}", e),
+                error_details: format!("Failed to parse interest rate response: {e}"),
                 retry_possible: false,
             })?;
 
@@ -145,7 +145,7 @@ impl ProductCatalogClient {
             .json()
             .await
             .map_err(|e| banking_api::BankingError::NetworkError {
-                error_details: format!("Failed to parse fee schedule: {}", e),
+                error_details: format!("Failed to parse fee schedule: {e}"),
                 retry_possible: false,
             })?;
 
@@ -168,7 +168,7 @@ impl ProductCatalogClient {
             .json()
             .await
             .map_err(|e| banking_api::BankingError::NetworkError {
-                error_details: format!("Failed to parse GL mapping: {}", e),
+                error_details: format!("Failed to parse GL mapping: {e}"),
                 retry_possible: false,
             })?;
 
@@ -191,7 +191,7 @@ impl ProductCatalogClient {
             .json()
             .await
             .map_err(|e| banking_api::BankingError::NetworkError {
-                error_details: format!("Failed to parse interest rate tiers: {}", e),
+                error_details: format!("Failed to parse interest rate tiers: {e}"),
                 retry_possible: false,
             })?;
 

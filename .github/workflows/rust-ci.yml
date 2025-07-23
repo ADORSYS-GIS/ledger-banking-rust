@@ -44,6 +44,14 @@ jobs:
         toolchain: stable
         components: clippy
         
+    - name: Install SQLx CLI
+      run: cd ./banking-db-postgres && cargo install sqlx-cli --no-default-features --features postgres
+
+    - name: Run database migrations
+      env:
+        DATABASE_URL: postgresql://user:password@localhost:5432/mydb
+      run: sqlx migrate run --source banking-db-postgres/migrations
+
     - name: Build
       run: cargo build --workspace --verbose
 

@@ -84,7 +84,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             .await?
             .ok_or(banking_api::BankingError::ValidationError {
                 field: "workflow".to_string(),
-                message: format!("No active account opening workflow found for account {}", account_id),
+                message: format!("No active account opening workflow found for account {account_id}"),
             })?;
 
         match verification_result.status {
@@ -333,7 +333,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             .await?
             .ok_or(banking_api::BankingError::ValidationError {
                 field: "workflow".to_string(),
-                message: format!("No active account reactivation workflow found for account {}", account_id),
+                message: format!("No active account reactivation workflow found for account {account_id}"),
             })?;
 
         match verification_result.status {
@@ -701,7 +701,7 @@ impl AccountLifecycleServiceImpl {
         next_step: WorkflowStep,
         notes: &str,
     ) -> BankingResult<()> {
-        let step_str = format!("{:?}", next_step);
+        let step_str = format!("{next_step:?}");
         self.workflow_repository
             .update_workflow_step(workflow_id, &step_str)
             .await?;
@@ -749,7 +749,7 @@ impl AccountLifecycleServiceImpl {
         status: WorkflowStatus,
         notes: &str,
     ) -> BankingResult<()> {
-        let status_str = format!("{:?}", status);
+        let status_str = format!("{status:?}");
         self.workflow_repository
             .update_workflow_status(workflow_id, &status_str, notes)
             .await?;
@@ -783,7 +783,7 @@ impl AccountLifecycleServiceImpl {
         if !valid_transitions.contains(&new) {
             return Err(banking_api::BankingError::ValidationError {
                 field: "status_transition".to_string(),
-                message: format!("Invalid status transition from {:?} to {:?}", current, new),
+                message: format!("Invalid status transition from {current:?} to {new:?}"),
             });
         }
 

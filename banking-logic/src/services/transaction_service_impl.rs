@@ -177,7 +177,7 @@ impl TransactionService for TransactionServiceImpl {
         self.transaction_repository.update_status(
             transaction_id,
             "Reversed",
-            &format!("Reversed: {}", reason),
+            &format!("Reversed: {reason}"),
         ).await?;
 
         tracing::info!(
@@ -250,7 +250,7 @@ impl TransactionService for TransactionServiceImpl {
         if transaction.status != "AwaitingApproval" {
             return Err(banking_api::BankingError::ValidationError {
                 field: "status".to_string(),
-                message: format!("Transaction {} is not awaiting approval", transaction_id),
+                message: format!("Transaction {transaction_id} is not awaiting approval"),
             });
         }
 
@@ -528,7 +528,7 @@ impl TransactionServiceImpl {
         let now = Utc::now();
         let timestamp = now.format("%Y%m%d%H%M%S");
         let random_suffix: u32 = rand::random::<u32>() % 10000;
-        Ok(format!("TXN{}{:04}", timestamp, random_suffix))
+        Ok(format!("TXN{timestamp}{random_suffix:04}"))
     }
 
     /// Generate GL code based on account and transaction

@@ -6,7 +6,6 @@ use validator::Validate;
 
 /// Comprehensive loan servicing functionality
 /// Building upon the loan fields in the Unified Account Model
-
 /// Amortization schedule for loan installment planning
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AmortizationSchedule {
@@ -357,4 +356,51 @@ pub struct ProvisioningSummary {
     pub stage3_provisions: Decimal,
     pub write_off_amount: Decimal,
     pub provision_coverage_ratio: Decimal,
+}
+
+/// Payment frequency for loan installments
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PaymentFrequency {
+    Weekly,
+    BiWeekly,
+    Monthly,
+    Quarterly,
+    SemiAnnually,
+    Annually,
+}
+
+/// Amortization calculation methods
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AmortizationMethod {
+    EqualInstallments,      // Equal monthly payments
+    EqualPrincipal,         // Equal principal, declining interest
+    InterestOnly,           // Interest-only with balloon payment
+    BulletPayment,          // Single payment at maturity
+}
+
+/// Request parameters for generating an amortization schedule
+#[derive(Debug, Clone, Validate)]
+pub struct GenerateAmortizationScheduleRequest {
+    pub loan_account_id: Uuid,
+    pub principal_amount: Decimal,
+    pub annual_interest_rate: Decimal,
+    pub term_months: u32,
+    pub first_payment_date: NaiveDate,
+    pub payment_frequency: PaymentFrequency,
+    pub calculation_method: AmortizationMethod,
+}
+
+/// Request parameters for creating a collection action
+#[derive(Debug, Clone, Validate)]
+pub struct CreateCollectionActionRequest {
+    pub loan_account_id: Uuid,
+    pub action_type: CollectionActionType,
+    #[validate(length(max = 500))]
+    pub description: String,
+    pub amount_demanded: Option<Decimal>,
+    pub due_date: Option<NaiveDate>,
+    #[validate(length(max = 100))]
+    pub assigned_to: String,
+    #[validate(length(max = 100))]
+    pub created_by: String,
 }

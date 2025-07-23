@@ -10,7 +10,7 @@ use crate::{
         PaymentAllocation, PrepaymentHandling, LoanRestructuring, LoanDelinquencyJob,
         LoanPortfolioSummary, CollectionAction, PaymentType, PrepaymentType,
         DelinquencyStage, RestructuringType, CollectionActionType, PaymentMethod,
-        InstallmentStatus
+        InstallmentStatus, GenerateAmortizationScheduleRequest, CreateCollectionActionRequest
     },
 };
 
@@ -34,13 +34,7 @@ pub trait LoanService: Send + Sync {
     /// Called automatically after successful loan disbursement
     async fn generate_amortization_schedule(
         &self,
-        loan_account_id: Uuid,
-        principal_amount: Decimal,
-        annual_interest_rate: Decimal,
-        term_months: u32,
-        first_payment_date: NaiveDate,
-        payment_frequency: PaymentFrequency,
-        calculation_method: AmortizationMethod,
+        request: GenerateAmortizationScheduleRequest,
     ) -> BankingResult<AmortizationSchedule>;
     
     /// Regenerate amortization schedule after loan modifications
@@ -214,13 +208,7 @@ pub trait LoanService: Send + Sync {
     /// Create collection action for delinquent loan
     async fn create_collection_action(
         &self,
-        loan_account_id: Uuid,
-        action_type: CollectionActionType,
-        description: String,
-        amount_demanded: Option<Decimal>,
-        due_date: Option<NaiveDate>,
-        assigned_to: String,
-        created_by: String,
+        request: CreateCollectionActionRequest,
     ) -> BankingResult<CollectionAction>;
     
     /// Update collection action status and response
@@ -384,25 +372,6 @@ pub trait LoanService: Send + Sync {
     ) -> BankingResult<LoanWriteOff>;
 }
 
-/// Payment frequency for loan installments
-#[derive(Debug, Clone)]
-pub enum PaymentFrequency {
-    Weekly,
-    BiWeekly,
-    Monthly,
-    Quarterly,
-    SemiAnnually,
-    Annually,
-}
-
-/// Amortization calculation methods
-#[derive(Debug, Clone)]
-pub enum AmortizationMethod {
-    EqualInstallments,      // Equal monthly payments
-    EqualPrincipal,         // Equal principal, declining interest
-    InterestOnly,           // Interest-only with balloon payment
-    BulletPayment,          // Single payment at maturity
-}
 
 /// Notification channels for collection actions
 #[derive(Debug, Clone)]

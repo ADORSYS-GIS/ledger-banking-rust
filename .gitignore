@@ -5,5 +5,8 @@
 .vscode
 
 
+# SQLx metadata files
+.sqlx/
+
 # Temporary files
 /tmp/

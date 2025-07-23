@@ -38,3 +38,6 @@ tracing.workspace = true
 
 [dev-dependencies]
 tokio-test.workspace = true
+
+[package.metadata.sqlx]
+migrations = "./migrations"
