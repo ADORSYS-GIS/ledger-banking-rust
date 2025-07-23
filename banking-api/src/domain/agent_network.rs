@@ -36,6 +36,9 @@ pub struct AgencyBranch {
     pub status: BranchStatus,
     pub daily_transaction_limit: Decimal,
     pub current_daily_volume: Decimal,
+    pub max_cash_limit: Decimal,
+    pub current_cash_balance: Decimal,
+    pub minimum_cash_balance: Decimal,
     pub created_at: DateTime<Utc>,
 }
 
@@ -49,6 +52,9 @@ pub struct AgentTerminal {
     pub terminal_name: String,
     pub daily_transaction_limit: Decimal,
     pub current_daily_volume: Decimal,
+    pub max_cash_limit: Decimal,
+    pub current_cash_balance: Decimal,
+    pub minimum_cash_balance: Decimal,
     pub status: TerminalStatus,
     pub last_sync_at: DateTime<Utc>,
 }
@@ -101,4 +107,35 @@ pub struct TerminalLimits {
 pub enum TerminalLimitResult {
     Approved,
     Denied { reason: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CashLimitValidation {
+    Approved,
+    InsufficientCash { available: Decimal, required: Decimal },
+    ExceedsMaxLimit { current: Decimal, max_limit: Decimal },
+    BelowMinimum { current: Decimal, minimum: Decimal },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CashLimitCheck {
+    pub entity_id: Uuid,
+    pub entity_type: CashLimitEntityType,
+    pub requested_amount: Decimal,
+    pub operation_type: CashOperationType,
+    pub validation_result: CashLimitValidation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CashLimitEntityType {
+    Branch,
+    Terminal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CashOperationType {
+    Withdrawal,
+    Deposit,
+    CashOut,
+    CashIn,
 }

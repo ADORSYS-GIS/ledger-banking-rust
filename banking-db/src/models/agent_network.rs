@@ -32,6 +32,9 @@ pub struct AgencyBranchModel {
     pub status: String, // Active, Suspended, Closed
     pub daily_transaction_limit: Decimal,
     pub current_daily_volume: Decimal,
+    pub max_cash_limit: Decimal,
+    pub current_cash_balance: Decimal,
+    pub minimum_cash_balance: Decimal,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     pub updated_by: String,
@@ -47,9 +50,28 @@ pub struct AgentTerminalModel {
     pub terminal_name: String,
     pub daily_transaction_limit: Decimal,
     pub current_daily_volume: Decimal,
+    pub max_cash_limit: Decimal,
+    pub current_cash_balance: Decimal,
+    pub minimum_cash_balance: Decimal,
     pub status: String, // Active, Maintenance, Suspended, Decommissioned
     pub last_sync_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     pub updated_by: String,
+}
+
+/// Cash Limit Check database model
+#[derive(Debug, Clone)]
+pub struct CashLimitCheckModel {
+    pub check_id: Uuid,
+    pub entity_id: Uuid,
+    pub entity_type: String, // Branch, Terminal
+    pub requested_amount: Decimal,
+    pub operation_type: String, // Withdrawal, Deposit, CashOut, CashIn
+    pub validation_result: String, // Approved, InsufficientCash, ExceedsMaxLimit, BelowMinimum
+    pub available_amount: Option<Decimal>,
+    pub max_limit: Option<Decimal>,
+    pub minimum_required: Option<Decimal>,
+    pub checked_at: DateTime<Utc>,
+    pub checked_by: String,
 }
