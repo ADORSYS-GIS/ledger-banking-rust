@@ -55,11 +55,6 @@ jobs:
     - name: Build
       run: cargo build --workspace --verbose
 
-    - name: Prepare SQLx offline query data
-      env:
-        DATABASE_URL: postgresql://user:password@localhost:5432/mydb
-      run: cd ./banking-db-postgres && cargo sqlx prepare
-
     - name: Run tests for PostgreSQL
       env:
         DATABASE_URL: postgresql://user:password@localhost:5432/mydb
