@@ -59,28 +59,28 @@ pub struct AgentTerminal {
     pub last_sync_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum NetworkType { 
     Internal, 
     Partner, 
     ThirdParty 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum NetworkStatus { 
     Active, 
     Suspended, 
     Terminated 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum BranchStatus { 
     Active, 
     Suspended, 
     Closed 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TerminalType { 
     Pos, 
     Mobile, 
@@ -88,7 +88,7 @@ pub enum TerminalType {
     WebPortal 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TerminalStatus { 
     Active, 
     Maintenance, 
