@@ -4,7 +4,7 @@ use uuid::Uuid;
 use rust_decimal::Decimal;
 use chrono::{DateTime, Utc, NaiveDate};
 
-use crate::models::{AgentNetworkModel, AgencyBranchModel, AgentTerminalModel};
+use crate::models::{AgentNetworkModel, AgencyBranchModel, AgentTerminalModel, CashLimitCheckModel};
 
 #[async_trait]
 pub trait AgentNetworkRepository: Send + Sync {
@@ -61,6 +61,16 @@ pub trait AgentNetworkRepository: Send + Sync {
     async fn get_network_performance(&self, network_id: Uuid, from_date: NaiveDate, to_date: NaiveDate) -> BankingResult<NetworkPerformanceReport>;
     async fn get_branch_performance(&self, branch_id: Uuid, from_date: NaiveDate, to_date: NaiveDate) -> BankingResult<BranchPerformanceReport>;
     async fn get_terminal_performance(&self, terminal_id: Uuid, from_date: NaiveDate, to_date: NaiveDate) -> BankingResult<TerminalPerformanceReport>;
+    
+    /// Cash Limit Operations
+    async fn update_branch_cash_balance(&self, branch_id: Uuid, new_balance: Decimal) -> BankingResult<()>;
+    async fn update_terminal_cash_balance(&self, terminal_id: Uuid, new_balance: Decimal) -> BankingResult<()>;
+    async fn validate_cash_limit(&self, entity_id: Uuid, entity_type: &str, requested_amount: Decimal, operation_type: &str) -> BankingResult<CashLimitValidationResult>;
+    async fn record_cash_limit_check(&self, check: CashLimitCheckModel) -> BankingResult<CashLimitCheckModel>;
+    async fn get_cash_limit_history(&self, entity_id: Uuid, from_date: DateTime<Utc>, to_date: DateTime<Utc>) -> BankingResult<Vec<CashLimitCheckModel>>;
+    async fn get_branch_cash_status(&self, branch_id: Uuid) -> BankingResult<Option<CashStatus>>;
+    async fn get_terminal_cash_status(&self, terminal_id: Uuid) -> BankingResult<Option<CashStatus>>;
+    async fn get_low_cash_alerts(&self, threshold_percentage: f64) -> BankingResult<Vec<CashAlert>>;
     
     /// Utility Operations
     async fn network_exists(&self, network_id: Uuid) -> BankingResult<bool>;
@@ -125,4 +135,37 @@ pub struct TerminalPerformanceReport {
     pub total_volume: Decimal,
     pub total_transactions: i64,
     pub uptime_percentage: f64,
+}
+
+/// Cash limit validation and monitoring structures
+pub struct CashLimitValidationResult {
+    pub is_valid: bool,
+    pub validation_type: String, // Approved, InsufficientCash, ExceedsMaxLimit, BelowMinimum
+    pub current_cash: Decimal,
+    pub requested_amount: Decimal,
+    pub max_limit: Decimal,
+    pub minimum_required: Decimal,
+    pub available_for_operation: Decimal,
+}
+
+pub struct CashStatus {
+    pub entity_id: Uuid,
+    pub entity_type: String, // Branch, Terminal
+    pub current_cash_balance: Decimal,
+    pub max_cash_limit: Decimal,
+    pub minimum_cash_balance: Decimal,
+    pub utilization_percentage: f64,
+    pub status: String, // Normal, Low, Critical, Overstocked
+    pub last_updated: DateTime<Utc>,
+}
+
+pub struct CashAlert {
+    pub entity_id: Uuid,
+    pub entity_type: String, // Branch, Terminal
+    pub entity_name: String,
+    pub alert_type: String, // LowCash, CriticalCash, Overstocked
+    pub current_balance: Decimal,
+    pub threshold_amount: Decimal,
+    pub utilization_percentage: f64,
+    pub created_at: DateTime<Utc>,
 }
