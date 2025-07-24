@@ -11,7 +11,7 @@ impl AgentNetworkMapper {
     pub fn network_to_model(network: AgentNetwork) -> AgentNetworkModel {
         AgentNetworkModel {
             network_id: network.network_id,
-            network_name: network.network_name,
+            network_name: network.network_name.to_string(),
             network_type: Self::network_type_to_string(network.network_type),
             status: Self::network_status_to_string(network.status),
             contract_id: network.contract_id,
@@ -28,7 +28,7 @@ impl AgentNetworkMapper {
     pub fn network_from_model(model: AgentNetworkModel) -> AgentNetwork {
         AgentNetwork {
             network_id: model.network_id,
-            network_name: model.network_name,
+            network_name: heapless::String::try_from(model.network_name.as_str()).unwrap_or_default(),
             network_type: Self::string_to_network_type(&model.network_type),
             status: Self::string_to_network_status(&model.status),
             contract_id: model.contract_id,
@@ -45,7 +45,7 @@ impl AgentNetworkMapper {
             branch_id: branch.branch_id,
             network_id: branch.network_id,
             parent_branch_id: branch.parent_branch_id,
-            branch_name: branch.branch_name,
+            branch_name: branch.branch_name.to_string(),
             branch_code: branch.branch_code,
             branch_level: branch.branch_level,
             gl_code_prefix: branch.gl_code_prefix,
@@ -68,7 +68,7 @@ impl AgentNetworkMapper {
             branch_id: model.branch_id,
             network_id: model.network_id,
             parent_branch_id: model.parent_branch_id,
-            branch_name: model.branch_name,
+            branch_name: heapless::String::try_from(model.branch_name.as_str()).unwrap_or_default(),
             branch_code: model.branch_code,
             branch_level: model.branch_level,
             gl_code_prefix: model.gl_code_prefix,
@@ -90,7 +90,7 @@ impl AgentNetworkMapper {
             branch_id: terminal.branch_id,
             agent_user_id: terminal.agent_user_id,
             terminal_type: Self::terminal_type_to_string(terminal.terminal_type),
-            terminal_name: terminal.terminal_name,
+            terminal_name: terminal.terminal_name.to_string(),
             daily_transaction_limit: terminal.daily_transaction_limit,
             current_daily_volume: terminal.current_daily_volume,
             max_cash_limit: terminal.max_cash_limit,
@@ -111,7 +111,7 @@ impl AgentNetworkMapper {
             branch_id: model.branch_id,
             agent_user_id: model.agent_user_id,
             terminal_type: Self::string_to_terminal_type(&model.terminal_type),
-            terminal_name: model.terminal_name,
+            terminal_name: heapless::String::try_from(model.terminal_name.as_str()).unwrap_or_default(),
             daily_transaction_limit: model.daily_transaction_limit,
             current_daily_volume: model.current_daily_volume,
             max_cash_limit: model.max_cash_limit,
@@ -286,15 +286,18 @@ mod tests {
 
     #[test]
     fn test_network_model_conversion() {
+        let mut settlement_gl_code = [0u8; 10];
+        settlement_gl_code[..5].copy_from_slice(b"GL001");
+        
         let network = AgentNetwork {
             network_id: Uuid::new_v4(),
-            network_name: "Test Network".to_string(),
+            network_name: heapless::String::try_from("Test Network").unwrap(),
             network_type: NetworkType::Partner,
             status: NetworkStatus::Active,
             contract_id: Some(Uuid::new_v4()),
             aggregate_daily_limit: Decimal::new(1000000, 2),
             current_daily_volume: Decimal::ZERO,
-            settlement_gl_code: "GL001".to_string(),
+            settlement_gl_code,
             created_at: Utc::now(),
         };
 
@@ -309,14 +312,20 @@ mod tests {
 
     #[test]
     fn test_branch_model_conversion() {
+        let mut branch_code = [0u8; 8];
+        branch_code[..5].copy_from_slice(b"BR001");
+        
+        let mut gl_code_prefix = [0u8; 6];
+        gl_code_prefix[..2].copy_from_slice(b"GL");
+        
         let branch = AgencyBranch {
             branch_id: Uuid::new_v4(),
             network_id: Uuid::new_v4(),
             parent_branch_id: Some(Uuid::new_v4()),
-            branch_name: "Test Branch".to_string(),
-            branch_code: "BR001".to_string(),
+            branch_name: heapless::String::try_from("Test Branch").unwrap(),
+            branch_code,
             branch_level: 2,
-            gl_code_prefix: "GL".to_string(),
+            gl_code_prefix,
             geolocation: Some("Location".to_string()),
             status: BranchStatus::Active,
             daily_transaction_limit: Decimal::new(500000, 2),
@@ -343,7 +352,7 @@ mod tests {
             branch_id: Uuid::new_v4(),
             agent_user_id: Uuid::new_v4(),
             terminal_type: TerminalType::Mobile,
-            terminal_name: "Test Terminal".to_string(),
+            terminal_name: heapless::String::try_from("Test Terminal").unwrap(),
             daily_transaction_limit: Decimal::new(100000, 2),
             current_daily_volume: Decimal::ZERO,
             max_cash_limit: Decimal::new(200000, 2),

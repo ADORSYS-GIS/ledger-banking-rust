@@ -4,9 +4,10 @@ use async_trait::async_trait;
 use chrono::{NaiveDate, Utc};
 use rust_decimal::Decimal;
 use uuid::Uuid;
+use heapless::String as HeaplessString;
 
 use banking_api::{
-    BankingResult, Transaction, ApprovalWorkflow,
+    BankingResult, BankingError, Transaction, ApprovalWorkflow,
     service::TransactionService,
     domain::{TransactionType, TransactionStatus, AccountStatus, ValidationResult},
 };
@@ -49,7 +50,11 @@ impl TransactionService for TransactionServiceImpl {
         
         // Generate reference number if not provided
         if transaction.reference_number.is_empty() {
-            transaction.reference_number = self.generate_reference_number().await?;
+            let ref_num = self.generate_reference_number().await?;
+            transaction.set_reference_number(&ref_num).map_err(|msg| BankingError::ValidationError {
+                field: "reference_number".to_string(),
+                message: msg.to_string(),
+            })?;
         }
 
         // Stage 1: Pre-validation (fail-fast checks)
@@ -145,21 +150,41 @@ impl TransactionService for TransactionServiceImpl {
         let reversal_transaction = Transaction {
             transaction_id: Uuid::new_v4(),
             account_id: original.account_id,
-            transaction_code: format!("REV_{}", original.transaction_code),
+            transaction_code: {
+                let rev_code = format!("REV_{}", original.transaction_code_as_str());
+                let mut code_array = [0u8; 8];
+                code_array[..rev_code.len().min(8)].copy_from_slice(rev_code.as_bytes());
+                code_array
+            },
             transaction_type: match original.transaction_type {
                 TransactionType::Credit => TransactionType::Debit,
                 TransactionType::Debit => TransactionType::Credit,
             },
             amount: original.amount,
             currency: original.currency,
-            description: format!("Reversal: {} - {}", original.description, reason),
-            channel_id: "SYSTEM_REVERSAL".to_string(),
+            description: {
+                let desc_str = format!("Reversal: {} - {}", original.description, reason);
+                HeaplessString::try_from(desc_str.as_str()).map_err(|_| BankingError::ValidationError {
+                    field: "description".to_string(),
+                    message: "Description too long".to_string(),
+                })?
+            },
+            channel_id: HeaplessString::try_from("SYSTEM_REVERSAL").map_err(|_| BankingError::ValidationError {
+                field: "channel_id".to_string(),
+                message: "Channel ID too long".to_string(),
+            })?,
             terminal_id: None,
             agent_user_id: None,
             transaction_date: Utc::now(),
             value_date: original.value_date,
             status: TransactionStatus::Posted,
-            reference_number: self.generate_reference_number().await?,
+            reference_number: {
+                let ref_num = self.generate_reference_number().await?;
+                HeaplessString::try_from(ref_num.as_str()).map_err(|_| BankingError::ValidationError {
+                    field: "reference_number".to_string(),
+                    message: "Reference number too long".to_string(),
+                })?
+            },
             external_reference: Some(original.reference_number.clone()),
             gl_code: original.gl_code,
             requires_approval: false,
@@ -247,7 +272,7 @@ impl TransactionService for TransactionServiceImpl {
             .await?
             .ok_or(banking_api::BankingError::TransactionNotFound(transaction_id.to_string()))?;
 
-        if transaction.status != "AwaitingApproval" {
+        if transaction.status != TransactionStatus::AwaitingApproval {
             return Err(banking_api::BankingError::ValidationError {
                 field: "status".to_string(),
                 message: format!("Transaction {transaction_id} is not awaiting approval"),
@@ -413,7 +438,7 @@ impl TransactionServiceImpl {
             .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
 
         // Get product rules from catalog
-        match self.product_catalog_client.get_product_rules(&account.product_code).await {
+        match self.product_catalog_client.get_product_rules(account.product_code_as_str()).await {
             Ok(product_rules) => {
                 // Check per-transaction limits
                 if let Some(per_txn_limit) = product_rules.per_transaction_limit {
@@ -511,8 +536,14 @@ impl TransactionServiceImpl {
             .await?;
 
         // Set GL code if not provided
-        if transaction.gl_code.is_empty() {
-            transaction.gl_code = self.generate_gl_code(&account, transaction).await?;
+        if transaction.gl_code_as_str().is_empty() {
+            let gl_code_str = self.generate_gl_code(&account, transaction).await?;
+            transaction.set_gl_code_from_str(&gl_code_str).map_err(|e| 
+                banking_api::BankingError::ValidationError {
+                    field: "gl_code".to_string(),
+                    message: e.to_string(),
+                }
+            )?;
         }
 
         tracing::debug!(
@@ -534,7 +565,11 @@ impl TransactionServiceImpl {
     /// Generate GL code based on account and transaction
     async fn generate_gl_code(&self, account: &banking_db::models::AccountModel, _transaction: &Transaction) -> BankingResult<String> {
         // In production, this would be more sophisticated
-        Ok(format!("{}001", account.product_code))
+        let product_code_str = {
+            let end = account.product_code.iter().position(|&b| b == 0).unwrap_or(12);
+            std::str::from_utf8(&account.product_code[..end]).unwrap_or("")
+        };
+        Ok(format!("{product_code_str}001"))
     }
 
     /// Get required approvers for a transaction

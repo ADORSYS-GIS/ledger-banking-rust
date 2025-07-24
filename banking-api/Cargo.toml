@@ -18,6 +18,8 @@ anyhow = { workspace = true }
 async-trait = { workspace = true }
 validator = { workspace = true }
 indexmap = { workspace = true }
+heapless = { version = "0.8", features = ["serde"] }
+blake3 = { version = "1.5", features = ["serde"] }
 sqlx = { workspace = true, optional = true }
 
 [features]

@@ -20,6 +20,8 @@ rust_decimal = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+heapless = { version = "0.8", features = ["serde"] }
+blake3 = { version = "1.5", features = ["serde"] }
 
 # Banking API
 banking-api = { path = "../banking-api" }

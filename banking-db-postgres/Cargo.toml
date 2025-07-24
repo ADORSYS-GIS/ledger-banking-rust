@@ -9,6 +9,7 @@ repository.workspace = true
 [features]
 default = []
 postgres_tests = []
+offline = []
 
 [dependencies]
 # Workspace dependencies
@@ -32,6 +33,9 @@ anyhow.workspace = true
 
 # Async traits
 async-trait.workspace = true
+
+# Stack optimization
+heapless.workspace = true
 
 # Logging
 tracing.workspace = true

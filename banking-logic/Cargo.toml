@@ -17,6 +17,7 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
+heapless = { workspace = true }
 
 # Banking crates
 banking-api = { path = "../banking-api" }

@@ -42,7 +42,7 @@ impl AccountService for AccountServiceImpl {
         self.validate_account_data(&account).await?;
 
         // Validate product code with catalog
-        self.validate_product_code(&account.product_code).await?;
+        self.validate_product_code(account.product_code_as_str()).await?;
 
         // Apply product-specific defaults
         account = self.apply_product_defaults(account).await?;
@@ -83,7 +83,7 @@ impl AccountService for AccountServiceImpl {
         self.account_repository
             .update_status(
                 account_id,
-                &crate::mappers::AccountMapper::account_status_to_string(status),
+                &Self::account_status_to_string(status),
                 "Status change authorized",
                 &authorized_by,
             )
@@ -195,14 +195,14 @@ impl AccountService for AccountServiceImpl {
         // Fetch latest product rules
         let _product_rules = self
             .product_catalog_client
-            .get_product_rules(&account.product_code)
+            .get_product_rules(account.product_code_as_str())
             .await?;
 
         // Update account with any product-specific changes
         // This might include dormancy thresholds, fee schedules, etc.
         tracing::info!(
             "Refreshed product rules for account {} with product code {}",
-            account_id, account.product_code
+            account_id, account.product_code_as_str()
         );
 
         // In production, this would update specific fields based on product rules
@@ -275,7 +275,7 @@ impl AccountServiceImpl {
     /// Validate account data according to business rules
     async fn validate_account_data(&self, account: &Account) -> BankingResult<()> {
         // Product code validation
-        if account.product_code.trim().is_empty() {
+        if account.product_code_as_str().trim().is_empty() {
             return Err(banking_api::BankingError::ValidationError {
                 field: "product_code".to_string(),
                 message: "Product code is required".to_string(),
@@ -283,7 +283,14 @@ impl AccountServiceImpl {
         }
 
         // Currency validation
-        if account.currency.len() != 3 {
+        let currency_str = std::str::from_utf8(&account.currency)
+            .map_err(|_| banking_api::BankingError::ValidationError {
+                field: "currency".to_string(),
+                message: "Currency must be a 3-character ISO code".to_string(),
+            })?;
+        
+        // Check for null bytes or invalid characters (not all uppercase letters)
+        if currency_str.contains('\0') || !currency_str.chars().all(|c| c.is_ascii_alphabetic() && c.is_uppercase()) {
             return Err(banking_api::BankingError::ValidationError {
                 field: "currency".to_string(),
                 message: "Currency must be a 3-character ISO code".to_string(),
@@ -343,7 +350,7 @@ impl AccountServiceImpl {
     async fn apply_product_defaults(&self, mut account: Account) -> BankingResult<Account> {
         let product_rules = self
             .product_catalog_client
-            .get_product_rules(&account.product_code)
+            .get_product_rules(account.product_code_as_str())
             .await?;
 
         // Apply dormancy threshold if not set
@@ -462,7 +469,7 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.product_code = "".to_string();
+        invalid_account.product_code = [0u8; 12]; // Manually set to all nulls for empty product code
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
@@ -481,7 +488,7 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.product_code = "   ".to_string();
+        let _ = invalid_account.set_product_code_from_str("   "); // Should fail validation
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
@@ -500,7 +507,7 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.currency = "US".to_string();
+        invalid_account.currency = [b'U', b'S', 0]; // Invalid: only 2 characters, padded with null
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
@@ -519,7 +526,8 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.currency = "USDX".to_string();
+        invalid_account.currency = [b'U', b'S', b'D']; // This would actually be valid, so let's use invalid chars
+        invalid_account.currency = [b'u', b's', b'd']; // Invalid: lowercase
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
@@ -538,7 +546,7 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.currency = "".to_string();
+        invalid_account.currency = [0, 0, 0]; // Invalid: all null bytes
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
@@ -783,13 +791,16 @@ mod tests {
 
     // Helper function to create valid test account
     fn create_valid_test_account() -> Account {
+        let mut product_code = [0u8; 12];
+        product_code[..6].copy_from_slice(b"SAV001");
+        
         Account {
             account_id: Uuid::new_v4(),
-            product_code: "SAV001".to_string(),
+            product_code,
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
-            currency: "USD".to_string(),
+            currency: [b'U', b'S', b'D'],
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
             domicile_branch_id: Uuid::new_v4(),
             current_balance: Decimal::new(1000, 2),
@@ -818,7 +829,7 @@ mod tests {
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: "TEST_USER".to_string(),
+            updated_by: heapless::String::try_from("TEST_USER").unwrap(),
         }
     }
 
@@ -1032,17 +1043,16 @@ mod tests {
     // Helper functions for creating test data
     
     fn create_test_account_model(account_type: AccountType, current_balance: Decimal, overdraft_limit: Option<Decimal>) -> banking_db::models::AccountModel {
+        let mut product_code = [0u8; 12];
+        product_code[..7].copy_from_slice(b"TEST001");
+        
         banking_db::models::AccountModel {
             account_id: Uuid::new_v4(),
-            product_code: "TEST001".to_string(),
-            account_type: match account_type {
-                AccountType::Savings => "Savings".to_string(),
-                AccountType::Current => "Current".to_string(),
-                AccountType::Loan => "Loan".to_string(),
-            },
-            account_status: "Active".to_string(),
-            signing_condition: "None".to_string(),
-            currency: "USD".to_string(),
+            product_code,
+            account_type,
+            account_status: AccountStatus::Active,
+            signing_condition: SigningCondition::None,
+            currency: [b'U', b'S', b'D'],
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
             domicile_branch_id: Uuid::new_v4(),
             current_balance,
@@ -1075,13 +1085,16 @@ mod tests {
     }
 
     fn create_test_loan_account_model(original_principal: Decimal, outstanding_principal: Decimal, current_balance: Decimal) -> banking_db::models::AccountModel {
+        let mut product_code = [0u8; 12];
+        product_code[..7].copy_from_slice(b"LOAN001");
+        
         banking_db::models::AccountModel {
             account_id: Uuid::new_v4(),
-            product_code: "LOAN001".to_string(),
-            account_type: "Loan".to_string(),
-            account_status: "Active".to_string(),
-            signing_condition: "None".to_string(),
-            currency: "USD".to_string(),
+            product_code,
+            account_type: AccountType::Loan,
+            account_status: AccountStatus::Active,
+            signing_condition: SigningCondition::None,
+            currency: [b'U', b'S', b'D'],
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
             domicile_branch_id: Uuid::new_v4(),
             current_balance,
@@ -1316,6 +1329,21 @@ mod tests {
 
         async fn update_last_activity_date(&self, _account_id: Uuid, _activity_date: chrono::NaiveDate) -> BankingResult<()> {
             todo!()
+        }
+    }
+}
+
+impl AccountServiceImpl {
+    // Helper function for status conversion (temporary until repository is updated)
+    fn account_status_to_string(status: AccountStatus) -> String {
+        match status {
+            AccountStatus::PendingApproval => "PendingApproval".to_string(),
+            AccountStatus::Active => "Active".to_string(),
+            AccountStatus::Dormant => "Dormant".to_string(),
+            AccountStatus::Frozen => "Frozen".to_string(),
+            AccountStatus::PendingClosure => "PendingClosure".to_string(),
+            AccountStatus::Closed => "Closed".to_string(),
+            AccountStatus::PendingReactivation => "PendingReactivation".to_string(),
         }
     }
 }

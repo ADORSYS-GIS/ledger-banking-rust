@@ -1,3 +1,4 @@
+use blake3::Hash;
 use chrono::{DateTime, Utc, NaiveDate};
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -122,7 +123,7 @@ pub struct ComplianceDocumentModel {
     pub document_id: Uuid,
     pub customer_id: Uuid,
     pub document_type: String,
-    pub document_path: String,
+    pub document_path: Hash,
     pub status: String, // Uploaded, Verified, Rejected, Expired
     pub uploaded_at: DateTime<Utc>,
     pub uploaded_by: String,

@@ -29,14 +29,14 @@ impl CustomerRepository for PostgresCustomerRepository {
             "#,
             customer.customer_id,
             customer.customer_type,
-            customer.full_name,
+            customer.full_name.as_str(),
             customer.id_type,
-            customer.id_number,
+            customer.id_number.as_str(),
             customer.risk_rating,
             customer.status,
             customer.created_at,
             customer.last_updated_at,
-            customer.updated_by
+            customer.updated_by.as_str()
         )
         .fetch_one(&self.pool)
         .await?;
@@ -44,14 +44,14 @@ impl CustomerRepository for PostgresCustomerRepository {
         Ok(CustomerModel {
             customer_id: row.customer_id,
             customer_type: row.customer_type,
-            full_name: row.full_name,
+            full_name: heapless::String::try_from(row.full_name.as_str()).unwrap_or_default(),
             id_type: row.id_type,
-            id_number: row.id_number,
+            id_number: heapless::String::try_from(row.id_number.as_str()).unwrap_or_default(),
             risk_rating: row.risk_rating,
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: row.updated_by,
+            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
         })
     }
 
@@ -66,13 +66,13 @@ impl CustomerRepository for PostgresCustomerRepository {
             "#,
             customer.customer_id,
             customer.customer_type,
-            customer.full_name,
+            customer.full_name.as_str(),
             customer.id_type,
-            customer.id_number,
+            customer.id_number.as_str(),
             customer.risk_rating,
             customer.status,
             customer.last_updated_at,
-            customer.updated_by
+            customer.updated_by.as_str()
         )
         .fetch_one(&self.pool)
         .await?;
@@ -80,14 +80,14 @@ impl CustomerRepository for PostgresCustomerRepository {
         Ok(CustomerModel {
             customer_id: row.customer_id,
             customer_type: row.customer_type,
-            full_name: row.full_name,
+            full_name: heapless::String::try_from(row.full_name.as_str()).unwrap_or_default(),
             id_type: row.id_type,
-            id_number: row.id_number,
+            id_number: heapless::String::try_from(row.id_number.as_str()).unwrap_or_default(),
             risk_rating: row.risk_rating,
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: row.updated_by,
+            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
         })
     }
 
@@ -102,14 +102,14 @@ impl CustomerRepository for PostgresCustomerRepository {
         Ok(row.map(|row| CustomerModel {
             customer_id: row.customer_id,
             customer_type: row.customer_type,
-            full_name: row.full_name,
+            full_name: heapless::String::try_from(row.full_name.as_str()).unwrap_or_default(),
             id_type: row.id_type,
-            id_number: row.id_number,
+            id_number: heapless::String::try_from(row.id_number.as_str()).unwrap_or_default(),
             risk_rating: row.risk_rating,
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: row.updated_by,
+            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
         }))
     }
 
@@ -125,14 +125,14 @@ impl CustomerRepository for PostgresCustomerRepository {
         Ok(row.map(|row| CustomerModel {
             customer_id: row.customer_id,
             customer_type: row.customer_type,
-            full_name: row.full_name,
+            full_name: heapless::String::try_from(row.full_name.as_str()).unwrap_or_default(),
             id_type: row.id_type,
-            id_number: row.id_number,
+            id_number: heapless::String::try_from(row.id_number.as_str()).unwrap_or_default(),
             risk_rating: row.risk_rating,
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: row.updated_by,
+            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
         }))
     }
 
@@ -149,14 +149,14 @@ impl CustomerRepository for PostgresCustomerRepository {
             .map(|row| CustomerModel {
                 customer_id: row.customer_id,
                 customer_type: row.customer_type,
-                full_name: row.full_name,
+                full_name: heapless::String::try_from(row.full_name.as_str()).unwrap_or_default(),
                 id_type: row.id_type,
-                id_number: row.id_number,
+                id_number: heapless::String::try_from(row.id_number.as_str()).unwrap_or_default(),
                 risk_rating: row.risk_rating,
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: row.updated_by,
+                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
             })
             .collect())
     }
@@ -180,14 +180,14 @@ impl CustomerRepository for PostgresCustomerRepository {
             .map(|row| CustomerModel {
                 customer_id: row.customer_id,
                 customer_type: row.customer_type,
-                full_name: row.full_name,
+                full_name: heapless::String::try_from(row.full_name.as_str()).unwrap_or_default(),
                 id_type: row.id_type,
-                id_number: row.id_number,
+                id_number: heapless::String::try_from(row.id_number.as_str()).unwrap_or_default(),
                 risk_rating: row.risk_rating,
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: row.updated_by,
+                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
             })
             .collect())
     }
@@ -506,14 +506,14 @@ impl CustomerRepository for PostgresCustomerRepository {
             .map(|row| CustomerModel {
                 customer_id: row.customer_id,
                 customer_type: row.customer_type,
-                full_name: row.full_name,
+                full_name: heapless::String::try_from(row.full_name.as_str()).unwrap_or_default(),
                 id_type: row.id_type,
-                id_number: row.id_number,
+                id_number: heapless::String::try_from(row.id_number.as_str()).unwrap_or_default(),
                 risk_rating: row.risk_rating,
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: row.updated_by,
+                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
             })
             .collect())
     }
