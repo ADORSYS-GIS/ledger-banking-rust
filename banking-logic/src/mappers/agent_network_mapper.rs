@@ -53,6 +53,9 @@ impl AgentNetworkMapper {
             status: Self::branch_status_to_string(branch.status),
             daily_transaction_limit: branch.daily_transaction_limit,
             current_daily_volume: branch.current_daily_volume,
+            max_cash_limit: branch.max_cash_limit,
+            current_cash_balance: branch.current_cash_balance,
+            minimum_cash_balance: branch.minimum_cash_balance,
             created_at: branch.created_at,
             last_updated_at: branch.created_at,
             updated_by: "system".to_string(),
@@ -73,6 +76,9 @@ impl AgentNetworkMapper {
             status: Self::string_to_branch_status(&model.status),
             daily_transaction_limit: model.daily_transaction_limit,
             current_daily_volume: model.current_daily_volume,
+            max_cash_limit: model.max_cash_limit,
+            current_cash_balance: model.current_cash_balance,
+            minimum_cash_balance: model.minimum_cash_balance,
             created_at: model.created_at,
         }
     }
@@ -87,6 +93,9 @@ impl AgentNetworkMapper {
             terminal_name: terminal.terminal_name,
             daily_transaction_limit: terminal.daily_transaction_limit,
             current_daily_volume: terminal.current_daily_volume,
+            max_cash_limit: terminal.max_cash_limit,
+            current_cash_balance: terminal.current_cash_balance,
+            minimum_cash_balance: terminal.minimum_cash_balance,
             status: Self::terminal_status_to_string(terminal.status),
             last_sync_at: terminal.last_sync_at,
             created_at: terminal.last_sync_at,
@@ -105,6 +114,9 @@ impl AgentNetworkMapper {
             terminal_name: model.terminal_name,
             daily_transaction_limit: model.daily_transaction_limit,
             current_daily_volume: model.current_daily_volume,
+            max_cash_limit: model.max_cash_limit,
+            current_cash_balance: model.current_cash_balance,
+            minimum_cash_balance: model.minimum_cash_balance,
             status: Self::string_to_terminal_status(&model.status),
             last_sync_at: model.last_sync_at,
         }
@@ -309,6 +321,9 @@ mod tests {
             status: BranchStatus::Active,
             daily_transaction_limit: Decimal::new(500000, 2),
             current_daily_volume: Decimal::ZERO,
+            max_cash_limit: Decimal::new(1000000, 2),
+            current_cash_balance: Decimal::new(500000, 2),
+            minimum_cash_balance: Decimal::new(100000, 2),
             created_at: Utc::now(),
         };
 
@@ -331,6 +346,9 @@ mod tests {
             terminal_name: "Test Terminal".to_string(),
             daily_transaction_limit: Decimal::new(100000, 2),
             current_daily_volume: Decimal::ZERO,
+            max_cash_limit: Decimal::new(200000, 2),
+            current_cash_balance: Decimal::new(100000, 2),
+            minimum_cash_balance: Decimal::new(20000, 2),
             status: TerminalStatus::Active,
             last_sync_at: Utc::now(),
         };
