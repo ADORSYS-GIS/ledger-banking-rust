@@ -1,3 +1,4 @@
+use blake3::Hash;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -16,10 +17,32 @@ pub struct KycResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KycCheck {
-    pub check_type: String,
+    pub check_type: Hash,
     pub result: CheckResult,
     pub details: Option<String>,
     pub performed_at: DateTime<Utc>,
+}
+
+impl KycCheck {
+    /// Create new KYC check with hash-based type identifier
+    pub fn new(check_type_name: &str, result: CheckResult, details: Option<String>) -> Self {
+        Self {
+            check_type: blake3::hash(check_type_name.as_bytes()),
+            result,
+            details,
+            performed_at: Utc::now(),
+        }
+    }
+    
+    /// Get check type as hex string for display/logging
+    pub fn check_type_hex(&self) -> String {
+        self.check_type.to_hex().to_string()
+    }
+    
+    /// Create hash from check type name for comparison
+    pub fn hash_from_type_name(check_type_name: &str) -> Hash {
+        blake3::hash(check_type_name.as_bytes())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

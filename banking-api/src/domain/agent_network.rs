@@ -1,37 +1,31 @@
 use chrono::{DateTime, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentNetwork {
     pub network_id: Uuid,
-    #[validate(length(min = 1, max = 255))]
-    pub network_name: String,
+    pub network_name: HeaplessString<255>,
     pub network_type: NetworkType,
     pub status: NetworkStatus,
     pub contract_id: Option<Uuid>,
     pub aggregate_daily_limit: Decimal,
     pub current_daily_volume: Decimal,
-    #[validate(length(min = 1, max = 50))]
-    pub settlement_gl_code: String,
+    pub settlement_gl_code: HeaplessString<10>,
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgencyBranch {
     pub branch_id: Uuid,
     pub network_id: Uuid,
     pub parent_branch_id: Option<Uuid>,
-    #[validate(length(min = 1, max = 255))]
-    pub branch_name: String,
-    #[validate(length(min = 1, max = 50))]
-    pub branch_code: String,
+    pub branch_name: HeaplessString<255>,
+    pub branch_code: HeaplessString<8>,
     pub branch_level: i32,
-    #[validate(length(min = 1, max = 20))]
-    pub gl_code_prefix: String,
-    #[validate(length(max = 255))]
+    pub gl_code_prefix: HeaplessString<6>,
     pub geolocation: Option<String>,
     pub status: BranchStatus,
     pub daily_transaction_limit: Decimal,
@@ -42,14 +36,13 @@ pub struct AgencyBranch {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentTerminal {
     pub terminal_id: Uuid,
     pub branch_id: Uuid,
     pub agent_user_id: Uuid,
     pub terminal_type: TerminalType,
-    #[validate(length(min = 1, max = 255))]
-    pub terminal_name: String,
+    pub terminal_name: HeaplessString<255>,
     pub daily_transaction_limit: Decimal,
     pub current_daily_volume: Decimal,
     pub max_cash_limit: Decimal,
@@ -138,4 +131,29 @@ pub enum CashOperationType {
     Deposit,
     CashOut,
     CashIn,
+}
+
+
+
+
+impl AgentNetwork {
+    /// Set settlement GL code from string with validation
+    pub fn set_settlement_gl_code(&mut self, gl_code: &str) -> Result<(), &'static str> {
+        self.settlement_gl_code = HeaplessString::try_from(gl_code).map_err(|_| "Settlement GL code too long")?;
+        Ok(())
+    }
+}
+
+impl AgencyBranch {
+    /// Set branch code from string with validation
+    pub fn set_branch_code(&mut self, code: &str) -> Result<(), &'static str> {
+        self.branch_code = HeaplessString::try_from(code).map_err(|_| "Branch code too long")?;
+        Ok(())
+    }
+    
+    /// Set GL code prefix from string with validation
+    pub fn set_gl_code_prefix(&mut self, prefix: &str) -> Result<(), &'static str> {
+        self.gl_code_prefix = HeaplessString::try_from(prefix).map_err(|_| "GL code prefix too long")?;
+        Ok(())
+    }
 }

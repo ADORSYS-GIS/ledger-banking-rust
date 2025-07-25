@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -9,14 +10,14 @@ use uuid::Uuid;
 pub struct CustomerModel {
     pub customer_id: Uuid,
     pub customer_type: String,
-    pub full_name: String,
+    pub full_name: HeaplessString<255>,
     pub id_type: String,
-    pub id_number: String,
+    pub id_number: HeaplessString<50>,
     pub risk_rating: String,
     pub status: String,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: String,
+    pub updated_by: HeaplessString<100>,
 }
 
 /// Database model for Customer Portfolio summary

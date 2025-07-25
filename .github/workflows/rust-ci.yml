@@ -19,9 +19,6 @@ jobs:
     - name: Start PostgreSQL Database
       run: docker compose up -d postgres
 
-    # - name: Start MariaDB Database
-    #   run: docker compose up -d mariadb
-
     - name: Wait for PostgreSQL to be ready
       run: |
         echo "Waiting for PostgreSQL to start..."
@@ -29,14 +26,6 @@ jobs:
           sleep 2
         done
         echo "PostgreSQL is ready."
-
-    # - name: Wait for MariaDB to be ready
-    #   run: |
-    #     echo "Waiting for MariaDB to start..."
-    #     until docker compose exec mariadb mysqladmin ping -h localhost -u user --password=password; do
-    #       sleep 2
-    #     done
-    #     echo "MariaDB is ready."
 
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -59,11 +48,6 @@ jobs:
       env:
         DATABASE_URL: postgresql://user:password@localhost:5432/mydb
       run: cargo test --workspace --features postgres_tests --verbose
-
-    # - name: Run tests for MariaDB
-    #   env:
-    #     DATABASE_URL: mysql://user:password@localhost:3306/mydb
-    #   run: cargo test --workspace --features mariadb_tests --verbose
 
     - name: Stop Databases
       if: always()

@@ -1,4 +1,4 @@
-use banking_api::domain::{Account, AccountType, AccountStatus, SigningCondition};
+use banking_api::domain::Account;
 use banking_db::models::AccountModel;
 
 pub struct AccountMapper;
@@ -9,9 +9,9 @@ impl AccountMapper {
         AccountModel {
             account_id: account.account_id,
             product_code: account.product_code,
-            account_type: Self::account_type_to_string(account.account_type),
-            account_status: Self::account_status_to_string(account.account_status),
-            signing_condition: Self::signing_condition_to_string(account.signing_condition),
+            account_type: account.account_type,
+            account_status: account.account_status,
+            signing_condition: account.signing_condition,
             currency: account.currency,
             open_date: account.open_date,
             domicile_branch_id: account.domicile_branch_id,
@@ -51,9 +51,9 @@ impl AccountMapper {
         Ok(Account {
             account_id: model.account_id,
             product_code: model.product_code,
-            account_type: Self::string_to_account_type(&model.account_type)?,
-            account_status: Self::string_to_account_status(&model.account_status)?,
-            signing_condition: Self::string_to_signing_condition(&model.signing_condition)?,
+            account_type: model.account_type,
+            account_status: model.account_status,
+            signing_condition: model.signing_condition,
             currency: model.currency,
             open_date: model.open_date,
             domicile_branch_id: model.domicile_branch_id,
@@ -87,74 +87,5 @@ impl AccountMapper {
             last_updated_at: model.last_updated_at,
             updated_by: model.updated_by,
         })
-    }
-
-    // Helper methods for enum conversions
-    fn account_type_to_string(account_type: AccountType) -> String {
-        match account_type {
-            AccountType::Savings => "Savings".to_string(),
-            AccountType::Current => "Current".to_string(),
-            AccountType::Loan => "Loan".to_string(),
-        }
-    }
-
-    fn string_to_account_type(s: &str) -> banking_api::BankingResult<AccountType> {
-        match s {
-            "Savings" => Ok(AccountType::Savings),
-            "Current" => Ok(AccountType::Current),
-            "Loan" => Ok(AccountType::Loan),
-            _ => Err(banking_api::BankingError::InvalidEnumValue {
-                field: "account_type".to_string(),
-                value: s.to_string(),
-            }),
-        }
-    }
-
-    pub fn account_status_to_string(status: AccountStatus) -> String {
-        match status {
-            AccountStatus::PendingApproval => "PendingApproval".to_string(),
-            AccountStatus::Active => "Active".to_string(),
-            AccountStatus::Dormant => "Dormant".to_string(),
-            AccountStatus::Frozen => "Frozen".to_string(),
-            AccountStatus::PendingClosure => "PendingClosure".to_string(),
-            AccountStatus::Closed => "Closed".to_string(),
-            AccountStatus::PendingReactivation => "PendingReactivation".to_string(),
-        }
-    }
-
-    fn string_to_account_status(s: &str) -> banking_api::BankingResult<AccountStatus> {
-        match s {
-            "PendingApproval" => Ok(AccountStatus::PendingApproval),
-            "Active" => Ok(AccountStatus::Active),
-            "Dormant" => Ok(AccountStatus::Dormant),
-            "Frozen" => Ok(AccountStatus::Frozen),
-            "PendingClosure" => Ok(AccountStatus::PendingClosure),
-            "Closed" => Ok(AccountStatus::Closed),
-            "PendingReactivation" => Ok(AccountStatus::PendingReactivation),
-            _ => Err(banking_api::BankingError::InvalidEnumValue {
-                field: "account_status".to_string(),
-                value: s.to_string(),
-            }),
-        }
-    }
-
-    fn signing_condition_to_string(signing_condition: SigningCondition) -> String {
-        match signing_condition {
-            SigningCondition::None => "None".to_string(),
-            SigningCondition::AnyOwner => "AnyOwner".to_string(),
-            SigningCondition::AllOwners => "AllOwners".to_string(),
-        }
-    }
-
-    fn string_to_signing_condition(s: &str) -> banking_api::BankingResult<SigningCondition> {
-        match s {
-            "None" => Ok(SigningCondition::None),
-            "AnyOwner" => Ok(SigningCondition::AnyOwner),
-            "AllOwners" => Ok(SigningCondition::AllOwners),
-            _ => Err(banking_api::BankingError::InvalidEnumValue {
-                field: "signing_condition".to_string(),
-                value: s.to_string(),
-            }),
-        }
     }
 }

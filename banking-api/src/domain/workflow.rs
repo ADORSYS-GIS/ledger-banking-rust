@@ -1,3 +1,4 @@
+use blake3::Hash;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -125,10 +126,38 @@ pub struct DormancyAssessment {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct DocumentReference {
-    #[validate(length(min = 1, max = 100))]
-    pub document_id: String,
+    pub document_id: Hash,
     #[validate(length(min = 1, max = 50))]
     pub document_type: String,
-    #[validate(length(max = 255))]
-    pub document_path: Option<String>,
+    pub document_path: Option<Hash>,
+}
+
+impl DocumentReference {
+    /// Create new document reference with hash-based ID
+    pub fn new(document_type: String, content: &[u8]) -> Self {
+        Self {
+            document_id: blake3::hash(content),
+            document_type,
+            document_path: None,
+        }
+    }
+    
+    /// Create document reference from path content
+    pub fn with_path(document_type: String, content: &[u8], path_content: &[u8]) -> Self {
+        Self {
+            document_id: blake3::hash(content),
+            document_type,
+            document_path: Some(blake3::hash(path_content)),
+        }
+    }
+    
+    /// Get document ID as hex string for display/logging
+    pub fn document_id_hex(&self) -> String {
+        self.document_id.to_hex().to_string()
+    }
+    
+    /// Get document path as hex string if available
+    pub fn document_path_hex(&self) -> Option<String> {
+        self.document_path.map(|hash| hash.to_hex().to_string())
+    }
 }

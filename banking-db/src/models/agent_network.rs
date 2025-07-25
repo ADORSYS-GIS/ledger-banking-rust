@@ -1,9 +1,11 @@
 use chrono::{DateTime, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Agent Network database model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentNetworkModel {
     pub network_id: Uuid,
     pub network_name: String,
@@ -12,22 +14,22 @@ pub struct AgentNetworkModel {
     pub contract_id: Option<Uuid>,
     pub aggregate_daily_limit: Decimal,
     pub current_daily_volume: Decimal,
-    pub settlement_gl_code: String,
+    pub settlement_gl_code: HeaplessString<10>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     pub updated_by: String,
 }
 
 /// Agency Branch database model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgencyBranchModel {
     pub branch_id: Uuid,
     pub network_id: Uuid,
     pub parent_branch_id: Option<Uuid>,
     pub branch_name: String,
-    pub branch_code: String,
+    pub branch_code: HeaplessString<8>,
     pub branch_level: i32,
-    pub gl_code_prefix: String,
+    pub gl_code_prefix: HeaplessString<6>,
     pub geolocation: Option<String>,
     pub status: String, // Active, Suspended, Closed
     pub daily_transaction_limit: Decimal,
@@ -41,7 +43,7 @@ pub struct AgencyBranchModel {
 }
 
 /// Agent Terminal database model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentTerminalModel {
     pub terminal_id: Uuid,
     pub branch_id: Uuid,
@@ -75,3 +77,6 @@ pub struct CashLimitCheckModel {
     pub checked_at: DateTime<Utc>,
     pub checked_by: String,
 }
+
+
+

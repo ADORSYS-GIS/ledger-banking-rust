@@ -218,7 +218,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         let account = AccountMapper::from_model(account_model)?;
 
         // Get product-specific dormancy rules
-        let product_rules = self.product_catalog_client.get_product_rules(&account.product_code).await?;
+        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
         let threshold_days = account.dormancy_threshold_days
             .unwrap_or(product_rules.default_dormancy_days.unwrap_or(90));
 
@@ -241,7 +241,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             days_inactive,
             threshold_days,
             product_specific_rules: vec![
-                format!("Product: {}", account.product_code),
+                format!("Product: {}", account.product_code.as_str()),
                 format!("Threshold: {} days", threshold_days),
             ],
         })
@@ -489,7 +489,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         };
 
         // Get closure fees from product catalog
-        let product_rules = self.product_catalog_client.get_product_rules(&account.product_code).await?;
+        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
         let closure_fees = product_rules.closure_fee;
 
         // Calculate final amount
@@ -598,7 +598,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         self.account_repository
             .update_status(
                 account_id,
-                &crate::mappers::AccountMapper::account_status_to_string(new_status),
+                &Self::account_status_to_string(new_status),
                 "Manual status update",
                 &authorized_by,
             )
@@ -809,6 +809,21 @@ impl AccountLifecycleServiceImpl {
             created_at: chrono::Utc::now(),
             last_updated_at: chrono::Utc::now(),
             updated_by: "SYSTEM".to_string(),
+        }
+    }
+}
+
+impl AccountLifecycleServiceImpl {
+    // Helper function for status conversion (temporary until repository is updated)
+    fn account_status_to_string(status: AccountStatus) -> String {
+        match status {
+            AccountStatus::PendingApproval => "PendingApproval".to_string(),
+            AccountStatus::Active => "Active".to_string(),
+            AccountStatus::Dormant => "Dormant".to_string(),
+            AccountStatus::Frozen => "Frozen".to_string(),
+            AccountStatus::PendingClosure => "PendingClosure".to_string(),
+            AccountStatus::Closed => "Closed".to_string(),
+            AccountStatus::PendingReactivation => "PendingReactivation".to_string(),
         }
     }
 }

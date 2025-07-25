@@ -15,29 +15,5 @@ services:
     ports:
       - ${POSTGRES_PORT:-5432}:5432
 
-  mariadb:
-    image: mariadb:10.6
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: "1"
-    environment:
-      MARIADB_USER: ${MARIADB_USER:-user}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-password}
-      MARIADB_DATABASE: ${MARIADB_DATABASE:-mydb}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root_password}
-    volumes:
-      - mariadb_db:/var/lib/mysql
-      - ./docker/mariadb-init:/docker-entrypoint-initdb.d
-    ports:
-      - ${MARIADB_PORT:-3306}:3306
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MARIADB_USER:-user}", "--password=${MARIADB_PASSWORD:-password}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
 volumes:
   db: {}
-  mariadb_db: {}

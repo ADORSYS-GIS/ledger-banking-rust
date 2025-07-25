@@ -3,9 +3,10 @@ use async_trait::async_trait;
 use chrono::{NaiveDate, Utc};
 use rust_decimal::Decimal;
 use uuid::Uuid;
+use heapless::String as HeaplessString;
 
 use banking_api::{
-    BankingResult,
+    BankingResult, BankingError,
     service::{InterestService, CalendarService},
     domain::{AccountType, TransactionType, TransactionStatus, Transaction},
 };
@@ -102,20 +103,44 @@ impl InterestService for InterestServiceImpl {
         let interest_transaction = Transaction {
             transaction_id: Uuid::new_v4(),
             account_id,
-            transaction_code: "INT_POST".to_string(),
+            transaction_code: HeaplessString::try_from("INT_POST").map_err(|_| BankingError::ValidationError {
+                field: "transaction_code".to_string(),
+                message: "Transaction code too long".to_string(),
+            })?,
             transaction_type: TransactionType::Credit,
             amount: account.accrued_interest,
             currency: account.currency.clone(),
-            description: format!("Interest posting for period ending {today}"),
-            channel_id: "SYSTEM".to_string(),
+            description: {
+                let desc_str = format!("Interest posting for period ending {today}");
+                HeaplessString::try_from(desc_str.as_str()).map_err(|_| BankingError::ValidationError {
+                    field: "description".to_string(),
+                    message: "Description too long".to_string(),
+                })?
+            },
+            channel_id: HeaplessString::try_from("SYSTEM").map_err(|_| BankingError::ValidationError {
+                field: "channel_id".to_string(),
+                message: "Channel ID too long".to_string(),
+            })?,
             terminal_id: None,
             agent_user_id: None,
             transaction_date: Utc::now(),
             value_date: today,
             status: TransactionStatus::Posted,
-            reference_number: self.generate_interest_reference(&account, today).await?,
+            reference_number: {
+                let ref_num = self.generate_interest_reference(&account, today).await?;
+                HeaplessString::try_from(ref_num.as_str()).map_err(|_| BankingError::ValidationError {
+                    field: "reference_number".to_string(),
+                    message: "Reference number too long".to_string(),
+                })?
+            },
             external_reference: None,
-            gl_code: self.get_interest_gl_code(&account.product_code).await?,
+            gl_code: {
+                let gl_code_str = self.get_interest_gl_code(account.product_code.as_str()).await?;
+                HeaplessString::try_from(gl_code_str.as_str()).map_err(|_| BankingError::ValidationError {
+                    field: "gl_code".to_string(),
+                    message: "GL code too long".to_string(),
+                })?
+            },
             requires_approval: false,
             approval_status: None,
             risk_score: Some(Decimal::ZERO), // System transaction, no risk
@@ -209,14 +234,14 @@ impl InterestService for InterestServiceImpl {
         let mut current_date = from_date;
 
         // Get product rules to determine accrual frequency
-        let product_rules = self.product_catalog_client.get_product_rules(&account.product_code).await?;
+        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
 
         while current_date <= to_date {
             // Check if we should accrue interest on this date
             let should_accrue = match product_rules.accrual_frequency {
                 crate::integration::AccrualFrequency::Daily => true,
                 crate::integration::AccrualFrequency::BusinessDaysOnly => {
-                    self.calendar_service.is_business_day(current_date, &account.currency).await?
+                    self.calendar_service.is_business_day(current_date, account.currency.as_str()).await?
                 }
                 crate::integration::AccrualFrequency::None => false,
             };
@@ -247,7 +272,7 @@ impl InterestService for InterestServiceImpl {
         let account = AccountMapper::from_model(account_model)?;
 
         // Get product rules
-        let product_rules = self.product_catalog_client.get_product_rules(&account.product_code).await?;
+        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
 
         // Check posting frequency
         match product_rules.interest_posting_frequency {
@@ -307,7 +332,7 @@ impl InterestServiceImpl {
         }
 
         // Get tiered interest rate based on balance
-        let interest_rate = self.get_tiered_savings_rate(&account.product_code, account.current_balance).await?;
+        let interest_rate = self.get_tiered_savings_rate(account.product_code.as_str(), account.current_balance).await?;
 
         // Calculate simple daily interest: (Balance * Rate) / 365
         let daily_interest = (account.current_balance * interest_rate) / Decimal::from(365);
@@ -340,7 +365,7 @@ impl InterestServiceImpl {
         let overdraft_amount = account.current_balance.abs();
         
         // Get overdraft interest rate from product catalog
-        let product_rules = self.product_catalog_client.get_product_rules(&account.product_code).await?;
+        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
         let overdraft_rate = product_rules.overdraft_interest_rate.unwrap_or(Decimal::ZERO);
 
         // Calculate daily overdraft interest

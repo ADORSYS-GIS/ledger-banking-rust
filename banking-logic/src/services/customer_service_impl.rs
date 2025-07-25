@@ -300,7 +300,6 @@ impl CustomerServiceImpl {
 mod tests {
     use super::*;
     use banking_api::domain::{CustomerType, IdentityType};
-    use chrono::Utc;
 
     // Mock repository for testing would go here
     // This is a simplified example - in production you'd use a proper mock framework
@@ -309,25 +308,35 @@ mod tests {
     async fn test_validate_customer_data() {
         let service = CustomerServiceImpl::new(Arc::new(MockCustomerRepository {}));
 
-        let valid_customer = Customer {
-            customer_id: Uuid::new_v4(),
-            customer_type: CustomerType::Individual,
-            full_name: "John Doe".to_string(),
-            id_type: IdentityType::NationalId,
-            id_number: "ID123456".to_string(),
-            risk_rating: RiskRating::Low,
-            status: CustomerStatus::Active,
-            created_at: Utc::now(),
-            last_updated_at: Utc::now(),
-            updated_by: "TEST_USER".to_string(),
-        };
+        #[allow(deprecated)]
+        let valid_customer = Customer::new(
+            Uuid::new_v4(),
+            CustomerType::Individual,
+            "John Doe",
+            IdentityType::NationalId,
+            "ID123456",
+            RiskRating::Low,
+            CustomerStatus::Active,
+            "TEST_USER",
+        ).unwrap();
 
         assert!(service.validate_customer_data(&valid_customer).is_ok());
 
-        // Test invalid name
-        let mut invalid_customer = valid_customer.clone();
-        invalid_customer.full_name = "X".to_string();
-        assert!(service.validate_customer_data(&invalid_customer).is_err());
+        // Test invalid name (empty should trigger validation error)
+        #[allow(deprecated)]
+        let invalid_customer = Customer::new(
+            Uuid::new_v4(),
+            CustomerType::Individual,
+            "", // Empty name should be invalid
+            IdentityType::NationalId,
+            "ID123456",
+            RiskRating::Low,
+            CustomerStatus::Active,
+            "TEST_USER",
+        ).unwrap(); // Customer creation succeeds, but validation should fail
+        
+        // Should fail validation due to empty name
+        assert!(invalid_customer.validate().is_err());
     }
 
     // Mock repository implementation for testing

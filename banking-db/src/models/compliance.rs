@@ -1,4 +1,6 @@
+use blake3::Hash;
 use chrono::{DateTime, Utc, NaiveDate};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -65,7 +67,7 @@ pub struct UltimateBeneficiaryModel {
     pub beneficiary_customer_id: Uuid,
     pub ownership_percentage: Option<Decimal>,
     pub control_type: String, // DirectOwnership, IndirectOwnership, SignificantInfluence, SeniorManagement
-    pub description: Option<String>,
+    pub description: Option<HeaplessString<256>>,
     pub status: String, // Active, Inactive, Terminated
     pub verification_status: String, // Pending, Verified, Rejected, RequiresUpdate
     pub verified_at: Option<DateTime<Utc>>,
@@ -122,7 +124,7 @@ pub struct ComplianceDocumentModel {
     pub document_id: Uuid,
     pub customer_id: Uuid,
     pub document_type: String,
-    pub document_path: String,
+    pub document_path: Hash,
     pub status: String, // Uploaded, Verified, Rejected, Expired
     pub uploaded_at: DateTime<Utc>,
     pub uploaded_by: String,

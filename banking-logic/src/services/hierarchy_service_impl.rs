@@ -222,7 +222,7 @@ impl HierarchyService for HierarchyServiceImpl {
         if network.network_name.trim().is_empty() {
             return Err(BankingError::ValidationFailed("Network name cannot be empty".to_string()));
         }
-        if network.settlement_gl_code.trim().is_empty() {
+        if network.settlement_gl_code.as_str().trim().is_empty() {
             return Err(BankingError::ValidationFailed("Settlement GL code cannot be empty".to_string()));
         }
 
@@ -245,7 +245,7 @@ impl HierarchyService for HierarchyServiceImpl {
         if branch.branch_name.trim().is_empty() {
             return Err(BankingError::ValidationFailed("Branch name cannot be empty".to_string()));
         }
-        if branch.branch_code.trim().is_empty() {
+        if branch.branch_code.as_str().trim().is_empty() {
             return Err(BankingError::ValidationFailed("Branch code cannot be empty".to_string()));
         }
 
@@ -446,16 +446,5 @@ impl HierarchyService for HierarchyServiceImpl {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::collections::HashMap;
-    use banking_db::models::{AgentNetworkModel, AgencyBranchModel, AgentTerminalModel};
-
-    #[warn(dead_code)]
-    struct MockAgentNetworkRepository {
-        networks: HashMap<Uuid, AgentNetworkModel>,
-        branches: HashMap<Uuid, AgencyBranchModel>,
-        terminals: HashMap<Uuid, AgentTerminalModel>,
-    }
-
-    // Add test implementations here...
+    // Test implementations will be added here when needed
 }
