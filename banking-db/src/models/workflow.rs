@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use heapless::String as HeaplessString;
 use uuid::Uuid;
 
 /// Account Workflow database model
@@ -56,7 +57,8 @@ pub struct ApprovalWorkflowModel {
     pub initiated_at: DateTime<Utc>,
     pub timeout_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
-    pub rejection_reason: Option<String>,
+    /// References ReasonAndPurpose.id for rejection reason
+    pub rejection_reason_id: Option<Uuid>,
     pub metadata: Option<String>, // JSON with approval-specific data
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
@@ -85,7 +87,10 @@ pub struct WorkflowStatusChangeModel {
     pub account_id: Uuid,
     pub old_status: Option<String>,
     pub new_status: String,
-    pub change_reason: String,
+    /// References ReasonAndPurpose.id for status change
+    pub change_reason_id: Uuid,
+    /// Additional context for status change
+    pub additional_context: Option<HeaplessString<200>>,
     pub changed_by: String,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,

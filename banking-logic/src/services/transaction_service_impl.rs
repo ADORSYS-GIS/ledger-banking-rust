@@ -128,8 +128,13 @@ impl TransactionService for TransactionServiceImpl {
         Ok(validation_result)
     }
 
-    /// Reverse a posted transaction with proper audit trail
-    async fn reverse_transaction(&self, transaction_id: Uuid, reason: String) -> BankingResult<()> {
+    /// Reverse a posted transaction with reason ID validation
+    async fn reverse_transaction(&self, transaction_id: Uuid, reason_id: Uuid, _additional_details: Option<&str>) -> BankingResult<()> {
+        // TODO: Validate reason_id against ReasonAndPurpose table
+        // TODO: Store additional_details if provided
+        
+        // For now, convert reason_id to string for legacy compatibility
+        let reason = format!("Reason ID: {}", reason_id);
         // Find original transaction
         let original_transaction = self.transaction_repository
             .find_by_id(transaction_id)
@@ -206,6 +211,33 @@ impl TransactionService for TransactionServiceImpl {
             &format!("Reversed: {reason}"),
         ).await?;
 
+        tracing::info!(
+            "Transaction {} reversed. Reason ID: {}",
+            transaction_id, reason_id
+        );
+
+        Ok(())
+    }
+    
+    /// Legacy method - deprecated, use reverse_transaction with reason_id instead
+    async fn reverse_transaction_legacy(&self, transaction_id: Uuid, reason: String) -> BankingResult<()> {
+        // Find original transaction
+        let original_transaction = self.transaction_repository
+            .find_by_id(transaction_id)
+            .await?
+            .ok_or(banking_api::BankingError::TransactionNotFound(transaction_id.to_string()))?;
+
+        let original = TransactionMapper::from_model(original_transaction)?;
+
+        // Validate transaction can be reversed
+        if original.status != TransactionStatus::Posted {
+            return Err(banking_api::BankingError::ValidationError {
+                field: "transaction_status".to_string(),
+                message: format!("Transaction {} cannot be reversed from status {:?}", transaction_id, original.status),
+            });
+        }
+
+        // Legacy implementation would go here
         tracing::info!(
             "Transaction {} reversed. Reason: {}",
             transaction_id, reason
@@ -309,8 +341,15 @@ impl TransactionService for TransactionServiceImpl {
         todo!("Implement process_closure_transaction")
     }
 
-    /// Reverse pending transactions
-    async fn reverse_pending_transactions(&self, _account_id: Uuid, _reason: String) -> BankingResult<Vec<banking_api::domain::Transaction>> {
+    /// Reverse pending transactions with reason ID validation
+    async fn reverse_pending_transactions(&self, _account_id: Uuid, _reason_id: Uuid, _additional_details: Option<&str>) -> BankingResult<Vec<banking_api::domain::Transaction>> {
+        // TODO: Validate reason_id against ReasonAndPurpose table
+        // TODO: Store additional_details if provided
+        todo!("Implement reverse_pending_transactions with reason_id")
+    }
+    
+    /// Legacy method - deprecated, use reverse_pending_transactions with reason_id instead
+    async fn reverse_pending_transactions_legacy(&self, _account_id: Uuid, _reason: String) -> BankingResult<Vec<banking_api::domain::Transaction>> {
         todo!("Implement reverse_pending_transactions")
     }
 

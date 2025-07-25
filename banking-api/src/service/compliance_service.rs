@@ -20,8 +20,12 @@ pub trait ComplianceService: Send + Sync {
     /// Monitor transaction for compliance violations
     async fn monitor_transaction(&self, transaction: &Transaction) -> BankingResult<MonitoringResult>;
     
-    /// Generate SAR (Suspicious Activity Report) data
-    async fn generate_sar_data(&self, customer_id: Uuid, reason: String) -> BankingResult<SarData>;
+    /// Generate SAR (Suspicious Activity Report) data with reason ID validation
+    async fn generate_sar_data(&self, customer_id: Uuid, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<SarData>;
+    
+    /// Legacy method - deprecated, use generate_sar_data with reason_id instead
+    #[deprecated(note = "Use generate_sar_data with reason_id instead")]
+    async fn generate_sar_data_legacy(&self, customer_id: Uuid, reason: String) -> BankingResult<SarData>;
     
     /// Ultimate Beneficial Owner verification
     async fn verify_ubo_chain(&self, corporate_customer_id: Uuid) -> BankingResult<UboVerificationResult>;

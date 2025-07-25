@@ -10,6 +10,7 @@ pub mod channel;
 pub mod fee;
 pub mod casa;
 pub mod loan;
+pub mod reason_view;
 
 pub use customer::*;
 pub use account::*;
@@ -23,3 +24,4 @@ pub use channel::*;
 pub use fee::*;
 pub use casa::*;
 pub use loan::*;
+pub use reason_view::*;

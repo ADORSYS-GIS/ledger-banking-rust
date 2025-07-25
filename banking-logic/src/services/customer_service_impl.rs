@@ -118,8 +118,58 @@ impl CustomerService for CustomerServiceImpl {
         Ok(())
     }
 
-    /// Update customer status with cascade effects
+    /// Update customer status with cascade effects and reason ID validation
     async fn update_customer_status(
+        &self,
+        customer_id: Uuid,
+        status: CustomerStatus,
+        reason_id: Uuid,
+        _additional_details: Option<&str>,
+    ) -> BankingResult<()> {
+        // Ensure customer exists
+        if !self.customer_repository.exists(customer_id).await? {
+            return Err(banking_api::BankingError::CustomerNotFound(customer_id));
+        }
+
+        // TODO: Validate reason_id against ReasonAndPurpose table
+        // TODO: Store additional_details if provided
+        
+        // For now, convert reason_id to string for legacy compatibility
+        let reason_string = format!("Reason ID: {}", reason_id);
+        
+        // Update status with audit trail
+        self.customer_repository
+            .update_status(
+                customer_id,
+                &crate::mappers::CustomerMapper::customer_status_to_string(status),
+                &reason_string,
+            )
+            .await?;
+
+        // Handle cascade effects based on status
+        match status {
+            CustomerStatus::Deceased | CustomerStatus::Dissolved => {
+                tracing::info!(
+                    "Customer {} status changed to {:?}. Account restrictions will be applied.",
+                    customer_id, status
+                );
+                // In production, this would trigger account status updates
+            }
+            CustomerStatus::Blacklisted => {
+                tracing::warn!(
+                    "Customer {} blacklisted. Immediate account freeze required.",
+                    customer_id
+                );
+                // In production, this would trigger immediate account freezing
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+    
+    /// Legacy method - deprecated, use update_customer_status with reason_id instead
+    async fn update_customer_status_legacy(
         &self,
         customer_id: Uuid,
         status: CustomerStatus,

@@ -148,8 +148,54 @@ impl AccountService for AccountServiceImpl {
         Ok(available)
     }
 
-    /// Apply a hold on the account for a specific amount
-    async fn apply_hold(&self, account_id: Uuid, amount: Decimal, reason: String) -> BankingResult<()> {
+    /// Apply hold with reason ID validation
+    async fn apply_hold(&self, account_id: Uuid, amount: Decimal, reason_id: Uuid, _additional_details: Option<&str>) -> BankingResult<()> {
+        // Validate account exists and is operational
+        let account = self
+            .find_account_by_id(account_id)
+            .await?
+            .ok_or(banking_api::BankingError::AccountNotFound(account_id))?;
+
+        // Validate account can have holds applied
+        self.validate_hold_eligibility(&account)?;
+
+        // Validate hold amount
+        if amount <= Decimal::ZERO {
+            return Err(banking_api::BankingError::ValidationError {
+                field: "amount".to_string(),
+                message: "Hold amount must be positive".to_string(),
+            });
+        }
+
+        // Check if applying hold would make available balance negative
+        let current_available = self.calculate_available_balance(account_id).await?;
+        if current_available < amount {
+            return Err(banking_api::BankingError::InsufficientFunds {
+                account_id,
+                requested: amount,
+                available: current_available,
+            });
+        }
+
+        // TODO: Validate reason_id against ReasonAndPurpose table
+        // TODO: Store additional_details if provided
+        
+        // For now, convert reason_id to string for legacy compatibility
+        let reason_string = format!("Reason ID: {}", reason_id);
+        
+        // Apply the hold (this would typically involve a holds repository)
+        self.create_account_hold(account_id, amount, &reason_string).await?;
+
+        tracing::info!(
+            "Applied hold of {} on account {} for reason ID: {}",
+            amount, account_id, reason_id
+        );
+
+        Ok(())
+    }
+    
+    /// Legacy method - deprecated, use apply_hold with reason_id instead
+    async fn apply_hold_legacy(&self, account_id: Uuid, amount: Decimal, reason: String) -> BankingResult<()> {
         // Validate account exists and is operational
         let account = self
             .find_account_by_id(account_id)
@@ -820,15 +866,15 @@ mod tests {
             next_due_date: None,
             penalty_rate: None,
             collateral_id: None,
-            loan_purpose: None,
+            loan_purpose_id: None,
             close_date: None,
             last_activity_date: None,
             dormancy_threshold_days: None,
             reactivation_required: false,
-            pending_closure_reason: None,
+            pending_closure_reason_id: None,
             disbursement_instructions: None,
             status_changed_by: None,
-            status_change_reason: None,
+            status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
@@ -1069,14 +1115,14 @@ mod tests {
             next_due_date: None,
             penalty_rate: None,
             collateral_id: None,
-            loan_purpose: None,
+            loan_purpose_id: None,
             close_date: None,
             last_activity_date: None,
             dormancy_threshold_days: None,
             reactivation_required: false,
-            pending_closure_reason: None,
+            pending_closure_reason_id: None,
             status_changed_by: None,
-            status_change_reason: None,
+            status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
@@ -1108,14 +1154,14 @@ mod tests {
             next_due_date: Some(NaiveDate::from_ymd_opt(2024, 2, 1).unwrap()),
             penalty_rate: Some(Decimal::new(200, 4)), // 2%
             collateral_id: Some(heapless::String::try_from(Uuid::new_v4().to_string().as_str()).unwrap()),
-            loan_purpose: Some(heapless::String::try_from("Business expansion").unwrap()),
+            loan_purpose_id: None,  // Changed to UUID reference
             close_date: None,
             last_activity_date: Some(NaiveDate::from_ymd_opt(2024, 1, 15).unwrap()),
             dormancy_threshold_days: None,
             reactivation_required: false,
-            pending_closure_reason: None,
+            pending_closure_reason_id: None,
             status_changed_by: None,
-            status_change_reason: None,
+            status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),

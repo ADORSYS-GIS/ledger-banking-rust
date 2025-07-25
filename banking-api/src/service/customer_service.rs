@@ -20,8 +20,12 @@ pub trait CustomerService: Send + Sync {
     /// Risk rating updates - restricted to Risk & Compliance module only
     async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: RiskRating, authorized_by: String) -> BankingResult<()>;
     
-    /// Status changes with cascade effects
-    async fn update_customer_status(&self, customer_id: Uuid, status: CustomerStatus, reason: String) -> BankingResult<()>;
+    /// Status changes with cascade effects and reason ID validation
+    async fn update_customer_status(&self, customer_id: Uuid, status: CustomerStatus, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<()>;
+    
+    /// Legacy method - deprecated, use update_customer_status with reason_id instead
+    #[deprecated(note = "Use update_customer_status with reason_id instead")]
+    async fn update_customer_status_legacy(&self, customer_id: Uuid, status: CustomerStatus, reason: String) -> BankingResult<()>;
     
     /// 360-degree customer view
     async fn get_customer_portfolio(&self, customer_id: Uuid) -> BankingResult<CustomerPortfolio>;

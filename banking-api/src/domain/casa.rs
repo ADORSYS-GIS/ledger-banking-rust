@@ -1,4 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -166,7 +167,10 @@ pub struct OverdraftLimitAdjustment {
     pub account_id: Uuid,
     pub current_limit: Decimal,
     pub requested_limit: Decimal,
-    pub adjustment_reason: String,
+    /// References ReasonAndPurpose.id for adjustment reason
+    pub adjustment_reason_id: Uuid,
+    /// Additional context for adjustment
+    pub additional_details: Option<HeaplessString<200>>,
     pub supporting_documents: Vec<String>,
     pub requested_by: String,
     pub requested_at: DateTime<Utc>,

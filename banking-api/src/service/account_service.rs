@@ -21,7 +21,12 @@ pub trait AccountService: Send + Sync {
     /// Balance operations with product rule integration
     async fn calculate_balance(&self, account_id: Uuid) -> BankingResult<Decimal>;
     async fn calculate_available_balance(&self, account_id: Uuid) -> BankingResult<Decimal>;
-    async fn apply_hold(&self, account_id: Uuid, amount: Decimal, reason: String) -> BankingResult<()>;
+    /// Apply hold with reason ID validation
+    async fn apply_hold(&self, account_id: Uuid, amount: Decimal, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<()>;
+    
+    /// Legacy method - deprecated, use apply_hold with reason_id instead
+    #[deprecated(note = "Use apply_hold with reason_id instead")]
+    async fn apply_hold_legacy(&self, account_id: Uuid, amount: Decimal, reason: String) -> BankingResult<()>;
     
     /// Product catalog integration
     async fn refresh_product_rules(&self, account_id: Uuid) -> BankingResult<()>;
