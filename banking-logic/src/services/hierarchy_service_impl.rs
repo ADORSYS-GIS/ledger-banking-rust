@@ -393,6 +393,7 @@ impl HierarchyService for HierarchyServiceImpl {
             BranchStatus::Active => "Active".to_string(),
             BranchStatus::Suspended => "Suspended".to_string(),
             BranchStatus::Closed => "Closed".to_string(),
+            BranchStatus::TemporarilyClosed => "TemporarilyClosed".to_string(),
         };
 
         self.agent_network_repository.update_branch(branch_model).await?;

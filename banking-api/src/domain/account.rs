@@ -82,7 +82,8 @@ pub enum SigningCondition {
 pub struct DisbursementInstructions {
     pub method: DisbursementMethod,
     pub target_account: Option<Uuid>,
-    pub cash_pickup_location: Option<HeaplessString<100>>,
+    /// References AgencyBranch.branch_id for cash pickup
+    pub cash_pickup_branch_id: Option<Uuid>,
     pub authorized_recipient: Option<HeaplessString<100>>,
 }
 
