@@ -392,6 +392,194 @@ let customer = Customer::new(uuid, customer_type, name, id_type, id_number, risk
 
 This comprehensive stack optimization aligns with Rust's zero-cost abstraction philosophy and banking system requirements for high-performance, memory-efficient financial data processing while maintaining regulatory compliance and audit trail integrity.
 
+## Rust Struct Design & Memory Allocation Guidelines
+
+### Core Design Principles
+
+**String Type Selection Strategy:**
+- **`[u8; N]`**: For fixed-length ASCII data (currency codes, product IDs, branch codes)
+- **`HeaplessString<N>`**: For variable-length UTF-8 data with known maximum size
+- **`String`**: Only when truly variable/unbounded length is required
+- **Enum**: For known sets of values (currencies, statuses, types)
+
+**Memory Allocation Decision Rules:**
+- **< 256 bytes**: Always prefer stack allocation
+- **256 bytes - 2KB**: Use stack for temporary objects, heap for long-lived storage
+- **> 2KB**: Prefer heap allocation with `Box<T>`
+- **Recursive functions**: Always use heap (`Box<T>`) to prevent stack overflow
+
+### Memory Allocation Decision Flowchart
+
+```
+Is the data size known at compile time?
+├─ YES → Is it always exactly N bytes?
+│   ├─ YES → Use [u8; N] or custom wrapper type
+│   └─ NO → Use HeaplessString<N> or HeaplessVec<T, N>
+└─ NO → Is there a reasonable maximum size?
+    ├─ YES → Use HeaplessString<MAX> or HeaplessVec<T, MAX>
+    └─ NO → Use String/Vec (heap allocated)
+
+Is the struct > 1KB?
+├─ YES → Is it used in recursive functions?
+│   ├─ YES → Always use Box<T>
+│   └─ NO → Is it moved frequently?
+│       ├─ YES → Use Box<T>
+│       └─ NO → Stack is OK for temporary use
+└─ NO → Prefer stack allocation
+```
+
+### Performance Optimization Patterns
+
+**Function Parameters:**
+```rust
+// AVOID: Copying large structs
+fn process(account: Account) { ... }  // ❌ Copies entire struct
+
+// PREFER: Borrowing for read operations
+fn process(account: &Account) { ... }  // ✅ Just passes reference
+
+// FOR OWNERSHIP TRANSFER: Use Box for large structs
+fn store(account: Box<Account>) { ... }  // ✅ Moves 8 bytes
+```
+
+**Collections with Large Structs:**
+```rust
+// For large structs (>1KB), prefer boxed storage
+let accounts: Vec<Box<Account>> = vec![];  // Good for large structs
+let accounts: Vec<Account> = vec![];       // OK only if struct is small
+```
+
+### Code Generation Rules for Banking System
+
+1. **Default to stack allocation** for structs under 1KB
+2. **Use fixed-size arrays** for data with known length (IDs, codes, currencies)
+3. **Prefer HeaplessString** over String when maximum size is known
+4. **Box large structs** (>1KB) when storing in collections or moving frequently
+5. **Use references** (`&T`) for function parameters to avoid unnecessary copies
+6. **Implement custom serialization** for `[u8; N]` fields using banking-specific helpers
+7. **Add validation** in constructors for constrained types (currency codes, etc.)
+8. **Use enums** for closed sets of values instead of strings
+9. **Apply builder patterns** for complex construction (>4 parameters)
+
+### Banking-Specific Type Patterns
+
+**Currency Codes (ISO 4217):**
+```rust
+// BEFORE: Heap allocated, variable size
+pub currency: String,
+
+// AFTER: Stack allocated, fixed size
+pub currency: [u8; 3],  // Exactly 3 ASCII characters
+
+// With validation wrapper
+#[derive(Debug, Copy, Clone)]
+pub struct CurrencyCode([u8; 3]);
+impl CurrencyCode {
+    pub fn new(code: &str) -> Result<Self, &'static str> {
+        if code.len() != 3 || !code.is_ascii() {
+            return Err("Currency code must be exactly 3 ASCII characters");
+        }
+        let mut bytes = [0u8; 3];
+        bytes.copy_from_slice(code.as_bytes());
+        Ok(CurrencyCode(bytes))
+    }
+}
+```
+
+**Banking Codes (Product, Branch, GL):**
+```rust
+// Product codes: Up to 12 characters
+pub product_code: [u8; 12],
+
+// Branch codes: Standard 8-character identifiers  
+pub branch_code: [u8; 8],
+
+// GL codes: Chart of accounts codes up to 10 characters
+pub gl_code: [u8; 10],
+
+// Transaction codes: Banking transaction type codes
+pub transaction_code: [u8; 8],
+```
+
+**Bounded Descriptions and Names:**
+```rust
+use heapless::String as HeaplessString;
+
+// Customer/account names: Maximum regulatory limit
+pub full_name: HeaplessString<255>,
+
+// Transaction descriptions: Regulatory requirement
+pub description: HeaplessString<500>,
+
+// Reference numbers: Banking standard length
+pub reference_number: HeaplessString<100>,
+
+// Channel identifiers: System-defined length
+pub channel_id: HeaplessString<50>,
+```
+
+**Status and Type Enums:**
+```rust
+// BEFORE: Heap allocated, allows invalid values
+pub account_status: String,
+
+// AFTER: Stack allocated, type-safe
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AccountStatus {
+    Active,
+    Closed, 
+    Dormant,
+    Frozen,
+    PendingClosure,
+}
+
+// Custom serialization for database compatibility
+#[serde(serialize_with = "serialize_account_status")]
+#[serde(deserialize_with = "deserialize_account_status")]
+pub account_status: AccountStatus,
+```
+
+### Serialization Helpers for Banking Types
+
+```rust
+// For [u8; N] fields representing strings
+fn serialize_fixed_str<S, const N: usize>(
+    bytes: &[u8; N], 
+    serializer: S
+) -> Result<S::Ok, S::Error>
+where S: Serializer {
+    let s = std::str::from_utf8(bytes)
+        .map_err(serde::ser::Error::custom)?
+        .trim_end_matches('\0');  // Remove null padding
+    serializer.serialize_str(s)
+}
+
+fn deserialize_fixed_str<'de, D, const N: usize>(
+    deserializer: D
+) -> Result<[u8; N], D::Error>
+where D: Deserializer<'de> {
+    let s = String::deserialize(deserializer)?;
+    if s.len() > N {
+        return Err(serde::de::Error::custom("String too long"));
+    }
+    let mut bytes = [0u8; N];
+    bytes[..s.len()].copy_from_slice(s.as_bytes());
+    Ok(bytes)
+}
+```
+
+### Performance Impact Reference
+
+- **Stack allocation**: ~0-2 ns
+- **Heap allocation**: ~50-100 ns  
+- **Copying 1KB struct**: ~10-50 ns
+- **Moving Box<T>**: ~1 ns
+- **Pointer indirection**: ~1-3 ns
+
+**Choose based on usage patterns and frequency, not just allocation cost.**
+
+These guidelines ensure the banking system maintains optimal memory efficiency while preserving type safety, regulatory compliance, and code maintainability. All optimizations align with Rust's zero-cost abstraction philosophy and banking industry requirements for high-performance financial data processing.
+
 ## API Design Patterns
 
 ### Builder Pattern Implementation
