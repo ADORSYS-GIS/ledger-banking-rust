@@ -39,20 +39,20 @@ pub struct Account {
     pub installment_amount: Option<Decimal>,
     pub next_due_date: Option<NaiveDate>,
     pub penalty_rate: Option<Decimal>,
-    pub collateral_id: Option<String>,
-    pub loan_purpose: Option<String>,
+    pub collateral_id: Option<HeaplessString<100>>,
+    pub loan_purpose: Option<HeaplessString<100>>,
 
     // Account lifecycle management (from enhancements)
     pub close_date: Option<NaiveDate>,
     pub last_activity_date: Option<NaiveDate>,
     pub dormancy_threshold_days: Option<i32>,
     pub reactivation_required: bool,
-    pub pending_closure_reason: Option<String>,
+    pub pending_closure_reason: Option<HeaplessString<100>>,
     pub disbursement_instructions: Option<DisbursementInstructions>,
     
     // Enhanced audit trail
-    pub status_changed_by: Option<String>,
-    pub status_change_reason: Option<String>,
+    pub status_changed_by: Option<HeaplessString<100>>,
+    pub status_change_reason: Option<HeaplessString<100>>,
     pub status_change_timestamp: Option<DateTime<Utc>>,
     
     // Audit fields
@@ -90,8 +90,8 @@ pub enum SigningCondition {
 pub struct DisbursementInstructions {
     pub method: DisbursementMethod,
     pub target_account: Option<Uuid>,
-    pub cash_pickup_location: Option<String>,
-    pub authorized_recipient: Option<String>,
+    pub cash_pickup_location: Option<HeaplessString<100>>,
+    pub authorized_recipient: Option<HeaplessString<100>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,15 +108,15 @@ pub struct AccountHold {
     pub account_id: Uuid,
     pub amount: Decimal,
     pub hold_type: HoldType,
-    pub reason: String,
-    pub placed_by: String,
+    pub reason: HeaplessString<100>,
+    pub placed_by: HeaplessString<100>,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub status: HoldStatus,
     pub released_at: Option<DateTime<Utc>>,
-    pub released_by: Option<String>,
+    pub released_by: Option<HeaplessString<100>>,
     pub priority: HoldPriority,
-    pub source_reference: Option<String>, // External reference for judicial holds, etc.
+    pub source_reference: Option<HeaplessString<100>>, // External reference for judicial holds, etc.
     pub automatic_release: bool,
 }
 
@@ -192,8 +192,8 @@ pub struct HoldSummary {
 pub struct HoldReleaseRequest {
     pub hold_id: Uuid,
     pub release_amount: Option<Decimal>, // For partial releases
-    pub release_reason: String,
-    pub released_by: String,
+    pub release_reason: HeaplessString<100>,
+    pub released_by: HeaplessString<100>,
     pub override_authorization: bool,
 }
 
@@ -205,7 +205,7 @@ pub struct HoldExpiryJob {
     pub expired_holds_count: u32,
     pub total_released_amount: Decimal,
     pub processed_at: DateTime<Utc>,
-    pub errors: Vec<String>,
+    pub errors: Vec<HeaplessString<100>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -214,8 +214,8 @@ pub struct StatusChangeRecord {
     pub account_id: Uuid,
     pub old_status: Option<AccountStatus>,
     pub new_status: AccountStatus,
-    pub reason: String,
-    pub changed_by: String,
+    pub reason: HeaplessString<100>,
+    pub changed_by: HeaplessString<100>,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
 }
@@ -226,11 +226,11 @@ pub struct PlaceHoldRequest {
     pub account_id: Uuid,
     pub hold_type: HoldType,
     pub amount: Decimal,
-    pub reason: String,
-    pub placed_by: String,
+    pub reason: HeaplessString<100>,
+    pub placed_by: HeaplessString<100>,
     pub expires_at: Option<DateTime<Utc>>,
     pub priority: HoldPriority,
-    pub source_reference: Option<String>,
+    pub source_reference: Option<HeaplessString<100>>,
 }
 
 // Currency serialization helpers for ISO 4217 compliance

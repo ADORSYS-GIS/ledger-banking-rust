@@ -1,4 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
@@ -53,25 +54,25 @@ pub struct AccountModel {
     pub installment_amount: Option<Decimal>,
     pub next_due_date: Option<NaiveDate>,
     pub penalty_rate: Option<Decimal>,
-    pub collateral_id: Option<String>,
-    pub loan_purpose: Option<String>,
+    pub collateral_id: Option<HeaplessString<100>>,
+    pub loan_purpose: Option<HeaplessString<100>>,
 
     // Account lifecycle management (from enhancements)
     pub close_date: Option<NaiveDate>,
     pub last_activity_date: Option<NaiveDate>,
     pub dormancy_threshold_days: Option<i32>,
     pub reactivation_required: bool,
-    pub pending_closure_reason: Option<String>,
+    pub pending_closure_reason: Option<HeaplessString<100>>,
     
     // Enhanced audit trail
-    pub status_changed_by: Option<String>,
-    pub status_change_reason: Option<String>,
+    pub status_changed_by: Option<HeaplessString<100>>,
+    pub status_change_reason: Option<HeaplessString<100>>,
     pub status_change_timestamp: Option<DateTime<Utc>>,
     
     // Audit fields
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: String,
+    pub updated_by: HeaplessString<100>,
 }
 
 /// Database model for Account Ownership
@@ -81,7 +82,7 @@ pub struct AccountOwnershipModel {
     pub ownership_id: Uuid,
     pub account_id: Uuid,
     pub customer_id: Uuid,
-    pub ownership_type: String,
+    pub ownership_type: HeaplessString<100>,
     pub ownership_percentage: Option<Decimal>,
     pub created_at: DateTime<Utc>,
 }
@@ -93,9 +94,9 @@ pub struct AccountRelationshipModel {
     pub relationship_id: Uuid,
     pub account_id: Uuid,
     pub entity_id: Uuid,
-    pub entity_type: String,
-    pub relationship_type: String,
-    pub status: String,
+    pub entity_type: HeaplessString<100>,
+    pub relationship_type: HeaplessString<100>,
+    pub status: HeaplessString<100>,
     pub start_date: NaiveDate,
     pub end_date: Option<NaiveDate>,
 }
@@ -107,10 +108,10 @@ pub struct AccountMandateModel {
     pub mandate_id: Uuid,
     pub account_id: Uuid,
     pub grantee_customer_id: Uuid,
-    pub permission_type: String,
+    pub permission_type: HeaplessString<100>,
     pub transaction_limit: Option<Decimal>,
     pub approval_group_id: Option<Uuid>,
-    pub status: String,
+    pub status: HeaplessString<100>,
     pub start_date: NaiveDate,
     pub end_date: Option<NaiveDate>,
 }
@@ -122,12 +123,12 @@ pub struct AccountHoldModel {
     pub hold_id: Uuid,
     pub account_id: Uuid,
     pub amount: Decimal,
-    pub reason: String,
-    pub placed_by: String,
+    pub reason: HeaplessString<100>,
+    pub placed_by: HeaplessString<100>,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
-    pub status: String,
-    pub released_by: Option<String>,
+    pub status: HeaplessString<100>,
+    pub released_by: Option<HeaplessString<100>>,
     pub released_at: Option<DateTime<Utc>>,
 }
 
@@ -137,10 +138,10 @@ pub struct AccountHoldModel {
 pub struct AccountStatusHistoryModel {
     pub history_id: Uuid,
     pub account_id: Uuid,
-    pub old_status: Option<String>,
-    pub new_status: String,
-    pub change_reason: String,
-    pub changed_by: String,
+    pub old_status: Option<HeaplessString<100>>,
+    pub new_status: HeaplessString<100>,
+    pub change_reason: HeaplessString<100>,
+    pub changed_by: HeaplessString<100>,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
     pub created_at: DateTime<Utc>,
@@ -157,9 +158,9 @@ pub struct AccountFinalSettlementModel {
     pub accrued_interest: Decimal,
     pub closure_fees: Decimal,
     pub final_amount: Decimal,
-    pub disbursement_method: String,
-    pub disbursement_reference: Option<String>,
-    pub processed_by: String,
+    pub disbursement_method: HeaplessString<100>,
+    pub disbursement_reference: Option<HeaplessString<100>>,
+    pub processed_by: HeaplessString<100>,
     pub created_at: DateTime<Utc>,
 }
 

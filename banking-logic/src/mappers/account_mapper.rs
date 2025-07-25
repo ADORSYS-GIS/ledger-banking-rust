@@ -42,7 +42,7 @@ impl AccountMapper {
             // Audit fields
             created_at: account.created_at,
             last_updated_at: account.last_updated_at,
-            updated_by: account.updated_by.to_string(),
+            updated_by: account.updated_by,
         }
     }
 
@@ -85,7 +85,7 @@ impl AccountMapper {
             // Audit fields
             created_at: model.created_at,
             last_updated_at: model.last_updated_at,
-            updated_by: heapless::String::try_from(model.updated_by.as_str()).unwrap_or_default(),
+            updated_by: model.updated_by,
         })
     }
 }

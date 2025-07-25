@@ -1080,7 +1080,7 @@ mod tests {
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: "TEST_USER".to_string(),
+            updated_by: heapless::String::try_from("TEST_USER").unwrap(),
         }
     }
 
@@ -1110,8 +1110,8 @@ mod tests {
             installment_amount: Some(Decimal::new(30000, 2)),
             next_due_date: Some(NaiveDate::from_ymd_opt(2024, 2, 1).unwrap()),
             penalty_rate: Some(Decimal::new(200, 4)), // 2%
-            collateral_id: Some(Uuid::new_v4().to_string()),
-            loan_purpose: Some("Business expansion".to_string()),
+            collateral_id: Some(heapless::String::try_from(Uuid::new_v4().to_string().as_str()).unwrap()),
+            loan_purpose: Some(heapless::String::try_from("Business expansion").unwrap()),
             close_date: None,
             last_activity_date: Some(NaiveDate::from_ymd_opt(2024, 1, 15).unwrap()),
             dormancy_threshold_days: None,
@@ -1122,7 +1122,7 @@ mod tests {
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: "TEST_USER".to_string(),
+            updated_by: heapless::String::try_from("TEST_USER").unwrap(),
         }
     }
 
