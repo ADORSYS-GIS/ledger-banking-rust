@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,7 @@ pub struct AgentNetworkModel {
 /// Agency Branch database model
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgencyBranchModel {
+    // === EXISTING FIELDS ===
     pub branch_id: Uuid,
     pub network_id: Uuid,
     pub parent_branch_id: Option<Uuid>,
@@ -30,14 +31,58 @@ pub struct AgencyBranchModel {
     pub branch_code: HeaplessString<8>,
     pub branch_level: i32,
     pub gl_code_prefix: HeaplessString<6>,
-    pub geolocation: Option<String>,
-    pub status: String, // Active, Suspended, Closed
+    pub status: String, // Active, Suspended, Closed, TemporarilyClosed
     pub daily_transaction_limit: Decimal,
     pub current_daily_volume: Decimal,
     pub max_cash_limit: Decimal,
     pub current_cash_balance: Decimal,
     pub minimum_cash_balance: Decimal,
     pub created_at: DateTime<Utc>,
+    
+    // === NEW LOCATION FIELDS ===
+    // Physical address (serialized as JSON)
+    pub address_json: String,
+    pub gps_latitude: Option<f64>,
+    pub gps_longitude: Option<f64>,
+    pub gps_accuracy_meters: Option<f32>,
+    pub landmark_description: Option<String>,
+    
+    // Operational details (serialized as JSON)
+    pub operating_hours_json: String,
+    pub holiday_schedule_json: String,
+    pub temporary_closure_json: Option<String>,
+    
+    // Contact information
+    pub primary_phone: String,
+    pub secondary_phone: Option<String>,
+    pub email: Option<String>,
+    pub branch_manager_id: Option<Uuid>,
+    
+    // Services and capabilities
+    pub branch_type: String, // MainBranch, SubBranch, AgentOutlet, etc.
+    pub supported_services_json: String, // JSON array
+    pub supported_currencies_json: String, // JSON array
+    pub languages_spoken_json: String, // JSON array
+    
+    // Security and access (serialized as JSON)
+    pub security_features_json: String,
+    pub accessibility_features_json: String,
+    pub required_documents_json: String,
+    
+    // Customer capacity
+    pub max_daily_customers: Option<u32>,
+    pub average_wait_time_minutes: Option<u16>,
+    
+    // Transaction limits (enhanced from existing)
+    pub per_transaction_limit: Decimal,
+    pub monthly_transaction_limit: Option<Decimal>,
+    
+    // Compliance and risk
+    pub risk_rating: String, // Low, Medium, High, Critical (BranchRiskRating)
+    pub last_audit_date: Option<NaiveDate>,
+    pub compliance_certifications_json: String,
+    
+    // Metadata
     pub last_updated_at: DateTime<Utc>,
     pub updated_by: String,
 }

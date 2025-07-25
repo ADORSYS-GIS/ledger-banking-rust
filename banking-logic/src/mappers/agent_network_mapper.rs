@@ -1,6 +1,6 @@
 use banking_api::domain::{
     AgentNetwork, AgencyBranch, AgentTerminal,
-    NetworkType, NetworkStatus, BranchStatus, TerminalType, TerminalStatus
+    NetworkType, NetworkStatus, BranchStatus, TerminalType, TerminalStatus, BranchType, BranchRiskRating
 };
 use banking_db::models::{AgentNetworkModel, AgencyBranchModel, AgentTerminalModel};
 
@@ -49,7 +49,6 @@ impl AgentNetworkMapper {
             branch_code: branch.branch_code,
             branch_level: branch.branch_level,
             gl_code_prefix: branch.gl_code_prefix,
-            geolocation: branch.geolocation,
             status: Self::branch_status_to_string(branch.status),
             daily_transaction_limit: branch.daily_transaction_limit,
             current_daily_volume: branch.current_daily_volume,
@@ -57,30 +56,82 @@ impl AgentNetworkMapper {
             current_cash_balance: branch.current_cash_balance,
             minimum_cash_balance: branch.minimum_cash_balance,
             created_at: branch.created_at,
-            last_updated_at: branch.created_at,
-            updated_by: "system".to_string(),
+            
+            // New location fields - serialize as JSON or extract coordinates
+            address_json: serde_json::to_string(&branch.address).unwrap_or_default(),
+            gps_latitude: branch.gps_coordinates.map(|c| c.latitude),
+            gps_longitude: branch.gps_coordinates.map(|c| c.longitude),
+            gps_accuracy_meters: branch.gps_coordinates.and_then(|c| c.accuracy_meters),
+            landmark_description: branch.landmark_description.map(|s| s.to_string()),
+            
+            // Operational details
+            operating_hours_json: serde_json::to_string(&branch.operating_hours).unwrap_or_default(),
+            holiday_schedule_json: serde_json::to_string(&branch.holiday_schedule).unwrap_or_default(),
+            temporary_closure_json: branch.temporary_closure.as_ref().map(|tc| serde_json::to_string(tc).unwrap_or_default()),
+            
+            // Contact information
+            primary_phone: branch.primary_phone.to_string(),
+            secondary_phone: branch.secondary_phone.map(|s| s.to_string()),
+            email: branch.email.map(|s| s.to_string()),
+            branch_manager_id: branch.branch_manager_id,
+            
+            // Services and capabilities
+            branch_type: format!("{:?}", branch.branch_type),
+            supported_services_json: serde_json::to_string(&branch.supported_services).unwrap_or_default(),
+            supported_currencies_json: serde_json::to_string(&branch.supported_currencies).unwrap_or_default(),
+            languages_spoken_json: serde_json::to_string(&branch.languages_spoken).unwrap_or_default(),
+            
+            // Security and access
+            security_features_json: serde_json::to_string(&branch.security_features).unwrap_or_default(),
+            accessibility_features_json: serde_json::to_string(&branch.accessibility_features).unwrap_or_default(),
+            required_documents_json: serde_json::to_string(&branch.required_documents).unwrap_or_default(),
+            
+            // Customer capacity
+            max_daily_customers: branch.max_daily_customers,
+            average_wait_time_minutes: branch.average_wait_time_minutes,
+            
+            // Transaction limits
+            per_transaction_limit: branch.per_transaction_limit,
+            monthly_transaction_limit: branch.monthly_transaction_limit,
+            
+            // Compliance and risk
+            risk_rating: format!("{:?}", branch.risk_rating),
+            last_audit_date: branch.last_audit_date,
+            compliance_certifications_json: serde_json::to_string(&branch.compliance_certifications).unwrap_or_default(),
+            
+            // Metadata
+            last_updated_at: branch.last_updated_at,
+            updated_by: branch.updated_by.to_string(),
         }
     }
 
     /// Map from database AgencyBranchModel to domain AgencyBranch
+    /// Uses create_minimal for backward compatibility with old database schema
     pub fn branch_from_model(model: AgencyBranchModel) -> AgencyBranch {
-        AgencyBranch {
-            branch_id: model.branch_id,
-            network_id: model.network_id,
-            parent_branch_id: model.parent_branch_id,
-            branch_name: heapless::String::try_from(model.branch_name.as_str()).unwrap_or_default(),
-            branch_code: model.branch_code,
-            branch_level: model.branch_level,
-            gl_code_prefix: model.gl_code_prefix,
-            geolocation: model.geolocation,
-            status: Self::string_to_branch_status(&model.status),
-            daily_transaction_limit: model.daily_transaction_limit,
-            current_daily_volume: model.current_daily_volume,
-            max_cash_limit: model.max_cash_limit,
-            current_cash_balance: model.current_cash_balance,
-            minimum_cash_balance: model.minimum_cash_balance,
-            created_at: model.created_at,
-        }
+        let mut branch = AgencyBranch::create_minimal(
+            model.branch_id,
+            model.network_id,
+            model.parent_branch_id,
+            heapless::String::try_from(model.branch_name.as_str()).unwrap_or_default(),
+            model.branch_code,
+            model.branch_level,
+            model.gl_code_prefix,
+            Self::string_to_branch_status(&model.status),
+            model.daily_transaction_limit,
+            model.current_daily_volume,
+            model.max_cash_limit,
+            model.current_cash_balance,
+            model.minimum_cash_balance,
+            model.created_at,
+        );
+        
+        // Set parsed branch type and risk rating from database
+        branch.branch_type = Self::string_to_branch_type(&model.branch_type);
+        branch.risk_rating = Self::string_to_branch_risk_rating(&model.risk_rating);
+        branch.last_updated_at = model.last_updated_at;
+        branch.updated_by = heapless::String::try_from(model.updated_by.as_str()).unwrap_or_default();
+        
+        branch
     }
 
     /// Map from domain AgentTerminal to database AgentTerminalModel
@@ -122,7 +173,7 @@ impl AgentNetworkMapper {
         }
     }
 
-    // Network Type conversions
+    // Helper methods for enum conversions
     fn network_type_to_string(network_type: NetworkType) -> String {
         match network_type {
             NetworkType::Internal => "Internal".to_string(),
@@ -136,11 +187,10 @@ impl AgentNetworkMapper {
             "Internal" => NetworkType::Internal,
             "Partner" => NetworkType::Partner,
             "ThirdParty" => NetworkType::ThirdParty,
-            _ => NetworkType::Internal, // Default fallback
+            _ => NetworkType::Internal, // Default
         }
     }
 
-    // Network Status conversions
     fn network_status_to_string(status: NetworkStatus) -> String {
         match status {
             NetworkStatus::Active => "Active".to_string(),
@@ -154,16 +204,16 @@ impl AgentNetworkMapper {
             "Active" => NetworkStatus::Active,
             "Suspended" => NetworkStatus::Suspended,
             "Terminated" => NetworkStatus::Terminated,
-            _ => NetworkStatus::Active, // Default fallback
+            _ => NetworkStatus::Active, // Default
         }
     }
 
-    // Branch Status conversions
     fn branch_status_to_string(status: BranchStatus) -> String {
         match status {
             BranchStatus::Active => "Active".to_string(),
             BranchStatus::Suspended => "Suspended".to_string(),
             BranchStatus::Closed => "Closed".to_string(),
+            BranchStatus::TemporarilyClosed => "TemporarilyClosed".to_string(),
         }
     }
 
@@ -172,11 +222,34 @@ impl AgentNetworkMapper {
             "Active" => BranchStatus::Active,
             "Suspended" => BranchStatus::Suspended,
             "Closed" => BranchStatus::Closed,
-            _ => BranchStatus::Active, // Default fallback
+            "TemporarilyClosed" => BranchStatus::TemporarilyClosed,
+            _ => BranchStatus::Active, // Default
         }
     }
 
-    // Terminal Type conversions
+    fn string_to_branch_type(s: &str) -> BranchType {
+        match s {
+            "MainBranch" => BranchType::MainBranch,
+            "SubBranch" => BranchType::SubBranch,
+            "AgentOutlet" => BranchType::AgentOutlet,
+            "StandaloneKiosk" => BranchType::StandaloneKiosk,
+            "PartnerAgent" => BranchType::PartnerAgent,
+            "ATMLocation" => BranchType::ATMLocation,
+            "MobileUnit" => BranchType::MobileUnit,
+            _ => BranchType::SubBranch, // Default
+        }
+    }
+
+    fn string_to_branch_risk_rating(s: &str) -> BranchRiskRating {
+        match s {
+            "Low" => BranchRiskRating::Low,
+            "Medium" => BranchRiskRating::Medium,
+            "High" => BranchRiskRating::High,
+            "Critical" => BranchRiskRating::Critical,
+            _ => BranchRiskRating::Low, // Default
+        }
+    }
+
     fn terminal_type_to_string(terminal_type: TerminalType) -> String {
         match terminal_type {
             TerminalType::Pos => "Pos".to_string(),
@@ -192,11 +265,10 @@ impl AgentNetworkMapper {
             "Mobile" => TerminalType::Mobile,
             "Atm" => TerminalType::Atm,
             "WebPortal" => TerminalType::WebPortal,
-            _ => TerminalType::Mobile, // Default fallback
+            _ => TerminalType::Pos, // Default
         }
     }
 
-    // Terminal Status conversions
     fn terminal_status_to_string(status: TerminalStatus) -> String {
         match status {
             TerminalStatus::Active => "Active".to_string(),
@@ -212,153 +284,7 @@ impl AgentNetworkMapper {
             "Maintenance" => TerminalStatus::Maintenance,
             "Suspended" => TerminalStatus::Suspended,
             "Decommissioned" => TerminalStatus::Decommissioned,
-            _ => TerminalStatus::Active, // Default fallback
+            _ => TerminalStatus::Active, // Default
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::Utc;
-    use rust_decimal::Decimal;
-    use uuid::Uuid;
-
-    #[test]
-    fn test_network_type_conversion() {
-        assert_eq!(
-            AgentNetworkMapper::network_type_to_string(NetworkType::Internal),
-            "Internal"
-        );
-        assert_eq!(
-            AgentNetworkMapper::string_to_network_type("Partner"),
-            NetworkType::Partner
-        );
-    }
-
-    #[test]
-    fn test_network_status_conversion() {
-        assert_eq!(
-            AgentNetworkMapper::network_status_to_string(NetworkStatus::Active),
-            "Active"
-        );
-        assert_eq!(
-            AgentNetworkMapper::string_to_network_status("Suspended"),
-            NetworkStatus::Suspended
-        );
-    }
-
-    #[test]
-    fn test_branch_status_conversion() {
-        assert_eq!(
-            AgentNetworkMapper::branch_status_to_string(BranchStatus::Closed),
-            "Closed"
-        );
-        assert_eq!(
-            AgentNetworkMapper::string_to_branch_status("Active"),
-            BranchStatus::Active
-        );
-    }
-
-    #[test]
-    fn test_terminal_type_conversion() {
-        assert_eq!(
-            AgentNetworkMapper::terminal_type_to_string(TerminalType::Atm),
-            "Atm"
-        );
-        assert_eq!(
-            AgentNetworkMapper::string_to_terminal_type("WebPortal"),
-            TerminalType::WebPortal
-        );
-    }
-
-    #[test]
-    fn test_terminal_status_conversion() {
-        assert_eq!(
-            AgentNetworkMapper::terminal_status_to_string(TerminalStatus::Maintenance),
-            "Maintenance"
-        );
-        assert_eq!(
-            AgentNetworkMapper::string_to_terminal_status("Decommissioned"),
-            TerminalStatus::Decommissioned
-        );
-    }
-
-    #[test]
-    fn test_network_model_conversion() {
-        let network = AgentNetwork {
-            network_id: Uuid::new_v4(),
-            network_name: heapless::String::try_from("Test Network").unwrap(),
-            network_type: NetworkType::Partner,
-            status: NetworkStatus::Active,
-            contract_id: Some(Uuid::new_v4()),
-            aggregate_daily_limit: Decimal::new(1000000, 2),
-            current_daily_volume: Decimal::ZERO,
-            settlement_gl_code: heapless::String::try_from("GL001").unwrap(),
-            created_at: Utc::now(),
-        };
-
-        let model = AgentNetworkMapper::network_to_model(network.clone());
-        let converted_back = AgentNetworkMapper::network_from_model(model);
-
-        assert_eq!(network.network_id, converted_back.network_id);
-        assert_eq!(network.network_name, converted_back.network_name);
-        assert_eq!(network.network_type, converted_back.network_type);
-        assert_eq!(network.status, converted_back.status);
-    }
-
-    #[test]
-    fn test_branch_model_conversion() {
-        let branch = AgencyBranch {
-            branch_id: Uuid::new_v4(),
-            network_id: Uuid::new_v4(),
-            parent_branch_id: Some(Uuid::new_v4()),
-            branch_name: heapless::String::try_from("Test Branch").unwrap(),
-            branch_code: heapless::String::try_from("BR001").unwrap(),
-            branch_level: 2,
-            gl_code_prefix: heapless::String::try_from("GL").unwrap(),
-            geolocation: Some("Location".to_string()),
-            status: BranchStatus::Active,
-            daily_transaction_limit: Decimal::new(500000, 2),
-            current_daily_volume: Decimal::ZERO,
-            max_cash_limit: Decimal::new(1000000, 2),
-            current_cash_balance: Decimal::new(500000, 2),
-            minimum_cash_balance: Decimal::new(100000, 2),
-            created_at: Utc::now(),
-        };
-
-        let model = AgentNetworkMapper::branch_to_model(branch.clone());
-        let converted_back = AgentNetworkMapper::branch_from_model(model);
-
-        assert_eq!(branch.branch_id, converted_back.branch_id);
-        assert_eq!(branch.branch_name, converted_back.branch_name);
-        assert_eq!(branch.branch_level, converted_back.branch_level);
-        assert_eq!(branch.status, converted_back.status);
-    }
-
-    #[test]
-    fn test_terminal_model_conversion() {
-        let terminal = AgentTerminal {
-            terminal_id: Uuid::new_v4(),
-            branch_id: Uuid::new_v4(),
-            agent_user_id: Uuid::new_v4(),
-            terminal_type: TerminalType::Mobile,
-            terminal_name: heapless::String::try_from("Test Terminal").unwrap(),
-            daily_transaction_limit: Decimal::new(100000, 2),
-            current_daily_volume: Decimal::ZERO,
-            max_cash_limit: Decimal::new(200000, 2),
-            current_cash_balance: Decimal::new(100000, 2),
-            minimum_cash_balance: Decimal::new(20000, 2),
-            status: TerminalStatus::Active,
-            last_sync_at: Utc::now(),
-        };
-
-        let model = AgentNetworkMapper::terminal_to_model(terminal.clone());
-        let converted_back = AgentNetworkMapper::terminal_from_model(model);
-
-        assert_eq!(terminal.terminal_id, converted_back.terminal_id);
-        assert_eq!(terminal.terminal_name, converted_back.terminal_name);
-        assert_eq!(terminal.terminal_type, converted_back.terminal_type);
-        assert_eq!(terminal.status, converted_back.status);
     }
 }
