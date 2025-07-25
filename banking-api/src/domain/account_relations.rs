@@ -1,4 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -46,8 +47,7 @@ pub struct UltimateBeneficiary {
     pub beneficiary_customer_id: Uuid,
     pub ownership_percentage: Option<Decimal>,
     pub control_type: ControlType,
-    #[validate(length(max = 500))]
-    pub description: Option<String>,
+    pub description: Option<HeaplessString<256>>,
     pub status: UboStatus,
     pub verification_status: VerificationStatus,
     pub created_at: DateTime<Utc>,
