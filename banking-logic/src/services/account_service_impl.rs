@@ -4,6 +4,9 @@ use chrono::Utc;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
+#[cfg(test)]
+use heapless::String as HeaplessString;
+
 use banking_api::{
     BankingResult, Account, AccountStatus,
     service::AccountService,
@@ -42,7 +45,7 @@ impl AccountService for AccountServiceImpl {
         self.validate_account_data(&account).await?;
 
         // Validate product code with catalog
-        self.validate_product_code(account.product_code_as_str()).await?;
+        self.validate_product_code(account.product_code.as_str()).await?;
 
         // Apply product-specific defaults
         account = self.apply_product_defaults(account).await?;
@@ -195,14 +198,14 @@ impl AccountService for AccountServiceImpl {
         // Fetch latest product rules
         let _product_rules = self
             .product_catalog_client
-            .get_product_rules(account.product_code_as_str())
+            .get_product_rules(account.product_code.as_str())
             .await?;
 
         // Update account with any product-specific changes
         // This might include dormancy thresholds, fee schedules, etc.
         tracing::info!(
             "Refreshed product rules for account {} with product code {}",
-            account_id, account.product_code_as_str()
+            account_id, account.product_code.as_str()
         );
 
         // In production, this would update specific fields based on product rules
@@ -275,7 +278,7 @@ impl AccountServiceImpl {
     /// Validate account data according to business rules
     async fn validate_account_data(&self, account: &Account) -> BankingResult<()> {
         // Product code validation
-        if account.product_code_as_str().trim().is_empty() {
+        if account.product_code.as_str().trim().is_empty() {
             return Err(banking_api::BankingError::ValidationError {
                 field: "product_code".to_string(),
                 message: "Product code is required".to_string(),
@@ -283,11 +286,15 @@ impl AccountServiceImpl {
         }
 
         // Currency validation
-        let currency_str = std::str::from_utf8(&account.currency)
-            .map_err(|_| banking_api::BankingError::ValidationError {
+        let currency_str = account.currency.as_str();
+        
+        // Check length and valid characters
+        if currency_str.len() != 3 {
+            return Err(banking_api::BankingError::ValidationError {
                 field: "currency".to_string(),
-                message: "Currency must be a 3-character ISO code".to_string(),
-            })?;
+                message: "Currency must be exactly 3 characters".to_string(),
+            });
+        }
         
         // Check for null bytes or invalid characters (not all uppercase letters)
         if currency_str.contains('\0') || !currency_str.chars().all(|c| c.is_ascii_alphabetic() && c.is_uppercase()) {
@@ -350,7 +357,7 @@ impl AccountServiceImpl {
     async fn apply_product_defaults(&self, mut account: Account) -> BankingResult<Account> {
         let product_rules = self
             .product_catalog_client
-            .get_product_rules(account.product_code_as_str())
+            .get_product_rules(account.product_code.as_str())
             .await?;
 
         // Apply dormancy threshold if not set
@@ -469,7 +476,7 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.product_code = [0u8; 12]; // Manually set to all nulls for empty product code
+        invalid_account.product_code = HeaplessString::try_from("").unwrap(); // Empty product code
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
@@ -488,7 +495,7 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        let _ = invalid_account.set_product_code_from_str("   "); // Should fail validation
+        let _ = invalid_account.set_product_code("   "); // Should fail validation
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
@@ -507,13 +514,13 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.currency = [b'U', b'S', 0]; // Invalid: only 2 characters, padded with null
+        invalid_account.currency = HeaplessString::try_from("US").unwrap(); // Invalid: only 2 characters
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
         if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
             assert_eq!(field, "currency");
-            assert_eq!(message, "Currency must be a 3-character ISO code");
+            assert_eq!(message, "Currency must be exactly 3 characters");
         } else {
             panic!("Expected ValidationError for short currency code");
         }
@@ -526,8 +533,7 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.currency = [b'U', b'S', b'D']; // This would actually be valid, so let's use invalid chars
-        invalid_account.currency = [b'u', b's', b'd']; // Invalid: lowercase
+        invalid_account.currency = HeaplessString::try_from("usd").unwrap(); // Invalid: lowercase
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
@@ -535,7 +541,7 @@ mod tests {
             assert_eq!(field, "currency");
             assert_eq!(message, "Currency must be a 3-character ISO code");
         } else {
-            panic!("Expected ValidationError for long currency code");
+            panic!("Expected ValidationError for lowercase currency code");
         }
     }
 
@@ -546,13 +552,13 @@ mod tests {
         let service = AccountServiceImpl::new(mock_repo, mock_catalog);
 
         let mut invalid_account = create_valid_test_account();
-        invalid_account.currency = [0, 0, 0]; // Invalid: all null bytes
+        invalid_account.currency = HeaplessString::try_from("").unwrap(); // Invalid: empty currency
 
         let result = service.validate_account_data(&invalid_account).await;
         assert!(result.is_err());
         if let Err(banking_api::BankingError::ValidationError { field, message }) = result {
             assert_eq!(field, "currency");
-            assert_eq!(message, "Currency must be a 3-character ISO code");
+            assert_eq!(message, "Currency must be exactly 3 characters");
         } else {
             panic!("Expected ValidationError for empty currency");
         }
@@ -791,16 +797,13 @@ mod tests {
 
     // Helper function to create valid test account
     fn create_valid_test_account() -> Account {
-        let mut product_code = [0u8; 12];
-        product_code[..6].copy_from_slice(b"SAV001");
-        
         Account {
             account_id: Uuid::new_v4(),
-            product_code,
+            product_code: HeaplessString::try_from("SAV001").unwrap(),
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
-            currency: [b'U', b'S', b'D'],
+            currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
             domicile_branch_id: Uuid::new_v4(),
             current_balance: Decimal::new(1000, 2),
@@ -1043,16 +1046,13 @@ mod tests {
     // Helper functions for creating test data
     
     fn create_test_account_model(account_type: AccountType, current_balance: Decimal, overdraft_limit: Option<Decimal>) -> banking_db::models::AccountModel {
-        let mut product_code = [0u8; 12];
-        product_code[..7].copy_from_slice(b"TEST001");
-        
         banking_db::models::AccountModel {
             account_id: Uuid::new_v4(),
-            product_code,
+            product_code: HeaplessString::try_from("TEST001").unwrap(),
             account_type,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
-            currency: [b'U', b'S', b'D'],
+            currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
             domicile_branch_id: Uuid::new_v4(),
             current_balance,
@@ -1085,16 +1085,13 @@ mod tests {
     }
 
     fn create_test_loan_account_model(original_principal: Decimal, outstanding_principal: Decimal, current_balance: Decimal) -> banking_db::models::AccountModel {
-        let mut product_code = [0u8; 12];
-        product_code[..7].copy_from_slice(b"LOAN001");
-        
         banking_db::models::AccountModel {
             account_id: Uuid::new_v4(),
-            product_code,
+            product_code: HeaplessString::try_from("LOAN001").unwrap(),
             account_type: AccountType::Loan,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
-            currency: [b'U', b'S', b'D'],
+            currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
             domicile_branch_id: Uuid::new_v4(),
             current_balance,

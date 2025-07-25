@@ -151,10 +151,11 @@ impl TransactionService for TransactionServiceImpl {
             transaction_id: Uuid::new_v4(),
             account_id: original.account_id,
             transaction_code: {
-                let rev_code = format!("REV_{}", original.transaction_code_as_str());
-                let mut code_array = [0u8; 8];
-                code_array[..rev_code.len().min(8)].copy_from_slice(rev_code.as_bytes());
-                code_array
+                let rev_code = format!("REV_{}", original.transaction_code.as_str());
+                HeaplessString::try_from(rev_code.as_str()).map_err(|_| BankingError::ValidationError {
+                    field: "transaction_code".to_string(),
+                    message: "Reversal transaction code too long".to_string(),
+                })?
             },
             transaction_type: match original.transaction_type {
                 TransactionType::Credit => TransactionType::Debit,
@@ -438,7 +439,7 @@ impl TransactionServiceImpl {
             .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
 
         // Get product rules from catalog
-        match self.product_catalog_client.get_product_rules(account.product_code_as_str()).await {
+        match self.product_catalog_client.get_product_rules(account.product_code.as_str()).await {
             Ok(product_rules) => {
                 // Check per-transaction limits
                 if let Some(per_txn_limit) = product_rules.per_transaction_limit {
@@ -536,9 +537,9 @@ impl TransactionServiceImpl {
             .await?;
 
         // Set GL code if not provided
-        if transaction.gl_code_as_str().is_empty() {
+        if transaction.gl_code.as_str().is_empty() {
             let gl_code_str = self.generate_gl_code(&account, transaction).await?;
-            transaction.set_gl_code_from_str(&gl_code_str).map_err(|e| 
+            transaction.set_gl_code(&gl_code_str).map_err(|e| 
                 banking_api::BankingError::ValidationError {
                     field: "gl_code".to_string(),
                     message: e.to_string(),
@@ -565,10 +566,7 @@ impl TransactionServiceImpl {
     /// Generate GL code based on account and transaction
     async fn generate_gl_code(&self, account: &banking_db::models::AccountModel, _transaction: &Transaction) -> BankingResult<String> {
         // In production, this would be more sophisticated
-        let product_code_str = {
-            let end = account.product_code.iter().position(|&b| b == 0).unwrap_or(12);
-            std::str::from_utf8(&account.product_code[..end]).unwrap_or("")
-        };
+        let product_code_str = account.product_code.as_str();
         Ok(format!("{product_code_str}001"))
     }
 

@@ -1,25 +1,17 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub account_id: Uuid,
-    #[serde(
-        serialize_with = "serialize_product_code",
-        deserialize_with = "deserialize_product_code"
-    )]
-    pub product_code: [u8; 12],
+    pub product_code: HeaplessString<12>,
     pub account_type: AccountType,
     pub account_status: AccountStatus,
     pub signing_condition: SigningCondition,
-    #[serde(
-        serialize_with = "serialize_currency",
-        deserialize_with = "deserialize_currency"
-    )]
-    pub currency: [u8; 3],
+    pub currency: HeaplessString<3>,
     pub open_date: NaiveDate,
     pub domicile_branch_id: Uuid,
     
@@ -233,99 +225,12 @@ pub struct PlaceHoldRequest {
     pub source_reference: Option<HeaplessString<100>>,
 }
 
-// Currency serialization helpers for ISO 4217 compliance
-fn serialize_currency<S>(currency: &[u8; 3], serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let currency_str = std::str::from_utf8(currency)
-        .map_err(|_| serde::ser::Error::custom("Invalid UTF-8 in currency code"))?;
-    serializer.serialize_str(currency_str)
-}
 
-fn deserialize_currency<'de, D>(deserializer: D) -> Result<[u8; 3], D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let currency_str = String::deserialize(deserializer)?;
-    if currency_str.len() != 3 {
-        return Err(serde::de::Error::custom(format!(
-            "Currency code must be exactly 3 characters, got {}",
-            currency_str.len()
-        )));
-    }
-    
-    let currency_bytes = currency_str.as_bytes();
-    if !currency_bytes.iter().all(|&b| b.is_ascii_alphabetic() && b.is_ascii_uppercase()) {
-        return Err(serde::de::Error::custom(
-            "Currency code must contain only uppercase ASCII letters"
-        ));
-    }
-    
-    Ok([currency_bytes[0], currency_bytes[1], currency_bytes[2]])
-}
-
-// Product code serialization helpers for banking product codes (up to 12 chars)
-fn serialize_product_code<S>(product_code: &[u8; 12], serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    // Find the actual length by looking for null terminator or end
-    let end = product_code.iter().position(|&b| b == 0).unwrap_or(12);
-    let product_str = std::str::from_utf8(&product_code[..end])
-        .map_err(|_| serde::ser::Error::custom("Invalid UTF-8 in product code"))?;
-    serializer.serialize_str(product_str)
-}
-
-fn deserialize_product_code<'de, D>(deserializer: D) -> Result<[u8; 12], D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let product_str = String::deserialize(deserializer)?;
-    if product_str.len() > 12 {
-        return Err(serde::de::Error::custom(format!(
-            "Product code cannot exceed 12 characters, got {}",
-            product_str.len()
-        )));
-    }
-    
-    if product_str.is_empty() {
-        return Err(serde::de::Error::custom(
-            "Product code cannot be empty"
-        ));
-    }
-    
-    let product_bytes = product_str.as_bytes();
-    if !product_bytes.iter().all(|&b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
-        return Err(serde::de::Error::custom(
-            "Product code must contain only alphanumeric characters, underscores, or hyphens"
-        ));
-    }
-    
-    let mut array = [0u8; 12];
-    array[..product_bytes.len()].copy_from_slice(product_bytes);
-    Ok(array)
-}
 
 impl Account {
-    /// Convert product_code array to string for use in APIs
-    pub fn product_code_as_str(&self) -> &str {
-        let end = self.product_code.iter().position(|&b| b == 0).unwrap_or(12);
-        std::str::from_utf8(&self.product_code[..end]).unwrap_or("")
-    }
-    
-    /// Create Account with product_code from string
-    pub fn set_product_code_from_str(&mut self, product_code: &str) -> Result<(), &'static str> {
-        if product_code.len() > 12 {
-            return Err("Product code too long");
-        }
-        if product_code.is_empty() {
-            return Err("Product code cannot be empty");
-        }
-        
-        let mut array = [0u8; 12];
-        array[..product_code.len()].copy_from_slice(product_code.as_bytes());
-        self.product_code = array;
+    /// Set product code from string with validation
+    pub fn set_product_code(&mut self, product_code: &str) -> Result<(), &'static str> {
+        self.product_code = HeaplessString::try_from(product_code).map_err(|_| "Product code too long")?;
         Ok(())
     }
 }
@@ -335,29 +240,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_product_code_array_efficiency() {
+    fn test_product_code_heapless_efficiency() {
         use std::mem;
         
-        // Compare memory sizes between array and string
+        // Compare memory sizes between HeaplessString and String
         let string_product = String::from("SAVP0001");
-        let mut array_product = [0u8; 12];
-        array_product[..8].copy_from_slice(b"SAVP0001");
+        let heapless_product: HeaplessString<12> = HeaplessString::try_from("SAVP0001").unwrap();
         
         println!("String product code size: {} bytes", mem::size_of_val(&string_product));
-        println!("Array product code size: {} bytes", mem::size_of_val(&array_product));
+        println!("HeaplessString product code size: {} bytes", mem::size_of_val(&heapless_product));
         
-        // Fixed array should be much smaller and predictable
-        assert!(mem::size_of_val(&array_product) < mem::size_of_val(&string_product));
-        assert_eq!(mem::size_of_val(&array_product), 12); // Always exactly 12 bytes
+        // HeaplessString may be similar size to String for longer strings but provides stack allocation
+        // The benefit is predictable memory layout and no heap allocation
+        assert_eq!(mem::size_of_val(&heapless_product), 24); // HeaplessString<12> with capacity info
         
         // Test conversion functions
         let mut account = Account {
             account_id: uuid::Uuid::new_v4(),
-            product_code: array_product,
+            product_code: heapless_product,
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
-            currency: [b'U', b'S', b'D'],
+            currency: HeaplessString::try_from("USD").unwrap(),
             open_date: chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
             domicile_branch_id: uuid::Uuid::new_v4(),
             current_balance: rust_decimal::Decimal::new(10000, 2),
@@ -389,12 +293,12 @@ mod tests {
             updated_by: HeaplessString::try_from("test").unwrap(),
         };
         
-        // Test string conversion
-        assert_eq!(account.product_code_as_str(), "SAVP0001");
+        // Test string access
+        assert_eq!(account.product_code.as_str(), "SAVP0001");
         
         // Test setting from string
-        account.set_product_code_from_str("LNST0123").unwrap();
-        assert_eq!(account.product_code_as_str(), "LNST0123");
+        account.set_product_code("LNST0123").unwrap();
+        assert_eq!(account.product_code.as_str(), "LNST0123");
     }
 
     #[test]
@@ -403,31 +307,33 @@ mod tests {
         
         // Compare memory sizes - our optimization goal
         let string_currency = String::from("USD");
-        let array_currency: [u8; 3] = *b"USD";
+        let heapless_currency: HeaplessString<3> = HeaplessString::try_from("USD").unwrap();
         
         println!("String currency size: {} bytes", mem::size_of_val(&string_currency));
-        println!("Array currency size: {} bytes", mem::size_of_val(&array_currency));
+        println!("HeaplessString currency size: {} bytes", mem::size_of_val(&heapless_currency));
         
-        // String has overhead (capacity, length, pointer), array is just 3 bytes
-        assert!(mem::size_of_val(&array_currency) < mem::size_of_val(&string_currency));
-        assert_eq!(mem::size_of_val(&array_currency), 3);
+        // HeaplessString should be smaller than String for very short strings
+        assert!(mem::size_of_val(&heapless_currency) < mem::size_of_val(&string_currency));
+        // HeaplessString<3> is allocated with capacity + length info 
+        assert_eq!(mem::size_of_val(&heapless_currency), 16);
     }
 
     #[test]
     fn test_currency_validation_and_conversion() {
-        // Test that our currency arrays work as expected
-        let original_currency: [u8; 3] = *b"EUR";
+        // Test that our currency HeaplessStrings work as expected
+        let original_currency: HeaplessString<3> = HeaplessString::try_from("EUR").unwrap();
         
         // Test currency validation
-        let currency_str = std::str::from_utf8(&original_currency).unwrap();
+        let currency_str = original_currency.as_str();
         assert_eq!(currency_str.len(), 3);
         assert_eq!(currency_str, "EUR");
         assert!(currency_str.chars().all(|c| c.is_ascii_uppercase()));
         
         // Test various currency codes
-        let currencies = [*b"USD", *b"GBP", *b"JPY", *b"CAD", *b"XAF"];
-        for currency in currencies.iter() {
-            let currency_str = std::str::from_utf8(currency).unwrap();
+        let currencies = ["USD", "GBP", "JPY", "CAD", "XAF"];
+        for &currency in currencies.iter() {
+            let heapless_currency: HeaplessString<3> = HeaplessString::try_from(currency).unwrap();
+            let currency_str = heapless_currency.as_str();
             assert_eq!(currency_str.len(), 3);
             assert!(currency_str.chars().all(|c| c.is_ascii_alphabetic()));
         }

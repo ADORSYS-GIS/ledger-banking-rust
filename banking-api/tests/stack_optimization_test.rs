@@ -18,15 +18,11 @@ mod stack_optimization_tests {
         // Create account with optimized field types
         let account = Account {
             account_id: Uuid::new_v4(),
-            product_code: {
-                let mut code = [0u8; 12];
-                code[..8].copy_from_slice(b"SAVP0001");
-                code
-            },
+            product_code: HeaplessString::try_from("SAVP0001").unwrap(),
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
-            currency: [b'U', b'S', b'D'],
+            currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
             domicile_branch_id: Uuid::new_v4(),
             current_balance: Decimal::new(150000, 2), // $1500.00
@@ -72,8 +68,8 @@ mod stack_optimization_tests {
         let deserialized: Account = serde_json::from_str(&json).expect("Deserialization should succeed");
         
         // Verify fixed array fields
-        assert_eq!(deserialized.product_code_as_str(), "SAVP0001");
-        let currency_str = std::str::from_utf8(&deserialized.currency).unwrap();
+        assert_eq!(deserialized.product_code.as_str(), "SAVP0001");
+        let currency_str = deserialized.currency.as_str();
         assert_eq!(currency_str, "USD");
         assert!(matches!(deserialized.account_type, AccountType::Savings));
         assert!(matches!(deserialized.account_status, AccountStatus::Active));
@@ -85,14 +81,10 @@ mod stack_optimization_tests {
         let transaction = Transaction {
             transaction_id: Uuid::new_v4(),
             account_id: Uuid::new_v4(),
-            transaction_code: {
-                let mut code = [0u8; 8];
-                code[..6].copy_from_slice(b"DEBIT1");
-                code
-            },
+            transaction_code: HeaplessString::try_from("DEBIT1").unwrap(),
             transaction_type: TransactionType::Debit,
             amount: Decimal::new(25000, 2), // $250.00
-            currency: [b'U', b'S', b'D'],
+            currency: HeaplessString::try_from("USD").unwrap(),
             description: HeaplessString::try_from("ATM withdrawal at Main Branch").unwrap(),
             channel_id: HeaplessString::try_from("ATM").unwrap(),
             terminal_id: Some(Uuid::new_v4()),
@@ -102,11 +94,7 @@ mod stack_optimization_tests {
             status: TransactionStatus::Posted,
             reference_number: HeaplessString::try_from("TXN2024011500123").unwrap(),
             external_reference: Some(HeaplessString::try_from("ATM_REF_456").unwrap()),
-            gl_code: {
-                let mut code = [0u8; 10];
-                code[..9].copy_from_slice(b"GL1100001");
-                code
-            },
+            gl_code: HeaplessString::try_from("GL1100001").unwrap(),
             requires_approval: false,
             approval_status: None,
             risk_score: Some(Decimal::new(15, 2)), // 0.15
@@ -129,8 +117,8 @@ mod stack_optimization_tests {
         assert_eq!(deserialized.description.as_str(), "ATM withdrawal at Main Branch");
         assert_eq!(deserialized.channel_id.as_str(), "ATM");
         assert_eq!(deserialized.reference_number.as_str(), "TXN2024011500123");
-        assert_eq!(deserialized.transaction_code_as_str(), "DEBIT1");
-        assert_eq!(deserialized.gl_code_as_str(), "GL1100001");
+        assert_eq!(deserialized.transaction_code.as_str(), "DEBIT1");
+        assert_eq!(deserialized.gl_code.as_str(), "GL1100001");
     }
 
     #[test]

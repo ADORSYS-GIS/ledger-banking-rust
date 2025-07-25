@@ -218,7 +218,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         let account = AccountMapper::from_model(account_model)?;
 
         // Get product-specific dormancy rules
-        let product_rules = self.product_catalog_client.get_product_rules(account.product_code_as_str()).await?;
+        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
         let threshold_days = account.dormancy_threshold_days
             .unwrap_or(product_rules.default_dormancy_days.unwrap_or(90));
 
@@ -241,7 +241,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             days_inactive,
             threshold_days,
             product_specific_rules: vec![
-                format!("Product: {}", account.product_code_as_str()),
+                format!("Product: {}", account.product_code.as_str()),
                 format!("Threshold: {} days", threshold_days),
             ],
         })
@@ -489,7 +489,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         };
 
         // Get closure fees from product catalog
-        let product_rules = self.product_catalog_client.get_product_rules(account.product_code_as_str()).await?;
+        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
         let closure_fees = product_rules.closure_fee;
 
         // Calculate final amount

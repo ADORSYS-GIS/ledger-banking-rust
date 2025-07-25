@@ -286,9 +286,6 @@ mod tests {
 
     #[test]
     fn test_network_model_conversion() {
-        let mut settlement_gl_code = [0u8; 10];
-        settlement_gl_code[..5].copy_from_slice(b"GL001");
-        
         let network = AgentNetwork {
             network_id: Uuid::new_v4(),
             network_name: heapless::String::try_from("Test Network").unwrap(),
@@ -297,7 +294,7 @@ mod tests {
             contract_id: Some(Uuid::new_v4()),
             aggregate_daily_limit: Decimal::new(1000000, 2),
             current_daily_volume: Decimal::ZERO,
-            settlement_gl_code,
+            settlement_gl_code: heapless::String::try_from("GL001").unwrap(),
             created_at: Utc::now(),
         };
 
@@ -312,20 +309,14 @@ mod tests {
 
     #[test]
     fn test_branch_model_conversion() {
-        let mut branch_code = [0u8; 8];
-        branch_code[..5].copy_from_slice(b"BR001");
-        
-        let mut gl_code_prefix = [0u8; 6];
-        gl_code_prefix[..2].copy_from_slice(b"GL");
-        
         let branch = AgencyBranch {
             branch_id: Uuid::new_v4(),
             network_id: Uuid::new_v4(),
             parent_branch_id: Some(Uuid::new_v4()),
             branch_name: heapless::String::try_from("Test Branch").unwrap(),
-            branch_code,
+            branch_code: heapless::String::try_from("BR001").unwrap(),
             branch_level: 2,
-            gl_code_prefix,
+            gl_code_prefix: heapless::String::try_from("GL").unwrap(),
             geolocation: Some("Location".to_string()),
             status: BranchStatus::Active,
             daily_transaction_limit: Decimal::new(500000, 2),
