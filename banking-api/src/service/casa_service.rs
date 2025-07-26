@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -9,7 +10,8 @@ use crate::{
         OverdraftFacility, OverdraftUtilization, OverdraftInterestCalculation,
         CasaAccountSummary, OverdraftProcessingJob, OverdraftLimitAdjustment,
         CasaTransactionValidation, InterestPostingRecord, InterestType,
-        CompoundingFrequency, ReviewFrequency, CreateOverdraftFacilityRequest
+        CompoundingFrequency, ReviewFrequency, CreateOverdraftFacilityRequest,
+        transaction::TransactionType
     },
 };
 
@@ -74,7 +76,7 @@ pub trait CasaService: Send + Sync {
         adjustment_id: Uuid,
         approved: bool,
         approved_by: Uuid, // References ReferencedPerson.person_id
-        approval_notes: Option<String>,
+        approval_notes: Option<HeaplessString<512>>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<OverdraftLimitAdjustment>;
     
@@ -88,7 +90,7 @@ pub trait CasaService: Send + Sync {
         &self,
         account_id: Uuid,
         transaction_amount: Decimal,
-        transaction_type: String, // "Debit" or "Credit"
+        transaction_type: TransactionType,
         channel: Option<String>,
     ) -> BankingResult<CasaTransactionValidation>;
     

@@ -73,7 +73,7 @@ pub struct WorkflowTransactionApprovalModel {
     pub approver_id: Uuid,
     pub approval_action: String, // Approved, Rejected, Delegated
     pub approved_at: DateTime<Utc>,
-    pub approval_notes: Option<String>,
+    pub approval_notes: Option<HeaplessString<512>>,
     pub approval_method: String, // Manual, Digital, Biometric
     pub approval_location: Option<String>,
     pub approval_device_info: Option<String>, // JSON with device information

@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::domain::customer::{KycStatus, RiskRating};
+use crate::domain::transaction::TransactionType;
+
 /// CASA (Current & Savings Account) specialized functionality
 /// Building upon the Unified Account Model
 /// Overdraft facility configuration and management
@@ -23,8 +26,7 @@ pub struct OverdraftFacility {
     pub review_frequency: ReviewFrequency,
     pub next_review_date: NaiveDate,
     pub security_required: bool,
-    #[validate(length(max = 255))]
-    pub security_details: Option<String>,
+    pub security_details: Option<HeaplessString<255>>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
 }
@@ -129,10 +131,10 @@ pub enum DormancyRisk {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CasaComplianceStatus {
-    pub kyc_status: String,
+    pub kyc_status: KycStatus,
     pub last_kyc_update: Option<NaiveDate>,
-    pub aml_risk_rating: String,
-    pub regulatory_alerts: Vec<String>,
+    pub aml_risk_rating: RiskRating,
+    pub regulatory_alerts: Vec<HeaplessString<256>>,
 }
 
 /// Daily overdraft processing job for EOD
@@ -176,7 +178,7 @@ pub struct OverdraftLimitAdjustment {
     pub approval_status: CasaApprovalStatus,
     pub approved_by: Option<Uuid>, // References ReferencedPerson.person_id
     pub approved_at: Option<DateTime<Utc>>,
-    pub approval_notes: Option<String>,
+    pub approval_notes: Option<HeaplessString<512>>,
     pub effective_date: Option<NaiveDate>,
 }
 
@@ -194,14 +196,14 @@ pub enum CasaApprovalStatus {
 pub struct CasaTransactionValidation {
     pub account_id: Uuid,
     pub transaction_amount: Decimal,
-    pub transaction_type: String, // Debit, Credit
+    pub transaction_type: TransactionType,
     pub current_balance: Decimal,
     pub available_balance: Decimal,
     pub overdraft_limit: Option<Decimal>,
     pub post_transaction_balance: Decimal,
     pub overdraft_utilization: Option<Decimal>,
     pub validation_result: CasaValidationResult,
-    pub validation_messages: Vec<String>,
+    pub validation_messages: Vec<HeaplessString<256>>,
     pub requires_authorization: bool,
     pub authorization_level: Option<AuthorizationLevel>,
 }
@@ -266,6 +268,5 @@ pub struct CreateOverdraftFacilityRequest {
     pub approved_by: Uuid, // References ReferencedPerson.person_id
     pub expiry_date: Option<NaiveDate>,
     pub security_required: bool,
-    #[validate(length(max = 255))]
-    pub security_details: Option<String>,
+    pub security_details: Option<HeaplessString<256>>,
 }
