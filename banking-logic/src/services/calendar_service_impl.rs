@@ -162,11 +162,7 @@ impl CalendarService for CalendarServiceImpl {
         )?;
 
         // Convert to model and save using create_holiday (the method that exists)
-        let holiday_model = CalendarMapper::holiday_to_model(holiday)
-            .map_err(|e| BankingError::ValidationError {
-                field: "holiday".to_string(),
-                message: e.to_string(),
-            })?;
+        let holiday_model = CalendarMapper::holiday_to_model(holiday);
         self.calendar_repository.create_holiday(holiday_model).await?;
 
         Ok(())
