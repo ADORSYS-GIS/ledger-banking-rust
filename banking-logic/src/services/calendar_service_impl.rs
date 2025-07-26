@@ -162,7 +162,11 @@ impl CalendarService for CalendarServiceImpl {
         )?;
 
         // Convert to model and save using create_holiday (the method that exists)
-        let holiday_model = CalendarMapper::holiday_to_model(holiday);
+        let holiday_model = CalendarMapper::holiday_to_model(holiday)
+            .map_err(|e| BankingError::ValidationError {
+                field: "holiday".to_string(),
+                message: e.to_string(),
+            })?;
         self.calendar_repository.create_holiday(holiday_model).await?;
 
         Ok(())
@@ -228,12 +232,15 @@ impl CalendarService for CalendarServiceImpl {
             DateShiftRule::NextBusinessDay
         };
 
-        Ok(BusinessDayCalculation {
-            requested_date: date,
+        BusinessDayCalculation::new(
+            date,
             adjusted_date,
             is_business_day,
             applied_rule,
-            jurisdiction: jurisdiction.to_string(),
+            jurisdiction,
+        ).map_err(|e| BankingError::ValidationError {
+            field: "jurisdiction".to_string(),
+            message: e.to_string(),
         })
     }
 
@@ -274,13 +281,17 @@ impl CalendarService for CalendarServiceImpl {
                 DateShiftRule::NextBusinessDay
             };
 
-            results.push(BusinessDayCalculation {
-                requested_date: date,
+            let calculation = BusinessDayCalculation::new(
+                date,
                 adjusted_date,
                 is_business_day,
                 applied_rule,
-                jurisdiction: jurisdiction.to_string(),
-            });
+                jurisdiction,
+            ).map_err(|e| BankingError::ValidationError {
+                field: "jurisdiction".to_string(),
+                message: e.to_string(),
+            })?;
+            results.push(calculation);
         }
 
         Ok(results)
