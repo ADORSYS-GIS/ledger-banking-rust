@@ -555,7 +555,7 @@ CREATE TABLE transaction_approvals (
     approver_id UUID NOT NULL,
     approval_action VARCHAR(20) NOT NULL CHECK (approval_action IN ('Approved', 'Rejected', 'Delegated')),
     approved_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    approval_notes TEXT,
+    approval_notes VARCHAR(512),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -812,7 +812,7 @@ CREATE TABLE overdraft_limit_adjustments (
     approval_status VARCHAR(30) NOT NULL DEFAULT 'Pending' CHECK (approval_status IN ('Pending', 'Approved', 'Rejected', 'RequiresAdditionalDocuments', 'UnderReview')),
     approved_by UUID REFERENCES referenced_persons(person_id),
     approved_at TIMESTAMP WITH TIME ZONE,
-    approval_notes VARCHAR(500),
+    approval_notes VARCHAR(512),
     effective_date DATE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),

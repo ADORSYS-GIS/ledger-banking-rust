@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -12,7 +13,7 @@ use banking_api::{
         CasaAccountSummary, OverdraftProcessingJob, OverdraftLimitAdjustment,
         CasaTransactionValidation, InterestPostingRecord, InterestType,
         CasaValidationResult, CompoundingFrequency, ReviewFrequency, OverdraftStatus,
-        CreateOverdraftFacilityRequest
+        CreateOverdraftFacilityRequest, transaction::TransactionType
     },
 };
 use banking_db::repository::{AccountRepository, HoldRepository};
@@ -157,7 +158,7 @@ impl CasaService for CasaServiceImpl {
         adjustment_id: Uuid,
         approved: bool,
         approved_by: Uuid, // References ReferencedPerson.person_id
-        approval_notes: Option<String>,
+        approval_notes: Option<HeaplessString<512>>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<OverdraftLimitAdjustment> {
         todo!("Implement overdraft adjustment processing")
@@ -171,11 +172,10 @@ impl CasaService for CasaServiceImpl {
         &self,
         account_id: Uuid,
         transaction_amount: Decimal,
-        transaction_type: String,
+        transaction_type: TransactionType,
         channel: Option<String>,
     ) -> BankingResult<CasaTransactionValidation> {
-        tracing::debug!("Validating CASA transaction: account={}, amount={}, type={}", 
-                       account_id, transaction_amount, transaction_type);
+        tracing::debug!("Validating CASA transaction: account={account_id}, amount={transaction_amount}, type={transaction_type:?}");
 
         // Get account details
         let account = self.account_repository
