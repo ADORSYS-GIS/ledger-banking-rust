@@ -845,6 +845,148 @@ CREATE TABLE overdraft_interest_calculations (
 );
 
 -- =============================================================================
+-- CHANNEL MANAGEMENT TABLES
+-- =============================================================================
+
+-- Channels for transaction processing
+CREATE TABLE channels (
+    channel_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    channel_code VARCHAR(50) NOT NULL UNIQUE,
+    channel_name VARCHAR(255) NOT NULL,
+    channel_type VARCHAR(30) NOT NULL CHECK (channel_type IN ('BranchTeller', 'ATM', 'InternetBanking', 'MobileApp', 'AgentTerminal', 'USSD', 'ApiGateway')),
+    status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive', 'Maintenance', 'Suspended')),
+    daily_limit DECIMAL(15,2),
+    per_transaction_limit DECIMAL(15,2),
+    supported_currencies VARCHAR(3)[] NOT NULL DEFAULT ARRAY['USD'], -- Array of 3-character currency codes
+    requires_additional_auth BOOLEAN NOT NULL DEFAULT FALSE,
+    fee_schedule_id UUID,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_channel_limits CHECK (daily_limit IS NULL OR per_transaction_limit IS NULL OR daily_limit >= per_transaction_limit)
+);
+
+-- Fee schedules for channel-based fee management
+CREATE TABLE fee_schedules (
+    schedule_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    schedule_name VARCHAR(100) NOT NULL,
+    channel_id UUID REFERENCES channels(channel_id),
+    effective_date DATE NOT NULL,
+    expiry_date DATE,
+    currency VARCHAR(3) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_fee_schedule_dates CHECK (expiry_date IS NULL OR expiry_date > effective_date),
+    CONSTRAINT ck_currency_format CHECK (LENGTH(currency) = 3 AND currency = UPPER(currency))
+);
+
+-- Fee items within fee schedules
+CREATE TABLE fee_items (
+    fee_item_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    schedule_id UUID NOT NULL REFERENCES fee_schedules(schedule_id) ON DELETE CASCADE,
+    fee_code VARCHAR(20) NOT NULL,
+    fee_name VARCHAR(100) NOT NULL,
+    fee_type VARCHAR(30) NOT NULL CHECK (fee_type IN ('TransactionFee', 'MaintenanceFee', 'ServiceFee', 'PenaltyFee', 'ProcessingFee', 'ComplianceFee', 'InterchangeFee', 'NetworkFee')),
+    calculation_method VARCHAR(20) NOT NULL CHECK (calculation_method IN ('Fixed', 'Percentage', 'Tiered', 'BalanceBased', 'RuleBased', 'Hybrid')),
+    fee_amount DECIMAL(15,2),
+    fee_percentage DECIMAL(8,6),
+    minimum_fee DECIMAL(15,2),
+    maximum_fee DECIMAL(15,2),
+    applies_to_transaction_types VARCHAR(20)[] DEFAULT ARRAY[]::VARCHAR[], -- Array of transaction type codes
+    is_waivable BOOLEAN NOT NULL DEFAULT FALSE,
+    requires_approval_for_waiver BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_fee_item_amounts CHECK (
+        (calculation_method = 'Fixed' AND fee_amount IS NOT NULL) OR
+        (calculation_method = 'Percentage' AND fee_percentage IS NOT NULL) OR
+        (calculation_method NOT IN ('Fixed', 'Percentage'))
+    ),
+    CONSTRAINT ck_fee_percentage_valid CHECK (fee_percentage IS NULL OR (fee_percentage >= 0 AND fee_percentage <= 1)),
+    CONSTRAINT ck_fee_limits CHECK (minimum_fee IS NULL OR maximum_fee IS NULL OR maximum_fee >= minimum_fee)
+);
+
+-- Fee tiers for tiered pricing structures
+CREATE TABLE fee_tiers (
+    tier_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fee_item_id UUID NOT NULL REFERENCES fee_items(fee_item_id) ON DELETE CASCADE,
+    tier_name VARCHAR(50) NOT NULL,
+    min_amount DECIMAL(15,2) NOT NULL,
+    max_amount DECIMAL(15,2),
+    fee_amount DECIMAL(15,2),
+    fee_percentage DECIMAL(8,6),
+    tier_order INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_tier_amounts CHECK (max_amount IS NULL OR max_amount > min_amount),
+    CONSTRAINT ck_tier_fee_defined CHECK (fee_amount IS NOT NULL OR fee_percentage IS NOT NULL),
+    CONSTRAINT ck_tier_percentage_valid CHECK (fee_percentage IS NULL OR (fee_percentage >= 0 AND fee_percentage <= 1))
+);
+
+-- Channel reconciliation reports
+CREATE TABLE channel_reconciliation_reports (
+    report_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    channel_id UUID NOT NULL REFERENCES channels(channel_id),
+    reconciliation_date DATE NOT NULL,
+    total_transactions BIGINT NOT NULL DEFAULT 0,
+    total_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(30) NOT NULL DEFAULT 'InProgress' CHECK (status IN ('InProgress', 'Completed', 'Failed', 'RequiresManualReview')),
+    generated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Reconciliation discrepancies
+CREATE TABLE reconciliation_discrepancies (
+    discrepancy_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    report_id UUID NOT NULL REFERENCES channel_reconciliation_reports(report_id) ON DELETE CASCADE,
+    transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
+    description VARCHAR(500) NOT NULL,
+    expected_amount DECIMAL(15,2) NOT NULL,
+    actual_amount DECIMAL(15,2) NOT NULL,
+    difference DECIMAL(15,2) NOT NULL,
+    resolved BOOLEAN NOT NULL DEFAULT FALSE,
+    resolution_notes VARCHAR(1000),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_discrepancy_difference CHECK (difference = expected_amount - actual_amount)
+);
+
+-- Add foreign key constraint for channels fee_schedule_id after fee_schedules table is created
+ALTER TABLE channels ADD CONSTRAINT fk_channels_fee_schedule 
+    FOREIGN KEY (fee_schedule_id) REFERENCES fee_schedules(schedule_id);
+
+-- Indexes for channel tables
+CREATE INDEX idx_channels_code ON channels(channel_code);
+CREATE INDEX idx_channels_type ON channels(channel_type);
+CREATE INDEX idx_channels_status ON channels(status);
+CREATE INDEX idx_fee_schedules_channel ON fee_schedules(channel_id);
+CREATE INDEX idx_fee_schedules_active ON fee_schedules(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_fee_schedules_effective ON fee_schedules(effective_date);
+CREATE INDEX idx_fee_items_schedule ON fee_items(schedule_id);
+CREATE INDEX idx_fee_items_code ON fee_items(fee_code);
+CREATE INDEX idx_fee_items_type ON fee_items(fee_type);
+CREATE INDEX idx_fee_tiers_item ON fee_tiers(fee_item_id);
+CREATE INDEX idx_fee_tiers_order ON fee_tiers(tier_order);
+CREATE INDEX idx_reconciliation_reports_channel ON channel_reconciliation_reports(channel_id);
+CREATE INDEX idx_reconciliation_reports_date ON channel_reconciliation_reports(reconciliation_date);
+CREATE INDEX idx_reconciliation_discrepancies_report ON reconciliation_discrepancies(report_id);
+CREATE INDEX idx_reconciliation_discrepancies_transaction ON reconciliation_discrepancies(transaction_id);
+
+-- Triggers for updated_at timestamps
+CREATE TRIGGER update_channels_updated_at
+    BEFORE UPDATE ON channels
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_fee_schedules_updated_at
+    BEFORE UPDATE ON fee_schedules
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================================
 -- LOAN SPECIALIZED TABLES
 -- =============================================================================
 
