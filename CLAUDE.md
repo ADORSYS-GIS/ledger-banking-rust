@@ -80,6 +80,13 @@ let customer = Customer::new(uuid, customer_type, name, id_type, id_number, risk
 - Validate string lengths at build time using the builder's validation
 - Add `#[allow(deprecated)]` only when maintaining legacy code
 
+**Clippy Compliance Guidelines:**
+- **Inline Format Arguments**: Always use inline format arguments in format! macros
+  - ❌ Avoid: `format!("Terminal {} not found in hierarchy", terminal_id)`
+  - ✅ Prefer: `format!("Terminal {terminal_id} not found in hierarchy")`
+- **Memory Efficiency**: Use appropriate string interpolation for better performance
+- **Readability**: Inline arguments make format strings more readable and maintainable
+
 ### 2. Unified Account Model (UAM) - `banking-api/src/domain/account.rs:8-62`
 **Strengths:**
 - Single flexible table supporting all account types (Savings, Current, Loan)
@@ -232,7 +239,7 @@ let customer = Customer::new(uuid, customer_type, name, id_type, id_number, risk
 **Memory Management:**
 - heapless::String<N> for bounded-length stack-allocated strings
 - blake3 for cryptographic hashing and content-addressable storage
-- Fixed-length byte arrays for banking codes (ISO compliance)
+- HeaplessString for banking codes (ISO compliance)
 
 **Error Handling:**
 - thiserror for structured error types
@@ -288,9 +295,9 @@ let customer = Customer::new(uuid, customer_type, name, id_type, id_number, risk
 
 **Currency Field Strategy:**
 - **Problem**: Currency fields currently use `String` type, forcing heap allocation for 3-character ISO 4217 codes
-- **Solution**: Convert to `[u8; 3]` fixed arrays for stack allocation
+- **Solution**: Convert to `HeaplessString<3>` for stack allocation
 - **Benefits**: 
-  - Memory savings: ~24 bytes per field (String overhead) → 3 bytes
+  - Memory savings: ~24 bytes per field (String overhead) → 3 bytes + small overhead
   - Performance: Faster comparisons, hashing, and copying
   - Type safety: Compile-time size guarantees
   - Cache efficiency: Better memory locality for account/transaction structures
@@ -303,7 +310,7 @@ let customer = Customer::new(uuid, customer_type, name, id_type, id_number, risk
 
 **ISO 4217 Compliance:**
 - All currency codes are exactly 3 ASCII characters (USD, EUR, GBP, XAF, etc.)
-- Fixed-size representation eliminates variable-length string overhead
+- HeaplessString<3> eliminates variable-length string overhead
 - Maintains full compatibility with international banking standards
 - Enables compile-time validation of currency code lengths
 
@@ -335,25 +342,25 @@ let customer = Customer::new(uuid, customer_type, name, id_type, id_number, risk
   - Simplified mappers: Direct enum assignment instead of string conversion
 
 **Progress Summary:**
-- ✅ Currency codes: `String` → `[u8; 3]` (12 fields completed)
+- ✅ Currency codes: `String` → `HeaplessString<3>` (12 fields completed)
 - ✅ Status/type enums: `String` → enum serialization (42 fields completed)
-- ✅ Product/branch/GL codes: `String` → fixed arrays (8 fields completed)
-- ✅ Names/descriptions: `String` → `heapless::String<N>` (35 fields completed)
+- ✅ Product/branch/GL codes: `String` → `HeaplessString<N>` (8 fields completed)
+- ✅ Names/descriptions: `String` → `HeaplessString<N>` (35 fields completed)
 - ✅ Document IDs: `String` → `Blake3::Hash` (5 fields completed)
 
-**Fixed-Length Array Pattern:**
+**Banking Code Pattern:**
 - **Problem**: Banking codes (product_code, branch_code, gl_code, transaction_code) use variable-length strings
-- **Solution**: Convert to fixed-length byte arrays based on banking standards
+- **Solution**: Convert to HeaplessString with appropriate sizes based on banking standards
 - **Implementation**:
-  - Product codes: `[u8; 12]` - Up to 12 characters for product identification
-  - Branch codes: `[u8; 8]` - Standard 8-character branch identifiers
-  - GL codes: `[u8; 10]` - Chart of accounts codes up to 10 characters
-  - Transaction codes: `[u8; 8]` - Banking transaction type codes
+  - Product codes: `HeaplessString<12>` - Up to 12 characters for product identification
+  - Branch codes: `HeaplessString<8>` - Standard 8-character branch identifiers
+  - GL codes: `HeaplessString<10>` - Chart of accounts codes up to 10 characters
+  - Transaction codes: `HeaplessString<8>` - Banking transaction type codes
 - **Benefits**:
   - Memory savings: ~75% reduction per field (String overhead eliminated)
   - Predictable memory layout: Fixed sizes enable better cache optimization
-  - Performance: Direct memory comparisons vs heap-allocated string comparisons
-  - Database efficiency: Fixed-width columns for better query performance
+  - Performance: Stack allocation vs heap-allocated string comparisons
+  - Database efficiency: Consistent field sizing for better query performance
 
 **Bounded String Pattern:**
 - **Problem**: Names and descriptions use unbounded `String` types causing heap fragmentation
@@ -397,8 +404,7 @@ This comprehensive stack optimization aligns with Rust's zero-cost abstraction p
 ### Core Design Principles
 
 **String Type Selection Strategy:**
-- **`[u8; N]`**: For fixed-length ASCII data (currency codes, product IDs, branch codes)
-- **`HeaplessString<N>`**: For variable-length UTF-8 data with known maximum size
+- **`HeaplessString<N>`**: For bounded UTF-8 data with known maximum size (preferred for banking codes, names, descriptions)
 - **`String`**: Only when truly variable/unbounded length is required
 - **Enum**: For known sets of values (currencies, statuses, types)
 
@@ -412,9 +418,9 @@ This comprehensive stack optimization aligns with Rust's zero-cost abstraction p
 
 ```
 Is the data size known at compile time?
-├─ YES → Is it always exactly N bytes?
-│   ├─ YES → Use [u8; N] or custom wrapper type
-│   └─ NO → Use HeaplessString<N> or HeaplessVec<T, N>
+├─ YES → Is it variable-length text data?
+│   ├─ YES → Use HeaplessString<N>
+│   └─ NO → Use appropriate fixed type (enums, primitives)
 └─ NO → Is there a reasonable maximum size?
     ├─ YES → Use HeaplessString<MAX> or HeaplessVec<T, MAX>
     └─ NO → Use String/Vec (heap allocated)
@@ -452,11 +458,11 @@ let accounts: Vec<Account> = vec![];       // OK only if struct is small
 ### Code Generation Rules for Banking System
 
 1. **Default to stack allocation** for structs under 1KB
-2. **Use fixed-size arrays** for data with known length (IDs, codes, currencies)
+2. **Use HeaplessString<N>** for bounded text data (IDs, codes, names, descriptions)
 3. **Prefer HeaplessString** over String when maximum size is known
 4. **Box large structs** (>1KB) when storing in collections or moving frequently
 5. **Use references** (`&T`) for function parameters to avoid unnecessary copies
-6. **Implement custom serialization** for `[u8; N]` fields using banking-specific helpers
+6. **Implement custom serialization** for HeaplessString fields when needed for database compatibility
 7. **Add validation** in constructors for constrained types (currency codes, etc.)
 8. **Use enums** for closed sets of values instead of strings
 9. **Apply builder patterns** for complex construction (>4 parameters)
@@ -468,20 +474,20 @@ let accounts: Vec<Account> = vec![];       // OK only if struct is small
 // BEFORE: Heap allocated, variable size
 pub currency: String,
 
-// AFTER: Stack allocated, fixed size
-pub currency: [u8; 3],  // Exactly 3 ASCII characters
+// AFTER: Stack allocated, bounded size
+pub currency: HeaplessString<3>,
 
 // With validation wrapper
-#[derive(Debug, Copy, Clone)]
-pub struct CurrencyCode([u8; 3]);
+#[derive(Debug, Clone)]
+pub struct CurrencyCode(HeaplessString<3>);
 impl CurrencyCode {
     pub fn new(code: &str) -> Result<Self, &'static str> {
         if code.len() != 3 || !code.is_ascii() {
             return Err("Currency code must be exactly 3 ASCII characters");
         }
-        let mut bytes = [0u8; 3];
-        bytes.copy_from_slice(code.as_bytes());
-        Ok(CurrencyCode(bytes))
+        let heapless_code = HeaplessString::try_from(code)
+            .map_err(|_| "Failed to create currency code")?;
+        Ok(CurrencyCode(heapless_code))
     }
 }
 ```
@@ -489,16 +495,16 @@ impl CurrencyCode {
 **Banking Codes (Product, Branch, GL):**
 ```rust
 // Product codes: Up to 12 characters
-pub product_code: [u8; 12],
+pub product_code: HeaplessString<12>,
 
 // Branch codes: Standard 8-character identifiers  
-pub branch_code: [u8; 8],
+pub branch_code: HeaplessString<8>,
 
 // GL codes: Chart of accounts codes up to 10 characters
-pub gl_code: [u8; 10],
+pub gl_code: HeaplessString<8>,
 
 // Transaction codes: Banking transaction type codes
-pub transaction_code: [u8; 8],
+pub transaction_code: HeaplessString<8>,
 ```
 
 **Bounded Descriptions and Names:**
@@ -539,34 +545,9 @@ pub enum AccountStatus {
 pub account_status: AccountStatus,
 ```
 
-### Serialization Helpers for Banking Types
+### Serialization for Banking Types
 
-```rust
-// For [u8; N] fields representing strings
-fn serialize_fixed_str<S, const N: usize>(
-    bytes: &[u8; N], 
-    serializer: S
-) -> Result<S::Ok, S::Error>
-where S: Serializer {
-    let s = std::str::from_utf8(bytes)
-        .map_err(serde::ser::Error::custom)?
-        .trim_end_matches('\0');  // Remove null padding
-    serializer.serialize_str(s)
-}
-
-fn deserialize_fixed_str<'de, D, const N: usize>(
-    deserializer: D
-) -> Result<[u8; N], D::Error>
-where D: Deserializer<'de> {
-    let s = String::deserialize(deserializer)?;
-    if s.len() > N {
-        return Err(serde::de::Error::custom("String too long"));
-    }
-    let mut bytes = [0u8; N];
-    bytes[..s.len()].copy_from_slice(s.as_bytes());
-    Ok(bytes)
-}
-```
+HeaplessString fields typically serialize directly via Serde without custom helpers. For special cases requiring custom serialization (like database compatibility), implement specific serialization functions as needed.
 
 ### Performance Impact Reference
 
@@ -692,7 +673,7 @@ This pattern ensures the banking system maintains high code quality standards wh
 3. **Dual Database Support**: PostgreSQL + MariaDB abstraction
 4. **High-Performance Caching**: Moka integration for sub-millisecond responses
 5. **Business Day Awareness**: Calendar integration throughout transaction processing
-6. **Stack-Based Memory Optimization**: Comprehensive heap allocation reduction through fixed arrays, bounded strings, and cryptographic hashing
+6. **Stack-Based Memory Optimization**: Comprehensive heap allocation reduction through HeaplessString, bounded strings, and cryptographic hashing
 7. **Builder Pattern Design**: Clippy-compliant domain model construction with fluent APIs and compile-time validation
 
 ## Recommendations for Next Steps
@@ -758,7 +739,7 @@ CREATE TABLE accounts (
 **Rust to PostgreSQL Type Mappings:**
 - `Uuid` (Rust) → `UUID` (PostgreSQL)
 - `String` → `VARCHAR(n)` or `TEXT`
-- `[u8; 3]` (currency) → `VARCHAR(3)` with CHECK constraint
+- `HeaplessString<N>` → `VARCHAR(N)` with appropriate length
 - `Decimal` → `DECIMAL(15,2)` for monetary values
 - `DateTime<Utc>` → `TIMESTAMP WITH TIME ZONE`
 - `NaiveDate` → `DATE`

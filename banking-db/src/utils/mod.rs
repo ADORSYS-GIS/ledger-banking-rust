@@ -28,6 +28,6 @@ where
         "System" => Ok(PersonType::System),
         "Integration" => Ok(PersonType::Integration),
         "Unknown" => Ok(PersonType::Unknown),
-        _ => Err(serde::de::Error::custom(format!("Invalid person type: {}", s))),
+        _ => Err(serde::de::Error::custom(format!("Invalid person type: {s}"))),
     }
 }

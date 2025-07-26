@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use heapless::String as HeaplessString;
 use uuid::Uuid;
 
 use crate::{
@@ -37,7 +38,7 @@ pub trait AccountLifecycleService: Send + Sync {
     
     /// Legacy method - deprecated, use update_account_status with reason_id instead
     #[deprecated(note = "Use update_account_status with reason_id instead")]
-    async fn update_account_status_legacy(&self, account_id: Uuid, new_status: AccountStatus, reason: String, authorized_by: Uuid) -> BankingResult<()>;
+    async fn update_account_status_legacy(&self, account_id: Uuid, new_status: AccountStatus, reason: HeaplessString<500>, authorized_by: Uuid) -> BankingResult<()>;
     async fn get_status_history(&self, account_id: Uuid) -> BankingResult<Vec<StatusChangeRecord>>;
 
     /// Workflow management
@@ -46,13 +47,13 @@ pub trait AccountLifecycleService: Send + Sync {
     async fn update_workflow_status(&self, workflow_id: Uuid, status: crate::domain::WorkflowStatus) -> BankingResult<()>;
     
     /// Workflow step progression
-    async fn advance_workflow_step(&self, workflow_id: Uuid, completed_by: String, notes: Option<String>) -> BankingResult<()>;
+    async fn advance_workflow_step(&self, workflow_id: Uuid, completed_by: Uuid, notes: Option<HeaplessString<500>>) -> BankingResult<()>;
     /// Reject workflow with reason ID validation
-    async fn reject_workflow(&self, workflow_id: Uuid, reason_id: Uuid, additional_details: Option<&str>, rejected_by: String) -> BankingResult<()>;
+    async fn reject_workflow(&self, workflow_id: Uuid, reason_id: Uuid, additional_details: Option<&str>, rejected_by: Uuid) -> BankingResult<()>;
     
     /// Legacy method - deprecated, use reject_workflow with reason_id instead
     #[deprecated(note = "Use reject_workflow with reason_id instead")]
-    async fn reject_workflow_legacy(&self, workflow_id: Uuid, reason: String, rejected_by: String) -> BankingResult<()>;
+    async fn reject_workflow_legacy(&self, workflow_id: Uuid, reason: HeaplessString<500>, rejected_by: Uuid) -> BankingResult<()>;
     
     /// Account lifecycle queries
     async fn find_pending_activations(&self) -> BankingResult<Vec<AccountWorkflow>>;
@@ -64,7 +65,7 @@ pub trait AccountLifecycleService: Send + Sync {
     async fn batch_process_closures(&self, processing_date: chrono::NaiveDate) -> BankingResult<crate::service::MaintenanceReport>;
     
     /// Compliance integration
-    async fn trigger_compliance_check(&self, account_id: Uuid, check_type: String) -> BankingResult<()>;
+    async fn trigger_compliance_check(&self, account_id: Uuid, check_type: ComplianceCheckType) -> BankingResult<()>;
     async fn handle_compliance_result(&self, account_id: Uuid, result: ComplianceCheckResult) -> BankingResult<()>;
 }
 
@@ -72,14 +73,27 @@ pub trait AccountLifecycleService: Send + Sync {
 pub struct ComplianceCheckResult {
     pub check_id: Uuid,
     pub account_id: Uuid,
-    pub check_type: String,
+    pub check_type: ComplianceCheckType,
     pub result: LifecycleComplianceResult,
-    pub details: Option<String>,
+    pub details: Option<HeaplessString<500>>,
     pub performed_at: chrono::DateTime<chrono::Utc>,
     pub requires_manual_review: bool,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ComplianceCheckType {
+    KycVerification,
+    AmlScreening,
+    SanctionsCheck,
+    PepScreening,
+    DocumentVerification,
+    AddressVerification,
+    IdentityVerification,
+    SourceOfFunds,
+    RiskAssessment,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum LifecycleComplianceResult {
     Pass,
     Fail,

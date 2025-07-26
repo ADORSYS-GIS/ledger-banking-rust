@@ -1,12 +1,13 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::Utc;
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use banking_api::{
     BankingResult,
-    service::{AccountLifecycleService, CalendarService},
+    service::{AccountLifecycleService, CalendarService, ComplianceCheckType, ComplianceCheckResult},
     domain::{
         AccountWorkflow, WorkflowType, WorkflowStep, WorkflowStatus,
         AccountOpeningRequest, ClosureRequest, DormancyAssessment,
@@ -14,7 +15,11 @@ use banking_api::{
     },
 };
 use banking_db::repository::{AccountRepository, WorkflowRepository};
-use crate::{mappers::AccountMapper, integration::ProductCatalogClient};
+use crate::{
+    mappers::AccountMapper, 
+    integration::ProductCatalogClient,
+    constants::*,
+};
 
 /// Production implementation of AccountLifecycleService
 /// Handles comprehensive account lifecycle management with workflow orchestration
@@ -56,7 +61,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             workflow_type: WorkflowType::AccountOpening,
             current_step: WorkflowStep::InitiateRequest,
             status: WorkflowStatus::InProgress,
-            initiated_by: request.initiated_by.clone(),
+            initiated_by: request.initiated_by,
             initiated_at: Utc::now(),
             completed_at: None,
             steps_completed: Vec::new(),
@@ -261,10 +266,10 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         // Update account status
         let updated_by = if system_triggered {
-            crate::constants::SYSTEM_PERSON_ID
+            SYSTEM_PERSON_ID
         } else {
             // TODO: Should be passed as parameter for manual triggers
-            crate::constants::SYSTEM_PERSON_ID
+            SYSTEM_PERSON_ID
         };
 
         self.account_repository
@@ -280,7 +285,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
 
     /// Initiate account reactivation workflow
-    async fn initiate_reactivation(&self, account_id: Uuid, requested_by: String) -> BankingResult<AccountWorkflow> {
+    async fn initiate_reactivation(&self, account_id: Uuid, requested_by: Uuid) -> BankingResult<AccountWorkflow> {
         let account_model = self.account_repository
             .find_by_id(account_id)
             .await?
@@ -312,7 +317,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         // Update account status to pending reactivation
         self.account_repository
-            .update_status(account_id, "PendingReactivation", "Account reactivation initiated", "SYSTEM")
+            .update_status(account_id, "PendingReactivation", "Account reactivation initiated", SYSTEM_PERSON_ID)
             .await?;
 
         // Convert to model and persist workflow
@@ -341,7 +346,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Approved => {
                 // Reactivate account
                 self.account_repository
-                    .update_status(account_id, "Active", "Account reactivated successfully", &workflow.initiated_by)
+                    .update_status(account_id, "Active", "Account reactivated successfully", LIFECYCLE_AUTOMATION_PERSON_ID)
                     .await?;
 
                 // Complete workflow
@@ -355,7 +360,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Rejected => {
                 // Keep account dormant, fail workflow
                 self.account_repository
-                    .update_status(account_id, "Dormant", "KYC verification failed", "SYSTEM")
+                    .update_status(account_id, "Dormant", "KYC verification failed", SYSTEM_PERSON_ID)
                     .await?;
 
                 self.fail_workflow(
@@ -392,7 +397,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Complete => {
                 // Treat Complete same as Approved
                 self.account_repository
-                    .update_status(account_id, "Active", "Account reactivated successfully", &workflow.initiated_by)
+                    .update_status(account_id, "Active", "Account reactivated successfully", LIFECYCLE_AUTOMATION_PERSON_ID)
                     .await?;
                 self.complete_workflow(workflow.workflow_id, "Account reactivated after mini-KYC").await?;
             }
@@ -406,7 +411,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Failed => {
                 // Treat Failed same as Rejected
                 self.account_repository
-                    .update_status(account_id, "Dormant", "KYC verification failed", "SYSTEM")
+                    .update_status(account_id, "Dormant", "KYC verification failed", SYSTEM_PERSON_ID)
                     .await?;
                 self.fail_workflow(
                     workflow.workflow_id,
@@ -446,7 +451,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             workflow_type: WorkflowType::AccountClosure,
             current_step: WorkflowStep::InitiateRequest,
             status: WorkflowStatus::InProgress,
-            initiated_by: closure_request.requested_by.clone(),
+            initiated_by: closure_request.requested_by,
             initiated_at: Utc::now(),
             completed_at: None,
             steps_completed: Vec::new(),
@@ -456,7 +461,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         // Update account status
         self.account_repository
-            .update_status(account_id, "PendingClosure", "Account closure requested", &closure_request.requested_by)
+            .update_status(account_id, "PendingClosure", "Account closure requested", closure_request.requested_by)
             .await?;
 
         // Convert to model and persist workflow
@@ -561,7 +566,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     async fn finalize_closure(&self, account_id: Uuid) -> BankingResult<()> {
         // Update account status to closed
         self.account_repository
-            .update_status(account_id, "Closed", "Account closure completed", "SYSTEM")
+            .update_status(account_id, "Closed", "Account closure completed", SYSTEM_PERSON_ID)
             .await?;
 
         // Complete workflow if exists
@@ -584,7 +589,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         new_status: AccountStatus,
         reason_id: Uuid,
         _additional_context: Option<&str>,
-        authorized_by: String,
+        authorized_by: Uuid,
     ) -> BankingResult<()> {
         // TODO: Validate reason_id against ReasonAndPurpose table
         // TODO: Store additional_context if provided
@@ -607,7 +612,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                 account_id,
                 &Self::account_status_to_string(new_status),
                 "Manual status update",
-                &authorized_by,
+                authorized_by,
             )
             .await?;
 
@@ -641,12 +646,12 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
 
     /// Advance workflow step
-    async fn advance_workflow_step(&self, _workflow_id: Uuid, _completed_by: String, _notes: Option<String>) -> BankingResult<()> {
+    async fn advance_workflow_step(&self, _workflow_id: Uuid, _completed_by: Uuid, _notes: Option<HeaplessString<500>>) -> BankingResult<()> {
         todo!("Implement advance_workflow_step")
     }
 
     /// Reject workflow with reason ID validation
-    async fn reject_workflow(&self, _workflow_id: Uuid, _reason_id: Uuid, _additional_details: Option<&str>, _rejected_by: String) -> BankingResult<()> {
+    async fn reject_workflow(&self, _workflow_id: Uuid, _reason_id: Uuid, _additional_details: Option<&str>, _rejected_by: Uuid) -> BankingResult<()> {
         // TODO: Validate reason_id against ReasonAndPurpose table
         // TODO: Store additional_details if provided
         todo!("Implement reject_workflow with reason_id")
@@ -657,8 +662,8 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         &self,
         account_id: Uuid,
         new_status: AccountStatus,
-        reason: String,
-        authorized_by: String,
+        reason: HeaplessString<500>,
+        authorized_by: Uuid,
     ) -> BankingResult<()> {
         let account_model = self.account_repository
             .find_by_id(account_id)
@@ -675,7 +680,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
     
     /// Legacy method - deprecated, use reject_workflow with reason_id instead
-    async fn reject_workflow_legacy(&self, _workflow_id: Uuid, _reason: String, _rejected_by: String) -> BankingResult<()> {
+    async fn reject_workflow_legacy(&self, _workflow_id: Uuid, _reason: HeaplessString<500>, _rejected_by: Uuid) -> BankingResult<()> {
         todo!("Implement reject_workflow_legacy")
     }
 
@@ -705,12 +710,12 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
 
     /// Trigger compliance check
-    async fn trigger_compliance_check(&self, _account_id: Uuid, _check_type: String) -> BankingResult<()> {
+    async fn trigger_compliance_check(&self, _account_id: Uuid, _check_type: ComplianceCheckType) -> BankingResult<()> {
         todo!("Implement trigger_compliance_check")
     }
 
     /// Handle compliance result
-    async fn handle_compliance_result(&self, _account_id: Uuid, _result: banking_api::service::ComplianceCheckResult) -> BankingResult<()> {
+    async fn handle_compliance_result(&self, _account_id: Uuid, _result: ComplianceCheckResult) -> BankingResult<()> {
         todo!("Implement handle_compliance_result")
     }
 }
@@ -834,17 +839,17 @@ impl AccountLifecycleServiceImpl {
             workflow_type: format!("{:?}", workflow.workflow_type),
             current_step: format!("{:?}", workflow.current_step),
             status: format!("{:?}", workflow.status),
-            initiated_by: workflow.initiated_by.clone(),
+            initiated_by: workflow.initiated_by.to_string(),
             initiated_at: workflow.initiated_at,
             completed_at: workflow.completed_at,
-            next_action_required: workflow.next_action_required.clone(),
+            next_action_required: workflow.next_action_required.as_ref().map(|s| s.as_str().to_string()),
             timeout_at: workflow.timeout_at,
             metadata: None, // Could serialize steps_completed if needed
             priority: "Medium".to_string(), // Default priority
             assigned_to: None,
             created_at: chrono::Utc::now(),
             last_updated_at: chrono::Utc::now(),
-            updated_by: "SYSTEM".to_string(),
+            updated_by: SYSTEM_PERSON_ID.to_string(),
         }
     }
 }

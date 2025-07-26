@@ -1,7 +1,15 @@
 use rust_decimal::Decimal;
 
 use banking_api::{BankingResult, BankingError};
-use banking_db::models::{AgentNetworkModel, AgencyBranchModel, AgentTerminalModel};
+use banking_db::models::{
+    AgentNetworkModel, AgencyBranchModel, AgentTerminalModel, 
+    NetworkStatus, BranchStatus, TerminalStatus,
+};
+
+#[cfg(test)]
+use heapless::String as HeaplessString;
+#[cfg(test)]
+use banking_db::models::{BranchType, BranchRiskRating, NetworkType};
 
 /// Comprehensive validation utilities for agent network hierarchy
 pub struct AgentNetworkValidation;
@@ -13,11 +21,11 @@ impl AgentNetworkValidation {
         network: &AgentNetworkModel,
     ) -> BankingResult<()> {
         // Validate network status first
-        if network.status != "Active" {
+        if network.status != NetworkStatus::Active {
             return Err(BankingError::AgentNetworkEntityInactive {
                 entity_type: "Network".to_string(),
                 entity_id: network.network_id,
-                status: network.status.clone(),
+                status: format!("{:?}", network.status),
             });
         }
 
@@ -67,11 +75,11 @@ impl AgentNetworkValidation {
         branch: &AgencyBranchModel,
     ) -> BankingResult<()> {
         // Validate branch status first
-        if branch.status != "Active" {
+        if branch.status != BranchStatus::Active {
             return Err(BankingError::AgentNetworkEntityInactive {
                 entity_type: "Branch".to_string(),
                 entity_id: branch.branch_id,
-                status: branch.status.clone(),
+                status: format!("{:?}", branch.status),
             });
         }
 
@@ -114,9 +122,9 @@ impl AgentNetworkValidation {
         let mut validation_errors = Vec::new();
 
         // Check terminal constraints
-        if terminal.status != "Active" {
+        if terminal.status != TerminalStatus::Active {
             validation_errors.push(format!(
-                "Terminal {} is not active (status: {})", 
+                "Terminal {} is not active (status: {:?})", 
                 terminal.terminal_id, terminal.status
             ));
         }
@@ -129,9 +137,9 @@ impl AgentNetworkValidation {
         }
 
         // Check branch constraints
-        if branch.status != "Active" {
+        if branch.status != BranchStatus::Active {
             validation_errors.push(format!(
-                "Branch {} is not active (status: {})", 
+                "Branch {} is not active (status: {:?})", 
                 branch.branch_id, branch.status
             ));
         }
@@ -144,9 +152,9 @@ impl AgentNetworkValidation {
         }
 
         // Check network constraints
-        if network.status != "Active" {
+        if network.status != NetworkStatus::Active {
             validation_errors.push(format!(
-                "Network {} is not active (status: {})", 
+                "Network {} is not active (status: {:?})", 
                 network.network_id, network.status
             ));
         }
@@ -170,9 +178,9 @@ impl AgentNetworkValidation {
             Ok(HierarchyValidationResult {
                 is_valid: false,
                 errors: validation_errors,
-                terminal_approved: terminal.status == "Active" && amount <= terminal.daily_transaction_limit,
-                branch_approved: branch.status == "Active" && amount <= branch.per_transaction_limit,
-                network_approved: network.status == "Active" && amount <= network.aggregate_daily_limit,
+                terminal_approved: terminal.status == TerminalStatus::Active && amount <= terminal.daily_transaction_limit,
+                branch_approved: branch.status == BranchStatus::Active && amount <= branch.per_transaction_limit,
+                network_approved: network.status == NetworkStatus::Active && amount <= network.aggregate_daily_limit,
             })
         }
     }
@@ -227,7 +235,7 @@ impl AgentNetworkValidation {
         let mut validation_errors = Vec::new();
 
         // Network name should not be empty
-        if network.network_name.trim().is_empty() {
+        if network.network_name.as_str().trim().is_empty() {
             validation_errors.push("Network name cannot be empty".to_string());
         }
 
@@ -267,7 +275,7 @@ impl AgentNetworkValidation {
         let mut validation_errors = Vec::new();
 
         // Branch name should not be empty
-        if branch.branch_name.trim().is_empty() {
+        if branch.branch_name.as_str().trim().is_empty() {
             validation_errors.push("Branch name cannot be empty".to_string());
         }
 
@@ -304,7 +312,7 @@ impl AgentNetworkValidation {
         let mut validation_errors = Vec::new();
 
         // Terminal name should not be empty
-        if terminal.terminal_name.trim().is_empty() {
+        if terminal.terminal_name.as_str().trim().is_empty() {
             validation_errors.push("Terminal name cannot be empty".to_string());
         }
 
@@ -364,61 +372,61 @@ mod tests {
     fn test_branch_limit_validation_success() {
         let network = AgentNetworkModel {
             network_id: Uuid::new_v4(),
-            network_name: "Test Network".to_string(),
-            network_type: "Urban".to_string(),
-            status: "Active".to_string(),
+            network_name: HeaplessString::try_from("Test Network").unwrap(),
+            network_type: NetworkType::Internal,
+            status: NetworkStatus::Active,
             contract_id: Some(Uuid::new_v4()),
             aggregate_daily_limit: Decimal::from(100000),
             current_daily_volume: Decimal::ZERO,
-            settlement_gl_code: heapless::String::try_from("GL123").unwrap(),
+            settlement_gl_code: HeaplessString::try_from("GL123").unwrap(),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: "system".to_string(),
+            updated_by: Uuid::new_v4(),
         };
 
         let branch = AgencyBranchModel {
             branch_id: Uuid::new_v4(),
             network_id: network.network_id,
             parent_branch_id: None,
-            branch_name: "Test Branch".to_string(),
-            branch_code: heapless::String::try_from("BR001").unwrap(),
+            branch_name: HeaplessString::try_from("Test Branch").unwrap(),
+            branch_code: HeaplessString::try_from("BR001").unwrap(),
             branch_level: 1,
-            gl_code_prefix: heapless::String::try_from("GL001").unwrap(),
-            status: "Active".to_string(),
+            gl_code_prefix: HeaplessString::try_from("GL001").unwrap(),
+            status: BranchStatus::Active,
             daily_transaction_limit: Decimal::from(50000),
             current_daily_volume: Decimal::ZERO,
             max_cash_limit: Decimal::from(100000),
             current_cash_balance: Decimal::from(50000),
             minimum_cash_balance: Decimal::from(10000),
             created_at: Utc::now(),
-            address_json: "{}".to_string(),
+            address_json: HeaplessString::try_from("{}").unwrap(),
             gps_latitude: None,
             gps_longitude: None,
             gps_accuracy_meters: None,
             landmark_description: None,
-            operating_hours_json: "{}".to_string(),
-            holiday_schedule_json: "{}".to_string(),
+            operating_hours_json: HeaplessString::try_from("{}").unwrap(),
+            holiday_schedule_json: HeaplessString::try_from("{}").unwrap(),
             temporary_closure_json: None,
-            primary_phone: "+1234567890".to_string(),
+            primary_phone: HeaplessString::try_from("+1234567890").unwrap(),
             secondary_phone: None,
-            email: Some("test@example.com".to_string()),
+            email: Some(HeaplessString::try_from("test@example.com").unwrap()),
             branch_manager_id: None,
-            branch_type: "MainBranch".to_string(),
-            supported_services_json: "[]".to_string(),
-            supported_currencies_json: "[]".to_string(),
-            languages_spoken_json: "[]".to_string(),
-            security_features_json: "{}".to_string(),
-            accessibility_features_json: "{}".to_string(),
-            required_documents_json: "[]".to_string(),
+            branch_type: BranchType::MainBranch,
+            supported_services_json: HeaplessString::try_from("[]").unwrap(),
+            supported_currencies_json: HeaplessString::try_from("[]").unwrap(),
+            languages_spoken_json: HeaplessString::try_from("[]").unwrap(),
+            security_features_json: HeaplessString::try_from("{}").unwrap(),
+            accessibility_features_json: HeaplessString::try_from("{}").unwrap(),
+            required_documents_json: HeaplessString::try_from("[]").unwrap(),
             max_daily_customers: Some(100),
             average_wait_time_minutes: Some(15),
             per_transaction_limit: Decimal::from(5000),
             monthly_transaction_limit: Some(Decimal::from(1000000)),
-            risk_rating: "Low".to_string(),
+            risk_rating: BranchRiskRating::Low,
             last_audit_date: None,
-            compliance_certifications_json: "[]".to_string(),
+            compliance_certifications_json: HeaplessString::try_from("[]").unwrap(),
             last_updated_at: Utc::now(),
-            updated_by: "system".to_string(),
+            updated_by: Uuid::new_v4(),
         };
 
         let result = AgentNetworkValidation::validate_branch_limits_against_network(&branch, &network);
@@ -429,61 +437,61 @@ mod tests {
     fn test_branch_limit_validation_failure() {
         let network = AgentNetworkModel {
             network_id: Uuid::new_v4(),
-            network_name: "Test Network".to_string(),
-            network_type: "Urban".to_string(),
-            status: "Active".to_string(),
+            network_name: HeaplessString::try_from("Test Network").unwrap(),
+            network_type: NetworkType::Internal,
+            status: NetworkStatus::Active,
             contract_id: Some(Uuid::new_v4()),
             aggregate_daily_limit: Decimal::from(50000),
             current_daily_volume: Decimal::ZERO,
-            settlement_gl_code: heapless::String::try_from("GL123").unwrap(),
+            settlement_gl_code: HeaplessString::try_from("GL123").unwrap(),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: "system".to_string(),
+            updated_by: Uuid::new_v4(),
         };
 
         let branch = AgencyBranchModel {
             branch_id: Uuid::new_v4(),
             network_id: network.network_id,
             parent_branch_id: None,
-            branch_name: "Test Branch".to_string(),
-            branch_code: heapless::String::try_from("BR001").unwrap(),
+            branch_name: HeaplessString::try_from("Test Branch").unwrap(),
+            branch_code: HeaplessString::try_from("BR001").unwrap(),
             branch_level: 1,
-            gl_code_prefix: heapless::String::try_from("GL001").unwrap(),
-            status: "Active".to_string(),
+            gl_code_prefix: HeaplessString::try_from("GL001").unwrap(),
+            status: BranchStatus::Active,
             daily_transaction_limit: Decimal::from(60000), // Exceeds network limit
             current_daily_volume: Decimal::ZERO,
             max_cash_limit: Decimal::from(100000),
             current_cash_balance: Decimal::from(50000),
             minimum_cash_balance: Decimal::from(10000),
             created_at: Utc::now(),
-            address_json: "{}".to_string(),
+            address_json: HeaplessString::try_from("{}").unwrap(),
             gps_latitude: None,
             gps_longitude: None,
             gps_accuracy_meters: None,
             landmark_description: None,
-            operating_hours_json: "{}".to_string(),
-            holiday_schedule_json: "{}".to_string(),
+            operating_hours_json: HeaplessString::try_from("{}").unwrap(),
+            holiday_schedule_json: HeaplessString::try_from("{}").unwrap(),
             temporary_closure_json: None,
-            primary_phone: "+1234567890".to_string(),
+            primary_phone: HeaplessString::try_from("+1234567890").unwrap(),
             secondary_phone: None,
-            email: Some("test@example.com".to_string()),
+            email: Some(HeaplessString::try_from("test@example.com").unwrap()),
             branch_manager_id: None,
-            branch_type: "MainBranch".to_string(),
-            supported_services_json: "[]".to_string(),
-            supported_currencies_json: "[]".to_string(),
-            languages_spoken_json: "[]".to_string(),
-            security_features_json: "{}".to_string(),
-            accessibility_features_json: "{}".to_string(),
-            required_documents_json: "[]".to_string(),
+            branch_type: BranchType::MainBranch,
+            supported_services_json: HeaplessString::try_from("[]").unwrap(),
+            supported_currencies_json: HeaplessString::try_from("[]").unwrap(),
+            languages_spoken_json: HeaplessString::try_from("[]").unwrap(),
+            security_features_json: HeaplessString::try_from("{}").unwrap(),
+            accessibility_features_json: HeaplessString::try_from("{}").unwrap(),
+            required_documents_json: HeaplessString::try_from("[]").unwrap(),
             max_daily_customers: Some(100),
             average_wait_time_minutes: Some(15),
             per_transaction_limit: Decimal::from(60000), // Exceeds network limit
             monthly_transaction_limit: Some(Decimal::from(1000000)),
-            risk_rating: "Low".to_string(),
+            risk_rating: BranchRiskRating::Low,
             last_audit_date: None,
-            compliance_certifications_json: "[]".to_string(),
+            compliance_certifications_json: HeaplessString::try_from("[]").unwrap(),
             last_updated_at: Utc::now(),
-            updated_by: "system".to_string(),
+            updated_by: Uuid::new_v4(),
         };
 
         let result = AgentNetworkValidation::validate_branch_limits_against_network(&branch, &network);

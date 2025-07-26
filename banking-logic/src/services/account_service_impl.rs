@@ -1235,7 +1235,7 @@ mod tests {
             Ok(self.accounts.lock().unwrap().get(&account_id).cloned())
         }
 
-        async fn update_status(&self, _account_id: Uuid, _status: &str, _reason: &str, _authorized_by: &str) -> BankingResult<()> {
+        async fn update_status(&self, _account_id: Uuid, _status: &str, _reason: &str, _authorized_by: Uuid) -> BankingResult<()> {
             Ok(())
         }
 
@@ -1355,7 +1355,7 @@ mod tests {
             todo!()
         }
 
-        async fn release_hold(&self, _hold_id: Uuid, _released_by: &str) -> BankingResult<()> {
+        async fn release_hold(&self, _hold_id: Uuid, _released_by: Uuid) -> BankingResult<()> {
             todo!()
         }
 

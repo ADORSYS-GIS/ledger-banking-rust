@@ -250,7 +250,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
         let hierarchy = hierarchy.ok_or_else(|| {
             banking_api::error::BankingError::ValidationError {
                 field: "terminal_id".to_string(),
-                message: format!("Terminal {} not found in hierarchy", terminal_id),
+                message: format!("Terminal {terminal_id} not found in hierarchy"),
             }
         })?;
 

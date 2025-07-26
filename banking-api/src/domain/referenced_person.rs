@@ -18,15 +18,6 @@ pub enum PersonType {
     Unknown,
 }
 
-/// Contact information for a referenced person
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContactInfo {
-    pub email: Option<HeaplessString<100>>,
-    pub phone: Option<HeaplessString<20>>,
-    pub department: Option<HeaplessString<50>>,
-    pub office_location: Option<HeaplessString<100>>,
-}
-
 /// Represents a person referenced throughout the system for audit and tracking purposes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferencedPerson {
@@ -45,8 +36,17 @@ pub struct ReferencedPerson {
     /// Organization/department for employees or company name for legal entities
     pub organization: Option<HeaplessString<100>>,
     
-    /// Contact information for audit/compliance purposes
-    pub contact_info: Option<ContactInfo>,
+    /// Email address for contact purposes
+    pub email: Option<HeaplessString<100>>,
+    
+    /// Phone number for contact purposes
+    pub phone: Option<HeaplessString<20>>,
+    
+    /// Department within organization
+    pub department: Option<HeaplessString<50>>,
+    
+    /// Office location or address
+    pub office_location: Option<HeaplessString<100>>,
     
     /// Reference to another ReferencedPerson if this is a duplicate
     pub duplicate_of: Option<Uuid>,
@@ -83,7 +83,10 @@ impl ReferencedPerson {
             display_name,
             external_identifier: None,
             organization: None,
-            contact_info: None,
+            email: None,
+            phone: None,
+            department: None,
+            office_location: None,
             duplicate_of: None,
             entity_reference: None,
             entity_type: None,
@@ -101,7 +104,10 @@ impl ReferencedPerson {
             display_name: HeaplessString::try_from("SYSTEM").unwrap(),
             external_identifier: None,
             organization: None,
-            contact_info: None,
+            email: None,
+            phone: None,
+            department: None,
+            office_location: None,
             duplicate_of: None,
             entity_reference: None,
             entity_type: None,
@@ -124,7 +130,10 @@ pub struct ReferencedPersonBuilder {
     display_name: String,
     external_identifier: Option<String>,
     organization: Option<String>,
-    contact_info: Option<ContactInfo>,
+    email: Option<String>,
+    phone: Option<String>,
+    department: Option<String>,
+    office_location: Option<String>,
     duplicate_of: Option<Uuid>,
     entity_reference: Option<Uuid>,
     entity_type: Option<String>,
@@ -139,7 +148,10 @@ impl ReferencedPersonBuilder {
             display_name: display_name.as_ref().to_string(),
             external_identifier: None,
             organization: None,
-            contact_info: None,
+            email: None,
+            phone: None,
+            department: None,
+            office_location: None,
             duplicate_of: None,
             entity_reference: None,
             entity_type: None,
@@ -157,8 +169,23 @@ impl ReferencedPersonBuilder {
         self
     }
     
-    pub fn contact_info(mut self, contact: ContactInfo) -> Self {
-        self.contact_info = Some(contact);
+    pub fn email(mut self, email: impl AsRef<str>) -> Self {
+        self.email = Some(email.as_ref().to_string());
+        self
+    }
+    
+    pub fn phone(mut self, phone: impl AsRef<str>) -> Self {
+        self.phone = Some(phone.as_ref().to_string());
+        self
+    }
+    
+    pub fn department(mut self, department: impl AsRef<str>) -> Self {
+        self.department = Some(department.as_ref().to_string());
+        self
+    }
+    
+    pub fn office_location(mut self, location: impl AsRef<str>) -> Self {
+        self.office_location = Some(location.as_ref().to_string());
         self
     }
     
@@ -197,13 +224,36 @@ impl ReferencedPersonBuilder {
             .transpose()
             .map_err(|_| "Entity type exceeds maximum length")?;
             
+        let email = self.email
+            .map(|s| HeaplessString::try_from(s.as_str()))
+            .transpose()
+            .map_err(|_| "Email exceeds maximum length")?;
+            
+        let phone = self.phone
+            .map(|s| HeaplessString::try_from(s.as_str()))
+            .transpose()
+            .map_err(|_| "Phone exceeds maximum length")?;
+            
+        let department = self.department
+            .map(|s| HeaplessString::try_from(s.as_str()))
+            .transpose()
+            .map_err(|_| "Department exceeds maximum length")?;
+            
+        let office_location = self.office_location
+            .map(|s| HeaplessString::try_from(s.as_str()))
+            .transpose()
+            .map_err(|_| "Office location exceeds maximum length")?;
+            
         Ok(ReferencedPerson {
             person_id: self.person_id,
             person_type: self.person_type,
             display_name,
             external_identifier,
             organization,
-            contact_info: self.contact_info,
+            email,
+            phone,
+            department,
+            office_location,
             duplicate_of: self.duplicate_of,
             entity_reference: self.entity_reference,
             entity_type,

@@ -367,7 +367,7 @@ mod tests {
             "ID123456",
             RiskRating::Low,
             CustomerStatus::Active,
-            "TEST_USER",
+            uuid::Uuid::new_v4(),
         ).unwrap();
 
         assert!(service.validate_customer_data(&valid_customer).is_ok());
@@ -382,7 +382,7 @@ mod tests {
             "ID123456",
             RiskRating::Low,
             CustomerStatus::Active,
-            "TEST_USER",
+            uuid::Uuid::new_v4(),
         ).unwrap(); // Customer creation succeeds, but validation should fail
         
         // Should fail validation due to empty name
@@ -422,7 +422,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn update_risk_rating(&self, _customer_id: Uuid, _risk_rating: &str, _authorized_by: &str) -> BankingResult<()> {
+        async fn update_risk_rating(&self, _customer_id: Uuid, _risk_rating: &str, _authorized_by: Uuid) -> BankingResult<()> {
             Ok(())
         }
 
@@ -446,7 +446,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn delete(&self, _customer_id: Uuid, _deleted_by: &str) -> BankingResult<()> {
+        async fn delete(&self, _customer_id: Uuid, _deleted_by: Uuid) -> BankingResult<()> {
             unimplemented!()
         }
 

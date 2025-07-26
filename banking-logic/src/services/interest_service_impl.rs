@@ -553,7 +553,7 @@ mod tests {
         async fn find_dormancy_candidates(&self, _reference_date: chrono::NaiveDate, _threshold_days: i32) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_pending_closure(&self) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_interest_bearing_accounts(&self) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
-        async fn update_status(&self, _account_id: Uuid, _status: &str, _reason: &str, _changed_by: &str) -> BankingResult<()> { todo!() }
+        async fn update_status(&self, _account_id: Uuid, _status: &str, _reason: &str, _changed_by: Uuid) -> BankingResult<()> { todo!() }
         async fn update_accrued_interest(&self, _account_id: Uuid, _accrued_interest: Decimal) -> BankingResult<()> { todo!() }
         async fn create_ownership(&self, _ownership: banking_db::models::AccountOwnershipModel) -> BankingResult<banking_db::models::AccountOwnershipModel> { todo!() }
         async fn find_ownership_by_account(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountOwnershipModel>> { todo!() }
@@ -572,7 +572,7 @@ mod tests {
         async fn create_hold(&self, _hold: banking_db::models::AccountHoldModel) -> BankingResult<banking_db::models::AccountHoldModel> { todo!() }
         async fn find_holds_by_account(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
         async fn find_active_holds(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn release_hold(&self, _hold_id: Uuid, _released_by: &str) -> BankingResult<()> { todo!() }
+        async fn release_hold(&self, _hold_id: Uuid, _released_by: Uuid) -> BankingResult<()> { todo!() }
         async fn release_expired_holds(&self, _expiry_cutoff: chrono::DateTime<chrono::Utc>) -> BankingResult<i64> { todo!() }
         async fn create_final_settlement(&self, _settlement: banking_db::models::AccountFinalSettlementModel) -> BankingResult<banking_db::models::AccountFinalSettlementModel> { todo!() }
         async fn find_settlement_by_account(&self, _account_id: Uuid) -> BankingResult<Option<banking_db::models::AccountFinalSettlementModel>> { todo!() }
