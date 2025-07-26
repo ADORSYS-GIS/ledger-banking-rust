@@ -228,12 +228,15 @@ impl CalendarService for CalendarServiceImpl {
             DateShiftRule::NextBusinessDay
         };
 
-        Ok(BusinessDayCalculation {
-            requested_date: date,
+        BusinessDayCalculation::new(
+            date,
             adjusted_date,
             is_business_day,
             applied_rule,
-            jurisdiction: jurisdiction.to_string(),
+            jurisdiction,
+        ).map_err(|e| BankingError::ValidationError {
+            field: "jurisdiction".to_string(),
+            message: e.to_string(),
         })
     }
 
@@ -274,13 +277,17 @@ impl CalendarService for CalendarServiceImpl {
                 DateShiftRule::NextBusinessDay
             };
 
-            results.push(BusinessDayCalculation {
-                requested_date: date,
+            let calculation = BusinessDayCalculation::new(
+                date,
                 adjusted_date,
                 is_business_day,
                 applied_rule,
-                jurisdiction: jurisdiction.to_string(),
-            });
+                jurisdiction,
+            ).map_err(|e| BankingError::ValidationError {
+                field: "jurisdiction".to_string(),
+                message: e.to_string(),
+            })?;
+            results.push(calculation);
         }
 
         Ok(results)

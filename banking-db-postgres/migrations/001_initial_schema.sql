@@ -16,6 +16,12 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Person type enum for referenced persons
 CREATE TYPE person_type AS ENUM ('natural', 'legal', 'system', 'integration', 'unknown');
 
+-- Calendar enums
+CREATE TYPE holiday_type AS ENUM ('National', 'Regional', 'Religious', 'Banking');
+CREATE TYPE date_shift_rule AS ENUM ('NextBusinessDay', 'PreviousBusinessDay', 'NoShift');
+CREATE TYPE weekend_treatment AS ENUM ('SaturdaySunday', 'FridayOnly', 'Custom');
+CREATE TYPE import_status AS ENUM ('Success', 'Partial', 'Failed');
+
 -- =============================================================================
 -- UTILITY FUNCTIONS
 -- =============================================================================
@@ -429,25 +435,79 @@ CREATE TABLE bank_holidays (
     holiday_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     jurisdiction VARCHAR(10) NOT NULL, -- Country/region code
     holiday_date DATE NOT NULL,
-    holiday_name VARCHAR(100) NOT NULL,
-    holiday_type VARCHAR(20) NOT NULL CHECK (holiday_type IN ('National', 'Regional', 'Religious', 'Bank')),
+    holiday_name VARCHAR(255) NOT NULL,
+    holiday_type holiday_type NOT NULL,
     is_recurring BOOLEAN NOT NULL DEFAULT FALSE,
+    description VARCHAR(256),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_by UUID NOT NULL REFERENCES referenced_persons(person_id),
     
     CONSTRAINT uk_holiday_per_jurisdiction UNIQUE (jurisdiction, holiday_date)
 );
 
 -- Weekend configuration per jurisdiction
-CREATE TABLE weekend_config (
+CREATE TABLE weekend_configuration (
     config_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     jurisdiction VARCHAR(10) NOT NULL UNIQUE,
-    weekend_days INTEGER[] NOT NULL, -- Array of day numbers (1=Monday, 7=Sunday)
-    effective_from DATE NOT NULL DEFAULT CURRENT_DATE,
+    weekend_days VARCHAR(100) NOT NULL, -- JSON array of weekday numbers (0=Sunday, 1=Monday, etc.)
+    effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    notes VARCHAR(256),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_by UUID NOT NULL REFERENCES referenced_persons(person_id)
+);
+
+-- Date calculation rules for business day calculations
+CREATE TABLE date_calculation_rules (
+    rule_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    jurisdiction VARCHAR(10) NOT NULL,
+    rule_name VARCHAR(100) NOT NULL,
+    rule_type VARCHAR(30) NOT NULL CHECK (rule_type IN ('DateShift', 'MaturityCalculation', 'PaymentDue')),
+    default_shift_rule date_shift_rule NOT NULL,
+    weekend_treatment weekend_treatment NOT NULL,
+    product_specific_overrides VARCHAR(1000), -- JSON with product-specific rules
+    priority INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    expiry_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
     
-    CONSTRAINT ck_valid_weekend_days CHECK (
-        array_length(weekend_days, 1) > 0
-    )
+    CONSTRAINT ck_rule_dates CHECK (expiry_date IS NULL OR expiry_date > effective_date)
+);
+
+-- Holiday import log for audit trail of holiday imports
+CREATE TABLE holiday_import_log (
+    import_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    jurisdiction VARCHAR(10) NOT NULL,
+    import_year INTEGER NOT NULL,
+    import_source VARCHAR(100) NOT NULL,
+    holidays_imported INTEGER NOT NULL DEFAULT 0,
+    holidays_updated INTEGER NOT NULL DEFAULT 0,
+    holidays_skipped INTEGER NOT NULL DEFAULT 0,
+    import_status import_status NOT NULL,
+    error_details VARCHAR(1000),
+    imported_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    imported_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Business day cache for performance optimization
+CREATE TABLE business_day_cache (
+    cache_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    jurisdiction VARCHAR(10) NOT NULL,
+    date DATE NOT NULL,
+    is_business_day BOOLEAN NOT NULL,
+    is_holiday BOOLEAN NOT NULL DEFAULT FALSE,
+    is_weekend BOOLEAN NOT NULL DEFAULT FALSE,
+    holiday_name VARCHAR(255),
+    cached_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    valid_until TIMESTAMP WITH TIME ZONE NOT NULL,
+    
+    CONSTRAINT uk_cache_per_jurisdiction_date UNIQUE (jurisdiction, date)
 );
 
 -- =============================================================================
@@ -1257,28 +1317,28 @@ WHERE code = 'HOLD_FRAUD_INVESTIGATION';
 -- =============================================================================
 
 -- Bank holidays for multiple jurisdictions
-INSERT INTO bank_holidays (holiday_id, jurisdiction, holiday_date, holiday_name, holiday_type, is_recurring) VALUES
-(uuid_generate_v4(), 'US', '2024-01-01', 'New Year''s Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-01-15', 'Martin Luther King Jr. Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-02-19', 'Presidents Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-05-27', 'Memorial Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-06-19', 'Juneteenth', 'National', true),
-(uuid_generate_v4(), 'US', '2024-07-04', 'Independence Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-09-02', 'Labor Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-10-14', 'Columbus Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-11-11', 'Veterans Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-11-28', 'Thanksgiving Day', 'National', true),
-(uuid_generate_v4(), 'US', '2024-12-25', 'Christmas Day', 'National', true),
-(uuid_generate_v4(), 'CM', '2024-01-01', 'New Year''s Day', 'National', true),
-(uuid_generate_v4(), 'CM', '2024-02-11', 'Youth Day', 'National', true),
-(uuid_generate_v4(), 'CM', '2024-05-20', 'National Day', 'National', true),
-(uuid_generate_v4(), 'CM', '2024-12-25', 'Christmas Day', 'Religious', true);
+INSERT INTO bank_holidays (holiday_id, jurisdiction, holiday_date, holiday_name, holiday_type, is_recurring, created_by) VALUES
+(uuid_generate_v4(), 'US', '2024-01-01', 'New Year''s Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-01-15', 'Martin Luther King Jr. Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-02-19', 'Presidents Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-05-27', 'Memorial Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-06-19', 'Juneteenth', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-07-04', 'Independence Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-09-02', 'Labor Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-10-14', 'Columbus Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-11-11', 'Veterans Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-11-28', 'Thanksgiving Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'US', '2024-12-25', 'Christmas Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'CM', '2024-01-01', 'New Year''s Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'CM', '2024-02-11', 'Youth Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'CM', '2024-05-20', 'National Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
+(uuid_generate_v4(), 'CM', '2024-12-25', 'Christmas Day', 'Religious', true, '00000000-0000-0000-0000-000000000000');
 
 -- Weekend configuration
-INSERT INTO weekend_config (config_id, jurisdiction, weekend_days, effective_from) VALUES
-(uuid_generate_v4(), 'US', ARRAY[6,7], '2024-01-01'), -- Saturday, Sunday
-(uuid_generate_v4(), 'CM', ARRAY[6,7], '2024-01-01'), -- Saturday, Sunday
-(uuid_generate_v4(), 'AE', ARRAY[5,6], '2024-01-01'); -- Friday, Saturday (UAE style)
+INSERT INTO weekend_configuration (config_id, jurisdiction, weekend_days, effective_date, created_by, updated_by) VALUES
+(uuid_generate_v4(), 'US', '[6,7]', '2024-01-01', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'), -- Saturday, Sunday
+(uuid_generate_v4(), 'CM', '[6,7]', '2024-01-01', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'), -- Saturday, Sunday
+(uuid_generate_v4(), 'AE', '[5,6]', '2024-01-01', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'); -- Friday, Saturday (UAE style)
 
 -- =============================================================================
 -- INDEXES FOR PERFORMANCE
@@ -1317,6 +1377,18 @@ CREATE INDEX idx_kyc_results_status ON kyc_results(status);
 CREATE INDEX idx_compliance_alerts_status ON compliance_alerts(status);
 CREATE INDEX idx_compliance_alerts_severity ON compliance_alerts(severity);
 
+-- Calendar table indexes
+CREATE INDEX idx_bank_holidays_jurisdiction ON bank_holidays(jurisdiction);
+CREATE INDEX idx_bank_holidays_date ON bank_holidays(holiday_date);
+CREATE INDEX idx_bank_holidays_is_recurring ON bank_holidays(is_recurring);
+CREATE INDEX idx_weekend_configuration_jurisdiction ON weekend_configuration(jurisdiction);
+CREATE INDEX idx_date_calculation_rules_jurisdiction ON date_calculation_rules(jurisdiction);
+CREATE INDEX idx_date_calculation_rules_active ON date_calculation_rules(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_holiday_import_log_jurisdiction ON holiday_import_log(jurisdiction);
+CREATE INDEX idx_holiday_import_log_year ON holiday_import_log(import_year);
+CREATE INDEX idx_business_day_cache_jurisdiction_date ON business_day_cache(jurisdiction, date);
+CREATE INDEX idx_business_day_cache_valid_until ON business_day_cache(valid_until);
+
 -- =============================================================================
 -- COMMENTS FOR DOCUMENTATION
 -- =============================================================================
@@ -1350,13 +1422,20 @@ COMMENT ON TABLE accounts IS 'Unified account model supporting all banking produ
 COMMENT ON TABLE transactions IS 'Comprehensive transaction processing with multi-channel support';
 COMMENT ON TABLE agent_networks IS 'Hierarchical agent banking network structure';
 
+-- Calendar tables
+COMMENT ON TABLE bank_holidays IS 'Bank holidays for business day calculations across jurisdictions';
+COMMENT ON TABLE weekend_configuration IS 'Weekend configuration per jurisdiction with JSON array format';
+COMMENT ON TABLE date_calculation_rules IS 'Date calculation rules for business day adjustments';
+COMMENT ON TABLE holiday_import_log IS 'Audit trail for holiday data imports';
+COMMENT ON TABLE business_day_cache IS 'Performance optimization cache for business day calculations';
+
 -- =============================================================================
 -- MIGRATION COMPLETE
 -- =============================================================================
 
 -- Migration completed successfully
--- Total tables created: 33
--- Total indexes created: 30+
+-- Total tables created: 38
+-- Total indexes created: 40+
 -- Foreign key constraints: 50+
 -- Check constraints: 50+
 -- Triggers: 4

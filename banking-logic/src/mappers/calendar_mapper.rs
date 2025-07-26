@@ -1,6 +1,6 @@
-use chrono::{Weekday, Utc};
-use banking_api::domain::{BankHoliday, HolidayType};
-use banking_db::models::BankHolidayModel;
+use chrono::Weekday;
+use banking_api::domain::{BankHoliday, HolidayType as DomainHolidayType};
+use banking_db::models::{BankHolidayModel, HolidayType as ModelHolidayType};
 
 /// Mapper for converting between domain and database calendar models
 pub struct CalendarMapper;
@@ -13,15 +13,11 @@ impl CalendarMapper {
             jurisdiction: holiday.jurisdiction,
             holiday_date: holiday.holiday_date,
             holiday_name: holiday.holiday_name,
-            holiday_type: Self::holiday_type_to_string(&holiday.holiday_type),
+            holiday_type: Self::domain_holiday_type_to_model(&holiday.holiday_type),
             is_recurring: holiday.is_recurring,
             description: holiday.description,
-            is_observed: true, // Default to observed
-            observance_rule: None, // No special rules by default
             created_at: holiday.created_at,
-            created_by: holiday.created_by.to_string(),
-            last_updated_at: Utc::now(),
-            updated_by: holiday.created_by.to_string(),
+            created_by: holiday.created_by,
         }
     }
 
@@ -32,33 +28,31 @@ impl CalendarMapper {
             jurisdiction: model.jurisdiction,
             holiday_date: model.holiday_date,
             holiday_name: model.holiday_name,
-            holiday_type: Self::string_to_holiday_type(&model.holiday_type),
+            holiday_type: Self::model_holiday_type_to_domain(&model.holiday_type),
             is_recurring: model.is_recurring,
             description: model.description,
-            created_by: model.created_by.parse().unwrap_or_default(),
+            created_by: model.created_by,
             created_at: model.created_at,
         }
     }
 
-    /// Convert HolidayType enum to string
-    fn holiday_type_to_string(holiday_type: &HolidayType) -> String {
+    /// Convert domain HolidayType to model HolidayType
+    fn domain_holiday_type_to_model(holiday_type: &DomainHolidayType) -> ModelHolidayType {
         match holiday_type {
-            HolidayType::National => "National".to_string(),
-            HolidayType::Regional => "Regional".to_string(),
-            HolidayType::Religious => "Religious".to_string(),
-            HolidayType::Banking => "Banking".to_string(),
+            DomainHolidayType::National => ModelHolidayType::National,
+            DomainHolidayType::Regional => ModelHolidayType::Regional,
+            DomainHolidayType::Religious => ModelHolidayType::Religious,
+            DomainHolidayType::Banking => ModelHolidayType::Banking,
         }
     }
 
-    /// Convert string to HolidayType enum
-    fn string_to_holiday_type(s: &str) -> HolidayType {
-        match s {
-            "National" => HolidayType::National,
-            "Regional" => HolidayType::Regional,
-            "Religious" => HolidayType::Religious,
-            "Bank" => HolidayType::Banking,
-            "Banking" => HolidayType::Banking, // Handle legacy variant
-            _ => HolidayType::National, // Default fallback
+    /// Convert model HolidayType to domain HolidayType
+    fn model_holiday_type_to_domain(holiday_type: &ModelHolidayType) -> DomainHolidayType {
+        match holiday_type {
+            ModelHolidayType::National => DomainHolidayType::National,
+            ModelHolidayType::Regional => DomainHolidayType::Regional,
+            ModelHolidayType::Religious => DomainHolidayType::Religious,
+            ModelHolidayType::Banking => DomainHolidayType::Banking,
         }
     }
 

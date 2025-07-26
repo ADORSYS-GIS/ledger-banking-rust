@@ -724,7 +724,7 @@ mod tests {
                 adjusted_date: date,
                 is_business_day: true,
                 applied_rule: banking_api::domain::DateShiftRule::NoShift,
-                jurisdiction: jurisdiction.to_string(),
+                jurisdiction: heapless::String::try_from(jurisdiction).unwrap_or_default(),
             })
         }
         async fn batch_calculate_business_days(&self, dates: Vec<NaiveDate>, jurisdiction: &str) -> BankingResult<Vec<banking_api::domain::BusinessDayCalculation>> {
@@ -733,7 +733,7 @@ mod tests {
                 adjusted_date: date,
                 is_business_day: true,
                 applied_rule: banking_api::domain::DateShiftRule::NoShift,
-                jurisdiction: jurisdiction.to_string(),
+                jurisdiction: heapless::String::try_from(jurisdiction).unwrap_or_default(),
             }).collect())
         }
         async fn is_weekend(&self, _date: NaiveDate, _jurisdiction: &str) -> BankingResult<bool> {

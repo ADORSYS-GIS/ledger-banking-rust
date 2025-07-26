@@ -2,9 +2,10 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 use uuid::Uuid;
 use chrono::{NaiveDate, Weekday};
+use heapless::String as HeaplessString;
 
 use banking_api::BankingResult;
-use banking_db::models::BankHolidayModel;
+use banking_db::models::{BankHolidayModel, HolidayType};
 use banking_db::repository::{CalendarRepository, ValidationResult, ImportResult, CalendarSummaryReport};
 
 pub struct CalendarRepositoryImpl {
@@ -24,9 +25,9 @@ impl CalendarRepository for CalendarRepositoryImpl {
         let config = sqlx::query!(
             r#"
             SELECT weekend_days
-            FROM weekend_config
-            WHERE jurisdiction = $1
-            ORDER BY effective_from DESC
+            FROM weekend_configuration
+            WHERE jurisdiction = $1 AND is_active = true
+            ORDER BY effective_date DESC
             LIMIT 1
             "#,
             jurisdiction
@@ -35,8 +36,11 @@ impl CalendarRepository for CalendarRepositoryImpl {
         .await?;
 
         if let Some(config) = config {
-            // Convert array of integers to Weekday enum
-            let weekend_days: Vec<Weekday> = config.weekend_days
+            // Parse JSON array of integers to Weekday enum
+            let day_numbers: Vec<i32> = serde_json::from_str(&config.weekend_days)
+                .unwrap_or_else(|_| vec![6, 7]); // Default to Saturday, Sunday
+            
+            let weekend_days: Vec<Weekday> = day_numbers
                 .iter()
                 .filter_map(|&day| match day {
                     1 => Some(Weekday::Mon),
@@ -74,23 +78,40 @@ impl CalendarRepository for CalendarRepositoryImpl {
 
         let config_id = Uuid::new_v4();
         let now = chrono::Utc::now();
+        let system_user_id = Uuid::parse_str("00000000-0000-0000-0000-000000000000")
+            .map_err(|e| banking_api::BankingError::ValidationError { 
+                field: "system_user_id".to_string(), 
+                message: format!("Invalid UUID: {e}") 
+            })?;
+        let weekend_days_json = serde_json::to_string(&day_numbers)
+            .map_err(|e| banking_api::BankingError::ValidationError { 
+                field: "weekend_days".to_string(), 
+                message: format!("JSON serialization error: {e}") 
+            })?;
 
         sqlx::query!(
             r#"
-            INSERT INTO weekend_config (
-                config_id, jurisdiction, weekend_days, effective_from, created_at
-            ) VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO weekend_configuration (
+                config_id, jurisdiction, weekend_days, effective_date, 
+                is_active, created_at, created_by, last_updated_at, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (jurisdiction) 
             DO UPDATE SET
                 weekend_days = EXCLUDED.weekend_days,
-                effective_from = EXCLUDED.effective_from,
-                created_at = EXCLUDED.created_at
+                effective_date = EXCLUDED.effective_date,
+                is_active = EXCLUDED.is_active,
+                last_updated_at = EXCLUDED.last_updated_at,
+                updated_by = EXCLUDED.updated_by
             "#,
             config_id,
             jurisdiction,
-            &day_numbers,
+            weekend_days_json,
             now.date_naive(),
-            now
+            true,
+            now,
+            system_user_id,
+            now,
+            system_user_id
         )
         .execute(&self.pool)
         .await?;
@@ -108,7 +129,8 @@ impl CalendarRepository for CalendarRepositoryImpl {
         let rows = sqlx::query!(
             r#"
             SELECT holiday_id, jurisdiction, holiday_date, holiday_name, 
-                   holiday_type, is_recurring, created_at
+                   holiday_type as "holiday_type: HolidayType", is_recurring, description, 
+                   created_at, created_by
             FROM bank_holidays
             WHERE jurisdiction = $1 
               AND holiday_date >= $2 
@@ -123,21 +145,23 @@ impl CalendarRepository for CalendarRepositoryImpl {
         .await?;
 
         // Convert query results to BankHolidayModel
-        let holidays = rows.into_iter().map(|row| BankHolidayModel {
-            holiday_id: row.holiday_id,
-            jurisdiction: row.jurisdiction,
-            holiday_date: row.holiday_date,
-            holiday_name: row.holiday_name,
-            holiday_type: row.holiday_type,
-            is_recurring: row.is_recurring,
-            // Fields that exist in model but not in database - use defaults
-            description: None,
-            is_observed: true, // Default to observed
-            observance_rule: None,
-            created_at: row.created_at,
-            created_by: "system".to_string(), // Default value
-            last_updated_at: row.created_at, // Use created_at as fallback
-            updated_by: "system".to_string(), // Default value
+        let holidays = rows.into_iter().map(|row| {
+            let jurisdiction_str = HeaplessString::try_from(row.jurisdiction.as_str())
+                .unwrap_or_else(|_| HeaplessString::new());
+            let holiday_name_str = HeaplessString::try_from(row.holiday_name.as_str())
+                .unwrap_or_else(|_| HeaplessString::new());
+            
+            BankHolidayModel {
+                holiday_id: row.holiday_id,
+                jurisdiction: jurisdiction_str,
+                holiday_date: row.holiday_date,
+                holiday_name: holiday_name_str,
+                holiday_type: row.holiday_type,
+                is_recurring: row.is_recurring,
+                description: row.description.map(|d| HeaplessString::try_from(d.as_str()).unwrap_or_else(|_| HeaplessString::new())),
+                created_at: row.created_at,
+                created_by: row.created_by,
+            }
         }).collect();
 
         Ok(holidays)
@@ -145,41 +169,46 @@ impl CalendarRepository for CalendarRepositoryImpl {
 
     /// Create holiday
     async fn create_holiday(&self, holiday: BankHolidayModel) -> BankingResult<BankHolidayModel> {
+        let description_str = holiday.description.as_ref().map(|d| d.as_str());
+        
         let row = sqlx::query!(
             r#"
             INSERT INTO bank_holidays (
                 holiday_id, jurisdiction, holiday_date, holiday_name,
-                holiday_type, is_recurring, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                holiday_type, is_recurring, description, created_at, created_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING holiday_id, jurisdiction, holiday_date, holiday_name, 
-                      holiday_type, is_recurring, created_at
+                      holiday_type as "holiday_type: HolidayType", is_recurring, description, 
+                      created_at, created_by
             "#,
             holiday.holiday_id,
-            holiday.jurisdiction,
+            holiday.jurisdiction.as_str(),
             holiday.holiday_date,
-            holiday.holiday_name,
-            holiday.holiday_type,
+            holiday.holiday_name.as_str(),
+            holiday.holiday_type as HolidayType,
             holiday.is_recurring,
-            holiday.created_at
+            description_str,
+            holiday.created_at,
+            holiday.created_by
         )
         .fetch_one(&self.pool)
         .await?;
 
+        let jurisdiction_str = HeaplessString::try_from(row.jurisdiction.as_str())
+            .unwrap_or_else(|_| HeaplessString::new());
+        let holiday_name_str = HeaplessString::try_from(row.holiday_name.as_str())
+            .unwrap_or_else(|_| HeaplessString::new());
+
         Ok(BankHolidayModel {
             holiday_id: row.holiday_id,
-            jurisdiction: row.jurisdiction,
+            jurisdiction: jurisdiction_str,
             holiday_date: row.holiday_date,
-            holiday_name: row.holiday_name,
+            holiday_name: holiday_name_str,
             holiday_type: row.holiday_type,
             is_recurring: row.is_recurring,
-            // Fields that exist in model but not in database - use defaults
-            description: None,
-            is_observed: true, // Default to observed
-            observance_rule: None,
+            description: row.description.map(|d| HeaplessString::try_from(d.as_str()).unwrap_or_else(|_| HeaplessString::new())),
             created_at: row.created_at,
-            created_by: "system".to_string(), // Default value
-            last_updated_at: row.created_at, // Use created_at as fallback
-            updated_by: "system".to_string(), // Default value
+            created_by: row.created_by,
         })
     }
 
@@ -204,7 +233,8 @@ impl CalendarRepository for CalendarRepositoryImpl {
         let rows = sqlx::query!(
             r#"
             SELECT holiday_id, jurisdiction, holiday_date, holiday_name, 
-                   holiday_type, is_recurring, created_at
+                   holiday_type as "holiday_type: HolidayType", is_recurring, description, 
+                   created_at, created_by
             FROM bank_holidays
             WHERE jurisdiction = $1 
               AND EXTRACT(YEAR FROM holiday_date) = $2
@@ -217,21 +247,23 @@ impl CalendarRepository for CalendarRepositoryImpl {
         .await?;
 
         // Convert query results to BankHolidayModel
-        let holidays = rows.into_iter().map(|row| BankHolidayModel {
-            holiday_id: row.holiday_id,
-            jurisdiction: row.jurisdiction,
-            holiday_date: row.holiday_date,
-            holiday_name: row.holiday_name,
-            holiday_type: row.holiday_type,
-            is_recurring: row.is_recurring,
-            // Fields that exist in model but not in database - use defaults
-            description: None,
-            is_observed: true, // Default to observed
-            observance_rule: None,
-            created_at: row.created_at,
-            created_by: "system".to_string(), // Default value
-            last_updated_at: row.created_at, // Use created_at as fallback
-            updated_by: "system".to_string(), // Default value
+        let holidays = rows.into_iter().map(|row| {
+            let jurisdiction_str = HeaplessString::try_from(row.jurisdiction.as_str())
+                .unwrap_or_else(|_| HeaplessString::new());
+            let holiday_name_str = HeaplessString::try_from(row.holiday_name.as_str())
+                .unwrap_or_else(|_| HeaplessString::new());
+                
+            BankHolidayModel {
+                holiday_id: row.holiday_id,
+                jurisdiction: jurisdiction_str,
+                holiday_date: row.holiday_date,
+                holiday_name: holiday_name_str,
+                holiday_type: row.holiday_type,
+                is_recurring: row.is_recurring,
+                description: row.description.map(|d| HeaplessString::try_from(d.as_str()).unwrap_or_else(|_| HeaplessString::new())),
+                created_at: row.created_at,
+                created_by: row.created_by,
+            }
         }).collect();
 
         Ok(holidays)
