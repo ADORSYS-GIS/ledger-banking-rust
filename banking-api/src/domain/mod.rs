@@ -21,7 +21,14 @@ pub use transaction::*;
 pub use calendar::*;
 pub use workflow::*;
 pub use compliance::*;
-pub use channel::*;
+// Channel module exports (renamed to avoid conflicts)
+pub use channel::{
+    Channel, ChannelStatus, ChannelFeeType, ChannelFeeCalculationMethod, 
+    ChannelFeeTier, FeeSchedule, FeeItem, ReconciliationReport, 
+    Discrepancy, ReconciliationStatus, ChannelFee
+};
+
+// Fee module exports (original fee types)
 pub use fee::*;
 pub use casa::*;
 pub use loan::*;

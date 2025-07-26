@@ -6,9 +6,10 @@ use uuid::Uuid;
 use crate::{
     BankingResult,
     domain::{
-        FeeApplication, FeeApplicationStatus, FeeTriggerEvent, FeeType, 
+        FeeApplication, FeeApplicationStatus, FeeTriggerEvent,
         FeeProcessingJob, FeeJobType, ProductFeeSchedule, ProductFee,
-        FeeWaiver, FeeCategory
+        FeeWaiver, FeeCategory,
+        fee::FeeType,
     },
 };
 

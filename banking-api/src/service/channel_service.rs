@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use uuid::Uuid;
 
 use crate::{
-    domain::{Transaction, Channel, Fee, ReconciliationReport, ChannelType},
+    domain::{Transaction, Channel, ChannelFee, ReconciliationReport, ChannelType},
     error::BankingResult,
 };
 
@@ -13,7 +13,7 @@ pub trait ChannelProcessor: Send + Sync {
     async fn validate_channel_limits(&self, transaction: &Transaction, channel: &Channel) -> BankingResult<bool>;
     
     /// Apply channel-specific fees
-    async fn apply_channel_fees(&self, transaction: &Transaction, channel: &Channel) -> BankingResult<Vec<Fee>>;
+    async fn apply_channel_fees(&self, transaction: &Transaction, channel: &Channel) -> BankingResult<Vec<ChannelFee>>;
     
     /// Log channel activity for audit
     async fn log_channel_activity(&self, transaction: &Transaction, channel: &Channel) -> BankingResult<()>;
