@@ -11,6 +11,7 @@ pub mod fee;
 pub mod casa;
 pub mod loan;
 pub mod reason_view;
+pub mod referenced_person;
 
 pub use customer::*;
 pub use account::*;
@@ -25,3 +26,4 @@ pub use fee::*;
 pub use casa::*;
 pub use loan::*;
 pub use reason_view::*;
+pub use referenced_person::*;

@@ -14,7 +14,8 @@ pub struct Customer {
     pub status: CustomerStatus,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub updated_by: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -106,7 +107,7 @@ pub struct CustomerBuilder {
     id_number: String,
     risk_rating: RiskRating,
     status: CustomerStatus,
-    updated_by: String,
+    updated_by: Uuid,
 }
 
 impl CustomerBuilder {
@@ -119,7 +120,7 @@ impl CustomerBuilder {
             id_number: String::new(),
             risk_rating: RiskRating::Low,
             status: CustomerStatus::Active,
-            updated_by: String::new(),
+            updated_by: Uuid::nil(),
         }
     }
     
@@ -144,15 +145,15 @@ impl CustomerBuilder {
         self
     }
     
-    pub fn updated_by(mut self, updated_by: &str) -> Self {
-        self.updated_by = updated_by.to_string();
+    pub fn updated_by(mut self, updated_by: Uuid) -> Self {
+        self.updated_by = updated_by;
         self
     }
     
     pub fn build(self) -> Result<Customer, &'static str> {
         let full_name_heap = HeaplessString::try_from(self.full_name.as_str()).map_err(|_| "Full name too long")?;
         let id_number_heap = HeaplessString::try_from(self.id_number.as_str()).map_err(|_| "ID number too long")?;
-        let updated_by_heap = HeaplessString::try_from(self.updated_by.as_str()).map_err(|_| "Updated by too long")?;
+        // No need for HeaplessString conversion for UUID
         
         let now = chrono::Utc::now();
         
@@ -166,7 +167,7 @@ impl CustomerBuilder {
             status: self.status,
             created_at: now,
             last_updated_at: now,
-            updated_by: updated_by_heap,
+            updated_by: self.updated_by,
         })
     }
 }
@@ -186,9 +187,9 @@ impl Customer {
             errors.push("ID number cannot be empty".to_string());
         }
         
-        // Validate updated_by (should not be empty, max 100 chars)
-        if self.updated_by.is_empty() {
-            errors.push("Updated by cannot be empty".to_string());
+        // Validate updated_by (should not be nil UUID)
+        if self.updated_by.is_nil() {
+            errors.push("Updated by cannot be nil UUID".to_string());
         }
         
         if errors.is_empty() {
@@ -217,7 +218,7 @@ impl Customer {
         id_number: &str,
         risk_rating: RiskRating,
         status: CustomerStatus,
-        updated_by: &str,
+        updated_by: Uuid,
     ) -> Result<Self, &'static str> {
         CustomerBuilder::new(customer_id, customer_type)
             .full_name(full_name)
@@ -267,7 +268,7 @@ mod tests {
             "12345",
             RiskRating::Low,
             CustomerStatus::Active,
-            "system"
+            Uuid::new_v4()
         ).unwrap();
         
         // Validation should pass for valid customer
@@ -276,7 +277,7 @@ mod tests {
         // Test that helper methods work
         assert_eq!(customer.full_name.as_str(), "John Smith");
         assert_eq!(customer.id_number.as_str(), "12345");
-        assert_eq!(customer.updated_by.as_str(), "system");
+        assert!(!customer.updated_by.is_nil());
     }
 
     #[test]
@@ -287,7 +288,7 @@ mod tests {
             .identity(IdentityType::CompanyRegistration, "REG987654321")
             .risk_rating(RiskRating::Medium)
             .status(CustomerStatus::Active)
-            .updated_by("compliance_officer")
+            .updated_by(Uuid::new_v4())
             .build()
             .unwrap();
 
@@ -297,7 +298,7 @@ mod tests {
         assert_eq!(customer.id_number.as_str(), "REG987654321");
         assert_eq!(customer.risk_rating, RiskRating::Medium);
         assert_eq!(customer.status, CustomerStatus::Active);
-        assert_eq!(customer.updated_by.as_str(), "compliance_officer");
+        assert!(!customer.updated_by.is_nil());
 
         // Should pass validation
         assert!(customer.validate().is_ok());
@@ -312,7 +313,7 @@ mod tests {
         let result = Customer::builder(customer_id, CustomerType::Individual)
             .full_name(&long_name)
             .identity(IdentityType::NationalId, "ID123")
-            .updated_by("admin")
+            .updated_by(Uuid::new_v4())
             .build();
             
         assert!(result.is_err());
@@ -333,7 +334,7 @@ mod tests {
             "12345",
             RiskRating::Low,
             CustomerStatus::Active,
-            "system"
+            Uuid::new_v4()
         );
         
         // Should fail due to name being too long

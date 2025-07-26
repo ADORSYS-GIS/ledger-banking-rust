@@ -59,7 +59,8 @@ pub struct AccountModel {
     pub pending_closure_reason_id: Option<Uuid>,
     
     // Enhanced audit trail
-    pub status_changed_by: Option<HeaplessString<100>>,
+    /// References ReferencedPerson.person_id
+    pub status_changed_by: Option<Uuid>,
     /// References ReasonAndPurpose.id for status change
     pub status_change_reason_id: Option<Uuid>,
     pub status_change_timestamp: Option<DateTime<Utc>>,
@@ -67,7 +68,8 @@ pub struct AccountModel {
     // Audit fields
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub updated_by: Uuid,
 }
 
 /// Database model for Account Ownership
@@ -122,11 +124,13 @@ pub struct AccountHoldModel {
     pub reason_id: Uuid,
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
-    pub placed_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub placed_by: Uuid,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub status: HeaplessString<100>,
-    pub released_by: Option<HeaplessString<100>>,
+    /// References ReferencedPerson.person_id
+    pub released_by: Option<Uuid>,
     pub released_at: Option<DateTime<Utc>>,
 }
 
@@ -142,7 +146,8 @@ pub struct AccountStatusHistoryModel {
     pub change_reason_id: Uuid,
     /// Additional context for status change
     pub additional_context: Option<HeaplessString<200>>,
-    pub changed_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub changed_by: Uuid,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
     pub created_at: DateTime<Utc>,
@@ -161,7 +166,8 @@ pub struct AccountFinalSettlementModel {
     pub final_amount: Decimal,
     pub disbursement_method: HeaplessString<100>,
     pub disbursement_reference: Option<HeaplessString<100>>,
-    pub processed_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub processed_by: Uuid,
     pub created_at: DateTime<Utc>,
 }
 

@@ -8,6 +8,7 @@ pub mod calendar;
 pub mod fee;
 pub mod reason_and_purpose;
 pub mod reason_and_purpose_seeds;
+pub mod referenced_person;
 
 pub use customer::*;
 pub use account::*;
@@ -19,3 +20,4 @@ pub use calendar::*;
 pub use fee::*;
 pub use reason_and_purpose::*;
 pub use reason_and_purpose_seeds::*;
+pub use referenced_person::*;

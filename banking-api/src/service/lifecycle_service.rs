@@ -16,14 +16,14 @@ pub trait AccountLifecycleService: Send + Sync {
     /// Account origination workflow
     async fn initiate_account_opening(&self, request: AccountOpeningRequest) -> BankingResult<AccountWorkflow>;
     async fn complete_kyc_verification(&self, account_id: Uuid, verification_result: KycResult) -> BankingResult<()>;
-    async fn activate_account(&self, account_id: Uuid, authorized_by: String) -> BankingResult<()>;
+    async fn activate_account(&self, account_id: Uuid, authorized_by: Uuid) -> BankingResult<()>;
     
     /// Dormancy management (automated)
     async fn check_dormancy_eligibility(&self, account_id: Uuid) -> BankingResult<DormancyAssessment>;
     async fn mark_account_dormant(&self, account_id: Uuid, system_triggered: bool) -> BankingResult<()>;
     
     /// Reactivation workflow (requires human intervention)
-    async fn initiate_reactivation(&self, account_id: Uuid, requested_by: String) -> BankingResult<AccountWorkflow>;
+    async fn initiate_reactivation(&self, account_id: Uuid, requested_by: Uuid) -> BankingResult<AccountWorkflow>;
     async fn complete_mini_kyc(&self, account_id: Uuid, verification_result: KycResult) -> BankingResult<()>;
     
     /// Account closure workflow
@@ -33,11 +33,11 @@ pub trait AccountLifecycleService: Send + Sync {
     async fn finalize_closure(&self, account_id: Uuid) -> BankingResult<()>;
     
     /// Status management with reason ID validation
-    async fn update_account_status(&self, account_id: Uuid, new_status: AccountStatus, reason_id: Uuid, additional_context: Option<&str>, authorized_by: String) -> BankingResult<()>;
+    async fn update_account_status(&self, account_id: Uuid, new_status: AccountStatus, reason_id: Uuid, additional_context: Option<&str>, authorized_by: Uuid) -> BankingResult<()>;
     
     /// Legacy method - deprecated, use update_account_status with reason_id instead
     #[deprecated(note = "Use update_account_status with reason_id instead")]
-    async fn update_account_status_legacy(&self, account_id: Uuid, new_status: AccountStatus, reason: String, authorized_by: String) -> BankingResult<()>;
+    async fn update_account_status_legacy(&self, account_id: Uuid, new_status: AccountStatus, reason: String, authorized_by: Uuid) -> BankingResult<()>;
     async fn get_status_history(&self, account_id: Uuid) -> BankingResult<Vec<StatusChangeRecord>>;
 
     /// Workflow management

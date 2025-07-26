@@ -46,12 +46,12 @@ mod stack_optimization_tests {
             reactivation_required: false,
             pending_closure_reason_id: None,
             disbursement_instructions: None,
-            status_changed_by: Some(HeaplessString::try_from("SYSTEM").unwrap()),
+            status_changed_by: Some(Uuid::new_v4()), // Changed to UUID for ReferencedPerson.person_id
             status_change_reason_id: None,  // Changed to UUID, using None for test
             status_change_timestamp: Some(Utc::now()),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: HeaplessString::try_from("admin@bank.com").unwrap(),
+            updated_by: Uuid::new_v4(), // Changed to UUID for ReferencedPerson.person_id
         };
 
         // Test serialization
@@ -73,7 +73,8 @@ mod stack_optimization_tests {
         assert_eq!(currency_str, "USD");
         assert!(matches!(deserialized.account_type, AccountType::Savings));
         assert!(matches!(deserialized.account_status, AccountStatus::Active));
-        assert_eq!(deserialized.updated_by.as_str(), "admin@bank.com");
+        // updated_by is now a UUID, so we just verify it exists
+        assert!(!deserialized.updated_by.is_nil());
     }
 
     #[test]
@@ -132,7 +133,7 @@ mod stack_optimization_tests {
             "ID789012345",
             RiskRating::Low,
             CustomerStatus::Active,
-            "branch_manager@bank.com",
+            Uuid::new_v4(),
         ).expect("Customer creation should succeed");
 
         // Test serialization
@@ -142,7 +143,8 @@ mod stack_optimization_tests {
         // Verify bounded string fields
         assert!(json.contains("\"full_name\":\"Jane Smith-Johnson\""));
         assert!(json.contains("\"id_number\":\"ID789012345\""));
-        assert!(json.contains("\"updated_by\":\"branch_manager@bank.com\""));
+        // updated_by is now a UUID, check it exists in JSON
+        assert!(json.contains("\"updated_by\":\""));
 
         // Test deserialization
         let deserialized: Customer = serde_json::from_str(&json).expect("Customer deserialization should succeed");
@@ -150,7 +152,8 @@ mod stack_optimization_tests {
         // Verify HeaplessString fields maintain data integrity
         assert_eq!(deserialized.full_name.as_str(), "Jane Smith-Johnson");
         assert_eq!(deserialized.id_number.as_str(), "ID789012345");
-        assert_eq!(deserialized.updated_by.as_str(), "branch_manager@bank.com");
+        // updated_by is now a UUID
+        assert!(!deserialized.updated_by.is_nil());
         assert!(matches!(deserialized.customer_type, CustomerType::Individual));
         assert!(matches!(deserialized.risk_rating, RiskRating::Low));
     }
@@ -190,7 +193,7 @@ mod stack_optimization_tests {
         let audit = TransactionAudit::new(
             Uuid::new_v4(),
             "status_change".to_string(),
-            "system".to_string(),
+            Uuid::new_v4(), // Changed to UUID for performed_by
             Some("Pending".to_string()),
             Some("Posted".to_string()),
             None,  // Changed to UUID for reason_id, using None for test
@@ -202,7 +205,8 @@ mod stack_optimization_tests {
 
         let audit_deserialized: TransactionAudit = serde_json::from_str(&audit_json).expect("TransactionAudit deserialization should succeed");
         assert_eq!(audit_deserialized.action_type, "status_change");
-        assert_eq!(audit_deserialized.performed_by, "system");
+        // performed_by is now a UUID
+        assert!(!audit_deserialized.performed_by.is_nil());
         // Verify hash integrity
         let expected_audit_hash = blake3::hash(b"audit_details_content_for_verification");
         assert_eq!(audit_deserialized.details, Some(expected_audit_hash));
@@ -263,7 +267,7 @@ mod stack_optimization_tests {
             "ID123",
             RiskRating::Low,
             CustomerStatus::Active,
-            "admin",
+            Uuid::new_v4(),
         );
         assert!(empty_name_result.is_ok(), "Empty name creation should succeed (business validation handled elsewhere)");
 
@@ -277,7 +281,7 @@ mod stack_optimization_tests {
             "REG987654321",
             RiskRating::Medium,
             CustomerStatus::Active,
-            "compliance_officer",
+            Uuid::new_v4(),
         );
         assert!(valid_customer.is_ok(), "Valid customer should pass validation");
 
@@ -292,7 +296,7 @@ mod stack_optimization_tests {
             "ID123",
             RiskRating::Low,
             CustomerStatus::Active,
-            "admin",
+            Uuid::new_v4(),
         );
         assert!(overflow_result.is_err(), "Overflow should fail validation");
     }

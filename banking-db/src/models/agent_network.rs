@@ -17,7 +17,7 @@ pub struct AgentNetworkModel {
     pub settlement_gl_code: HeaplessString<10>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: String,
+    pub updated_by: Uuid,
 }
 
 /// Agency Branch database model
@@ -84,7 +84,7 @@ pub struct AgencyBranchModel {
     
     // Metadata
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: String,
+    pub updated_by: Uuid,
 }
 
 /// Agent Terminal database model
@@ -104,7 +104,7 @@ pub struct AgentTerminalModel {
     pub last_sync_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: String,
+    pub updated_by: Uuid,
 }
 
 /// Cash Limit Check database model
@@ -120,7 +120,7 @@ pub struct CashLimitCheckModel {
     pub max_limit: Option<Decimal>,
     pub minimum_required: Option<Decimal>,
     pub checked_at: DateTime<Utc>,
-    pub checked_by: String,
+    pub checked_by: Uuid,
 }
 
 

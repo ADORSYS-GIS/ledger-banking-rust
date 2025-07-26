@@ -11,7 +11,8 @@ use banking_api::{
         OverdraftFacility, OverdraftUtilization, OverdraftInterestCalculation,
         CasaAccountSummary, OverdraftProcessingJob, OverdraftLimitAdjustment,
         CasaTransactionValidation, InterestPostingRecord, InterestType,
-        CasaValidationResult, CompoundingFrequency, ReviewFrequency, OverdraftStatus
+        CasaValidationResult, CompoundingFrequency, ReviewFrequency, OverdraftStatus,
+        CreateOverdraftFacilityRequest
     },
 };
 use banking_db::repository::{AccountRepository, HoldRepository};
@@ -49,21 +50,15 @@ impl CasaService for CasaServiceImpl {
     
     async fn create_overdraft_facility(
         &self,
-        account_id: Uuid,
-        approved_limit: Decimal,
-        interest_rate: Decimal,
-        approved_by: String,
-        expiry_date: Option<NaiveDate>,
-        security_required: bool,
-        security_details: Option<String>,
+        request: CreateOverdraftFacilityRequest,
     ) -> BankingResult<OverdraftFacility> {
-        tracing::info!("Creating overdraft facility for account {} with limit {}", account_id, approved_limit);
+        tracing::info!("Creating overdraft facility for account {} with limit {}", request.account_id, request.approved_limit);
 
         // Validate account exists and is a current account
         let account = self.account_repository
-            .find_by_id(account_id)
+            .find_by_id(request.account_id)
             .await?
-            .ok_or(BankingError::AccountNotFound(account_id))?;
+            .ok_or(BankingError::AccountNotFound(request.account_id))?;
 
         if account.account_type != banking_api::domain::AccountType::Current {
             return Err(BankingError::ValidationError {
@@ -73,14 +68,14 @@ impl CasaService for CasaServiceImpl {
         }
 
         // Validate business rules
-        if approved_limit <= Decimal::ZERO {
+        if request.approved_limit <= Decimal::ZERO {
             return Err(BankingError::ValidationError {
                 field: "approved_limit".to_string(),
                 message: "Approved limit must be greater than zero".to_string(),
             });
         }
 
-        if interest_rate < Decimal::ZERO || interest_rate > Decimal::ONE {
+        if request.interest_rate < Decimal::ZERO || request.interest_rate > Decimal::ONE {
             return Err(BankingError::ValidationError {
                 field: "interest_rate".to_string(),
                 message: "Interest rate must be between 0 and 1".to_string(),
@@ -90,29 +85,29 @@ impl CasaService for CasaServiceImpl {
         // Create overdraft facility
         let facility = OverdraftFacility {
             facility_id: Uuid::new_v4(),
-            account_id,
-            approved_limit,
+            account_id: request.account_id,
+            approved_limit: request.approved_limit,
             current_utilized: Decimal::ZERO,
-            available_limit: approved_limit,
-            interest_rate,
+            available_limit: request.approved_limit,
+            interest_rate: request.interest_rate,
             facility_status: OverdraftStatus::Active,
             approval_date: chrono::Utc::now().date_naive(),
-            expiry_date,
-            approved_by,
+            expiry_date: request.expiry_date,
+            approved_by: request.approved_by,
             review_frequency: ReviewFrequency::Annually,
             next_review_date: chrono::Utc::now().date_naive() + chrono::Duration::days(365),
-            security_required,
-            security_details,
+            security_required: request.security_required,
+            security_details: request.security_details,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
         };
 
         // Update account with overdraft limit
         let mut updated_account = account.clone();
-        updated_account.overdraft_limit = Some(approved_limit);
+        updated_account.overdraft_limit = Some(request.approved_limit);
         self.account_repository.update(updated_account).await?;
 
-        tracing::info!("Created overdraft facility {} for account {}", facility.facility_id, account_id);
+        tracing::info!("Created overdraft facility {} for account {}", facility.facility_id, request.account_id);
 
         Ok(facility)
     }
@@ -123,7 +118,7 @@ impl CasaService for CasaServiceImpl {
         new_limit: Option<Decimal>,
         new_rate: Option<Decimal>,
         new_expiry_date: Option<NaiveDate>,
-        updated_by: String,
+        updated_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<OverdraftFacility> {
         // Implementation would update facility and account
         todo!("Implement overdraft facility update")
@@ -134,7 +129,7 @@ impl CasaService for CasaServiceImpl {
         facility_id: Uuid,
         new_status: OverdraftStatus,
         reason: String,
-        updated_by: String,
+        updated_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<OverdraftFacility> {
         todo!("Implement overdraft status update")
     }
@@ -152,7 +147,7 @@ impl CasaService for CasaServiceImpl {
         requested_limit: Decimal,
         adjustment_reason: String,
         supporting_documents: Vec<String>,
-        requested_by: String,
+        requested_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<OverdraftLimitAdjustment> {
         todo!("Implement overdraft limit adjustment request")
     }
@@ -161,7 +156,7 @@ impl CasaService for CasaServiceImpl {
         &self,
         adjustment_id: Uuid,
         approved: bool,
-        approved_by: String,
+        approved_by: Uuid, // References ReferencedPerson.person_id
         approval_notes: Option<String>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<OverdraftLimitAdjustment> {
@@ -385,7 +380,7 @@ impl CasaService for CasaServiceImpl {
             compounding_frequency: CompoundingFrequency::Daily,
             capitalization_due: false, // Would be determined by product rules
             calculated_at: Utc::now(),
-            calculated_by: "SYSTEM".to_string(),
+            calculated_by: Uuid::nil(), // System-generated calculation
         };
 
         tracing::debug!("Calculated daily overdraft interest: {} for account {}", interest_amount, account_id);
@@ -449,7 +444,7 @@ impl CasaService for CasaServiceImpl {
         calculation_period_start: NaiveDate,
         calculation_period_end: NaiveDate,
         posting_date: NaiveDate,
-        posted_by: String,
+        posted_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<InterestPostingRecord> {
         todo!("Implement overdraft interest posting")
     }

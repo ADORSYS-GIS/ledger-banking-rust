@@ -88,10 +88,10 @@ impl CustomerService for CustomerServiceImpl {
         &self,
         customer_id: Uuid,
         risk_rating: RiskRating,
-        authorized_by: String,
+        authorized_by: Uuid,
     ) -> BankingResult<()> {
         // Validate authorization (in production, this would check user permissions)
-        self.validate_risk_rating_authorization(&authorized_by)?;
+        self.validate_risk_rating_authorization(authorized_by)?;
 
         // Ensure customer exists
         if !self.customer_repository.exists(customer_id).await? {
@@ -103,7 +103,7 @@ impl CustomerService for CustomerServiceImpl {
             .update_risk_rating(
                 customer_id,
                 &crate::mappers::CustomerMapper::risk_rating_to_string(risk_rating),
-                &authorized_by,
+                authorized_by,
             )
             .await?;
 
@@ -319,7 +319,7 @@ impl CustomerServiceImpl {
         }
 
         // Updated by validation
-        if customer.updated_by.trim().is_empty() {
+        if customer.updated_by.is_nil() {
             return Err(banking_api::BankingError::ValidationError {
                 field: "updated_by".to_string(),
                 message: "Updated by field is required".to_string(),
@@ -330,9 +330,9 @@ impl CustomerServiceImpl {
     }
 
     /// Validate authorization for risk rating updates
-    fn validate_risk_rating_authorization(&self, authorized_by: &str) -> BankingResult<()> {
+    fn validate_risk_rating_authorization(&self, authorized_by: Uuid) -> BankingResult<()> {
         // In production, this would check against user permissions database
-        if authorized_by.trim().is_empty() {
+        if authorized_by.is_nil() {
             return Err(banking_api::BankingError::UnauthorizedOperation(
                 "Authorization required for risk rating updates".to_string()
             ));

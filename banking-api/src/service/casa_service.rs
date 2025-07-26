@@ -40,7 +40,7 @@ pub trait CasaService: Send + Sync {
         new_limit: Option<Decimal>,
         new_rate: Option<Decimal>,
         new_expiry_date: Option<NaiveDate>,
-        updated_by: String,
+        updated_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<OverdraftFacility>;
     
     /// Suspend or activate overdraft facility
@@ -49,7 +49,7 @@ pub trait CasaService: Send + Sync {
         facility_id: Uuid,
         new_status: crate::domain::OverdraftStatus,
         reason: String,
-        updated_by: String,
+        updated_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<OverdraftFacility>;
     
     /// Get overdraft facility details for an account
@@ -65,7 +65,7 @@ pub trait CasaService: Send + Sync {
         requested_limit: Decimal,
         adjustment_reason: String,
         supporting_documents: Vec<String>,
-        requested_by: String,
+        requested_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<OverdraftLimitAdjustment>;
     
     /// Process overdraft limit adjustment approval
@@ -73,7 +73,7 @@ pub trait CasaService: Send + Sync {
         &self,
         adjustment_id: Uuid,
         approved: bool,
-        approved_by: String,
+        approved_by: Uuid, // References ReferencedPerson.person_id
         approval_notes: Option<String>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<OverdraftLimitAdjustment>;

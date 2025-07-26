@@ -713,6 +713,88 @@ This pattern ensures the banking system maintains high code quality standards wh
 3. Production deployment documentation
 4. Monitoring and observability integration
 
+## Database Schema Guidelines
+
+### Migration Management
+
+**Development Environment Schema Management:**
+- **Single Migration File**: All database schema definitions are consolidated in `001_initial_schema.sql`
+- **Recreation Strategy**: During development, the database can be dropped and recreated from this single file
+- **No Incremental Migrations**: Schema changes are made directly to `001_initial_schema.sql` rather than creating new migration files
+- **Production Migration**: When moving to production, proper incremental migrations will be implemented
+
+**Benefits of Single Migration Approach:**
+1. **Simplicity**: No migration version conflicts during rapid development
+2. **Clean Schema**: Always working with the latest schema definition
+3. **Fast Iteration**: Quick schema changes without migration overhead
+4. **Easy Reset**: Simple database recreation for testing
+
+### UUID Field Guidelines
+
+**PostgreSQL UUID Type Usage:**
+- **Native UUID Type**: All UUID fields use PostgreSQL's native `UUID` type, not `VARCHAR`
+- **Default Generation**: Use `uuid_generate_v4()` or `gen_random_uuid()` for default values
+- **Performance**: Native UUID type provides better indexing and storage efficiency
+- **Type Safety**: Prevents invalid UUID values at the database level
+
+**UUID Field Examples:**
+```sql
+-- Customer table with native UUID
+CREATE TABLE customers (
+    customer_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    -- other fields...
+);
+
+-- Foreign key references with UUID
+CREATE TABLE accounts (
+    account_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    updated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    -- other fields...
+);
+```
+
+### Database Type Mapping
+
+**Rust to PostgreSQL Type Mappings:**
+- `Uuid` (Rust) → `UUID` (PostgreSQL)
+- `String` → `VARCHAR(n)` or `TEXT`
+- `[u8; 3]` (currency) → `VARCHAR(3)` with CHECK constraint
+- `Decimal` → `DECIMAL(15,2)` for monetary values
+- `DateTime<Utc>` → `TIMESTAMP WITH TIME ZONE`
+- `NaiveDate` → `DATE`
+- `bool` → `BOOLEAN`
+- `i32` → `INTEGER`
+- `i64` → `BIGINT`
+- `Vec<T>` → `ARRAY` types
+- `serde_json::Value` → `JSONB`
+- `Blake3::Hash` → `BYTEA`
+
+### Schema Best Practices
+
+1. **Use UUID Primary Keys**: All tables use UUID primary keys for global uniqueness
+2. **Foreign Key Constraints**: Always define foreign key relationships for referential integrity
+3. **Check Constraints**: Use CHECK constraints for business rule enforcement at database level
+4. **Indexes**: Create indexes on foreign keys and frequently queried columns
+5. **Audit Fields**: Include created_at, updated_at timestamps on all tables
+6. **Trigger Functions**: Use triggers for automatic timestamp updates
+7. **Comments**: Document tables and columns with COMMENT statements
+
+### Development Workflow
+
+**When making schema changes:**
+1. Edit `banking-db-postgres/migrations/001_initial_schema.sql`
+2. Drop the existing database: `dropdb ledger_banking_dev`
+3. Create a new database: `createdb ledger_banking_dev`
+4. Run the migration: `psql -d ledger_banking_dev -f banking-db-postgres/migrations/001_initial_schema.sql`
+5. Update corresponding Rust models to match schema changes
+6. Run tests to verify changes
+
+**Important Notes:**
+- This single-migration approach is ONLY for development
+- Production deployments will require proper migration versioning
+- Always backup data before dropping databases
+- Keep the single migration file well-organized and commented
+
 ## Conclusion
 
 This is an exceptionally well-designed core banking system that demonstrates enterprise-grade architecture and comprehensive business domain understanding. The foundation is solid with complete domain models, service interfaces, and database schemas. The critical blocker is the incomplete database repository implementation layer, which represents about 2000 lines of implementation code needed to bridge the gap between the excellent architecture and a fully functional system.

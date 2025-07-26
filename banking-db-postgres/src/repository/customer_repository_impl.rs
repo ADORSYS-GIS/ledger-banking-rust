@@ -36,7 +36,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             customer.status,
             customer.created_at,
             customer.last_updated_at,
-            customer.updated_by.as_str()
+            &customer.updated_by.to_string() // TODO: Update after migration
         )
         .fetch_one(&self.pool)
         .await?;
@@ -51,7 +51,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+            updated_by: Uuid::parse_str(&row.updated_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
         })
     }
 
@@ -72,7 +72,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             customer.risk_rating,
             customer.status,
             customer.last_updated_at,
-            customer.updated_by.as_str()
+            &customer.updated_by.to_string() // TODO: Update after migration
         )
         .fetch_one(&self.pool)
         .await?;
@@ -87,7 +87,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+            updated_by: Uuid::parse_str(&row.updated_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
         })
     }
 
@@ -109,7 +109,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+            updated_by: Uuid::parse_str(&row.updated_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
         }))
     }
 
@@ -132,7 +132,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+            updated_by: Uuid::parse_str(&row.updated_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
         }))
     }
 
@@ -156,7 +156,7 @@ impl CustomerRepository for PostgresCustomerRepository {
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+                updated_by: Uuid::parse_str(&row.updated_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
             })
             .collect())
     }
@@ -187,7 +187,7 @@ impl CustomerRepository for PostgresCustomerRepository {
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+                updated_by: Uuid::parse_str(&row.updated_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
             })
             .collect())
     }
@@ -232,7 +232,7 @@ impl CustomerRepository for PostgresCustomerRepository {
         }))
     }
 
-    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: &str, authorized_by: &str) -> BankingResult<()> {
+    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: &str, authorized_by: Uuid) -> BankingResult<()> {
         let mut tx = self.pool.begin().await?;
 
         // Get current risk rating for audit trail
@@ -252,7 +252,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             "#,
             customer_id,
             risk_rating,
-            authorized_by
+            &authorized_by.to_string() // TODO: Update after migration
         )
         .execute(&mut *tx)
         .await?;
@@ -270,7 +270,7 @@ impl CustomerRepository for PostgresCustomerRepository {
                 customer_id,
                 current_record.risk_rating,
                 risk_rating,
-                authorized_by
+                &authorized_by.to_string() // TODO: Update after migration
             )
             .execute(&mut *tx)
             .await?;
@@ -328,6 +328,9 @@ impl CustomerRepository for PostgresCustomerRepository {
     }
 
     async fn add_document(&self, document: CustomerDocumentModel) -> BankingResult<CustomerDocumentModel> {
+        // Create temporary for verified_by to avoid lifetime issues
+        let verified_by_str = document.verified_by.map(|id| id.to_string());
+        
         let row = sqlx::query!(
             r#"
             INSERT INTO customer_documents (
@@ -342,9 +345,9 @@ impl CustomerRepository for PostgresCustomerRepository {
             document.document_path,
             document.status,
             document.uploaded_at,
-            document.uploaded_by,
+            &document.uploaded_by.to_string(), // TODO: Update after migration
             document.verified_at,
-            document.verified_by
+            verified_by_str.as_deref() // TODO: Update after migration
         )
         .fetch_one(&self.pool)
         .await?;
@@ -356,9 +359,9 @@ impl CustomerRepository for PostgresCustomerRepository {
             document_path: row.document_path,
             status: row.status,
             uploaded_at: row.uploaded_at,
-            uploaded_by: row.uploaded_by,
+            uploaded_by: Uuid::parse_str(&row.uploaded_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
             verified_at: row.verified_at,
-            verified_by: row.verified_by,
+            verified_by: row.verified_by.and_then(|s| Uuid::parse_str(&s).ok()), // TODO: Update after migration
         })
     }
 
@@ -379,9 +382,9 @@ impl CustomerRepository for PostgresCustomerRepository {
                 document_path: row.document_path,
                 status: row.status,
                 uploaded_at: row.uploaded_at,
-                uploaded_by: row.uploaded_by,
+                uploaded_by: Uuid::parse_str(&row.uploaded_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
                 verified_at: row.verified_at,
-                verified_by: row.verified_by,
+                verified_by: row.verified_by.and_then(|s| Uuid::parse_str(&s).ok()), // TODO: Update after migration
             })
             .collect())
     }
@@ -401,7 +404,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             audit.old_value,
             audit.new_value,
             audit.changed_at,
-            audit.changed_by,
+            &audit.changed_by.to_string(), // TODO: Update after migration
             audit.reason
         )
         .fetch_one(&self.pool)
@@ -414,7 +417,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             old_value: row.old_value,
             new_value: row.new_value,
             changed_at: row.changed_at,
-            changed_by: row.changed_by,
+            changed_by: Uuid::parse_str(&row.changed_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
             reason: row.reason,
         })
     }
@@ -436,13 +439,13 @@ impl CustomerRepository for PostgresCustomerRepository {
                 old_value: row.old_value,
                 new_value: row.new_value,
                 changed_at: row.changed_at,
-                changed_by: row.changed_by,
+                changed_by: Uuid::parse_str(&row.changed_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
                 reason: row.reason,
             })
             .collect())
     }
 
-    async fn delete(&self, customer_id: Uuid, deleted_by: &str) -> BankingResult<()> {
+    async fn delete(&self, customer_id: Uuid, deleted_by: Uuid) -> BankingResult<()> {
         let mut tx = self.pool.begin().await?;
 
         // Soft delete by updating status
@@ -453,7 +456,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             WHERE customer_id = $1
             "#,
             customer_id,
-            deleted_by
+            &deleted_by.to_string() // TODO: Update after migration
         )
         .execute(&mut *tx)
         .await?;
@@ -468,7 +471,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             "#,
             Uuid::new_v4(),
             customer_id,
-            deleted_by
+            &deleted_by.to_string() // TODO: Update after migration
         )
         .execute(&mut *tx)
         .await?;
@@ -514,7 +517,7 @@ impl CustomerRepository for PostgresCustomerRepository {
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+                updated_by: Uuid::parse_str(&row.updated_by).unwrap_or_else(|_| Uuid::nil()), // TODO: Update after migration
             })
             .collect())
     }

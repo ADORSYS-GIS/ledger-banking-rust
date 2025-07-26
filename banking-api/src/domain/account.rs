@@ -45,7 +45,8 @@ pub struct Account {
     pub disbursement_instructions: Option<DisbursementInstructions>,
     
     // Enhanced audit trail
-    pub status_changed_by: Option<HeaplessString<100>>,
+    /// References ReferencedPerson.person_id
+    pub status_changed_by: Option<Uuid>,
     /// References ReasonAndPurpose.id for status change
     pub status_change_reason_id: Option<Uuid>,
     pub status_change_timestamp: Option<DateTime<Utc>>,
@@ -53,7 +54,8 @@ pub struct Account {
     // Audit fields
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub updated_by: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -87,7 +89,8 @@ pub struct DisbursementInstructions {
     pub target_account: Option<Uuid>,
     /// References AgencyBranch.branch_id for cash pickup
     pub cash_pickup_branch_id: Option<Uuid>,
-    pub authorized_recipient: Option<HeaplessString<100>>,
+    /// References ReferencedPerson.person_id for authorized recipient
+    pub authorized_recipient: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,12 +111,14 @@ pub struct AccountHold {
     pub reason_id: Uuid,
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
-    pub placed_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub placed_by: Uuid,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub status: HoldStatus,
     pub released_at: Option<DateTime<Utc>>,
-    pub released_by: Option<HeaplessString<100>>,
+    /// References ReferencedPerson.person_id
+    pub released_by: Option<Uuid>,
     pub priority: HoldPriority,
     pub source_reference: Option<HeaplessString<100>>, // External reference for judicial holds, etc.
     pub automatic_release: bool,
@@ -195,7 +200,8 @@ pub struct HoldReleaseRequest {
     pub release_reason_id: Uuid,
     /// Additional context for release
     pub release_additional_details: Option<HeaplessString<200>>,
-    pub released_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub released_by: Uuid,
     pub override_authorization: bool,
 }
 
@@ -220,7 +226,8 @@ pub struct StatusChangeRecord {
     pub reason_id: Uuid,
     /// Additional context beyond the standard reason
     pub additional_context: Option<HeaplessString<200>>,
-    pub changed_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub changed_by: Uuid,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
 }
@@ -235,7 +242,8 @@ pub struct PlaceHoldRequest {
     pub reason_id: Uuid,
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
-    pub placed_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub placed_by: Uuid,
     pub expires_at: Option<DateTime<Utc>>,
     pub priority: HoldPriority,
     pub source_reference: Option<HeaplessString<100>>,
@@ -306,7 +314,7 @@ mod tests {
             status_change_timestamp: None,
             created_at: chrono::Utc::now(),
             last_updated_at: chrono::Utc::now(),
-            updated_by: HeaplessString::try_from("test").unwrap(),
+            updated_by: Uuid::new_v4(), // References ReferencedPerson.person_id
         };
         
         // Test string access

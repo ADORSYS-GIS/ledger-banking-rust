@@ -36,7 +36,8 @@ pub trait AccountRepository: Send + Sync {
     async fn find_interest_bearing_accounts(&self) -> BankingResult<Vec<AccountModel>>;
     
     /// Update account status with audit trail
-    async fn update_status(&self, account_id: Uuid, status: &str, reason: &str, changed_by: &str) -> BankingResult<()>;
+    /// @param changed_by - References ReferencedPerson.person_id
+    async fn update_status(&self, account_id: Uuid, status: &str, reason: &str, changed_by: Uuid) -> BankingResult<()>;
     
     /// Update account balance
     async fn update_balance(&self, account_id: Uuid, current_balance: Decimal, available_balance: Decimal) -> BankingResult<()>;
@@ -71,7 +72,9 @@ pub trait AccountRepository: Send + Sync {
     async fn create_hold(&self, hold: AccountHoldModel) -> BankingResult<AccountHoldModel>;
     async fn find_holds_by_account(&self, account_id: Uuid) -> BankingResult<Vec<AccountHoldModel>>;
     async fn find_active_holds(&self, account_id: Uuid) -> BankingResult<Vec<AccountHoldModel>>;
-    async fn release_hold(&self, hold_id: Uuid, released_by: &str) -> BankingResult<()>;
+    /// Release a hold
+    /// @param released_by - References ReferencedPerson.person_id
+    async fn release_hold(&self, hold_id: Uuid, released_by: Uuid) -> BankingResult<()>;
     async fn release_expired_holds(&self, reference_date: DateTime<Utc>) -> BankingResult<i64>;
     
     /// Final Settlement Operations

@@ -171,7 +171,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
 
     /// Activate account after all verifications complete
-    async fn activate_account(&self, account_id: Uuid, authorized_by: String) -> BankingResult<()> {
+    async fn activate_account(&self, account_id: Uuid, authorized_by: Uuid) -> BankingResult<()> {
         // Validate account exists and is in pending state
         let account_model = self.account_repository
             .find_by_id(account_id)
@@ -189,7 +189,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         // Update account status to Active
         self.account_repository
-            .update_status(account_id, "Active", "Account approved and activated", &authorized_by)
+            .update_status(account_id, "Active", "Account approved and activated", authorized_by)
             .await?;
 
         // Complete workflow
@@ -261,13 +261,14 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         // Update account status
         let updated_by = if system_triggered {
-            "SYSTEM_DORMANCY_JOB".to_string()
+            crate::constants::SYSTEM_PERSON_ID
         } else {
-            "MANUAL_DORMANCY_TRIGGER".to_string()
+            // TODO: Should be passed as parameter for manual triggers
+            crate::constants::SYSTEM_PERSON_ID
         };
 
         self.account_repository
-            .update_status(account_id, "Dormant", "Account marked dormant due to inactivity", &updated_by)
+            .update_status(account_id, "Dormant", "Account marked dormant due to inactivity", updated_by)
             .await?;
 
         tracing::info!(
