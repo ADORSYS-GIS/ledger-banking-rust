@@ -36,7 +36,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             customer.status,
             customer.created_at,
             customer.last_updated_at,
-            customer.updated_by.as_str()
+            customer.updated_by
         )
         .fetch_one(&self.pool)
         .await?;
@@ -51,7 +51,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+            updated_by: row.updated_by,
         })
     }
 
@@ -72,7 +72,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             customer.risk_rating,
             customer.status,
             customer.last_updated_at,
-            customer.updated_by.as_str()
+            customer.updated_by
         )
         .fetch_one(&self.pool)
         .await?;
@@ -87,7 +87,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+            updated_by: row.updated_by,
         })
     }
 
@@ -109,7 +109,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+            updated_by: row.updated_by,
         }))
     }
 
@@ -132,7 +132,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             status: row.status,
             created_at: row.created_at,
             last_updated_at: row.last_updated_at,
-            updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+            updated_by: row.updated_by,
         }))
     }
 
@@ -156,7 +156,7 @@ impl CustomerRepository for PostgresCustomerRepository {
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+                updated_by: row.updated_by,
             })
             .collect())
     }
@@ -187,7 +187,7 @@ impl CustomerRepository for PostgresCustomerRepository {
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+                updated_by: row.updated_by,
             })
             .collect())
     }
@@ -232,7 +232,7 @@ impl CustomerRepository for PostgresCustomerRepository {
         }))
     }
 
-    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: &str, authorized_by: &str) -> BankingResult<()> {
+    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: &str, authorized_by: Uuid) -> BankingResult<()> {
         let mut tx = self.pool.begin().await?;
 
         // Get current risk rating for audit trail
@@ -311,12 +311,13 @@ impl CustomerRepository for PostgresCustomerRepository {
                 INSERT INTO customer_audit_trail (
                     audit_id, customer_id, field_name, old_value, new_value,
                     changed_at, changed_by, reason
-                ) VALUES ($1, $2, 'status', $3, $4, NOW(), 'SYSTEM', $5)
+                ) VALUES ($1, $2, 'status', $3, $4, NOW(), $5, $6)
                 "#,
                 Uuid::new_v4(),
                 customer_id,
                 current_record.status,
                 status,
+                Uuid::nil(), // SYSTEM user - using nil UUID as placeholder
                 reason
             )
             .execute(&mut *tx)
@@ -328,6 +329,8 @@ impl CustomerRepository for PostgresCustomerRepository {
     }
 
     async fn add_document(&self, document: CustomerDocumentModel) -> BankingResult<CustomerDocumentModel> {
+        // Create temporary for verified_by to avoid lifetime issues
+        
         let row = sqlx::query!(
             r#"
             INSERT INTO customer_documents (
@@ -442,7 +445,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             .collect())
     }
 
-    async fn delete(&self, customer_id: Uuid, deleted_by: &str) -> BankingResult<()> {
+    async fn delete(&self, customer_id: Uuid, deleted_by: Uuid) -> BankingResult<()> {
         let mut tx = self.pool.begin().await?;
 
         // Soft delete by updating status
@@ -453,7 +456,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             WHERE customer_id = $1
             "#,
             customer_id,
-            deleted_by
+deleted_by
         )
         .execute(&mut *tx)
         .await?;
@@ -468,7 +471,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             "#,
             Uuid::new_v4(),
             customer_id,
-            deleted_by
+deleted_by
         )
         .execute(&mut *tx)
         .await?;
@@ -514,7 +517,7 @@ impl CustomerRepository for PostgresCustomerRepository {
                 status: row.status,
                 created_at: row.created_at,
                 last_updated_at: row.last_updated_at,
-                updated_by: heapless::String::try_from(row.updated_by.as_str()).unwrap_or_default(),
+                updated_by: row.updated_by,
             })
             .collect())
     }

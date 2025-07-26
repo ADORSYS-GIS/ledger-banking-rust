@@ -12,7 +12,10 @@ use banking_api::{
     },
     service::{HierarchyService, NetworkHierarchy, BranchHierarchy},
 };
-use banking_db::repository::AgentNetworkRepository;
+use banking_db::{
+    repository::AgentNetworkRepository,
+    models::agent_network::{BranchStatus as DbBranchStatus, TerminalStatus as DbTerminalStatus, NetworkStatus as DbNetworkStatus}
+};
 use banking_api::domain::TerminalLimits;
 use crate::mappers::AgentNetworkMapper;
 
@@ -40,9 +43,9 @@ impl HierarchyServiceImpl {
             ));
         }
 
-        if branch.status != "Active" {
+        if branch.status != DbBranchStatus::Active {
             return Err(BankingError::ValidationFailed(
-                format!("Branch {branch_id} is not active (status: {})", branch.status)
+                format!("Branch {branch_id} is not active (status: {:?})", branch.status)
             ));
         }
 
@@ -100,7 +103,7 @@ impl HierarchyService for HierarchyServiceImpl {
             .await?
             .ok_or_else(|| BankingError::Internal(format!("Terminal {terminal_id} not found")))?;
 
-        if terminal_model.status != "Active" {
+        if terminal_model.status != DbTerminalStatus::Active {
             return Ok(ValidationResult::failure(vec![ format!("Terminal {terminal_id} is not active")
             ]));
         }
@@ -119,7 +122,7 @@ impl HierarchyService for HierarchyServiceImpl {
             .await?
             .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal_model.branch_id)))?;
 
-        if branch_model.status != "Active" {
+        if branch_model.status != DbBranchStatus::Active {
             return Ok(ValidationResult::failure(vec![ format!("Branch {} is not active", terminal_model.branch_id)
             ]));
         }
@@ -138,7 +141,7 @@ impl HierarchyService for HierarchyServiceImpl {
             .await?
             .ok_or_else(|| BankingError::Internal(format!("Network {} not found", branch_model.network_id)))?;
 
-        if network_model.status != "Active" {
+        if network_model.status != DbNetworkStatus::Active {
             return Ok(ValidationResult::failure(vec![ format!("Network {} is not active", branch_model.network_id)
             ]));
         }
@@ -255,7 +258,7 @@ impl HierarchyService for HierarchyServiceImpl {
             .await?
             .ok_or_else(|| BankingError::Internal(format!("Network {} not found", branch.network_id)))?;
 
-        if network_model.status != "Active" {
+        if network_model.status != DbNetworkStatus::Active {
             return Err(BankingError::ValidationFailed(
                 format!("Cannot create branch under inactive network {}", branch.network_id)
             ));
@@ -314,7 +317,7 @@ impl HierarchyService for HierarchyServiceImpl {
             .await?
             .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal.branch_id)))?;
 
-        if branch_model.status != "Active" {
+        if branch_model.status != DbBranchStatus::Active {
             return Err(BankingError::ValidationFailed(
                 format!("Cannot create terminal under inactive branch {}", terminal.branch_id)
             ));
@@ -392,10 +395,10 @@ impl HierarchyService for HierarchyServiceImpl {
             .ok_or_else(|| BankingError::Internal(format!("Terminal {terminal_id} not found")))?;
 
         terminal_model.status = match status {
-            TerminalStatus::Active => "Active".to_string(),
-            TerminalStatus::Maintenance => "Maintenance".to_string(),
-            TerminalStatus::Suspended => "Suspended".to_string(),
-            TerminalStatus::Decommissioned => "Decommissioned".to_string(),
+            TerminalStatus::Active => DbTerminalStatus::Active,
+            TerminalStatus::Maintenance => DbTerminalStatus::Maintenance,
+            TerminalStatus::Suspended => DbTerminalStatus::Suspended,
+            TerminalStatus::Decommissioned => DbTerminalStatus::Decommissioned,
         };
 
         self.agent_network_repository.update_terminal(terminal_model).await?;
@@ -410,10 +413,10 @@ impl HierarchyService for HierarchyServiceImpl {
             .ok_or_else(|| BankingError::Internal(format!("Branch {branch_id} not found")))?;
 
         branch_model.status = match status {
-            BranchStatus::Active => "Active".to_string(),
-            BranchStatus::Suspended => "Suspended".to_string(),
-            BranchStatus::Closed => "Closed".to_string(),
-            BranchStatus::TemporarilyClosed => "TemporarilyClosed".to_string(),
+            BranchStatus::Active => DbBranchStatus::Active,
+            BranchStatus::Suspended => DbBranchStatus::Suspended,
+            BranchStatus::Closed => DbBranchStatus::Closed,
+            BranchStatus::TemporarilyClosed => DbBranchStatus::TemporarilyClosed,
         };
 
         self.agent_network_repository.update_branch(branch_model).await?;
@@ -428,9 +431,9 @@ impl HierarchyService for HierarchyServiceImpl {
             .ok_or_else(|| BankingError::Internal(format!("Network {network_id} not found")))?;
 
         network_model.status = match status {
-            NetworkStatus::Active => "Active".to_string(),
-            NetworkStatus::Suspended => "Suspended".to_string(),
-            NetworkStatus::Terminated => "Terminated".to_string(),
+            NetworkStatus::Active => DbNetworkStatus::Active,
+            NetworkStatus::Suspended => DbNetworkStatus::Suspended,
+            NetworkStatus::Terminated => DbNetworkStatus::Terminated,
         };
 
         self.agent_network_repository.update_network(network_model).await?;

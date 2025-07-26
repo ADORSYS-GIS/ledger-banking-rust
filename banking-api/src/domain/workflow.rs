@@ -12,8 +12,8 @@ pub struct AccountWorkflow {
     pub workflow_type: WorkflowType,
     pub current_step: WorkflowStep,
     pub status: WorkflowStatus,
-    #[validate(length(min = 1, max = 100))]
-    pub initiated_by: String,
+    /// References ReferencedPerson.person_id
+    pub initiated_by: Uuid,
     pub initiated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub steps_completed: Vec<WorkflowStepRecord>,
@@ -67,8 +67,8 @@ pub enum WorkflowStatus {
 pub struct WorkflowStepRecord {
     pub step: WorkflowStep,
     pub completed_at: DateTime<Utc>,
-    #[validate(length(min = 1, max = 100))]
-    pub completed_by: String,
+    /// References ReferencedPerson.person_id
+    pub completed_by: Uuid,
     #[validate(length(max = 1000))]
     pub notes: Option<String>,
     pub supporting_documents: Vec<String>,
@@ -82,8 +82,8 @@ pub struct AccountOpeningRequest {
     pub initial_deposit: Option<Decimal>,
     #[validate(length(min = 1, max = 50))]
     pub channel: String,
-    #[validate(length(min = 1, max = 100))]
-    pub initiated_by: String,
+    /// References ReferencedPerson.person_id
+    pub initiated_by: Uuid,
     pub supporting_documents: Vec<DocumentReference>,
 }
 
@@ -91,8 +91,8 @@ pub struct AccountOpeningRequest {
 pub struct ClosureRequest {
     pub reason: ClosureReason,
     pub disbursement_instructions: super::account::DisbursementInstructions,
-    #[validate(length(min = 1, max = 100))]
-    pub requested_by: String,
+    /// References ReferencedPerson.person_id
+    pub requested_by: Uuid,
     pub force_closure: bool,
 }
 

@@ -19,9 +19,9 @@ impl CalendarMapper {
             is_observed: true, // Default to observed
             observance_rule: None, // No special rules by default
             created_at: holiday.created_at,
-            created_by: holiday.created_by.clone(),
+            created_by: holiday.created_by.to_string(),
             last_updated_at: Utc::now(),
-            updated_by: holiday.created_by,
+            updated_by: holiday.created_by.to_string(),
         }
     }
 
@@ -35,7 +35,7 @@ impl CalendarMapper {
             holiday_type: Self::string_to_holiday_type(&model.holiday_type),
             is_recurring: model.is_recurring,
             description: model.description,
-            created_by: model.created_by,
+            created_by: model.created_by.parse().unwrap_or_default(),
             created_at: model.created_at,
         }
     }

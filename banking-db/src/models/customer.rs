@@ -17,7 +17,8 @@ pub struct CustomerModel {
     pub status: String,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: HeaplessString<100>,
+    /// References ReferencedPerson.person_id
+    pub updated_by: Uuid,
 }
 
 /// Database model for Customer Portfolio summary
@@ -44,9 +45,11 @@ pub struct CustomerDocumentModel {
     pub document_path: Option<String>,
     pub status: String,
     pub uploaded_at: DateTime<Utc>,
-    pub uploaded_by: String,
+    /// References ReferencedPerson.person_id
+    pub uploaded_by: Uuid,
     pub verified_at: Option<DateTime<Utc>>,
-    pub verified_by: Option<String>,
+    /// References ReferencedPerson.person_id
+    pub verified_by: Option<Uuid>,
 }
 
 /// Database model for Customer audit trail
@@ -59,6 +62,7 @@ pub struct CustomerAuditModel {
     pub old_value: Option<String>,
     pub new_value: Option<String>,
     pub changed_at: DateTime<Utc>,
-    pub changed_by: String,
+    /// References ReferencedPerson.person_id
+    pub changed_by: Uuid,
     pub reason: Option<String>,
 }

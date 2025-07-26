@@ -14,7 +14,8 @@ pub struct BankHoliday {
     pub holiday_type: HolidayType,
     pub is_recurring: bool,
     pub description: Option<String>,
-    pub created_by: String,
+    /// References ReferencedPerson.person_id
+    pub created_by: Uuid,
     pub created_at: DateTime<Utc>,
 }
 

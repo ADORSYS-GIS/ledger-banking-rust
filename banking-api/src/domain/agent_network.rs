@@ -78,7 +78,7 @@ pub struct AgencyBranch {
     
     // Metadata
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: HeaplessString<100>,
+    pub updated_by: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -301,7 +301,7 @@ pub struct RequiredDocument {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceCert {
     pub certification_name: HeaplessString<100>,
-    pub issuer: HeaplessString<100>,
+    pub issuer: Uuid,
     pub issue_date: NaiveDate,
     pub expiry_date: Option<NaiveDate>,
     pub status: CertificationStatus,
@@ -501,7 +501,7 @@ impl AgencyBranch {
             last_audit_date: None,
             compliance_certifications: HeaplessVec::new(),
             last_updated_at: created_at,
-            updated_by: HeaplessString::try_from("system").unwrap_or_default(),
+            updated_by: Uuid::nil(), // Default to nil UUID for system-generated records
         }
     }
 }

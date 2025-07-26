@@ -69,7 +69,7 @@ pub trait LoanService: Send + Sync {
         new_status: InstallmentStatus,
         paid_date: Option<NaiveDate>,
         paid_amount: Option<Decimal>,
-        updated_by: String,
+        updated_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<AmortizationEntry>;
     
     /// Get upcoming installments for a loan
@@ -91,7 +91,7 @@ pub trait LoanService: Send + Sync {
         payment_date: NaiveDate,
         payment_method: PaymentMethod,
         external_reference: Option<String>,
-        processed_by: String,
+        processed_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<LoanPayment>;
     
     /// Calculate payment allocation across loan components
@@ -109,7 +109,7 @@ pub trait LoanService: Send + Sync {
         prepayment_amount: Decimal,
         prepayment_type: PrepaymentType,
         customer_choice: bool,
-        processed_by: String,
+        processed_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<PrepaymentHandling>;
     
     /// Apply prepayment to reduce loan term
@@ -175,7 +175,7 @@ pub trait LoanService: Send + Sync {
         loan_account_id: Uuid,
         delinquency_stage: DelinquencyStage,
         status_change_reason: String,
-        updated_by: String,
+        updated_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<()>;
     
     /// Apply penalty interest on overdue amounts
@@ -219,7 +219,7 @@ pub trait LoanService: Send + Sync {
         response_details: Option<String>,
         follow_up_required: bool,
         follow_up_date: Option<NaiveDate>,
-        updated_by: String,
+        updated_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<CollectionAction>;
     
     /// Get collection actions for a loan
@@ -266,7 +266,7 @@ pub trait LoanService: Send + Sync {
         &self,
         restructuring_id: Uuid,
         approved: bool,
-        approved_by: String,
+        approved_by: Uuid, // References ReferencedPerson.person_id
         conditions: Vec<String>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<LoanRestructuring>;
@@ -342,7 +342,7 @@ pub trait LoanService: Send + Sync {
         loan_account_id: Uuid,
         new_status: LoanAccountStatus,
         reason: String,
-        updated_by: String,
+        updated_by: Uuid, // References ReferencedPerson.person_id
     ) -> BankingResult<()>;
     
     /// Close loan account after full payment

@@ -18,7 +18,7 @@ pub trait CustomerService: Send + Sync {
     async fn find_customer_by_id(&self, customer_id: Uuid) -> BankingResult<Option<Customer>>;
     
     /// Risk rating updates - restricted to Risk & Compliance module only
-    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: RiskRating, authorized_by: String) -> BankingResult<()>;
+    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: RiskRating, authorized_by: Uuid) -> BankingResult<()>;
     
     /// Status changes with cascade effects and reason ID validation
     async fn update_customer_status(&self, customer_id: Uuid, status: CustomerStatus, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<()>;

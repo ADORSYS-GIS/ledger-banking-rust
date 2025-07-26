@@ -31,7 +31,8 @@ pub trait CustomerRepository: Send + Sync {
     async fn get_portfolio(&self, customer_id: Uuid) -> BankingResult<Option<CustomerPortfolioModel>>;
     
     /// Update customer risk rating with audit trail
-    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: &str, authorized_by: &str) -> BankingResult<()>;
+    /// @param authorized_by - References ReferencedPerson.person_id
+    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: &str, authorized_by: Uuid) -> BankingResult<()>;
     
     /// Update customer status with audit trail
     async fn update_status(&self, customer_id: Uuid, status: &str, reason: &str) -> BankingResult<()>;
@@ -49,7 +50,8 @@ pub trait CustomerRepository: Send + Sync {
     async fn get_audit_trail(&self, customer_id: Uuid) -> BankingResult<Vec<CustomerAuditModel>>;
     
     /// Delete customer (soft delete)
-    async fn delete(&self, customer_id: Uuid, deleted_by: &str) -> BankingResult<()>;
+    /// @param deleted_by - References ReferencedPerson.person_id
+    async fn delete(&self, customer_id: Uuid, deleted_by: Uuid) -> BankingResult<()>;
     
     /// List customers with pagination
     async fn list(&self, offset: i64, limit: i64) -> BankingResult<Vec<CustomerModel>>;

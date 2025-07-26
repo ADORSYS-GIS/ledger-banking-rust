@@ -72,10 +72,10 @@ impl AccountService for AccountServiceImpl {
         &self,
         account_id: Uuid,
         status: AccountStatus,
-        authorized_by: String,
+        authorized_by: Uuid,
     ) -> BankingResult<()> {
-        // Validate authorization for status changes
-        self.validate_status_change_authorization(&authorized_by, &status)?;
+        // Validate authorization for status changes (now using person ID)
+        self.validate_status_change_authorization_by_id(&authorized_by, &status)?;
 
         // Ensure account exists
         if !self.account_repository.exists(account_id).await? {
@@ -88,7 +88,7 @@ impl AccountService for AccountServiceImpl {
                 account_id,
                 &Self::account_status_to_string(status),
                 "Status change authorized",
-                &authorized_by,
+                authorized_by,
             )
             .await?;
 
@@ -276,7 +276,7 @@ impl AccountService for AccountServiceImpl {
     }
 
     /// Update account balance
-    async fn update_balance(&self, account_id: Uuid, new_balance: Decimal, updated_by: String) -> BankingResult<()> {
+    async fn update_balance(&self, account_id: Uuid, new_balance: Decimal, updated_by: Uuid) -> BankingResult<()> {
         // In a real implementation, we'd calculate available balance based on holds
         self.account_repository.update_balance(account_id, new_balance, new_balance).await?;
         
@@ -305,7 +305,7 @@ impl AccountService for AccountServiceImpl {
     }
 
     /// Release hold
-    async fn release_hold(&self, _hold_id: Uuid, _released_by: String) -> BankingResult<()> {
+    async fn release_hold(&self, _hold_id: Uuid, _released_by: Uuid) -> BankingResult<()> {
         todo!("Implement release_hold")
     }
 
@@ -421,7 +421,36 @@ impl AccountServiceImpl {
         Ok(account)
     }
 
-    /// Validate authorization for status changes
+    /// Validate authorization for status changes (using person ID)
+    fn validate_status_change_authorization_by_id(
+        &self,
+        authorized_by: &Uuid,
+        status: &AccountStatus,
+    ) -> BankingResult<()> {
+        // TODO: Verify the person ID exists in referenced_persons table
+        // For now, just check it's not nil UUID
+        if authorized_by.is_nil() {
+            return Err(banking_api::BankingError::UnauthorizedOperation(
+                "Valid person ID required for status changes".to_string()
+            ));
+        }
+
+        // Validate based on status type
+        match status {
+            AccountStatus::Closed => {
+                // TODO: Check if person has authority to close accounts
+                Ok(())
+            }
+            AccountStatus::Frozen => {
+                // TODO: Check if person has authority to freeze accounts
+                Ok(())
+            }
+            _ => Ok(())
+        }
+    }
+
+    /// Validate authorization for status changes (legacy string-based)
+    #[allow(dead_code)]
     fn validate_status_change_authorization(
         &self,
         authorized_by: &str,
@@ -878,7 +907,7 @@ mod tests {
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: heapless::String::try_from("TEST_USER").unwrap(),
+            updated_by: Uuid::new_v4(), // Changed to UUID for ReferencedPerson.person_id
         }
     }
 
@@ -1126,7 +1155,7 @@ mod tests {
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: heapless::String::try_from("TEST_USER").unwrap(),
+            updated_by: Uuid::new_v4(), // Changed to UUID for ReferencedPerson.person_id
         }
     }
 
@@ -1165,7 +1194,7 @@ mod tests {
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: heapless::String::try_from("TEST_USER").unwrap(),
+            updated_by: Uuid::new_v4(), // Changed to UUID for ReferencedPerson.person_id
         }
     }
 
@@ -1206,7 +1235,7 @@ mod tests {
             Ok(self.accounts.lock().unwrap().get(&account_id).cloned())
         }
 
-        async fn update_status(&self, _account_id: Uuid, _status: &str, _reason: &str, _authorized_by: &str) -> BankingResult<()> {
+        async fn update_status(&self, _account_id: Uuid, _status: &str, _reason: &str, _authorized_by: Uuid) -> BankingResult<()> {
             Ok(())
         }
 
@@ -1326,7 +1355,7 @@ mod tests {
             todo!()
         }
 
-        async fn release_hold(&self, _hold_id: Uuid, _released_by: &str) -> BankingResult<()> {
+        async fn release_hold(&self, _hold_id: Uuid, _released_by: Uuid) -> BankingResult<()> {
             todo!()
         }
 

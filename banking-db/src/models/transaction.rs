@@ -93,7 +93,8 @@ pub struct TransactionAuditModel {
     pub audit_id: Uuid,
     pub transaction_id: Uuid,
     pub action: String,
-    pub performed_by: String,
+    /// References ReferencedPerson.person_id
+    pub performed_by: Uuid,
     pub performed_at: DateTime<Utc>,
     pub details: Option<Hash>,
     pub ip_address: Option<String>,
