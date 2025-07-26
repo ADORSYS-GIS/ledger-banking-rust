@@ -241,7 +241,10 @@ pub struct HolidaySchedule {
 pub struct TemporaryClosure {
     pub start_date: NaiveDate,
     pub end_date: Option<NaiveDate>,
-    pub reason: HeaplessString<200>,
+    /// References ReasonAndPurpose.id for closure reason
+    pub reason_id: Uuid,
+    /// Additional context for closure
+    pub additional_details: Option<HeaplessString<200>>,
     pub alternative_branch_id: Option<Uuid>,
 }
 

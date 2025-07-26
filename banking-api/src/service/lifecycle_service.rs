@@ -32,8 +32,12 @@ pub trait AccountLifecycleService: Send + Sync {
     async fn process_final_disbursement(&self, account_id: Uuid, disbursement: crate::domain::DisbursementInstructions) -> BankingResult<()>;
     async fn finalize_closure(&self, account_id: Uuid) -> BankingResult<()>;
     
-    /// Status management
-    async fn update_account_status(&self, account_id: Uuid, new_status: AccountStatus, reason: String, authorized_by: String) -> BankingResult<()>;
+    /// Status management with reason ID validation
+    async fn update_account_status(&self, account_id: Uuid, new_status: AccountStatus, reason_id: Uuid, additional_context: Option<&str>, authorized_by: String) -> BankingResult<()>;
+    
+    /// Legacy method - deprecated, use update_account_status with reason_id instead
+    #[deprecated(note = "Use update_account_status with reason_id instead")]
+    async fn update_account_status_legacy(&self, account_id: Uuid, new_status: AccountStatus, reason: String, authorized_by: String) -> BankingResult<()>;
     async fn get_status_history(&self, account_id: Uuid) -> BankingResult<Vec<StatusChangeRecord>>;
 
     /// Workflow management
@@ -43,7 +47,12 @@ pub trait AccountLifecycleService: Send + Sync {
     
     /// Workflow step progression
     async fn advance_workflow_step(&self, workflow_id: Uuid, completed_by: String, notes: Option<String>) -> BankingResult<()>;
-    async fn reject_workflow(&self, workflow_id: Uuid, reason: String, rejected_by: String) -> BankingResult<()>;
+    /// Reject workflow with reason ID validation
+    async fn reject_workflow(&self, workflow_id: Uuid, reason_id: Uuid, additional_details: Option<&str>, rejected_by: String) -> BankingResult<()>;
+    
+    /// Legacy method - deprecated, use reject_workflow with reason_id instead
+    #[deprecated(note = "Use reject_workflow with reason_id instead")]
+    async fn reject_workflow_legacy(&self, workflow_id: Uuid, reason: String, rejected_by: String) -> BankingResult<()>;
     
     /// Account lifecycle queries
     async fn find_pending_activations(&self) -> BankingResult<Vec<AccountWorkflow>>;

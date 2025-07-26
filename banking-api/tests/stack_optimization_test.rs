@@ -39,15 +39,15 @@ mod stack_optimization_tests {
             next_due_date: None,
             penalty_rate: None,
             collateral_id: None,
-            loan_purpose: None,
+            loan_purpose_id: None,
             close_date: None,
             last_activity_date: Some(NaiveDate::from_ymd_opt(2024, 1, 15).unwrap()),
             dormancy_threshold_days: Some(90),
             reactivation_required: false,
-            pending_closure_reason: None,
+            pending_closure_reason_id: None,
             disbursement_instructions: None,
             status_changed_by: Some(HeaplessString::try_from("SYSTEM").unwrap()),
-            status_change_reason: Some(HeaplessString::try_from("Account activation").unwrap()),
+            status_change_reason_id: None,  // Changed to UUID, using None for test
             status_change_timestamp: Some(Utc::now()),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
@@ -193,7 +193,7 @@ mod stack_optimization_tests {
             "system".to_string(),
             Some("Pending".to_string()),
             Some("Posted".to_string()),
-            Some("Automated posting".to_string()),
+            None,  // Changed to UUID for reason_id, using None for test
             Some("audit_details_content_for_verification"),
         );
 

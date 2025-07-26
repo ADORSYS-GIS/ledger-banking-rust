@@ -1,4 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -26,7 +27,8 @@ pub struct FeeApplicationModel {
     pub reversal_deadline: Option<DateTime<Utc>>,
     pub waived: bool,
     pub waived_by: Option<String>,
-    pub waived_reason: Option<String>,
+    /// References ReasonAndPurpose.id for waiver reason
+    pub waived_reason_id: Option<Uuid>,
     pub applied_by: String,
     pub created_at: DateTime<Utc>,
 }
@@ -38,7 +40,10 @@ pub struct FeeWaiverModel {
     pub fee_application_id: Uuid,
     pub account_id: Uuid,
     pub waived_amount: Decimal,
-    pub reason: String,
+    /// References ReasonAndPurpose.id for waiver reason
+    pub reason_id: Uuid,
+    /// Additional context for waiver
+    pub additional_details: Option<HeaplessString<200>>,
     pub waived_by: String,
     pub waived_at: DateTime<Utc>,
     pub approval_required: bool,
@@ -73,7 +78,10 @@ pub struct FeeAccountHoldModel {
     pub account_id: Uuid,
     pub amount: Decimal,
     pub hold_type: String, // UnclearedFunds, JudicialLien, LoanPledge, etc.
-    pub reason: String,
+    /// References ReasonAndPurpose.id for hold reason
+    pub reason_id: Uuid,
+    /// Additional context for hold
+    pub additional_details: Option<HeaplessString<200>>,
     pub placed_by: String,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
@@ -93,7 +101,10 @@ pub struct HoldReleaseRecordModel {
     pub release_record_id: Uuid,
     pub hold_id: Uuid,
     pub release_amount: Decimal,
-    pub release_reason: String,
+    /// References ReasonAndPurpose.id for release reason
+    pub release_reason_id: Uuid,
+    /// Additional context for release
+    pub release_additional_details: Option<HeaplessString<200>>,
     pub released_by: String,
     pub released_at: DateTime<Utc>,
     pub is_partial_release: bool,

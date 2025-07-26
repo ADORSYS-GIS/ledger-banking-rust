@@ -6,6 +6,8 @@ pub mod compliance;
 pub mod workflow;
 pub mod calendar;
 pub mod fee;
+pub mod reason_and_purpose;
+pub mod reason_and_purpose_seeds;
 
 pub use customer::*;
 pub use account::*;
@@ -15,3 +17,5 @@ pub use compliance::*;
 pub use workflow::*;
 pub use calendar::*;
 pub use fee::*;
+pub use reason_and_purpose::*;
+pub use reason_and_purpose_seeds::*;

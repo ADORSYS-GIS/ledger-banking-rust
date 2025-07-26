@@ -18,8 +18,12 @@ pub trait TransactionService: Send + Sync {
     /// Validate transaction limits
     async fn validate_transaction_limits(&self, transaction: &Transaction) -> BankingResult<ValidationResult>;
     
-    /// Reverse a posted transaction
-    async fn reverse_transaction(&self, transaction_id: Uuid, reason: String) -> BankingResult<()>;
+    /// Reverse a posted transaction with reason ID validation
+    async fn reverse_transaction(&self, transaction_id: Uuid, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<()>;
+    
+    /// Legacy method - deprecated, use reverse_transaction with reason_id instead
+    #[deprecated(note = "Use reverse_transaction with reason_id instead")]
+    async fn reverse_transaction_legacy(&self, transaction_id: Uuid, reason: String) -> BankingResult<()>;
     
     /// Find transactions for an account within a date range
     async fn find_transactions_by_account(&self, account_id: Uuid, from: NaiveDate, to: NaiveDate) -> BankingResult<Vec<Transaction>>;
@@ -36,7 +40,12 @@ pub trait TransactionService: Send + Sync {
     
     /// Final settlement operations
     async fn process_closure_transaction(&self, account_id: Uuid, settlement: FinalSettlement) -> BankingResult<Transaction>;
-    async fn reverse_pending_transactions(&self, account_id: Uuid, reason: String) -> BankingResult<Vec<Transaction>>;
+    /// Reverse pending transactions with reason ID validation
+    async fn reverse_pending_transactions(&self, account_id: Uuid, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<Vec<Transaction>>;
+    
+    /// Legacy method - deprecated, use reverse_pending_transactions with reason_id instead
+    #[deprecated(note = "Use reverse_pending_transactions with reason_id instead")]
+    async fn reverse_pending_transactions_legacy(&self, account_id: Uuid, reason: String) -> BankingResult<Vec<Transaction>>;
 
     /// Process transaction request
     async fn process_transaction_request(&self, request: TransactionRequest) -> BankingResult<TransactionResult>;

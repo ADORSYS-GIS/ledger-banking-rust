@@ -162,13 +162,13 @@ impl CustomerRepository for PostgresCustomerRepository {
     }
 
     async fn find_requiring_review(&self) -> BankingResult<Vec<CustomerModel>> {
+        // Fixed: Don't use query_as! with heapless::String types
         let rows = sqlx::query!(
             r#"
             SELECT DISTINCT c.* FROM customers c
-            LEFT JOIN kyc_records k ON c.customer_id = k.customer_id
+            LEFT JOIN kyc_results k ON c.customer_id = k.customer_id
             WHERE c.status = 'PendingVerification' 
-               OR k.status = 'RequiresReview'
-               OR (c.risk_rating = 'High' AND k.last_review_date < NOW() - INTERVAL '90 days')
+               OR k.status = 'RequiresManualReview'
             ORDER BY c.created_at ASC
             "#
         )
@@ -200,19 +200,19 @@ impl CustomerRepository for PostgresCustomerRepository {
                 COUNT(DISTINCT a.account_id) as total_accounts,
                 COALESCE(SUM(a.current_balance), 0) as total_balance,
                 MAX(t.transaction_date) as last_activity_date,
-                COALESCE(cr.risk_score, 0) as risk_score,
+                COALESCE(cr.overall_score, 0) as risk_score,
                 COALESCE(k.status, 'Unknown') as kyc_status,
-                CASE WHEN s.last_screening_date IS NOT NULL THEN true ELSE false END as sanctions_checked,
-                s.last_screening_date
+                CASE WHEN s.screened_at IS NOT NULL THEN true ELSE false END as sanctions_checked,
+                s.screened_at as last_screening_date
             FROM customers c
             LEFT JOIN account_ownership ao ON c.customer_id = ao.customer_id
             LEFT JOIN accounts a ON ao.account_id = a.account_id
             LEFT JOIN transactions t ON a.account_id = t.account_id
-            LEFT JOIN compliance_risk_scores cr ON c.customer_id = cr.customer_id
-            LEFT JOIN kyc_records k ON c.customer_id = k.customer_id
+            LEFT JOIN customer_risk_scores cr ON c.customer_id = cr.customer_id
+            LEFT JOIN kyc_results k ON c.customer_id = k.customer_id
             LEFT JOIN sanctions_screening s ON c.customer_id = s.customer_id
             WHERE c.customer_id = $1
-            GROUP BY c.customer_id, cr.risk_score, k.status, s.last_screening_date
+            GROUP BY c.customer_id, cr.overall_score, k.status, s.screened_at
             "#,
             customer_id
         )
@@ -227,7 +227,8 @@ impl CustomerRepository for PostgresCustomerRepository {
             risk_score: row.risk_score.and_then(|bd| rust_decimal::Decimal::from_str(&bd.to_string()).ok()),
             kyc_status: row.kyc_status.unwrap_or("Unknown".to_string()),
             sanctions_checked: row.sanctions_checked.unwrap_or(false),
-            last_screening_date: row.last_screening_date,
+            // Fixed: compiler suggests wrapping in Some() to convert DateTime<Utc> to Option<DateTime<Utc>>
+            last_screening_date: Some(row.last_screening_date),
         }))
     }
 

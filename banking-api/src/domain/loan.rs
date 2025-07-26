@@ -1,4 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -222,7 +223,10 @@ pub enum PaymentStatus {
 pub struct PaymentReversal {
     pub reversal_id: Uuid,
     pub original_payment_id: Uuid,
-    pub reversal_reason: String,
+    /// References ReasonAndPurpose.id for reversal reason
+    pub reversal_reason_id: Uuid,
+    /// Additional context for reversal
+    pub additional_details: Option<HeaplessString<200>>,
     pub reversed_amount: Decimal,
     pub reversed_by: String,
     pub reversed_at: DateTime<Utc>,
@@ -237,7 +241,10 @@ pub struct LoanRestructuring {
     pub restructuring_type: RestructuringType,
     pub request_date: NaiveDate,
     pub effective_date: Option<NaiveDate>,
-    pub restructuring_reason: String,
+    /// References ReasonAndPurpose.id for restructuring reason
+    pub restructuring_reason_id: Uuid,
+    /// Additional context for restructuring
+    pub additional_details: Option<HeaplessString<200>>,
     
     // Original loan terms
     pub original_principal: Decimal,

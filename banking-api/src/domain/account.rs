@@ -32,19 +32,22 @@ pub struct Account {
     pub next_due_date: Option<NaiveDate>,
     pub penalty_rate: Option<Decimal>,
     pub collateral_id: Option<HeaplessString<100>>,
-    pub loan_purpose: Option<HeaplessString<100>>,
+    /// References ReasonAndPurpose.id for loan purpose
+    pub loan_purpose_id: Option<Uuid>,
 
     // Account lifecycle management (from enhancements)
     pub close_date: Option<NaiveDate>,
     pub last_activity_date: Option<NaiveDate>,
     pub dormancy_threshold_days: Option<i32>,
     pub reactivation_required: bool,
-    pub pending_closure_reason: Option<HeaplessString<100>>,
+    /// References ReasonAndPurpose.id for pending closure
+    pub pending_closure_reason_id: Option<Uuid>,
     pub disbursement_instructions: Option<DisbursementInstructions>,
     
     // Enhanced audit trail
     pub status_changed_by: Option<HeaplessString<100>>,
-    pub status_change_reason: Option<HeaplessString<100>>,
+    /// References ReasonAndPurpose.id for status change
+    pub status_change_reason_id: Option<Uuid>,
     pub status_change_timestamp: Option<DateTime<Utc>>,
     
     // Audit fields
@@ -101,7 +104,10 @@ pub struct AccountHold {
     pub account_id: Uuid,
     pub amount: Decimal,
     pub hold_type: HoldType,
-    pub reason: HeaplessString<100>,
+    /// References ReasonAndPurpose.id - required field
+    pub reason_id: Uuid,
+    /// Additional context beyond the standard reason
+    pub additional_details: Option<HeaplessString<200>>,
     pub placed_by: HeaplessString<100>,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
@@ -185,7 +191,10 @@ pub struct HoldSummary {
 pub struct HoldReleaseRequest {
     pub hold_id: Uuid,
     pub release_amount: Option<Decimal>, // For partial releases
-    pub release_reason: HeaplessString<100>,
+    /// References ReasonAndPurpose.id for release
+    pub release_reason_id: Uuid,
+    /// Additional context for release
+    pub release_additional_details: Option<HeaplessString<200>>,
     pub released_by: HeaplessString<100>,
     pub override_authorization: bool,
 }
@@ -207,7 +216,10 @@ pub struct StatusChangeRecord {
     pub account_id: Uuid,
     pub old_status: Option<AccountStatus>,
     pub new_status: AccountStatus,
-    pub reason: HeaplessString<100>,
+    /// References ReasonAndPurpose.id
+    pub reason_id: Uuid,
+    /// Additional context beyond the standard reason
+    pub additional_context: Option<HeaplessString<200>>,
     pub changed_by: HeaplessString<100>,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
@@ -219,7 +231,10 @@ pub struct PlaceHoldRequest {
     pub account_id: Uuid,
     pub hold_type: HoldType,
     pub amount: Decimal,
-    pub reason: HeaplessString<100>,
+    /// References ReasonAndPurpose.id - required field
+    pub reason_id: Uuid,
+    /// Additional context beyond the standard reason
+    pub additional_details: Option<HeaplessString<200>>,
     pub placed_by: HeaplessString<100>,
     pub expires_at: Option<DateTime<Utc>>,
     pub priority: HoldPriority,
@@ -279,15 +294,15 @@ mod tests {
             next_due_date: None,
             penalty_rate: None,
             collateral_id: None,
-            loan_purpose: None,
+            loan_purpose_id: None,
             close_date: None,
             last_activity_date: None,
             dormancy_threshold_days: None,
             reactivation_required: false,
-            pending_closure_reason: None,
+            pending_closure_reason_id: None,
             disbursement_instructions: None,
             status_changed_by: None,
-            status_change_reason: None,
+            status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: chrono::Utc::now(),
             last_updated_at: chrono::Utc::now(),

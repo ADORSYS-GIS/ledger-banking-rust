@@ -29,15 +29,15 @@ impl AccountMapper {
             next_due_date: account.next_due_date,
             penalty_rate: account.penalty_rate,
             collateral_id: account.collateral_id,
-            loan_purpose: account.loan_purpose,
+            loan_purpose_id: account.loan_purpose_id,
             // Enhanced lifecycle fields
             close_date: account.close_date,
             last_activity_date: account.last_activity_date,
             dormancy_threshold_days: account.dormancy_threshold_days,
             reactivation_required: account.reactivation_required,
-            pending_closure_reason: account.pending_closure_reason,
+            pending_closure_reason_id: account.pending_closure_reason_id,
             status_changed_by: account.status_changed_by,
-            status_change_reason: account.status_change_reason,
+            status_change_reason_id: account.status_change_reason_id,
             status_change_timestamp: account.status_change_timestamp,
             // Audit fields
             created_at: account.created_at,
@@ -71,16 +71,16 @@ impl AccountMapper {
             next_due_date: model.next_due_date,
             penalty_rate: model.penalty_rate,
             collateral_id: model.collateral_id,
-            loan_purpose: model.loan_purpose,
+            loan_purpose_id: model.loan_purpose_id,
             // Enhanced lifecycle fields
             close_date: model.close_date,
             last_activity_date: model.last_activity_date,
             dormancy_threshold_days: model.dormancy_threshold_days,
             reactivation_required: model.reactivation_required,
-            pending_closure_reason: model.pending_closure_reason,
+            pending_closure_reason_id: model.pending_closure_reason_id,
             disbursement_instructions: None, // This would need to be loaded separately from related table
             status_changed_by: model.status_changed_by,
-            status_change_reason: model.status_change_reason,
+            status_change_reason_id: model.status_change_reason_id,
             status_change_timestamp: model.status_change_timestamp,
             // Audit fields
             created_at: model.created_at,

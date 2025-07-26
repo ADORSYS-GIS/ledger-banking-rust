@@ -190,7 +190,8 @@ pub struct TransactionAudit {
     pub performed_at: DateTime<Utc>,
     pub old_status: Option<String>,
     pub new_status: Option<String>,
-    pub reason: Option<String>,
+    /// References ReasonAndPurpose.id for audit reason
+    pub reason_id: Option<Uuid>,
     pub details: Option<Hash>,
 }
 
@@ -202,7 +203,7 @@ impl TransactionAudit {
         performed_by: String,
         old_status: Option<String>,
         new_status: Option<String>,
-        reason: Option<String>,
+        reason_id: Option<Uuid>,
         details_content: Option<&str>,
     ) -> Self {
         Self {
@@ -213,7 +214,7 @@ impl TransactionAudit {
             performed_at: Utc::now(),
             old_status,
             new_status,
-            reason,
+            reason_id,
             details: details_content.map(|content| blake3::hash(content.as_bytes())),
         }
     }

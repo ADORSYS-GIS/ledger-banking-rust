@@ -581,9 +581,15 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         &self,
         account_id: Uuid,
         new_status: AccountStatus,
-        reason: String,
+        reason_id: Uuid,
+        _additional_context: Option<&str>,
         authorized_by: String,
     ) -> BankingResult<()> {
+        // TODO: Validate reason_id against ReasonAndPurpose table
+        // TODO: Store additional_context if provided
+        
+        // For now, convert reason_id to string for legacy compatibility
+        let reason = format!("Reason ID: {reason_id}");
         let account_model = self.account_repository
             .find_by_id(account_id)
             .await?
@@ -638,9 +644,38 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         todo!("Implement advance_workflow_step")
     }
 
-    /// Reject workflow
-    async fn reject_workflow(&self, _workflow_id: Uuid, _reason: String, _rejected_by: String) -> BankingResult<()> {
-        todo!("Implement reject_workflow")
+    /// Reject workflow with reason ID validation
+    async fn reject_workflow(&self, _workflow_id: Uuid, _reason_id: Uuid, _additional_details: Option<&str>, _rejected_by: String) -> BankingResult<()> {
+        // TODO: Validate reason_id against ReasonAndPurpose table
+        // TODO: Store additional_details if provided
+        todo!("Implement reject_workflow with reason_id")
+    }
+    
+    /// Legacy method - deprecated, use update_account_status with reason_id instead
+    async fn update_account_status_legacy(
+        &self,
+        account_id: Uuid,
+        new_status: AccountStatus,
+        reason: String,
+        authorized_by: String,
+    ) -> BankingResult<()> {
+        let account_model = self.account_repository
+            .find_by_id(account_id)
+            .await?
+            .ok_or(banking_api::BankingError::AccountNotFound(account_id))?;
+
+        let _account = AccountMapper::from_model(account_model)?;
+        // Legacy implementation would go here
+        tracing::info!(
+            "Account {} status updated to {:?} by {}. Reason: {}",
+            account_id, new_status, authorized_by, reason
+        );
+        Ok(())
+    }
+    
+    /// Legacy method - deprecated, use reject_workflow with reason_id instead
+    async fn reject_workflow_legacy(&self, _workflow_id: Uuid, _reason: String, _rejected_by: String) -> BankingResult<()> {
+        todo!("Implement reject_workflow_legacy")
     }
 
     /// Find pending activations

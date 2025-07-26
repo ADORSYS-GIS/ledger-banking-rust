@@ -1,4 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -28,7 +29,8 @@ pub struct FeeApplication {
     pub reversal_deadline: Option<DateTime<Utc>>,
     pub waived: bool,
     pub waived_by: Option<String>,
-    pub waived_reason: Option<String>,
+    /// References ReasonAndPurpose.id for waiver reason
+    pub waived_reason_id: Option<Uuid>,
     #[validate(length(max = 100))]
     pub applied_by: String,
     pub created_at: DateTime<Utc>,
@@ -257,7 +259,10 @@ pub struct FeeWaiver {
     pub fee_application_id: Uuid,
     pub account_id: Uuid,
     pub waived_amount: Decimal,
-    pub reason: String,
+    /// References ReasonAndPurpose.id for waiver reason
+    pub reason_id: Uuid,
+    /// Additional context for waiver
+    pub additional_details: Option<HeaplessString<200>>,
     pub waived_by: String,
     pub waived_at: DateTime<Utc>,
     pub approval_required: bool,

@@ -27,6 +27,7 @@ banking-db = { path = "../banking-db" }
 reqwest = { workspace = true }
 moka = { workspace = true }
 tracing = { workspace = true }
+log = { workspace = true }
 rand = { workspace = true }
 
 # Configuration

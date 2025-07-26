@@ -1,5 +1,6 @@
 use blake3::Hash;
 use chrono::{DateTime, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -140,7 +141,10 @@ pub enum AlertStatus {
 pub struct SarData {
     pub sar_id: Uuid,
     pub customer_id: Uuid,
-    pub reason: String,
+    /// References ReasonAndPurpose.id for SAR reason
+    pub reason_id: Uuid,
+    /// Additional context for SAR
+    pub additional_details: Option<HeaplessString<500>>,
     pub supporting_transactions: Vec<Uuid>,
     pub generated_at: DateTime<Utc>,
     pub status: SarStatus,

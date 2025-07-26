@@ -96,6 +96,44 @@ pub enum BankingError {
         customer_id: Uuid, 
         match_details: String 
     },
+
+    // Agent Network Hierarchy Limit Violations
+    #[error("Branch limit violation: branch {limit_type} limit ({branch_limit}) exceeds network limit ({network_limit})")]
+    BranchLimitExceedsNetwork {
+        branch_limit: Decimal,
+        network_limit: Decimal,
+        limit_type: String, // "transaction" or "daily"
+    },
+
+    #[error("Terminal limit violation: terminal {limit_type} limit ({terminal_limit}) exceeds branch limit ({branch_limit})")]
+    TerminalLimitExceedsBranch {
+        terminal_limit: Decimal,
+        branch_limit: Decimal,
+        limit_type: String, // "transaction" or "daily"
+    },
+
+    #[error("Agent network entity inactive: {entity_type} {entity_id} has status '{status}'")]
+    AgentNetworkEntityInactive {
+        entity_type: String, // "Network", "Branch", "Terminal"
+        entity_id: Uuid,
+        status: String,
+    },
+
+    #[error("Hierarchical validation failed: {validation_errors:?}")]
+    HierarchicalValidationFailed {
+        validation_errors: Vec<String>,
+    },
+
+    // Calendar and Business Day Validation
+    #[error("Invalid weekend days configuration: {invalid_days:?} - days must be between 1 (Monday) and 7 (Sunday)")]
+    InvalidWeekendDays {
+        invalid_days: Vec<i32>,
+    },
+
+    #[error("Weekend configuration validation failed: {validation_errors:?}")]
+    WeekendConfigValidationFailed {
+        validation_errors: Vec<String>,
+    },
     
     // Product and system errors
     #[error("Invalid product code: {0}")]
@@ -164,6 +202,10 @@ pub enum BankingError {
     // Internal errors
     #[error("Internal error: {0}")]
     Internal(String),
+    
+    // Not implemented features
+    #[error("Feature not implemented: {0}")]
+    NotImplemented(String),
 }
 
 impl From<anyhow::Error> for BankingError {
