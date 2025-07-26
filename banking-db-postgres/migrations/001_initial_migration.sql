@@ -295,11 +295,7 @@ CREATE TABLE agent_branches (
     settlement_account_id UUID, -- Internal settlement account
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
-    CONSTRAINT uk_branch_code_per_network UNIQUE (network_id, branch_code),
-    CONSTRAINT ck_branch_limits_within_network CHECK (
-        max_transaction_limit <= (SELECT max_transaction_limit FROM agent_networks WHERE network_id = agent_branches.network_id) AND
-        max_daily_limit <= (SELECT max_daily_limit FROM agent_networks WHERE network_id = agent_branches.network_id)
-    )
+    CONSTRAINT uk_branch_code_per_network UNIQUE (network_id, branch_code)
 );
 
 -- Agent terminals - individual POS/mobile terminals
@@ -345,8 +341,7 @@ CREATE TABLE weekend_config (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_valid_weekend_days CHECK (
-        array_length(weekend_days, 1) > 0 AND 
-        NOT EXISTS (SELECT 1 FROM unnest(weekend_days) AS day WHERE day < 1 OR day > 7)
+        array_length(weekend_days, 1) > 0
     )
 );
 

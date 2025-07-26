@@ -181,7 +181,7 @@ impl AccountService for AccountServiceImpl {
         // TODO: Store additional_details if provided
         
         // For now, convert reason_id to string for legacy compatibility
-        let reason_string = format!("Reason ID: {}", reason_id);
+        let reason_string = format!("Reason ID: {reason_id}");
         
         // Apply the hold (this would typically involve a holds repository)
         self.create_account_hold(account_id, amount, &reason_string).await?;

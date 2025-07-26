@@ -234,6 +234,7 @@ dependencies = [
  "chrono",
  "config",
  "heapless",
+ "log",
  "moka",
  "rand 0.8.5",
  "reqwest",

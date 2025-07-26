@@ -13,15 +13,17 @@ pub struct BankHoliday {
     pub holiday_name: String,
     pub holiday_type: HolidayType,
     pub is_recurring: bool,
+    pub description: Option<String>,
+    pub created_by: String,
     pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HolidayType { 
     National, 
+    Regional,
     Religious, 
-    Banking, 
-    Custom 
+    Banking
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]

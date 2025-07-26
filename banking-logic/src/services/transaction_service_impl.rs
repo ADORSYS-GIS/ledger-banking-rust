@@ -134,7 +134,7 @@ impl TransactionService for TransactionServiceImpl {
         // TODO: Store additional_details if provided
         
         // For now, convert reason_id to string for legacy compatibility
-        let reason = format!("Reason ID: {}", reason_id);
+        let reason = format!("Reason ID: {reason_id}");
         // Find original transaction
         let original_transaction = self.transaction_repository
             .find_by_id(transaction_id)

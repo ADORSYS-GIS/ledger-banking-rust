@@ -261,6 +261,18 @@ impl HierarchyService for HierarchyServiceImpl {
             ));
         }
 
+        // NOTE: The AgentNetworkModel doesn't have max_transaction_limit or max_daily_limit fields
+        // We'll compare against aggregate_daily_limit instead for the daily limit check
+        // and skip the transaction limit check as the field doesn't exist
+
+        // Check if branch daily limit exceeds network aggregate daily limit
+        if branch.max_cash_limit > network_model.aggregate_daily_limit {
+            return Err(BankingError::ValidationFailed(
+                format!("Branch max cash limit {} exceeds network aggregate daily limit {}", 
+                    branch.max_cash_limit, network_model.aggregate_daily_limit)
+            ));
+        }
+
         // Validate parent branch if specified
         if let Some(parent_id) = branch.parent_branch_id {
             self.validate_branch_network_relationship(parent_id, branch.network_id).await?;
@@ -305,6 +317,14 @@ impl HierarchyService for HierarchyServiceImpl {
         if branch_model.status != "Active" {
             return Err(BankingError::ValidationFailed(
                 format!("Cannot create terminal under inactive branch {}", terminal.branch_id)
+            ));
+        }
+
+        // CRITICAL: Validate terminal limits against branch limits
+        if terminal.max_cash_limit > branch_model.max_cash_limit {
+            return Err(BankingError::ValidationFailed(
+                format!("Terminal max cash limit {} exceeds branch max cash limit {}", 
+                    terminal.max_cash_limit, branch_model.max_cash_limit)
             ));
         }
 

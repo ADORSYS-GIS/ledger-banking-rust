@@ -589,7 +589,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         // TODO: Store additional_context if provided
         
         // For now, convert reason_id to string for legacy compatibility
-        let reason = format!("Reason ID: {}", reason_id);
+        let reason = format!("Reason ID: {reason_id}");
         let account_model = self.account_repository
             .find_by_id(account_id)
             .await?

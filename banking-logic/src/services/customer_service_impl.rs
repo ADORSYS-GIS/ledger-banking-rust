@@ -135,7 +135,7 @@ impl CustomerService for CustomerServiceImpl {
         // TODO: Store additional_details if provided
         
         // For now, convert reason_id to string for legacy compatibility
-        let reason_string = format!("Reason ID: {}", reason_id);
+        let reason_string = format!("Reason ID: {reason_id}");
         
         // Update status with audit trail
         self.customer_repository
