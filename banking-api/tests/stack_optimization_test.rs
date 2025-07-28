@@ -164,7 +164,7 @@ mod stack_optimization_tests {
         let kyc_check = KycCheck::new(
             "identity_verification",
             CheckResult::Pass,
-            Some("Document verified successfully".to_string()),
+            Some(HeaplessString::try_from("Document verified successfully").unwrap()),
         );
 
         let json = serde_json::to_string(&kyc_check).expect("KycCheck serialization should succeed");
