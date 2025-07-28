@@ -1,13 +1,71 @@
-# Git Commit Template
+# Git Commit Analysis and Signing Prompt
 
-This template provides a structured approach for creating comprehensive git commits in the ledger-banking-rust project.
+This prompt provides a structured approach for analyzing changes and creating properly signed commits in the ledger-banking-rust project.
 
-## Commit Message Format
+## Usage
+
+Use this prompt when you need to:
+- Analyze all pending changes in the git working directory
+- Create a comprehensive commit message
+- Commit with proper signing (-s -S flags)
+
+## Prompt Template
+
+```
+Analyze all changes and commit with -s -S.
+```
+
+## Expected Workflow
+
+When this prompt is used, the assistant should:
+
+1. **Analyze Changes**:
+   - Run `git status` to see all modified/added/deleted files
+   - Run `git diff --stat` to understand the scope of changes
+   - Identify the primary purpose and scope of the changes
+
+2. **Create Commit Template** (if requested):
+   - Generate a comprehensive commit template
+   - Store it in `prompts/commit.md`
+
+3. **Stage Relevant Changes**:
+   - Use `git add` to stage files related to the main task
+   - Handle file deletions with `git rm` if needed
+   - Focus on logically related changes for a single commit
+
+4. **Create Comprehensive Commit Message**:
+   - Follow conventional commit format: `<type>(<scope>): <subject>`
+   - Include detailed body explaining the changes
+   - List major modifications in bullet points
+   - Specify affected components
+   - Explain benefits and impact
+   - Add Claude Code attribution
+
+5. **Commit with Proper Signing**:
+   - Use both `-s` (DCO sign-off) and `-S` (GPG signature) flags
+   - Verify the commit was properly signed
+
+## Commit Message Structure
 
 ```
 <type>(<scope>): <subject>
 
-<body>
+<detailed description of changes and why they were made>
+
+Major changes:
+- Change 1 with specific details
+- Change 2 with specific details
+- Change 3 with specific details
+
+Components affected:
+- Component 1: Description of changes
+- Component 2: Description of changes
+- Component 3: Description of changes
+
+Benefits:
+- Benefit 1: Specific improvement achieved
+- Benefit 2: Specific improvement achieved
+- Benefit 3: Specific improvement achieved
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
@@ -29,111 +87,41 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Scope Guidelines
 
-Use specific component names:
+- **workspace**: Multi-crate changes spanning several components
 - **api**: Changes to banking-api domain models
 - **db**: Changes to banking-db models or repositories
 - **logic**: Changes to banking-logic services or mappers
 - **schema**: Database schema changes
 - **migration**: Database migration files
-- **workspace**: Multi-crate changes
 
-## Subject Guidelines
+## Signing Requirements
 
-- Use imperative mood ("add" not "added" or "adds")
-- Start with lowercase letter
-- No period at the end
-- Maximum 50 characters
-- Be specific and descriptive
-
-## Body Guidelines
-
-- Explain the **why** behind the change, not just what was changed
-- Include context about the problem being solved
-- List major changes in bullet points
-- Reference issue numbers when applicable
-- Use present tense
-- Wrap lines at 72 characters
-
-## Examples
-
-### Feature Addition
-```
-feat(api): consolidate account relations into unified account domain
-
-- Move AccountOwnership, AccountRelationship, AccountMandate, and UltimateBeneficiary from account_relations.rs to account.rs
-- Remove duplicate account_relations module
-- Update imports across all dependent modules
-- Maintain backward compatibility for existing functionality
-
-This change simplifies the domain structure by grouping related account entities together, improving code organization and reducing module complexity.
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-### Database Alignment
-```
-refactor(db): align account models with API domain using proper enums
-
-- Convert String fields to strongly-typed enums (OwnershipType, EntityType, etc.)
-- Add comprehensive serialization functions for database compatibility
-- Update PostgreSQL schema with new enum types
-- Enhance type safety and memory efficiency across data layers
-
-This alignment eliminates runtime string validation errors and improves performance through enum usage instead of heap-allocated strings.
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-### Bug Fix
-```
-fix(logic): add missing disbursement_instructions field to test helpers
-
-- Add disbursement_instructions field to create_test_account_model()
-- Add disbursement_instructions field to create_test_loan_account_model()
-- Initialize field as None to maintain existing test behavior
-
-Resolves compilation errors in account service tests after AccountModel schema updates.
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-## Pre-Commit Checklist
-
-- [ ] All tests pass (`cargo test --workspace`)
-- [ ] Code compiles without warnings (`cargo check --workspace`)
-- [ ] No sensitive information in commit
-- [ ] Commit message follows template format
-- [ ] Changes are logically grouped
-- [ ] Documentation updated if needed
-
-## Signing Guidelines
-
-Always use both `-s` (sign-off) and `-S` (GPG sign) flags:
+Always commit with both flags:
 ```bash
 git commit -s -S -m "commit message"
 ```
 
-- `-s`: Adds Signed-off-by line (DCO compliance)
-- `-S`: GPG signature for authenticity verification
+- `-s`: Adds Signed-off-by line for DCO compliance
+- `-S`: Adds GPG signature for authenticity verification
 
-## Multi-Component Changes
+## Pre-Commit Verification
 
-For changes spanning multiple components, use the most significant scope and list all affected components in the body:
+Before committing, ensure:
+- [ ] All tests pass (`cargo test --workspace`)
+- [ ] Code compiles without warnings (`cargo check --workspace`)
+- [ ] Changes are logically grouped
+- [ ] Commit message is comprehensive and follows format
+- [ ] Proper signing flags are used
 
-```
-feat(workspace): implement comprehensive account domain alignment
+## Example Usage
 
-Components affected:
-- banking-api: Domain model consolidation
-- banking-db: Enum-based type system
-- banking-logic: Enhanced mappers and service compatibility
-- banking-db-postgres: Schema updates with proper constraints
+**Input**: "Analyze all changes and commit with -s -S"
 
-This change establishes consistent type safety across all layers of the banking system architecture.
-```
+**Expected Output**:
+1. Analysis of current git status and changes
+2. Creation of this template file (if requested)
+3. Staging of relevant changes
+4. Creation of comprehensive commit with proper signing
+5. Verification of commit signature
+
+This ensures consistent, well-documented, and properly signed commits across the banking system development lifecycle.
