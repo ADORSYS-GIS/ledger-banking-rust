@@ -1,7 +1,6 @@
 pub mod customer;
 pub mod account;
 pub mod agent_network;
-pub mod account_relations;
 pub mod transaction;
 pub mod calendar;
 pub mod workflow;
@@ -16,7 +15,6 @@ pub mod referenced_person;
 pub use customer::*;
 pub use account::*;
 pub use agent_network::*;
-pub use account_relations::*;
 pub use transaction::*;
 pub use calendar::*;
 pub use workflow::*;

@@ -34,13 +34,19 @@ impl CustomerService for CustomerServiceImpl {
         self.validate_customer_data(&customer)?;
 
         // Check for duplicate identity documents
+        let id_type_str = match customer.id_type {
+            banking_api::domain::IdentityType::NationalId => "NationalId",
+            banking_api::domain::IdentityType::Passport => "Passport",
+            banking_api::domain::IdentityType::CompanyRegistration => "CompanyRegistration",
+        };
+        
         if let Some(existing) = self.customer_repository
-            .find_by_identity(&customer.id_type.to_string(), &customer.id_number)
+            .find_by_identity(id_type_str, &customer.id_number)
             .await? 
         {
             return Err(banking_api::BankingError::DuplicateIdentityDocument(
                 format!("Customer with {} '{}' already exists (existing customer ID: {})", 
-                    customer.id_type, customer.id_number, existing.customer_id)
+                    id_type_str, customer.id_number.as_str(), existing.customer_id)
             ));
         }
 
@@ -223,9 +229,14 @@ impl CustomerService for CustomerServiceImpl {
 
     /// Find customers by identity document
     async fn find_customer_by_identity(&self, id_type: banking_api::domain::IdentityType, id_number: &str) -> BankingResult<Option<Customer>> {
-        let id_type_str = id_type.to_string();
+        let id_type_str = match id_type {
+            banking_api::domain::IdentityType::NationalId => "NationalId",
+            banking_api::domain::IdentityType::Passport => "Passport",
+            banking_api::domain::IdentityType::CompanyRegistration => "CompanyRegistration",
+        };
+        
         let customer_model = self.customer_repository
-            .find_by_identity(&id_type_str, id_number)
+            .find_by_identity(id_type_str, id_number)
             .await?;
         
         match customer_model {
@@ -242,8 +253,11 @@ impl CustomerService for CustomerServiceImpl {
             .await?
             .ok_or(banking_api::BankingError::CustomerNotFound(customer_id))?;
 
+        // Convert to domain model to properly check status
+        let customer = CustomerMapper::from_model(customer_model)?;
+        
         // Basic eligibility checks
-        if customer_model.status != "Active" {
+        if customer.status != CustomerStatus::Active {
             return Ok(false);
         }
 

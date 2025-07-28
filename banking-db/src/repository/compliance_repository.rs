@@ -3,7 +3,8 @@ use banking_api::BankingResult;
 use uuid::Uuid;
 use chrono::{DateTime, Utc, NaiveDate};
 
-use crate::models::{KycRecordModel, SanctionsScreeningModel, ComplianceAlertModel, UltimateBeneficiaryModel, ComplianceRiskScoreModel, SarDataModel};
+use crate::models::{KycRecordModel, SanctionsScreeningModel, ComplianceAlertModel, ComplianceRiskScoreModel, ComplianceResultModel, SarDataModel};
+use crate::models::account::UltimateBeneficiaryModel;
 
 #[async_trait]
 pub trait ComplianceRepository: Send + Sync {
@@ -55,6 +56,13 @@ pub trait ComplianceRepository: Send + Sync {
     async fn find_risk_score_by_customer(&self, customer_id: Uuid) -> BankingResult<Option<ComplianceRiskScoreModel>>;
     async fn find_high_risk_customers(&self, threshold_score: f64) -> BankingResult<Vec<ComplianceRiskScoreModel>>;
     async fn find_risk_scores_requiring_review(&self, days_threshold: i32) -> BankingResult<Vec<ComplianceRiskScoreModel>>;
+    
+    /// Compliance Result Operations
+    async fn create_compliance_result(&self, result: ComplianceResultModel) -> BankingResult<ComplianceResultModel>;
+    async fn find_compliance_result_by_id(&self, result_id: Uuid) -> BankingResult<Option<ComplianceResultModel>>;
+    async fn find_compliance_results_by_account(&self, account_id: Uuid) -> BankingResult<Vec<ComplianceResultModel>>;
+    async fn find_compliance_results_by_check_type(&self, check_type: &str) -> BankingResult<Vec<ComplianceResultModel>>;
+    async fn find_failed_compliance_results(&self) -> BankingResult<Vec<ComplianceResultModel>>;
     
     /// SAR (Suspicious Activity Report) Operations
     async fn create_sar_data(&self, sar: SarDataModel) -> BankingResult<SarDataModel>;

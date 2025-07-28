@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use heapless::String as HeaplessString;
 use uuid::Uuid;
 
 use crate::{
@@ -21,7 +22,7 @@ pub trait ComplianceService: Send + Sync {
     async fn monitor_transaction(&self, transaction: &Transaction) -> BankingResult<MonitoringResult>;
     
     /// Generate SAR (Suspicious Activity Report) data with reason ID validation
-    async fn generate_sar_data(&self, customer_id: Uuid, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<SarData>;
+    async fn generate_sar_data(&self, customer_id: Uuid, reason_id: Uuid, additional_details: Option<HeaplessString<500>>) -> BankingResult<SarData>;
     
     /// Legacy method - deprecated, use generate_sar_data with reason_id instead
     #[deprecated(note = "Use generate_sar_data with reason_id instead")]
@@ -38,7 +39,7 @@ pub trait ComplianceService: Send + Sync {
     async fn get_pending_compliance_alerts(&self) -> BankingResult<Vec<crate::domain::ComplianceAlert>>;
 
     /// Update compliance alert status
-    async fn update_alert_status(&self, alert_id: Uuid, status: crate::domain::AlertStatus, updated_by: String) -> BankingResult<()>;
+    async fn update_alert_status(&self, alert_id: Uuid, status: crate::domain::AlertStatus, updated_by: Uuid) -> BankingResult<()>;
 
     /// Generate compliance report
     async fn generate_compliance_report(&self, from_date: chrono::NaiveDate, to_date: chrono::NaiveDate) -> BankingResult<ComplianceReport>;
@@ -50,7 +51,7 @@ pub trait ComplianceService: Send + Sync {
     async fn perform_enhanced_due_diligence(&self, customer_id: Uuid) -> BankingResult<EnhancedDueDiligenceResult>;
 
     /// Update customer risk profile
-    async fn update_risk_profile(&self, customer_id: Uuid, risk_factors: Vec<String>) -> BankingResult<()>;
+    async fn update_risk_profile(&self, customer_id: Uuid, risk_factors: Vec<HeaplessString<100>>) -> BankingResult<()>;
 
     /// Get transaction monitoring rules
     async fn get_monitoring_rules(&self) -> BankingResult<crate::domain::MonitoringRules>;
@@ -77,7 +78,7 @@ pub struct EnhancedDueDiligenceResult {
     pub customer_id: Uuid,
     pub performed_at: chrono::DateTime<chrono::Utc>,
     pub risk_assessment: crate::domain::RiskLevel,
-    pub findings: Vec<String>,
-    pub recommendations: Vec<String>,
+    pub findings: Vec<HeaplessString<300>>,
+    pub recommendations: Vec<HeaplessString<300>>,
     pub requires_ongoing_monitoring: bool,
 }
