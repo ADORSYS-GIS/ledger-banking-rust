@@ -4,14 +4,13 @@ use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KycResult {
     pub customer_id: Uuid,
     pub status: super::customer::KycStatus,
     pub completed_checks: Vec<KycCheck>,
-    pub missing_documents: Vec<String>,
+    pub missing_documents: Vec<HeaplessString<100>>,
     pub risk_score: Option<Decimal>,
     pub verified_at: Option<DateTime<Utc>>,
 }
@@ -20,13 +19,13 @@ pub struct KycResult {
 pub struct KycCheck {
     pub check_type: Hash,
     pub result: CheckResult,
-    pub details: Option<String>,
+    pub details: Option<HeaplessString<500>>,
     pub performed_at: DateTime<Utc>,
 }
 
 impl KycCheck {
     /// Create new KYC check with hash-based type identifier
-    pub fn new(check_type_name: &str, result: CheckResult, details: Option<String>) -> Self {
+    pub fn new(check_type_name: &str, result: CheckResult, details: Option<HeaplessString<500>>) -> Self {
         Self {
             check_type: blake3::hash(check_type_name.as_bytes()),
             result,
@@ -72,14 +71,12 @@ pub enum ScreeningType {
     Watchlist,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SanctionsMatch {
-    #[validate(length(min = 1, max = 255))]
-    pub matched_name: String,
+    pub matched_name: HeaplessString<255>,
     pub confidence_score: Decimal,
-    #[validate(length(max = 500))]
-    pub details: Option<String>,
-    pub list_source: String,
+    pub details: Option<HeaplessString<500>>,
+    pub list_source: HeaplessString<50>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,12 +96,11 @@ pub struct MonitoringResult {
     pub auto_approved: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceAlert {
     pub alert_id: Uuid,
     pub alert_type: AlertType,
-    #[validate(length(min = 1, max = 500))]
-    pub description: String,
+    pub description: HeaplessString<500>,
     pub severity: Severity,
     pub triggered_at: DateTime<Utc>,
     pub status: AlertStatus,
@@ -162,7 +158,7 @@ pub struct UboVerificationResult {
     pub corporate_customer_id: Uuid,
     pub ubo_chain: Vec<UboLink>,
     pub verification_complete: bool,
-    pub requires_update: Vec<String>,
+    pub requires_update: Vec<HeaplessString<100>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -170,8 +166,8 @@ pub struct UboLink {
     pub ubo_id: Uuid,
     pub beneficiary_customer_id: Uuid,
     pub ownership_percentage: Option<Decimal>,
-    pub control_type: super::account_relations::ControlType,
-    pub verification_status: super::account_relations::VerificationStatus,
+    pub control_type: super::account::ControlType,
+    pub verification_status: super::account::VerificationStatus,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,13 +184,33 @@ pub struct MonitoringRules {
 pub struct ComplianceResult {
     pub result_id: Uuid,
     pub account_id: Uuid,
-    pub check_type: String,
+    pub check_type: CheckType,
     pub status: ComplianceStatus,
     pub risk_score: Option<Decimal>,
-    pub findings: Vec<String>,
-    pub recommendations: Vec<String>,
+    pub findings: Vec<HeaplessString<300>>,
+    pub recommendations: Vec<HeaplessString<300>>,
     pub checked_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CheckType {
+    Kyc,
+    Aml,
+    Cdd,
+    Edd,
+    SanctionsScreening,
+    PepScreening,
+    AdverseMediaScreening,
+    WatchlistScreening,
+    UboVerification,
+    DocumentVerification,
+    AddressVerification,
+    SourceOfFundsVerification,
+    SourceOfWealthVerification,
+    RiskAssessment,
+    OngoingMonitoring,
+    PeriodicReview,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

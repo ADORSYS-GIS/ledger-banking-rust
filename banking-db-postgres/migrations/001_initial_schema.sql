@@ -16,6 +16,42 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Person type enum for referenced persons
 CREATE TYPE person_type AS ENUM ('natural', 'legal', 'system', 'integration', 'unknown');
 
+-- Customer related enums
+CREATE TYPE customer_type AS ENUM ('Individual', 'Corporate');
+CREATE TYPE identity_type AS ENUM ('NationalId', 'Passport', 'CompanyRegistration');
+CREATE TYPE risk_rating AS ENUM ('Low', 'Medium', 'High', 'Blacklisted');
+CREATE TYPE customer_status AS ENUM ('Active', 'PendingVerification', 'Deceased', 'Dissolved', 'Blacklisted');
+CREATE TYPE kyc_status AS ENUM ('NotStarted', 'InProgress', 'Pending', 'Complete', 'Approved', 'Rejected', 'RequiresUpdate', 'Failed');
+CREATE TYPE document_status AS ENUM ('Uploaded', 'Verified', 'Rejected', 'Expired');
+
+-- Account related enums
+CREATE TYPE account_type AS ENUM ('Savings', 'Current', 'Loan');
+CREATE TYPE account_status AS ENUM ('PendingApproval', 'Active', 'Dormant', 'Frozen', 'PendingClosure', 'Closed', 'PendingReactivation');
+CREATE TYPE signing_condition AS ENUM ('None', 'AnyOwner', 'AllOwners');
+CREATE TYPE disbursement_method AS ENUM ('Transfer', 'CashWithdrawal', 'Check', 'HoldFunds');
+CREATE TYPE hold_type AS ENUM ('UnclearedFunds', 'JudicialLien', 'LoanPledge', 'ComplianceHold', 'AdministrativeHold', 'FraudHold', 'PendingAuthorization', 'OverdraftReserve', 'CardAuthorization', 'Other');
+CREATE TYPE hold_status AS ENUM ('Active', 'Released', 'Expired', 'Cancelled', 'PartiallyReleased');
+CREATE TYPE hold_priority AS ENUM ('Critical', 'High', 'Medium', 'Low');
+CREATE TYPE ownership_type AS ENUM ('Single', 'Joint', 'Corporate');
+CREATE TYPE entity_type AS ENUM ('Branch', 'Agent', 'RiskManager', 'ComplianceOfficer', 'CustomerService');
+CREATE TYPE relationship_type AS ENUM ('PrimaryHandler', 'BackupHandler', 'RiskOversight', 'ComplianceOversight');
+CREATE TYPE relationship_status AS ENUM ('Active', 'Inactive', 'Suspended');
+CREATE TYPE permission_type AS ENUM ('ViewOnly', 'LimitedWithdrawal', 'JointApproval', 'FullAccess');
+CREATE TYPE mandate_status AS ENUM ('Active', 'Suspended', 'Revoked', 'Expired');
+CREATE TYPE ubo_status AS ENUM ('Active', 'Inactive', 'UnderReview');
+
+-- Compliance related enums
+CREATE TYPE check_result AS ENUM ('Pass', 'Fail', 'Warning', 'Manual');
+CREATE TYPE screening_type AS ENUM ('Sanctions', 'PoliticallyExposed', 'AdverseMedia', 'Watchlist');
+CREATE TYPE risk_level AS ENUM ('Low', 'Medium', 'High', 'Critical');
+CREATE TYPE alert_type AS ENUM ('StructuringDetection', 'VelocityCheck', 'LargeCashTransaction', 'SuspiciousPattern', 'GeographicAnomaly', 'CrossBorderTransaction');
+CREATE TYPE severity AS ENUM ('Low', 'Medium', 'High', 'Critical');
+CREATE TYPE alert_status AS ENUM ('New', 'InReview', 'Investigated', 'Cleared', 'Escalated');
+CREATE TYPE sar_status AS ENUM ('Draft', 'Filed', 'Acknowledged');
+CREATE TYPE compliance_status AS ENUM ('Passed', 'Failed', 'RequiresReview', 'Pending');
+CREATE TYPE control_type AS ENUM ('DirectOwnership', 'IndirectOwnership', 'SignificantInfluence', 'SeniorManagement');
+CREATE TYPE verification_status AS ENUM ('Pending', 'Verified', 'Rejected', 'RequiresUpdate');
+
 -- Calendar enums
 CREATE TYPE holiday_type AS ENUM ('National', 'Regional', 'Religious', 'Banking');
 CREATE TYPE date_shift_rule AS ENUM ('NextBusinessDay', 'PreviousBusinessDay', 'NoShift');
@@ -75,12 +111,12 @@ CREATE TRIGGER update_referenced_persons_updated_at
 -- Main customers table - Single source of truth for customer data
 CREATE TABLE customers (
     customer_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    customer_type VARCHAR(20) NOT NULL CHECK (customer_type IN ('Individual', 'Corporate')),
+    customer_type customer_type NOT NULL,
     full_name VARCHAR(255) NOT NULL,
-    id_type VARCHAR(30) NOT NULL CHECK (id_type IN ('NationalId', 'Passport', 'CompanyRegistration')),
+    id_type identity_type NOT NULL,
     id_number VARCHAR(50) NOT NULL,
-    risk_rating VARCHAR(20) NOT NULL DEFAULT 'Low' CHECK (risk_rating IN ('Low', 'Medium', 'High', 'Blacklisted')),
-    status VARCHAR(30) NOT NULL DEFAULT 'PendingVerification' CHECK (status IN ('Active', 'PendingVerification', 'Deceased', 'Dissolved', 'Blacklisted')),
+    risk_rating risk_rating NOT NULL DEFAULT 'Low',
+    status customer_status NOT NULL DEFAULT 'PendingVerification',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
@@ -97,7 +133,7 @@ CREATE TABLE customer_documents (
     customer_id UUID NOT NULL REFERENCES customers(customer_id),
     document_type VARCHAR(50) NOT NULL,
     document_path VARCHAR(500),
-    status VARCHAR(20) NOT NULL DEFAULT 'Uploaded' CHECK (status IN ('Uploaded', 'Verified', 'Rejected', 'Expired')),
+    status document_status NOT NULL DEFAULT 'Uploaded',
     uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     uploaded_by UUID NOT NULL REFERENCES referenced_persons(person_id),
     verified_at TIMESTAMP WITH TIME ZONE,
@@ -180,13 +216,10 @@ CREATE INDEX idx_reason_category_context ON reason_and_purpose(category, context
 -- Comprehensive accounts table supporting all banking products
 CREATE TABLE accounts (
     account_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    product_code VARCHAR(50) NOT NULL,
-    account_type VARCHAR(20) NOT NULL CHECK (account_type IN ('Savings', 'Current', 'Loan')),
-    account_status VARCHAR(30) NOT NULL DEFAULT 'Active' CHECK (account_status IN (
-        'Active', 'Closed', 'Dormant', 'Frozen', 'PendingClosure', 
-        'UnderReview', 'Suspended', 'PendingActivation'
-    )),
-    signing_condition VARCHAR(20) NOT NULL DEFAULT 'Single' CHECK (signing_condition IN ('Single', 'Joint', 'Either')),
+    product_code VARCHAR(12) NOT NULL,
+    account_type account_type NOT NULL,
+    account_status account_status NOT NULL DEFAULT 'Active',
+    signing_condition signing_condition NOT NULL DEFAULT 'None',
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     open_date DATE NOT NULL DEFAULT CURRENT_DATE,
     domicile_branch_id UUID NOT NULL,
@@ -253,7 +286,7 @@ CREATE TABLE account_ownership (
     ownership_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
     customer_id UUID NOT NULL REFERENCES customers(customer_id),
-    ownership_type VARCHAR(20) NOT NULL CHECK (ownership_type IN ('Primary', 'Joint', 'Beneficiary', 'PowerOfAttorney')),
+    ownership_type ownership_type NOT NULL,
     ownership_percentage DECIMAL(5,2) DEFAULT 100.00 CHECK (ownership_percentage > 0 AND ownership_percentage <= 100),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -265,9 +298,9 @@ CREATE TABLE account_relationships (
     relationship_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
     entity_id UUID NOT NULL, -- Could be employee, department, or external entity
-    entity_type VARCHAR(20) NOT NULL CHECK (entity_type IN ('Employee', 'Department', 'Branch', 'ExternalBank')),
-    relationship_type VARCHAR(30) NOT NULL CHECK (relationship_type IN ('AccountOfficer', 'RelationshipManager', 'Approver', 'Correspondent')),
-    status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive', 'Suspended')),
+    entity_type entity_type NOT NULL,
+    relationship_type relationship_type NOT NULL,
+    status relationship_status NOT NULL DEFAULT 'Active',
     start_date DATE NOT NULL DEFAULT CURRENT_DATE,
     end_date DATE,
     
@@ -278,36 +311,30 @@ CREATE TABLE account_relationships (
 CREATE TABLE account_mandates (
     mandate_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
-    authorized_person_id UUID NOT NULL, -- References external person or customer
-    mandate_type VARCHAR(30) NOT NULL CHECK (mandate_type IN ('SingleSignatory', 'JointSignatory', 'PowerOfAttorney', 'Guardian')),
-    permissions TEXT[] NOT NULL, -- Array of permitted operations
+    grantee_customer_id UUID NOT NULL REFERENCES customers(customer_id), -- References external person or customer
+    permission_type permission_type NOT NULL,
     transaction_limit DECIMAL(15,2),
-    daily_limit DECIMAL(15,2),
-    effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    expiry_date DATE,
-    status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Suspended', 'Revoked', 'Expired')),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    approval_group_id UUID,
+    status mandate_status NOT NULL DEFAULT 'Active',
+    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    end_date DATE,
     
-    CONSTRAINT ck_mandate_dates CHECK (expiry_date IS NULL OR expiry_date > effective_date),
-    CONSTRAINT ck_mandate_limits CHECK (daily_limit IS NULL OR transaction_limit IS NULL OR daily_limit >= transaction_limit)
+    CONSTRAINT ck_mandate_dates CHECK (end_date IS NULL OR end_date >= start_date)
 );
 
 -- Ultimate Beneficial Owner (UBO) tracking for corporate accounts - regulatory requirement
 CREATE TABLE ultimate_beneficial_owners (
-    ubo_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
-    beneficial_owner_id UUID NOT NULL REFERENCES customers(customer_id),
-    ownership_percentage DECIMAL(5,2) NOT NULL CHECK (ownership_percentage > 0 AND ownership_percentage <= 100),
-    control_method VARCHAR(50) NOT NULL, -- 'DirectOwnership', 'VotingRights', 'ManagementControl'
-    verification_status VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (verification_status IN ('Pending', 'Verified', 'RequiresUpdate')),
-    verified_at TIMESTAMP WITH TIME ZONE,
-    verified_by UUID REFERENCES referenced_persons(person_id),
+    ubo_link_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    corporate_customer_id UUID NOT NULL REFERENCES customers(customer_id),
+    beneficiary_customer_id UUID NOT NULL REFERENCES customers(customer_id),
+    ownership_percentage DECIMAL(5,2) CHECK (ownership_percentage > 0 AND ownership_percentage <= 100),
+    control_type control_type NOT NULL,
+    description VARCHAR(256),
+    status ubo_status NOT NULL DEFAULT 'Active',
+    verification_status verification_status NOT NULL DEFAULT 'Pending',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
-    CONSTRAINT ck_ubo_verification CHECK (
-        (verification_status = 'Verified' AND verified_at IS NOT NULL AND verified_by IS NOT NULL) OR
-        (verification_status != 'Verified')
-    )
+    CONSTRAINT ck_ubo_not_self_reference CHECK (corporate_customer_id != beneficiary_customer_id)
 );
 
 -- =============================================================================
@@ -613,14 +640,14 @@ CREATE TABLE compliance_alerts (
     customer_id UUID REFERENCES customers(customer_id),
     account_id UUID REFERENCES accounts(account_id),
     transaction_id UUID REFERENCES transactions(transaction_id),
-    alert_type VARCHAR(50) NOT NULL,
-    severity VARCHAR(20) NOT NULL CHECK (severity IN ('Low', 'Medium', 'High', 'Critical')),
-    description TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'Open' CHECK (status IN ('Open', 'InReview', 'Resolved', 'FalsePositive')),
+    alert_type alert_type NOT NULL,
+    severity severity NOT NULL,
+    description VARCHAR(500) NOT NULL,
+    status alert_status NOT NULL DEFAULT 'New',
     assigned_to UUID REFERENCES referenced_persons(person_id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     resolved_at TIMESTAMP WITH TIME ZONE,
-    resolution_notes TEXT
+    resolution_notes VARCHAR(500)
 );
 
 -- Risk scoring for customers
@@ -635,6 +662,25 @@ CREATE TABLE customer_risk_scores (
     sanctions_score DECIMAL(5,2) CHECK (sanctions_score >= 0 AND sanctions_score <= 100),
     calculated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     valid_until TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Compliance results table for check type tracking
+CREATE TABLE compliance_results (
+    result_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL REFERENCES accounts(account_id),
+    check_type VARCHAR(50) NOT NULL CHECK (check_type IN (
+        'Kyc', 'Aml', 'Cdd', 'Edd', 'SanctionsScreening', 'PepScreening', 
+        'AdverseMediaScreening', 'WatchlistScreening', 'UboVerification', 
+        'DocumentVerification', 'AddressVerification', 'SourceOfFundsVerification', 
+        'SourceOfWealthVerification', 'RiskAssessment', 'OngoingMonitoring', 'PeriodicReview'
+    )),
+    status VARCHAR(50) NOT NULL CHECK (status IN ('Passed', 'Failed', 'RequiresReview', 'Pending')),
+    risk_score DECIMAL(5,2) CHECK (risk_score >= 0 AND risk_score <= 100),
+    findings TEXT[], -- Array of findings (up to 300 chars each)
+    recommendations TEXT[], -- Array of recommendations (up to 300 chars each)  
+    checked_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -717,16 +763,16 @@ CREATE TABLE account_holds (
     hold_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
     amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
-    hold_type VARCHAR(30) NOT NULL CHECK (hold_type IN ('UnclearedFunds', 'JudicialLien', 'LoanPledge', 'ComplianceHold', 'AdministrativeHold', 'FraudHold', 'PendingAuthorization', 'OverdraftReserve', 'CardAuthorization', 'Other')),
+    hold_type hold_type NOT NULL,
     reason_id UUID NOT NULL REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for hold reason
     additional_details VARCHAR(200), -- Additional context beyond the standard reason
     placed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
     placed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMP WITH TIME ZONE,
-    status VARCHAR(30) NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Released', 'Expired', 'Cancelled', 'PartiallyReleased')),
+    status hold_status NOT NULL DEFAULT 'Active',
     released_at TIMESTAMP WITH TIME ZONE,
     released_by UUID REFERENCES referenced_persons(person_id),
-    priority VARCHAR(20) NOT NULL DEFAULT 'Medium' CHECK (priority IN ('Critical', 'High', 'Medium', 'Low')),
+    priority hold_priority NOT NULL DEFAULT 'Medium',
     source_reference VARCHAR(100), -- External reference for judicial holds, etc.
     automatic_release BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
