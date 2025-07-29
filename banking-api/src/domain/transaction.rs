@@ -71,7 +71,7 @@ pub struct TransactionRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionResult {
     pub transaction_id: Uuid,
-    pub reference_number: String,
+    pub reference_number: HeaplessString<200>,
     pub gl_entries: Vec<GlEntry>,
     pub timestamp: DateTime<Utc>,
 }
@@ -123,12 +123,12 @@ impl ValidationResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlEntry {
     pub entry_id: Uuid,
-    pub account_code: String,
+    pub account_code: Uuid,
     pub debit_amount: Option<Decimal>,
     pub credit_amount: Option<Decimal>,
     pub currency: HeaplessString<3>,
-    pub description: String,
-    pub reference_number: String,
+    pub description: HeaplessString<200>,
+    pub reference_number: HeaplessString<200>,
     pub transaction_id: Uuid,
     pub value_date: NaiveDate,
     pub posting_date: DateTime<Utc>,
@@ -160,6 +160,17 @@ pub enum TransactionWorkflowStatus {
     TimedOut 
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TransactionAuditAction {
+    Created,
+    StatusChanged,
+    Posted,
+    Reversed,
+    Failed,
+    Approved,
+    Rejected,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChannelType {
     MobileApp,
@@ -185,12 +196,12 @@ pub enum PermittedOperation {
 pub struct TransactionAudit {
     pub audit_id: Uuid,
     pub transaction_id: Uuid,
-    pub action_type: String,
+    pub action_type: TransactionAuditAction,
     /// References ReferencedPerson.person_id
     pub performed_by: Uuid,
     pub performed_at: DateTime<Utc>,
-    pub old_status: Option<String>,
-    pub new_status: Option<String>,
+    pub old_status: Option<TransactionStatus>,
+    pub new_status: Option<TransactionStatus>,
     /// References ReasonAndPurpose.id for audit reason
     pub reason_id: Option<Uuid>,
     pub details: Option<Hash>,
@@ -200,10 +211,10 @@ impl TransactionAudit {
     /// Create new transaction audit with hash-based details
     pub fn new(
         transaction_id: Uuid,
-        action_type: String,
+        action_type: TransactionAuditAction,
         performed_by: Uuid,
-        old_status: Option<String>,
-        new_status: Option<String>,
+        old_status: Option<TransactionStatus>,
+        new_status: Option<TransactionStatus>,
         reason_id: Option<Uuid>,
         details_content: Option<&str>,
     ) -> Self {

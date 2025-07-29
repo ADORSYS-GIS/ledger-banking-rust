@@ -231,6 +231,7 @@ dependencies = [
  "banking-api",
  "banking-db",
  "banking-db-postgres",
+ "blake3",
  "chrono",
  "config",
  "heapless",

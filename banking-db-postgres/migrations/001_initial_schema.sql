@@ -349,7 +349,7 @@ CREATE TABLE transactions (
     transaction_type VARCHAR(10) NOT NULL CHECK (transaction_type IN ('Credit', 'Debit')),
     amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
-    description VARCHAR(255) NOT NULL,
+    description VARCHAR(200) NOT NULL,
     
     -- Multi-channel processing support
     channel_id VARCHAR(50) NOT NULL, -- 'BranchTeller', 'ATM', 'OnlineBanking', 'MobileBanking', 'AgentBanking'
@@ -362,7 +362,7 @@ CREATE TABLE transactions (
     
     -- Status and approval workflow
     status VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Posted', 'Failed', 'Reversed', 'OnHold')),
-    reference_number VARCHAR(50) NOT NULL UNIQUE,
+    reference_number VARCHAR(200) NOT NULL UNIQUE,
     external_reference VARCHAR(100), -- For external system correlation
     
     -- Financial posting integration
@@ -387,11 +387,11 @@ CREATE TABLE transactions (
 CREATE TABLE transaction_audit_trail (
     audit_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
-    action_type VARCHAR(50) NOT NULL, -- 'Created', 'StatusChanged', 'Posted', 'Reversed'
+    action_type VARCHAR(50) NOT NULL, -- 'Created', 'StatusChanged', 'Posted', 'Reversed', 'Failed', 'Approved', 'Rejected'
     performed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
     performed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    old_status VARCHAR(20),
-    new_status VARCHAR(20),
+    old_status VARCHAR(20), -- TransactionStatus enum values
+    new_status VARCHAR(20), -- TransactionStatus enum values  
     reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for audit reason
     details_hash BYTEA -- Blake3 hash of additional details for tamper detection
 );
@@ -550,7 +550,7 @@ CREATE TABLE account_workflows (
         'ComplianceVerification', 'MultiPartyApproval'
     )),
     current_step VARCHAR(50) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'InProgress' CHECK (status IN ('InProgress', 'Completed', 'Rejected', 'Cancelled')),
+    status VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected', 'TimedOut')),
     initiated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
     initiated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     timeout_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -580,7 +580,7 @@ CREATE TABLE transaction_approvals (
     workflow_id UUID NOT NULL REFERENCES account_workflows(workflow_id),
     transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
     approver_id UUID NOT NULL,
-    approval_action VARCHAR(20) NOT NULL CHECK (approval_action IN ('Approved', 'Rejected', 'Delegated')),
+    approval_action VARCHAR(20) NOT NULL CHECK (approval_action IN ('Pending', 'Approved', 'Rejected', 'PartiallyApproved')),
     approved_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     approval_notes VARCHAR(512),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
