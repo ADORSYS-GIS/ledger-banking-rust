@@ -176,9 +176,9 @@ mod stack_optimization_tests {
 
         // Test DocumentReference with Blake3 hash
         let doc_ref = DocumentReference::new(
-            "passport".to_string(),
+            "passport",
             b"passport_scan_data_content_for_hashing",
-        );
+        ).expect("DocumentReference creation should succeed");
 
         let doc_json = serde_json::to_string(&doc_ref).expect("DocumentReference serialization should succeed");
         println!("DocumentReference JSON: {}", doc_json);

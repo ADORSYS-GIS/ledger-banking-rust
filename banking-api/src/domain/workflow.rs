@@ -1,11 +1,11 @@
 use blake3::Hash;
 use chrono::{DateTime, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountWorkflow {
     pub workflow_id: Uuid,
     pub account_id: Uuid,
@@ -17,8 +17,7 @@ pub struct AccountWorkflow {
     pub initiated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub steps_completed: Vec<WorkflowStepRecord>,
-    #[validate(length(max = 500))]
-    pub next_action_required: Option<String>,
+    pub next_action_required: Option<HeaplessString<500>>,
     pub timeout_at: Option<DateTime<Utc>>,
 }
 
@@ -63,31 +62,28 @@ pub enum WorkflowStatus {
     TimedOut,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowStepRecord {
     pub step: WorkflowStep,
     pub completed_at: DateTime<Utc>,
     /// References ReferencedPerson.person_id
     pub completed_by: Uuid,
-    #[validate(length(max = 1000))]
-    pub notes: Option<String>,
-    pub supporting_documents: Vec<String>,
+    pub notes: Option<HeaplessString<1000>>,
+    pub supporting_documents: Vec<HeaplessString<100>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountOpeningRequest {
     pub customer_id: Uuid,
-    #[validate(length(min = 1, max = 50))]
-    pub product_code: String,
+    pub product_code: HeaplessString<50>,
     pub initial_deposit: Option<Decimal>,
-    #[validate(length(min = 1, max = 50))]
-    pub channel: String,
+    pub channel: HeaplessString<50>,
     /// References ReferencedPerson.person_id
     pub initiated_by: Uuid,
     pub supporting_documents: Vec<DocumentReference>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClosureRequest {
     pub reason: ClosureReason,
     pub disbursement_instructions: super::account::DisbursementInstructions,
@@ -121,34 +117,37 @@ pub struct DormancyAssessment {
     pub last_activity_date: Option<chrono::NaiveDate>,
     pub days_inactive: i32,
     pub threshold_days: i32,
-    pub product_specific_rules: Vec<String>,
+    pub product_specific_rules: Vec<HeaplessString<200>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentReference {
     pub document_id: Hash,
-    #[validate(length(min = 1, max = 50))]
-    pub document_type: String,
+    pub document_type: HeaplessString<50>,
     pub document_path: Option<Hash>,
 }
 
 impl DocumentReference {
     /// Create new document reference with hash-based ID
-    pub fn new(document_type: String, content: &[u8]) -> Self {
-        Self {
+    pub fn new(document_type: &str, content: &[u8]) -> Result<Self, &'static str> {
+        let doc_type = HeaplessString::try_from(document_type)
+            .map_err(|_| "Document type exceeds maximum length of 50 characters")?;
+        Ok(Self {
             document_id: blake3::hash(content),
-            document_type,
+            document_type: doc_type,
             document_path: None,
-        }
+        })
     }
     
     /// Create document reference from path content
-    pub fn with_path(document_type: String, content: &[u8], path_content: &[u8]) -> Self {
-        Self {
+    pub fn with_path(document_type: &str, content: &[u8], path_content: &[u8]) -> Result<Self, &'static str> {
+        let doc_type = HeaplessString::try_from(document_type)
+            .map_err(|_| "Document type exceeds maximum length of 50 characters")?;
+        Ok(Self {
             document_id: blake3::hash(content),
-            document_type,
+            document_type: doc_type,
             document_path: Some(blake3::hash(path_content)),
-        }
+        })
     }
     
     /// Get document ID as hex string for display/logging
