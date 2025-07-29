@@ -72,17 +72,20 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================================================
--- REFERENCED PERSONS TABLE - Central person reference system
+-- PERSONS TABLE - Central person reference system
 -- =============================================================================
 
-CREATE TABLE referenced_persons (
+CREATE TABLE persons (
     person_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     person_type person_type NOT NULL,
     display_name VARCHAR(100) NOT NULL,
     external_identifier VARCHAR(50),
     organization VARCHAR(100),
-    contact_info JSONB,
-    duplicate_of UUID REFERENCES referenced_persons(person_id),
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    department VARCHAR(50),
+    office_location VARCHAR(200),
+    duplicate_of UUID REFERENCES persons(person_id),
     entity_reference UUID,
     entity_type VARCHAR(50),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -90,17 +93,17 @@ CREATE TABLE referenced_persons (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for referenced_persons
-CREATE INDEX idx_referenced_persons_external_id ON referenced_persons(external_identifier) WHERE external_identifier IS NOT NULL;
-CREATE INDEX idx_referenced_persons_entity_ref ON referenced_persons(entity_reference, entity_type) WHERE entity_reference IS NOT NULL;
-CREATE INDEX idx_referenced_persons_duplicate ON referenced_persons(duplicate_of) WHERE duplicate_of IS NOT NULL;
-CREATE INDEX idx_referenced_persons_active ON referenced_persons(is_active) WHERE is_active = TRUE;
-CREATE INDEX idx_referenced_persons_display_name ON referenced_persons(display_name);
-CREATE INDEX idx_referenced_persons_type ON referenced_persons(person_type);
+-- Indexes for persons
+CREATE INDEX idx_persons_external_id ON persons(external_identifier) WHERE external_identifier IS NOT NULL;
+CREATE INDEX idx_persons_entity_ref ON persons(entity_reference, entity_type) WHERE entity_reference IS NOT NULL;
+CREATE INDEX idx_persons_duplicate ON persons(duplicate_of) WHERE duplicate_of IS NOT NULL;
+CREATE INDEX idx_persons_active ON persons(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_persons_display_name ON persons(display_name);
+CREATE INDEX idx_persons_type ON persons(person_type);
 
 -- Trigger for updated_at
-CREATE TRIGGER update_referenced_persons_updated_at
-    BEFORE UPDATE ON referenced_persons
+CREATE TRIGGER update_persons_updated_at
+    BEFORE UPDATE ON persons
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -119,7 +122,7 @@ CREATE TABLE customers (
     status customer_status NOT NULL DEFAULT 'PendingVerification',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id),
     
     -- Business constraints
     CONSTRAINT uk_customer_identity UNIQUE (id_type, id_number),
@@ -135,9 +138,9 @@ CREATE TABLE customer_documents (
     document_path VARCHAR(500),
     status document_status NOT NULL DEFAULT 'Uploaded',
     uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    uploaded_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    uploaded_by UUID NOT NULL REFERENCES persons(person_id),
     verified_at TIMESTAMP WITH TIME ZONE,
-    verified_by UUID REFERENCES referenced_persons(person_id),
+    verified_by UUID REFERENCES persons(person_id),
     
     CONSTRAINT ck_document_verification CHECK (
         (status IN ('Verified', 'Rejected') AND verified_at IS NOT NULL AND verified_by IS NOT NULL) OR
@@ -153,7 +156,7 @@ CREATE TABLE customer_audit_trail (
     old_value VARCHAR(255),
     new_value VARCHAR(255),
     changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    changed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    changed_by UUID NOT NULL REFERENCES persons(person_id),
     reason VARCHAR(255)
 );
 
@@ -251,14 +254,14 @@ CREATE TABLE accounts (
     pending_closure_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for closure
     
     -- Enhanced audit trail
-    status_changed_by UUID REFERENCES referenced_persons(person_id),
+    status_changed_by UUID REFERENCES persons(person_id),
     status_change_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for status change
     status_change_timestamp TIMESTAMP WITH TIME ZONE,
     
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id),
     
     -- Business constraints ensuring data integrity
     CONSTRAINT ck_balance_consistency CHECK (current_balance >= 0 OR account_type = 'Current'),
@@ -388,7 +391,7 @@ CREATE TABLE transaction_audit_trail (
     audit_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
     action_type VARCHAR(50) NOT NULL, -- 'Created', 'StatusChanged', 'Posted', 'Reversed', 'Failed', 'Approved', 'Rejected'
-    performed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    performed_by UUID NOT NULL REFERENCES persons(person_id),
     performed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     old_status VARCHAR(20), -- TransactionStatus enum values
     new_status VARCHAR(20), -- TransactionStatus enum values  
@@ -467,7 +470,7 @@ CREATE TABLE bank_holidays (
     is_recurring BOOLEAN NOT NULL DEFAULT FALSE,
     description VARCHAR(256),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
     
     CONSTRAINT uk_holiday_per_jurisdiction UNIQUE (jurisdiction, holiday_date)
 );
@@ -481,9 +484,9 @@ CREATE TABLE weekend_configuration (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     notes VARCHAR(256),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES referenced_persons(person_id)
+    updated_by UUID NOT NULL REFERENCES persons(person_id)
 );
 
 -- Date calculation rules for business day calculations
@@ -500,9 +503,9 @@ CREATE TABLE date_calculation_rules (
     effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
     expiry_date DATE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id),
     
     CONSTRAINT ck_rule_dates CHECK (expiry_date IS NULL OR expiry_date > effective_date)
 );
@@ -518,7 +521,7 @@ CREATE TABLE holiday_import_log (
     holidays_skipped INTEGER NOT NULL DEFAULT 0,
     import_status import_status NOT NULL,
     error_details VARCHAR(1000),
-    imported_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    imported_by UUID NOT NULL REFERENCES persons(person_id),
     imported_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -551,7 +554,7 @@ CREATE TABLE account_workflows (
     )),
     current_step VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected', 'TimedOut')),
-    initiated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    initiated_by UUID NOT NULL REFERENCES persons(person_id),
     initiated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     timeout_at TIMESTAMP WITH TIME ZONE NOT NULL,
     completed_at TIMESTAMP WITH TIME ZONE,
@@ -595,13 +598,13 @@ CREATE TABLE account_status_history (
     new_status VARCHAR(30) NOT NULL,
     change_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for status change
     additional_context VARCHAR(200), -- Additional context beyond the standard reason
-    changed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    changed_by UUID NOT NULL REFERENCES persons(person_id),
     changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     system_triggered BOOLEAN NOT NULL DEFAULT FALSE,
     workflow_id UUID, -- Link to associated workflow
     supporting_documents JSONB, -- JSON array of document references
     approval_required BOOLEAN NOT NULL DEFAULT FALSE,
-    approved_by UUID REFERENCES referenced_persons(person_id),
+    approved_by UUID REFERENCES persons(person_id),
     approved_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -619,7 +622,7 @@ CREATE TABLE kyc_results (
     risk_score DECIMAL(5,2) CHECK (risk_score >= 0 AND risk_score <= 100),
     expiry_date DATE,
     performed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    performed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    performed_by UUID NOT NULL REFERENCES persons(person_id),
     details BYTEA, -- Blake3 hash of KYC details for tamper detection
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -631,7 +634,7 @@ CREATE TABLE sanctions_screening (
     screening_result VARCHAR(20) NOT NULL CHECK (screening_result IN ('Clear', 'PotentialMatch', 'ConfirmedMatch')),
     match_details JSONB, -- Structured data about potential matches
     screened_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    screened_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    screened_by UUID NOT NULL REFERENCES persons(person_id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -645,7 +648,7 @@ CREATE TABLE compliance_alerts (
     severity severity NOT NULL,
     description VARCHAR(500) NOT NULL,
     status alert_status NOT NULL DEFAULT 'New',
-    assigned_to UUID REFERENCES referenced_persons(person_id),
+    assigned_to UUID REFERENCES persons(person_id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     resolved_at TIMESTAMP WITH TIME ZONE,
     resolution_notes VARCHAR(500)
@@ -693,7 +696,7 @@ CREATE TABLE suspicious_activity_reports (
     additional_details VARCHAR(500), -- Additional context for SAR
     supporting_transactions UUID[] NOT NULL, -- Array of transaction IDs
     generated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    generated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    generated_by UUID NOT NULL REFERENCES persons(person_id),
     status VARCHAR(20) NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Filed', 'Acknowledged')),
     filed_at TIMESTAMP WITH TIME ZONE,
     acknowledgment_received_at TIMESTAMP WITH TIME ZONE,
@@ -725,9 +728,9 @@ CREATE TABLE fee_applications (
     value_date DATE NOT NULL DEFAULT CURRENT_DATE,
     reversal_deadline TIMESTAMP WITH TIME ZONE,
     waived BOOLEAN NOT NULL DEFAULT FALSE,
-    waived_by UUID REFERENCES referenced_persons(person_id),
+    waived_by UUID REFERENCES persons(person_id),
     waived_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for waiver reason
-    applied_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    applied_by UUID NOT NULL REFERENCES persons(person_id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_fee_amount_positive CHECK (amount > 0),
@@ -746,10 +749,10 @@ CREATE TABLE fee_waivers (
     waived_amount DECIMAL(15,2) NOT NULL CHECK (waived_amount > 0),
     reason_id UUID NOT NULL REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for waiver reason
     additional_details VARCHAR(200), -- Additional context for waiver
-    waived_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    waived_by UUID NOT NULL REFERENCES persons(person_id),
     waived_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     approval_required BOOLEAN NOT NULL DEFAULT FALSE,
-    approved_by UUID REFERENCES referenced_persons(person_id),
+    approved_by UUID REFERENCES persons(person_id),
     approved_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -767,12 +770,12 @@ CREATE TABLE account_holds (
     hold_type hold_type NOT NULL,
     reason_id UUID NOT NULL REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for hold reason
     additional_details VARCHAR(200), -- Additional context beyond the standard reason
-    placed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    placed_by UUID NOT NULL REFERENCES persons(person_id),
     placed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMP WITH TIME ZONE,
     status hold_status NOT NULL DEFAULT 'Active',
     released_at TIMESTAMP WITH TIME ZONE,
-    released_by UUID REFERENCES referenced_persons(person_id),
+    released_by UUID REFERENCES persons(person_id),
     priority hold_priority NOT NULL DEFAULT 'Medium',
     source_reference VARCHAR(100), -- External reference for judicial holds, etc.
     automatic_release BOOLEAN NOT NULL DEFAULT FALSE,
@@ -804,7 +807,7 @@ CREATE TABLE overdraft_facilities (
     facility_status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (facility_status IN ('Active', 'Suspended', 'Expired', 'UnderReview', 'Cancelled')),
     approval_date DATE NOT NULL,
     expiry_date DATE,
-    approved_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    approved_by UUID NOT NULL REFERENCES persons(person_id),
     review_frequency VARCHAR(20) NOT NULL CHECK (review_frequency IN ('Monthly', 'Quarterly', 'SemiAnnually', 'Annually')),
     next_review_date DATE NOT NULL,
     security_required BOOLEAN NOT NULL DEFAULT FALSE,
@@ -834,7 +837,7 @@ CREATE TABLE interest_posting_records (
     tax_withheld DECIMAL(15,2),
     net_amount DECIMAL(15,2) NOT NULL,
     posting_status VARCHAR(20) NOT NULL CHECK (posting_status IN ('Calculated', 'Posted', 'Reversed', 'Adjusted')),
-    posted_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    posted_by UUID NOT NULL REFERENCES persons(person_id),
     posted_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -854,10 +857,10 @@ CREATE TABLE overdraft_limit_adjustments (
     adjustment_reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
     additional_details VARCHAR(200),
     supporting_documents TEXT[], -- Array of document references
-    requested_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    requested_by UUID NOT NULL REFERENCES persons(person_id),
     requested_at TIMESTAMP WITH TIME ZONE NOT NULL,
     approval_status VARCHAR(30) NOT NULL DEFAULT 'Pending' CHECK (approval_status IN ('Pending', 'Approved', 'Rejected', 'RequiresAdditionalDocuments', 'UnderReview')),
-    approved_by UUID REFERENCES referenced_persons(person_id),
+    approved_by UUID REFERENCES persons(person_id),
     approved_at TIMESTAMP WITH TIME ZONE,
     approval_notes VARCHAR(512),
     effective_date DATE,
@@ -884,7 +887,7 @@ CREATE TABLE overdraft_interest_calculations (
     compounding_frequency VARCHAR(20) NOT NULL CHECK (compounding_frequency IN ('Daily', 'Weekly', 'Monthly', 'Quarterly')),
     capitalization_due BOOLEAN NOT NULL DEFAULT FALSE,
     calculated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    calculated_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    calculated_by UUID NOT NULL REFERENCES persons(person_id),
     
     CONSTRAINT ck_calculation_period_valid CHECK (calculation_period_start <= calculation_period_end),
     CONSTRAINT ck_calculation_days_valid CHECK (days_calculated > 0),
@@ -1053,8 +1056,8 @@ CREATE TABLE collection_actions (
     follow_up_required BOOLEAN NOT NULL DEFAULT FALSE,
     follow_up_date DATE,
     action_status VARCHAR(20) NOT NULL CHECK (action_status IN ('Planned', 'InProgress', 'Completed', 'Failed', 'Cancelled')),
-    assigned_to UUID NOT NULL REFERENCES referenced_persons(person_id),
-    created_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    assigned_to UUID NOT NULL REFERENCES persons(person_id),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_response_consistency CHECK (
@@ -1073,7 +1076,7 @@ CREATE TABLE loan_payments (
     payment_method VARCHAR(30) NOT NULL CHECK (payment_method IN ('BankTransfer', 'DirectDebit', 'Check', 'Cash', 'OnlinePayment', 'MobilePayment', 'StandingInstruction')),
     payment_status VARCHAR(20) NOT NULL CHECK (payment_status IN ('Processed', 'Pending', 'Failed', 'Reversed', 'PartiallyAllocated')),
     external_reference VARCHAR(100),
-    processed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    processed_by UUID NOT NULL REFERENCES persons(person_id),
     processed_at TIMESTAMP WITH TIME ZONE NOT NULL,
     reversal_info_id UUID,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -1100,7 +1103,7 @@ CREATE TABLE payment_reversals (
     reversal_reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
     additional_details VARCHAR(200),
     reversed_amount DECIMAL(15,2) NOT NULL CHECK (reversed_amount > 0),
-    reversed_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    reversed_by UUID NOT NULL REFERENCES persons(person_id),
     reversed_at TIMESTAMP WITH TIME ZONE NOT NULL,
     schedule_adjusted BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -1130,10 +1133,10 @@ CREATE TABLE loan_restructurings (
     capitalized_interest DECIMAL(15,2),
     waived_penalty_amount DECIMAL(15,2),
     approval_status VARCHAR(30) NOT NULL CHECK (approval_status IN ('Pending', 'Approved', 'Rejected', 'ConditionallyApproved', 'RequiresCommitteeApproval')),
-    approved_by UUID REFERENCES referenced_persons(person_id),
+    approved_by UUID REFERENCES persons(person_id),
     approved_at TIMESTAMP WITH TIME ZONE,
     conditions TEXT[], -- Array of conditions
-    created_by UUID NOT NULL REFERENCES referenced_persons(person_id),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_approval_consistency CHECK (
@@ -1215,7 +1218,7 @@ CREATE TRIGGER reason_and_purpose_updated_at
 -- =============================================================================
 
 -- Insert system persons
-INSERT INTO referenced_persons (person_id, person_type, display_name, external_identifier, organization, is_active)
+INSERT INTO persons (person_id, person_type, display_name, external_identifier, organization, is_active)
 VALUES 
     ('00000000-0000-0000-0000-000000000000', 'system', 'SYSTEM', 'SYSTEM', 'Banking System', TRUE),
     ('00000000-0000-0000-0000-000000000001', 'system', 'MIGRATION', 'MIGRATION', 'Data Migration', TRUE),
@@ -1583,17 +1586,20 @@ CREATE INDEX idx_business_day_cache_valid_until ON business_day_cache(valid_unti
 -- =============================================================================
 
 -- Referenced persons
-COMMENT ON TABLE referenced_persons IS 'Stores all person references used throughout the system for audit and tracking';
-COMMENT ON COLUMN referenced_persons.person_id IS 'Unique identifier for this person reference';
-COMMENT ON COLUMN referenced_persons.person_type IS 'Type of person: natural (human), legal (company), system, integration, unknown';
-COMMENT ON COLUMN referenced_persons.display_name IS 'Display name of the person';
-COMMENT ON COLUMN referenced_persons.external_identifier IS 'External ID like employee number, badge ID, system ID';
-COMMENT ON COLUMN referenced_persons.organization IS 'Organization or department for employees or company name for legal entities';
-COMMENT ON COLUMN referenced_persons.contact_info IS 'JSON object containing email, phone, department, office_location';
-COMMENT ON COLUMN referenced_persons.duplicate_of IS 'Reference to another person record if this is a duplicate';
-COMMENT ON COLUMN referenced_persons.entity_reference IS 'Reference to related entity (customer_id, employee_id, etc.)';
-COMMENT ON COLUMN referenced_persons.entity_type IS 'Type of entity referenced (customer, employee, shareholder, etc.)';
-COMMENT ON COLUMN referenced_persons.is_active IS 'Whether this person reference is currently active';
+COMMENT ON TABLE persons IS 'Stores all person references used throughout the system for audit and tracking';
+COMMENT ON COLUMN persons.person_id IS 'Unique identifier for this person reference';
+COMMENT ON COLUMN persons.person_type IS 'Type of person: natural (human), legal (company), system, integration, unknown';
+COMMENT ON COLUMN persons.display_name IS 'Display name of the person';
+COMMENT ON COLUMN persons.external_identifier IS 'External ID like employee number, badge ID, system ID';
+COMMENT ON COLUMN persons.organization IS 'Organization or department for employees or company name for legal entities';
+COMMENT ON COLUMN persons.email IS 'Email address for contact purposes';
+COMMENT ON COLUMN persons.phone IS 'Phone number for contact purposes';
+COMMENT ON COLUMN persons.department IS 'Department within organization';
+COMMENT ON COLUMN persons.office_location IS 'Office location or address (up to 200 characters)';
+COMMENT ON COLUMN persons.duplicate_of IS 'Reference to another person record if this is a duplicate';
+COMMENT ON COLUMN persons.entity_reference IS 'Reference to related entity (customer_id, employee_id, etc.)';
+COMMENT ON COLUMN persons.entity_type IS 'Type of entity referenced (customer, employee, shareholder, etc.)';
+COMMENT ON COLUMN persons.is_active IS 'Whether this person reference is currently active';
 
 -- Reason and purpose
 COMMENT ON TABLE reason_and_purpose IS 'Centralized table for all reasons and purposes with multilingual support';

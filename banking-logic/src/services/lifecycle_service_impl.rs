@@ -567,6 +567,20 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                     settlement.final_amount, account_id
                 );
             }
+            banking_api::domain::DisbursementMethod::OverdraftFacility => {
+                // Process overdraft facility setup
+                tracing::info!(
+                    "Setting up overdraft facility for account closure {}",
+                    account_id
+                );
+            }
+            banking_api::domain::DisbursementMethod::StagedRelease => {
+                // Process staged release disbursement
+                tracing::info!(
+                    "Processing staged release disbursement of {} for account closure {}",
+                    settlement.final_amount, account_id
+                );
+            }
         }
 
         // In production, this would create disbursement transactions

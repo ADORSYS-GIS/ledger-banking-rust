@@ -9,7 +9,8 @@ pub mod fee;
 pub mod channel;
 pub mod reason_and_purpose;
 pub mod reason_and_purpose_seeds;
-pub mod referenced_person;
+pub mod person;
+pub mod collateral;
 
 pub use customer::*;
 pub use account::*;
@@ -22,4 +23,5 @@ pub use fee::*;
 pub use channel::*;
 pub use reason_and_purpose::*;
 pub use reason_and_purpose_seeds::*;
-pub use referenced_person::*;
+pub use person::*;
+pub use collateral::*;

@@ -16,7 +16,7 @@ pub trait AccountService: Send + Sync {
     async fn find_account_by_id(&self, account_id: Uuid) -> BankingResult<Option<Account>>;
     
     /// Status updates with immediate enforcement
-    /// @param authorized_by - References ReferencedPerson.person_id
+    /// @param authorized_by - References Person.person_id
     async fn update_account_status(&self, account_id: Uuid, status: AccountStatus, authorized_by: Uuid) -> BankingResult<()>;
     
     /// Balance operations with product rule integration
@@ -42,7 +42,7 @@ pub trait AccountService: Send + Sync {
     async fn find_interest_bearing_accounts(&self) -> BankingResult<Vec<Account>>;
 
     /// Update account balance
-    /// @param updated_by - References ReferencedPerson.person_id
+    /// @param updated_by - References Person.person_id
     async fn update_balance(&self, account_id: Uuid, new_balance: Decimal, updated_by: Uuid) -> BankingResult<()>;
 
     /// Reset accrued interest to zero
@@ -58,7 +58,7 @@ pub trait AccountService: Send + Sync {
     async fn get_active_holds(&self, account_id: Uuid) -> BankingResult<Vec<AccountHold>>;
 
     /// Release a hold
-    /// @param released_by - References ReferencedPerson.person_id
+    /// @param released_by - References Person.person_id
     async fn release_hold(&self, hold_id: Uuid, released_by: Uuid) -> BankingResult<()>;
 
     /// Find accounts eligible for dormancy check

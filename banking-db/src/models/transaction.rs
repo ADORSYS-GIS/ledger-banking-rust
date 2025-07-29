@@ -104,7 +104,7 @@ pub struct TransactionAuditModel {
         deserialize_with = "deserialize_transaction_audit_action"
     )]
     pub action_type: TransactionAuditAction,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub performed_by: Uuid,
     pub performed_at: DateTime<Utc>,
     #[serde(

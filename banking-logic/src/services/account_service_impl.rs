@@ -5,7 +5,7 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 #[cfg(test)]
-use heapless::String as HeaplessString;
+use heapless::{String as HeaplessString, Vec as HeaplessVec};
 
 use banking_api::{
     BankingResult, Account, AccountStatus,
@@ -427,7 +427,7 @@ impl AccountServiceImpl {
         authorized_by: &Uuid,
         status: &AccountStatus,
     ) -> BankingResult<()> {
-        // TODO: Verify the person ID exists in referenced_persons table
+        // TODO: Verify the person ID exists in persons table
         // For now, just check it's not nil UUID
         if authorized_by.is_nil() {
             return Err(banking_api::BankingError::UnauthorizedOperation(
@@ -901,13 +901,13 @@ mod tests {
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: None,
+            disbursement_instructions: HeaplessVec::new(),
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(), // Changed to UUID for ReferencedPerson.person_id
+            updated_by: Uuid::new_v4(), // Changed to UUID for Person.person_id
         }
     }
 
@@ -1150,13 +1150,13 @@ mod tests {
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: None,
+            disbursement_instructions: serde_json::Value::Array(vec![]),
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(), // Changed to UUID for ReferencedPerson.person_id
+            updated_by: Uuid::new_v4(), // Changed to UUID for Person.person_id
         }
     }
 
@@ -1183,20 +1183,20 @@ mod tests {
             installment_amount: Some(Decimal::new(30000, 2)),
             next_due_date: Some(NaiveDate::from_ymd_opt(2024, 2, 1).unwrap()),
             penalty_rate: Some(Decimal::new(200, 4)), // 2%
-            collateral_id: Some(heapless::String::try_from(Uuid::new_v4().to_string().as_str()).unwrap()),
+            collateral_id: Some(Uuid::new_v4()),
             loan_purpose_id: None,  // Changed to UUID reference
             close_date: None,
             last_activity_date: Some(NaiveDate::from_ymd_opt(2024, 1, 15).unwrap()),
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: None,
+            disbursement_instructions: serde_json::Value::Array(vec![]),
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(), // Changed to UUID for ReferencedPerson.person_id
+            updated_by: Uuid::new_v4(), // Changed to UUID for Person.person_id
         }
     }
 

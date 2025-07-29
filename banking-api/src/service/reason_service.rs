@@ -24,7 +24,7 @@ pub trait EnhancedAccountService: Send + Sync {
         account_id: Uuid,
         reason_id: Uuid,
         additional_details: Option<&str>,
-        closed_by: Uuid, // References ReferencedPerson.person_id
+        closed_by: Uuid, // References Person.person_id
     ) -> BankingResult<()>;
     
     /// Place hold with reason validation
@@ -34,7 +34,7 @@ pub trait EnhancedAccountService: Send + Sync {
         amount: rust_decimal::Decimal,
         reason_id: Uuid,
         additional_details: Option<&str>,
-        placed_by: Uuid, // References ReferencedPerson.person_id
+        placed_by: Uuid, // References Person.person_id
     ) -> BankingResult<Uuid>;
     
     /// Update account status with reason validation
@@ -44,7 +44,7 @@ pub trait EnhancedAccountService: Send + Sync {
         new_status: AccountStatus,
         reason_id: Uuid,
         additional_context: Option<&str>,
-        updated_by: Uuid, // References ReferencedPerson.person_id
+        updated_by: Uuid, // References Person.person_id
     ) -> BankingResult<()>;
 }
 
@@ -57,7 +57,7 @@ pub trait EnhancedTransactionService: Send + Sync {
         transaction_id: Uuid,
         reason_id: Uuid,
         additional_details: Option<&str>,
-        reversed_by: Uuid, // References ReferencedPerson.person_id
+        reversed_by: Uuid, // References Person.person_id
     ) -> BankingResult<()>;
     
     /// Update transaction status with reason validation
@@ -67,7 +67,7 @@ pub trait EnhancedTransactionService: Send + Sync {
         status: TransactionStatus,
         reason_id: Uuid,
         additional_context: Option<&str>,
-        updated_by: Uuid, // References ReferencedPerson.person_id
+        updated_by: Uuid, // References Person.person_id
     ) -> BankingResult<()>;
 }
 
@@ -80,7 +80,7 @@ pub trait EnhancedComplianceService: Send + Sync {
         customer_id: Uuid,
         reason_id: Uuid,
         additional_details: Option<&str>,
-        generated_by: Uuid, // References ReferencedPerson.person_id
+        generated_by: Uuid, // References Person.person_id
     ) -> BankingResult<SarData>;
 }
 
@@ -93,7 +93,7 @@ pub trait EnhancedLoanService: Send + Sync {
         loan_account_id: Uuid,
         restructuring_reason_id: Uuid,
         additional_details: Option<&str>,
-        requested_by: Uuid, // References ReferencedPerson.person_id
+        requested_by: Uuid, // References Person.person_id
     ) -> BankingResult<LoanRestructuring>;
     
     /// Reverse loan payment with reason validation
@@ -102,7 +102,7 @@ pub trait EnhancedLoanService: Send + Sync {
         payment_id: Uuid,
         reversal_reason_id: Uuid,
         additional_details: Option<&str>,
-        reversed_by: Uuid, // References ReferencedPerson.person_id
+        reversed_by: Uuid, // References Person.person_id
     ) -> BankingResult<PaymentReversal>;
 }
 
@@ -115,7 +115,7 @@ pub trait EnhancedFeeService: Send + Sync {
         fee_application_id: Uuid,
         reason_id: Uuid,
         additional_details: Option<&str>,
-        requested_by: Uuid, // References ReferencedPerson.person_id
+        requested_by: Uuid, // References Person.person_id
     ) -> BankingResult<FeeWaiver>;
 }
 

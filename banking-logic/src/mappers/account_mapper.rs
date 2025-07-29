@@ -1,11 +1,11 @@
 use banking_api::domain::{
     Account, AccountOwnership, AccountRelationship, AccountMandate, UltimateBeneficiary,
-    AccountHold, DisbursementInstructions, StatusChangeRecord
+    AccountHold, StatusChangeRecord
 };
+use heapless::{String as HeaplessString, Vec as HeaplessVec};
 use banking_db::models::{
     AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel,
-    UltimateBeneficiaryModel, AccountHoldModel, DisbursementInstructionsModel,
-    AccountStatusHistoryModel
+    UltimateBeneficiaryModel, AccountHoldModel, AccountStatusHistoryModel
 };
 
 pub struct AccountMapper;
@@ -43,7 +43,7 @@ impl AccountMapper {
             dormancy_threshold_days: account.dormancy_threshold_days,
             reactivation_required: account.reactivation_required,
             pending_closure_reason_id: account.pending_closure_reason_id,
-            disbursement_instructions: account.disbursement_instructions.map(Self::disbursement_instructions_to_model),
+            disbursement_instructions: serde_json::to_value(&account.disbursement_instructions).unwrap_or(serde_json::Value::Array(vec![])),
             status_changed_by: account.status_changed_by,
             status_change_reason_id: account.status_change_reason_id,
             status_change_timestamp: account.status_change_timestamp,
@@ -86,7 +86,7 @@ impl AccountMapper {
             dormancy_threshold_days: model.dormancy_threshold_days,
             reactivation_required: model.reactivation_required,
             pending_closure_reason_id: model.pending_closure_reason_id,
-            disbursement_instructions: model.disbursement_instructions.map(Self::disbursement_instructions_from_model),
+            disbursement_instructions: serde_json::from_value(model.disbursement_instructions).unwrap_or_else(|_| HeaplessVec::new()),
             status_changed_by: model.status_changed_by,
             status_change_reason_id: model.status_change_reason_id,
             status_change_timestamp: model.status_change_timestamp,
@@ -97,24 +97,8 @@ impl AccountMapper {
         })
     }
 
-    // Disbursement Instructions mappers
-    pub fn disbursement_instructions_to_model(instructions: DisbursementInstructions) -> DisbursementInstructionsModel {
-        DisbursementInstructionsModel {
-            method: instructions.method,
-            target_account: instructions.target_account,
-            cash_pickup_branch_id: instructions.cash_pickup_branch_id,
-            authorized_recipient: instructions.authorized_recipient,
-        }
-    }
-
-    pub fn disbursement_instructions_from_model(model: DisbursementInstructionsModel) -> DisbursementInstructions {
-        DisbursementInstructions {
-            method: model.method,
-            target_account: model.target_account,
-            cash_pickup_branch_id: model.cash_pickup_branch_id,
-            authorized_recipient: model.authorized_recipient,
-        }
-    }
+    // Note: Disbursement instructions are now stored as UUID references in HeaplessVec
+    // and serialized directly to JSON, so individual mapper functions are not needed
 
     // Account Ownership mappers
     pub fn account_ownership_to_model(ownership: AccountOwnership) -> AccountOwnershipModel {
@@ -203,7 +187,9 @@ impl AccountMapper {
             beneficiary_customer_id: ubo.beneficiary_customer_id,
             ownership_percentage: ubo.ownership_percentage,
             control_type: ubo.control_type,
-            description: ubo.description,
+            description: ubo.description.map(|desc| {
+                HeaplessString::try_from(desc.as_str()).unwrap_or_else(|_| HeaplessString::new())
+            }),
             status: ubo.status,
             verification_status: ubo.verification_status,
             created_at: ubo.created_at,
@@ -217,7 +203,9 @@ impl AccountMapper {
             beneficiary_customer_id: model.beneficiary_customer_id,
             ownership_percentage: model.ownership_percentage,
             control_type: model.control_type,
-            description: model.description,
+            description: model.description.map(|desc| {
+                HeaplessString::try_from(desc.as_str()).unwrap_or_else(|_| HeaplessString::new())
+            }),
             status: model.status,
             verification_status: model.verification_status,
             created_at: model.created_at,

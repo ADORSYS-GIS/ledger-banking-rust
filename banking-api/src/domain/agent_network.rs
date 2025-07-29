@@ -37,7 +37,7 @@ pub struct AgencyBranch {
     
     // === NEW LOCATION FIELDS ===
     // Physical address
-    pub address: Address,
+    pub address: AgentAddress,
     pub gps_coordinates: Option<GpsCoordinates>,
     pub landmark_description: Option<HeaplessString<200>>,
     
@@ -193,7 +193,7 @@ pub enum BranchType {
 
 // Supporting structs
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Address {
+pub struct AgentAddress {
     pub street_line1: HeaplessString<100>,
     pub street_line2: Option<HeaplessString<100>>,
     pub city: HeaplessString<50>,
@@ -445,7 +445,7 @@ impl AgencyBranch {
             created_at,
             
             // Default values for new fields
-            address: Address {
+            address: AgentAddress {
                 street_line1: HeaplessString::new(),
                 street_line2: None,
                 city: HeaplessString::new(),

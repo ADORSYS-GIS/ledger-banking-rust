@@ -14,7 +14,7 @@ pub struct Customer {
     pub status: CustomerStatus,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub updated_by: Uuid,
 }
 
@@ -28,7 +28,11 @@ pub enum CustomerType {
 pub enum IdentityType { 
     NationalId, 
     Passport, 
-    CompanyRegistration 
+    CompanyRegistration,
+    PermanentResidentCard,
+    AsylumCard,
+    TemporaryResidentPermit,
+    Unknown
 }
 
 impl std::fmt::Display for IdentityType {
@@ -37,6 +41,10 @@ impl std::fmt::Display for IdentityType {
             IdentityType::NationalId => write!(f, "NationalId"),
             IdentityType::Passport => write!(f, "Passport"),
             IdentityType::CompanyRegistration => write!(f, "CompanyRegistration"),
+            IdentityType::PermanentResidentCard => write!(f, "PermanentResidentCard"),
+            IdentityType::AsylumCard => write!(f, "AsylumCard"),
+            IdentityType::TemporaryResidentPermit => write!(f, "TemporaryResidentPermit"),
+            IdentityType::Unknown => write!(f, "Unknown"),
         }
     }
 }

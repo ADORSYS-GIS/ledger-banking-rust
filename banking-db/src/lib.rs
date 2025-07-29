@@ -6,7 +6,7 @@ pub mod utils;
 pub use models::{
     customer::*, account::*, transaction::*, 
     agent_network::*, compliance::*, workflow::*,
-    calendar::*, referenced_person::*
+    calendar::*, person::*
 };
 pub use repository::{
     CustomerRepository, AccountRepository, TransactionRepository,

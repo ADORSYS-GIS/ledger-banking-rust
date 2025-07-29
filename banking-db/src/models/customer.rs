@@ -21,7 +21,7 @@ pub struct CustomerModel {
     pub status: CustomerStatus,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub updated_by: Uuid,
 }
 
@@ -52,10 +52,10 @@ pub struct CustomerDocumentModel {
     #[serde(serialize_with = "serialize_document_status", deserialize_with = "deserialize_document_status")]
     pub status: DocumentStatus,
     pub uploaded_at: DateTime<Utc>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub uploaded_by: Uuid,
     pub verified_at: Option<DateTime<Utc>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub verified_by: Option<Uuid>,
 }
 
@@ -69,7 +69,7 @@ pub struct CustomerAuditModel {
     pub old_value: Option<HeaplessString<255>>,
     pub new_value: Option<HeaplessString<255>>,
     pub changed_at: DateTime<Utc>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub changed_by: Uuid,
     pub reason: Option<HeaplessString<255>>,
 }
@@ -109,6 +109,10 @@ pub enum IdentityType {
     NationalId,
     Passport,
     CompanyRegistration,
+    PermanentResidentCard,
+    AsylumCard,
+    TemporaryResidentPermit,
+    Unknown,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -183,6 +187,10 @@ where
         IdentityType::NationalId => "NationalId",
         IdentityType::Passport => "Passport",
         IdentityType::CompanyRegistration => "CompanyRegistration",
+        IdentityType::PermanentResidentCard => "PermanentResidentCard",
+        IdentityType::AsylumCard => "AsylumCard",
+        IdentityType::TemporaryResidentPermit => "TemporaryResidentPermit",
+        IdentityType::Unknown => "Unknown",
     };
     serializer.serialize_str(value_str)
 }
@@ -196,6 +204,10 @@ where
         "NationalId" => Ok(IdentityType::NationalId),
         "Passport" => Ok(IdentityType::Passport),
         "CompanyRegistration" => Ok(IdentityType::CompanyRegistration),
+        "PermanentResidentCard" => Ok(IdentityType::PermanentResidentCard),
+        "AsylumCard" => Ok(IdentityType::AsylumCard),
+        "TemporaryResidentPermit" => Ok(IdentityType::TemporaryResidentPermit),
+        "Unknown" => Ok(IdentityType::Unknown),
         _ => Err(serde::de::Error::custom(format!("Invalid IdentityType: {value_str}"))),
     }
 }

@@ -39,21 +39,24 @@ pub enum ImportStatus {
 }
 
 /// Bank Holiday database model - simplified to match domain
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct BankHolidayModel {
     pub holiday_id: Uuid,
     pub jurisdiction: HeaplessString<10>, // Country/region code (e.g., "US", "UK", "CM")
     pub holiday_date: NaiveDate,
-    pub holiday_name: HeaplessString<255>,
+    pub holiday_name: HeaplessString<50>, // Updated to match API domain
+    #[serde(serialize_with = "serialize_holiday_type", deserialize_with = "deserialize_holiday_type")]
     pub holiday_type: HolidayType, // Use enum instead of HeaplessString
     pub is_recurring: bool,   // Annual recurrence flag
-    pub description: Option<HeaplessString<256>>,
-    pub created_by: Uuid, // References ReferencedPerson.person_id
+    pub description: Option<HeaplessString<200>>, // Updated to match API domain
+    pub created_by: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
 
 /// Weekend Configuration database model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct WeekendConfigurationModel {
     pub config_id: Uuid,
     pub jurisdiction: HeaplessString<10>,
@@ -62,13 +65,14 @@ pub struct WeekendConfigurationModel {
     pub is_active: bool,
     pub notes: Option<HeaplessString<256>>,
     pub created_at: DateTime<Utc>,
-    pub created_by: Uuid, // References ReferencedPerson.person_id
+    pub created_by: Uuid, // References Person.person_id
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: Uuid, // References ReferencedPerson.person_id
+    pub updated_by: Uuid, // References Person.person_id
 }
 
 /// Date Calculation Rules database model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct DateCalculationRulesModel {
     pub rule_id: Uuid,
     pub jurisdiction: HeaplessString<10>,
@@ -82,13 +86,14 @@ pub struct DateCalculationRulesModel {
     pub effective_date: NaiveDate,
     pub expiry_date: Option<NaiveDate>,
     pub created_at: DateTime<Utc>,
-    pub created_by: Uuid, // References ReferencedPerson.person_id
+    pub created_by: Uuid, // References Person.person_id
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: Uuid, // References ReferencedPerson.person_id
+    pub updated_by: Uuid, // References Person.person_id
 }
 
 /// Holiday Import Log database model (for audit trail of holiday imports)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct HolidayImportLogModel {
     pub import_id: Uuid,
     pub jurisdiction: HeaplessString<10>,
@@ -99,12 +104,13 @@ pub struct HolidayImportLogModel {
     pub holidays_skipped: i32,
     pub import_status: ImportStatus, // Use enum instead of HeaplessString
     pub error_details: Option<HeaplessString<1000>>,
-    pub imported_by: Uuid, // References ReferencedPerson.person_id
+    pub imported_by: Uuid, // References Person.person_id
     pub imported_at: DateTime<Utc>,
 }
 
 /// Business Day Cache database model (for performance optimization)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct BusinessDayCacheModel {
     pub cache_id: Uuid,
     pub jurisdiction: HeaplessString<10>,
@@ -115,4 +121,32 @@ pub struct BusinessDayCacheModel {
     pub holiday_name: Option<HeaplessString<255>>,
     pub cached_at: DateTime<Utc>,
     pub valid_until: DateTime<Utc>,
+}
+
+// Serialization functions for HolidayType
+fn serialize_holiday_type<S>(holiday_type: &HolidayType, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let type_str = match holiday_type {
+        HolidayType::National => "National",
+        HolidayType::Regional => "Regional",
+        HolidayType::Religious => "Religious",
+        HolidayType::Banking => "Banking",
+    };
+    serializer.serialize_str(type_str)
+}
+
+fn deserialize_holiday_type<'de, D>(deserializer: D) -> Result<HolidayType, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "National" => Ok(HolidayType::National),
+        "Regional" => Ok(HolidayType::Regional),
+        "Religious" => Ok(HolidayType::Religious),
+        "Banking" => Ok(HolidayType::Banking),
+        _ => Err(serde::de::Error::custom(format!("Unknown holiday type: {s}"))),
+    }
 }
