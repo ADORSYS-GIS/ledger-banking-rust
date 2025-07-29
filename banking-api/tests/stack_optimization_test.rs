@@ -2,7 +2,7 @@ use serde_json;
 use banking_api::domain::{Account, AccountType, AccountStatus, SigningCondition, Transaction, TransactionType, TransactionStatus, Customer, CustomerType, IdentityType, RiskRating, CustomerStatus};
 use banking_api::domain::compliance::{KycCheck, CheckResult};
 use banking_api::domain::workflow::DocumentReference;
-use banking_api::domain::transaction::TransactionAudit;
+use banking_api::domain::transaction::{TransactionAudit, TransactionAuditAction};
 use chrono::{NaiveDate, Utc};
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -192,10 +192,10 @@ mod stack_optimization_tests {
         // Test TransactionAudit with Blake3 hash
         let audit = TransactionAudit::new(
             Uuid::new_v4(),
-            "status_change".to_string(),
+            TransactionAuditAction::StatusChanged,
             Uuid::new_v4(), // Changed to UUID for performed_by
-            Some("Pending".to_string()),
-            Some("Posted".to_string()),
+            Some(TransactionStatus::Pending),
+            Some(TransactionStatus::Posted),
             None,  // Changed to UUID for reason_id, using None for test
             Some("audit_details_content_for_verification"),
         );
@@ -204,7 +204,7 @@ mod stack_optimization_tests {
         println!("TransactionAudit JSON: {}", audit_json);
 
         let audit_deserialized: TransactionAudit = serde_json::from_str(&audit_json).expect("TransactionAudit deserialization should succeed");
-        assert_eq!(audit_deserialized.action_type, "status_change");
+        assert_eq!(audit_deserialized.action_type, TransactionAuditAction::StatusChanged);
         // performed_by is now a UUID
         assert!(!audit_deserialized.performed_by.is_nil());
         // Verify hash integrity

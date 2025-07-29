@@ -50,11 +50,7 @@ impl TransactionService for TransactionServiceImpl {
         
         // Generate reference number if not provided
         if transaction.reference_number.is_empty() {
-            let ref_num = self.generate_reference_number().await?;
-            transaction.set_reference_number(&ref_num).map_err(|msg| BankingError::ValidationError {
-                field: "reference_number".to_string(),
-                message: msg.to_string(),
-            })?;
+            transaction.reference_number = self.generate_reference_number().await?;
         }
 
         // Stage 1: Pre-validation (fail-fast checks)
@@ -184,13 +180,7 @@ impl TransactionService for TransactionServiceImpl {
             transaction_date: Utc::now(),
             value_date: original.value_date,
             status: TransactionStatus::Posted,
-            reference_number: {
-                let ref_num = self.generate_reference_number().await?;
-                HeaplessString::try_from(ref_num.as_str()).map_err(|_| BankingError::ValidationError {
-                    field: "reference_number".to_string(),
-                    message: "Reference number too long".to_string(),
-                })?
-            },
+            reference_number: self.generate_reference_number().await?,
             external_reference: Some(original.reference_number.clone()),
             gl_code: original.gl_code,
             requires_approval: false,
@@ -595,11 +585,15 @@ impl TransactionServiceImpl {
     }
 
     /// Generate unique transaction reference number
-    async fn generate_reference_number(&self) -> BankingResult<String> {
+    async fn generate_reference_number(&self) -> BankingResult<HeaplessString<100>> {
         let now = Utc::now();
         let timestamp = now.format("%Y%m%d%H%M%S");
         let random_suffix: u32 = rand::random::<u32>() % 10000;
-        Ok(format!("TXN{timestamp}{random_suffix:04}"))
+        let ref_num = format!("TXN{timestamp}{random_suffix:04}");
+        HeaplessString::try_from(ref_num.as_str()).map_err(|_| BankingError::ValidationError {
+            field: "reference_number".to_string(),
+            message: "Generated reference number too long".to_string(),
+        })
     }
 
     /// Generate GL code based on account and transaction
