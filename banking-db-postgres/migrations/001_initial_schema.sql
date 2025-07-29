@@ -555,6 +555,7 @@ CREATE TABLE account_workflows (
     initiated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     timeout_at TIMESTAMP WITH TIME ZONE NOT NULL,
     completed_at TIMESTAMP WITH TIME ZONE,
+    next_action_required VARCHAR(500),
     rejection_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for rejection
     metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -570,7 +571,7 @@ CREATE TABLE workflow_step_records (
     assigned_to VARCHAR(100),
     started_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
-    notes TEXT,
+    notes VARCHAR(1000),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 

@@ -65,7 +65,10 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             initiated_at: Utc::now(),
             completed_at: None,
             steps_completed: Vec::new(),
-            next_action_required: Some("KYC verification required".to_string()),
+            next_action_required: Some(
+                heapless::String::try_from("KYC verification required")
+                    .unwrap_or_else(|_| heapless::String::new())
+            ),
             timeout_at: Some(Utc::now() + chrono::Duration::days(30)), // 30-day timeout
         };
 
@@ -75,7 +78,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         tracing::info!(
             "Account opening workflow {} initiated for customer {} with product {}",
-            workflow.workflow_id, request.customer_id, request.product_code
+            workflow.workflow_id, request.customer_id, request.product_code.as_str()
         );
 
         Ok(workflow)
@@ -246,8 +249,10 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             days_inactive,
             threshold_days,
             product_specific_rules: vec![
-                format!("Product: {}", account.product_code.as_str()),
-                format!("Threshold: {} days", threshold_days),
+                heapless::String::try_from(format!("Product: {}", account.product_code.as_str()).as_str())
+                    .unwrap_or_else(|_| heapless::String::new()),
+                heapless::String::try_from(format!("Threshold: {threshold_days} days").as_str())
+                    .unwrap_or_else(|_| heapless::String::new()),
             ],
         })
     }
@@ -311,7 +316,10 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             initiated_at: Utc::now(),
             completed_at: None,
             steps_completed: Vec::new(),
-            next_action_required: Some("Mini-KYC verification required".to_string()),
+            next_action_required: Some(
+                heapless::String::try_from("Mini-KYC verification required")
+                    .unwrap_or_else(|_| heapless::String::new())
+            ),
             timeout_at: Some(Utc::now() + chrono::Duration::days(7)), // 7-day timeout
         };
 
@@ -455,7 +463,10 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             initiated_at: Utc::now(),
             completed_at: None,
             steps_completed: Vec::new(),
-            next_action_required: Some("Final settlement calculation required".to_string()),
+            next_action_required: Some(
+                heapless::String::try_from("Final settlement calculation required")
+                    .unwrap_or_else(|_| heapless::String::new())
+            ),
             timeout_at: Some(Utc::now() + chrono::Duration::days(30)), // 30-day timeout
         };
 
@@ -725,9 +736,9 @@ impl AccountLifecycleServiceImpl {
     async fn validate_product_eligibility(&self, request: &AccountOpeningRequest) -> BankingResult<()> {
         // Check if product exists
         let _product_rules = self.product_catalog_client
-            .get_product_rules(&request.product_code)
+            .get_product_rules(request.product_code.as_str())
             .await
-            .map_err(|_| banking_api::BankingError::InvalidProductCode(request.product_code.clone()))?;
+            .map_err(|_| banking_api::BankingError::InvalidProductCode(request.product_code.as_str().to_string()))?;
 
         // Additional eligibility checks would go here
         // (customer type compatibility, minimum deposits, etc.)
@@ -833,23 +844,31 @@ impl AccountLifecycleServiceImpl {
 
     /// Convert domain AccountWorkflow to database AccountWorkflowModel
     fn to_workflow_model(&self, workflow: &AccountWorkflow) -> banking_db::models::AccountWorkflowModel {
+        use heapless::String as HeaplessString;
+        
         banking_db::models::AccountWorkflowModel {
             workflow_id: workflow.workflow_id,
             account_id: workflow.account_id,
-            workflow_type: format!("{:?}", workflow.workflow_type),
-            current_step: format!("{:?}", workflow.current_step),
-            status: format!("{:?}", workflow.status),
-            initiated_by: workflow.initiated_by.to_string(),
+            workflow_type: HeaplessString::try_from(format!("{:?}", workflow.workflow_type).as_str())
+                .unwrap_or_else(|_| HeaplessString::new()),
+            current_step: HeaplessString::try_from(format!("{:?}", workflow.current_step).as_str())
+                .unwrap_or_else(|_| HeaplessString::new()),
+            status: HeaplessString::try_from(format!("{:?}", workflow.status).as_str())
+                .unwrap_or_else(|_| HeaplessString::new()),
+            initiated_by: HeaplessString::try_from(workflow.initiated_by.to_string().as_str())
+                .unwrap_or_else(|_| HeaplessString::new()),
             initiated_at: workflow.initiated_at,
             completed_at: workflow.completed_at,
-            next_action_required: workflow.next_action_required.as_ref().map(|s| s.as_str().to_string()),
+            next_action_required: workflow.next_action_required.clone(),
             timeout_at: workflow.timeout_at,
             metadata: None, // Could serialize steps_completed if needed
-            priority: "Medium".to_string(), // Default priority
+            priority: HeaplessString::try_from("Medium")
+                .unwrap_or_else(|_| HeaplessString::new()),
             assigned_to: None,
             created_at: chrono::Utc::now(),
             last_updated_at: chrono::Utc::now(),
-            updated_by: SYSTEM_PERSON_ID.to_string(),
+            updated_by: HeaplessString::try_from(SYSTEM_PERSON_ID.to_string().as_str())
+                .unwrap_or_else(|_| HeaplessString::new()),
         }
     }
 }
