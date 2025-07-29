@@ -8,11 +8,11 @@ pub struct BankHoliday {
     pub holiday_id: Uuid,
     pub jurisdiction: HeaplessString<10>,
     pub holiday_date: NaiveDate,
-    pub holiday_name: HeaplessString<255>,
+    pub holiday_name: HeaplessString<50>,
     pub holiday_type: HolidayType,
     pub is_recurring: bool,
-    pub description: Option<HeaplessString<256>>,
-    /// References ReferencedPerson.person_id
+    pub description: Option<HeaplessString<200>>,
+    /// References Person.person_id
     pub created_by: Uuid,
     pub created_at: DateTime<Utc>,
 }

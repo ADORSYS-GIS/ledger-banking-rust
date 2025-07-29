@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use heapless::String as HeaplessString;
+use heapless::{String as HeaplessString, Vec as HeaplessVec};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -32,7 +32,7 @@ pub struct Account {
     pub installment_amount: Option<Decimal>,
     pub next_due_date: Option<NaiveDate>,
     pub penalty_rate: Option<Decimal>,
-    pub collateral_id: Option<HeaplessString<100>>,
+    pub collateral_id: Option<Uuid>,
     /// References ReasonAndPurpose.id for loan purpose
     pub loan_purpose_id: Option<Uuid>,
 
@@ -43,10 +43,11 @@ pub struct Account {
     pub reactivation_required: bool,
     /// References ReasonAndPurpose.id for pending closure
     pub pending_closure_reason_id: Option<Uuid>,
-    pub disbursement_instructions: Option<DisbursementInstructions>,
+    /// References to DisbursementInstructions.disbursement_id (max 10 stages)
+    pub disbursement_instructions: HeaplessVec<Uuid, 10>,
     
     // Enhanced audit trail
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub status_changed_by: Option<Uuid>,
     /// References ReasonAndPurpose.id for status change
     pub status_change_reason_id: Option<Uuid>,
@@ -55,7 +56,7 @@ pub struct Account {
     // Audit fields
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub updated_by: Uuid,
 }
 
@@ -86,12 +87,30 @@ pub enum SigningCondition {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisbursementInstructions {
+    pub disbursement_id: Uuid,
+    /// References the account holding the loan (source of funds)
+    pub source_account_id: Uuid,
     pub method: DisbursementMethod,
     pub target_account: Option<Uuid>,
     /// References AgencyBranch.branch_id for cash pickup
     pub cash_pickup_branch_id: Option<Uuid>,
-    /// References ReferencedPerson.person_id for authorized recipient
+    /// References Person.person_id for authorized recipient
     pub authorized_recipient: Option<Uuid>,
+    
+    // Disbursement tracking and staging
+    pub disbursement_amount: Option<Decimal>,
+    pub disbursement_date: Option<NaiveDate>,
+    pub stage_number: Option<i32>,
+    pub stage_description: Option<HeaplessString<200>>,
+    pub status: DisbursementStatus,
+    
+    // Audit trail
+    pub created_at: DateTime<Utc>,
+    pub last_updated_at: DateTime<Utc>,
+    /// References Person.person_id
+    pub created_by: Uuid,
+    /// References Person.person_id
+    pub updated_by: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,6 +119,18 @@ pub enum DisbursementMethod {
     CashWithdrawal,
     Check,
     HoldFunds,
+    OverdraftFacility,
+    StagedRelease,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum DisbursementStatus {
+    Pending,
+    Approved,
+    Executed,
+    Cancelled,
+    Failed,
+    PartiallyExecuted,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,13 +143,13 @@ pub struct AccountHold {
     pub reason_id: Uuid,
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub placed_by: Uuid,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub status: HoldStatus,
     pub released_at: Option<DateTime<Utc>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub released_by: Option<Uuid>,
     pub priority: HoldPriority,
     pub source_reference: Option<HeaplessString<100>>, // External reference for judicial holds, etc.
@@ -201,7 +232,7 @@ pub struct HoldReleaseRequest {
     pub release_reason_id: Uuid,
     /// Additional context for release
     pub release_additional_details: Option<HeaplessString<200>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub released_by: Uuid,
     pub override_authorization: bool,
 }
@@ -227,7 +258,7 @@ pub struct StatusChangeRecord {
     pub reason_id: Uuid,
     /// Additional context beyond the standard reason
     pub additional_context: Option<HeaplessString<200>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub changed_by: Uuid,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
@@ -243,7 +274,7 @@ pub struct PlaceHoldRequest {
     pub reason_id: Uuid,
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub placed_by: Uuid,
     pub expires_at: Option<DateTime<Utc>>,
     pub priority: HoldPriority,
@@ -257,6 +288,34 @@ impl Account {
     pub fn set_product_code(&mut self, product_code: &str) -> Result<(), &'static str> {
         self.product_code = HeaplessString::try_from(product_code).map_err(|_| "Product code too long")?;
         Ok(())
+    }
+    
+    /// Add a disbursement instruction to the account (max 10)
+    pub fn add_disbursement_instruction(&mut self, instruction_id: Uuid) -> Result<(), &'static str> {
+        self.disbursement_instructions
+            .push(instruction_id)
+            .map_err(|_| "Maximum 10 disbursement instructions allowed")?;
+        Ok(())
+    }
+    
+    /// Remove a disbursement instruction by ID
+    pub fn remove_disbursement_instruction(&mut self, instruction_id: Uuid) -> bool {
+        if let Some(pos) = self.disbursement_instructions.iter().position(|&id| id == instruction_id) {
+            self.disbursement_instructions.swap_remove(pos);
+            true
+        } else {
+            false
+        }
+    }
+    
+    /// Check if account has disbursement instructions
+    pub fn has_disbursement_instructions(&self) -> bool {
+        !self.disbursement_instructions.is_empty()
+    }
+    
+    /// Get count of disbursement instructions
+    pub fn disbursement_instruction_count(&self) -> usize {
+        self.disbursement_instructions.len()
     }
 }
 
@@ -309,13 +368,13 @@ mod tests {
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: None,
+            disbursement_instructions: HeaplessVec::new(),
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: chrono::Utc::now(),
             last_updated_at: chrono::Utc::now(),
-            updated_by: Uuid::new_v4(), // References ReferencedPerson.person_id
+            updated_by: Uuid::new_v4(), // References Person.person_id
         };
         
         // Test string access
@@ -380,6 +439,80 @@ mod tests {
         assert!(mem::size_of_val(&enum_status) < mem::size_of_val(&string_status));
         assert!(mem::size_of_val(&enum_status) <= 8); // Typically 1-8 bytes for enums
     }
+
+    #[test]
+    fn test_disbursement_instructions_management() {
+        let mut account = Account {
+            account_id: uuid::Uuid::new_v4(),
+            product_code: HeaplessString::try_from("LNST0001").unwrap(),
+            account_type: AccountType::Loan,
+            account_status: AccountStatus::Active,
+            signing_condition: SigningCondition::None,
+            currency: HeaplessString::try_from("USD").unwrap(),
+            open_date: chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
+            domicile_branch_id: uuid::Uuid::new_v4(),
+            current_balance: rust_decimal::Decimal::ZERO,
+            available_balance: rust_decimal::Decimal::ZERO,
+            accrued_interest: rust_decimal::Decimal::ZERO,
+            overdraft_limit: None,
+            original_principal: Some(rust_decimal::Decimal::new(50000000, 2)), // $500,000
+            outstanding_principal: Some(rust_decimal::Decimal::new(50000000, 2)),
+            loan_interest_rate: Some(rust_decimal::Decimal::new(750, 2)), // 7.5%
+            loan_term_months: Some(24),
+            disbursement_date: None,
+            maturity_date: Some(chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap()),
+            installment_amount: Some(rust_decimal::Decimal::new(2291667, 2)),
+            next_due_date: Some(chrono::NaiveDate::from_ymd_opt(2024, 2, 1).unwrap()),
+            penalty_rate: Some(rust_decimal::Decimal::new(200, 2)),
+            collateral_id: Some(Uuid::new_v4()),
+            loan_purpose_id: Some(Uuid::new_v4()),
+            close_date: None,
+            last_activity_date: None,
+            dormancy_threshold_days: None,
+            reactivation_required: false,
+            pending_closure_reason_id: None,
+            disbursement_instructions: HeaplessVec::new(),
+            status_changed_by: None,
+            status_change_reason_id: None,
+            status_change_timestamp: None,
+            created_at: chrono::Utc::now(),
+            last_updated_at: chrono::Utc::now(),
+            updated_by: Uuid::new_v4(),
+        };
+        
+        // Test initial state
+        assert!(!account.has_disbursement_instructions());
+        assert_eq!(account.disbursement_instruction_count(), 0);
+        
+        // Test adding disbursement instructions (construction loan stages)
+        let stage1_id = Uuid::new_v4();
+        let stage2_id = Uuid::new_v4();
+        let stage3_id = Uuid::new_v4();
+        
+        assert!(account.add_disbursement_instruction(stage1_id).is_ok());
+        assert!(account.add_disbursement_instruction(stage2_id).is_ok());
+        assert!(account.add_disbursement_instruction(stage3_id).is_ok());
+        
+        assert!(account.has_disbursement_instructions());
+        assert_eq!(account.disbursement_instruction_count(), 3);
+        
+        // Test removing disbursement instruction
+        assert!(account.remove_disbursement_instruction(stage2_id));
+        assert_eq!(account.disbursement_instruction_count(), 2);
+        assert!(!account.remove_disbursement_instruction(stage2_id)); // Should return false for non-existent
+        
+        // Test maximum limit (10 stages)
+        for _ in 0..8 {
+            let stage_id = Uuid::new_v4();
+            assert!(account.add_disbursement_instruction(stage_id).is_ok());
+        }
+        assert_eq!(account.disbursement_instruction_count(), 10);
+        
+        // Test exceeding maximum limit
+        let overflow_id = Uuid::new_v4();
+        assert!(account.add_disbursement_instruction(overflow_id).is_err());
+        assert_eq!(account.disbursement_instruction_count(), 10); // Should remain 10
+    }
 }
 
 // Account Relations Structs and Enums (moved from account_relations.rs)
@@ -426,7 +559,7 @@ pub struct UltimateBeneficiary {
     pub beneficiary_customer_id: Uuid,
     pub ownership_percentage: Option<Decimal>,
     pub control_type: ControlType,
-    pub description: Option<HeaplessString<256>>,
+    pub description: Option<HeaplessString<200>>,
     pub status: UboStatus,
     pub verification_status: VerificationStatus,
     pub created_at: DateTime<Utc>,

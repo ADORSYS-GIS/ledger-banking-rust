@@ -1,5 +1,5 @@
 use serde::{Deserialize, Deserializer, Serializer};
-use crate::models::referenced_person::PersonType;
+use crate::models::person::PersonType;
 
 /// Serialize PersonType for database compatibility
 pub fn serialize_person_type<S>(person_type: &PersonType, serializer: S) -> Result<S::Ok, S::Error>

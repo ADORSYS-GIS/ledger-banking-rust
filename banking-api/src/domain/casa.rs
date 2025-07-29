@@ -22,7 +22,7 @@ pub struct OverdraftFacility {
     pub facility_status: OverdraftStatus,
     pub approval_date: NaiveDate,
     pub expiry_date: Option<NaiveDate>,
-    pub approved_by: Uuid, // References ReferencedPerson.person_id
+    pub approved_by: Uuid, // References Person.person_id
     pub review_frequency: ReviewFrequency,
     pub next_review_date: NaiveDate,
     pub security_required: bool,
@@ -79,7 +79,7 @@ pub struct OverdraftInterestCalculation {
     pub compounding_frequency: CompoundingFrequency,
     pub capitalization_due: bool,
     pub calculated_at: DateTime<Utc>,
-    pub calculated_by: Uuid, // References ReferencedPerson.person_id
+    pub calculated_by: Uuid, // References Person.person_id
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -173,10 +173,10 @@ pub struct OverdraftLimitAdjustment {
     /// Additional context for adjustment
     pub additional_details: Option<HeaplessString<200>>,
     pub supporting_documents: Vec<String>,
-    pub requested_by: Uuid, // References ReferencedPerson.person_id
+    pub requested_by: Uuid, // References Person.person_id
     pub requested_at: DateTime<Utc>,
     pub approval_status: CasaApprovalStatus,
-    pub approved_by: Option<Uuid>, // References ReferencedPerson.person_id
+    pub approved_by: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<DateTime<Utc>>,
     pub approval_notes: Option<HeaplessString<512>>,
     pub effective_date: Option<NaiveDate>,
@@ -240,7 +240,7 @@ pub struct InterestPostingRecord {
     pub tax_withheld: Option<Decimal>,
     pub net_amount: Decimal,
     pub posting_status: PostingStatus,
-    pub posted_by: Uuid, // References ReferencedPerson.person_id
+    pub posted_by: Uuid, // References Person.person_id
     pub posted_at: DateTime<Utc>,
 }
 
@@ -265,7 +265,7 @@ pub struct CreateOverdraftFacilityRequest {
     pub account_id: Uuid,
     pub approved_limit: Decimal,
     pub interest_rate: Decimal,
-    pub approved_by: Uuid, // References ReferencedPerson.person_id
+    pub approved_by: Uuid, // References Person.person_id
     pub expiry_date: Option<NaiveDate>,
     pub security_required: bool,
     pub security_details: Option<HeaplessString<256>>,

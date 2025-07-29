@@ -12,7 +12,7 @@ pub struct AccountWorkflow {
     pub workflow_type: WorkflowType,
     pub current_step: WorkflowStep,
     pub status: WorkflowStatus,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub initiated_by: Uuid,
     pub initiated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
@@ -66,7 +66,7 @@ pub enum WorkflowStatus {
 pub struct WorkflowStepRecord {
     pub step: WorkflowStep,
     pub completed_at: DateTime<Utc>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub completed_by: Uuid,
     pub notes: Option<HeaplessString<1000>>,
     pub supporting_documents: Vec<HeaplessString<100>>,
@@ -78,7 +78,7 @@ pub struct AccountOpeningRequest {
     pub product_code: HeaplessString<50>,
     pub initial_deposit: Option<Decimal>,
     pub channel: HeaplessString<50>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub initiated_by: Uuid,
     pub supporting_documents: Vec<DocumentReference>,
 }
@@ -87,7 +87,7 @@ pub struct AccountOpeningRequest {
 pub struct ClosureRequest {
     pub reason: ClosureReason,
     pub disbursement_instructions: super::account::DisbursementInstructions,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub requested_by: Uuid,
     pub force_closure: bool,
 }

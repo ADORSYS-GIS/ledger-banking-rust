@@ -28,11 +28,11 @@ pub struct FeeApplication {
     pub value_date: NaiveDate,
     pub reversal_deadline: Option<DateTime<Utc>>,
     pub waived: bool,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub waived_by: Option<Uuid>,
     /// References ReasonAndPurpose.id for waiver reason
     pub waived_reason_id: Option<Uuid>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub applied_by: Uuid,
     pub created_at: DateTime<Utc>,
 }
@@ -264,11 +264,11 @@ pub struct FeeWaiver {
     pub reason_id: Uuid,
     /// Additional context for waiver
     pub additional_details: Option<HeaplessString<200>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub waived_by: Uuid,
     pub waived_at: DateTime<Utc>,
     pub approval_required: bool,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub approved_by: Option<Uuid>,
     pub approved_at: Option<DateTime<Utc>>,
 }

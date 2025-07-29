@@ -50,7 +50,7 @@ pub struct AccountModel {
     pub installment_amount: Option<Decimal>,
     pub next_due_date: Option<NaiveDate>,
     pub penalty_rate: Option<Decimal>,
-    pub collateral_id: Option<HeaplessString<100>>,
+    pub collateral_id: Option<Uuid>,
     /// References ReasonAndPurpose.id for loan purpose
     pub loan_purpose_id: Option<Uuid>,
 
@@ -61,10 +61,11 @@ pub struct AccountModel {
     pub reactivation_required: bool,
     /// References ReasonAndPurpose.id for pending closure
     pub pending_closure_reason_id: Option<Uuid>,
-    pub disbursement_instructions: Option<DisbursementInstructionsModel>,
+    /// References to DisbursementInstructions.disbursement_id (stored as JSON array, max 10 stages)
+    pub disbursement_instructions: serde_json::Value, // Will store Vec<Uuid> as JSON
     
     // Enhanced audit trail
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub status_changed_by: Option<Uuid>,
     /// References ReasonAndPurpose.id for status change
     pub status_change_reason_id: Option<Uuid>,
@@ -73,7 +74,7 @@ pub struct AccountModel {
     // Audit fields
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub updated_by: Uuid,
 }
 
@@ -158,7 +159,7 @@ pub struct AccountHoldModel {
     pub reason_id: Uuid,
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub placed_by: Uuid,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
@@ -168,7 +169,7 @@ pub struct AccountHoldModel {
     )]
     pub status: HoldStatus,
     pub released_at: Option<DateTime<Utc>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub released_by: Option<Uuid>,
     #[serde(
         serialize_with = "serialize_hold_priority",
@@ -199,7 +200,7 @@ pub struct AccountStatusHistoryModel {
     pub change_reason_id: Uuid,
     /// Additional context for status change
     pub additional_context: Option<HeaplessString<200>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub changed_by: Uuid,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
@@ -223,7 +224,7 @@ pub struct AccountFinalSettlementModel {
     )]
     pub disbursement_method: DisbursementMethod,
     pub disbursement_reference: Option<HeaplessString<100>>,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub processed_by: Uuid,
     pub created_at: DateTime<Utc>,
 }
@@ -236,7 +237,11 @@ pub type StatusChangeModel = AccountStatusHistoryModel;
 
 /// Database model for Disbursement Instructions
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct DisbursementInstructionsModel {
+    pub disbursement_id: Uuid,
+    /// References the account holding the loan (source of funds)
+    pub source_account_id: Uuid,
     #[serde(
         serialize_with = "serialize_disbursement_method",
         deserialize_with = "deserialize_disbursement_method"
@@ -245,8 +250,39 @@ pub struct DisbursementInstructionsModel {
     pub target_account: Option<Uuid>,
     /// References AgencyBranch.branch_id for cash pickup
     pub cash_pickup_branch_id: Option<Uuid>,
-    /// References ReferencedPerson.person_id for authorized recipient
+    /// References Person.person_id for authorized recipient
     pub authorized_recipient: Option<Uuid>,
+    
+    // Disbursement tracking and staging
+    pub disbursement_amount: Option<Decimal>,
+    pub disbursement_date: Option<NaiveDate>,
+    pub stage_number: Option<i32>,
+    pub stage_description: Option<HeaplessString<200>>,
+    #[serde(
+        serialize_with = "serialize_disbursement_status",
+        deserialize_with = "deserialize_disbursement_status"
+    )]
+    pub status: DisbursementStatus,
+    
+    // Audit trail
+    pub created_at: DateTime<Utc>,
+    pub last_updated_at: DateTime<Utc>,
+    /// References Person.person_id
+    pub created_by: Uuid,
+    /// References Person.person_id
+    pub updated_by: Uuid,
+}
+
+/// Database model for disbursement status enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "disbursement_status", rename_all = "lowercase")]
+pub enum DisbursementStatus {
+    Pending,
+    Approved,
+    Executed,
+    Cancelled,
+    Failed,
+    PartiallyExecuted,
 }
 
 /// Database model for Ultimate Beneficial Owner
@@ -371,6 +407,8 @@ where
         DisbursementMethod::CashWithdrawal => "CashWithdrawal",
         DisbursementMethod::Check => "Check",
         DisbursementMethod::HoldFunds => "HoldFunds",
+        DisbursementMethod::OverdraftFacility => "OverdraftFacility",
+        DisbursementMethod::StagedRelease => "StagedRelease",
     };
     serializer.serialize_str(method_str)
 }
@@ -385,6 +423,8 @@ where
         "CashWithdrawal" => Ok(DisbursementMethod::CashWithdrawal),
         "Check" => Ok(DisbursementMethod::Check),
         "HoldFunds" => Ok(DisbursementMethod::HoldFunds),
+        "OverdraftFacility" => Ok(DisbursementMethod::OverdraftFacility),
+        "StagedRelease" => Ok(DisbursementMethod::StagedRelease),
         _ => Err(serde::de::Error::custom(format!("Invalid disbursement method: {method_str}"))),
     }
 }
@@ -757,6 +797,37 @@ where
 }
 
 
+
+fn serialize_disbursement_status<S>(status: &DisbursementStatus, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let status_str = match status {
+        DisbursementStatus::Pending => "Pending",
+        DisbursementStatus::Approved => "Approved",
+        DisbursementStatus::Executed => "Executed",
+        DisbursementStatus::Cancelled => "Cancelled",
+        DisbursementStatus::Failed => "Failed",
+        DisbursementStatus::PartiallyExecuted => "PartiallyExecuted",
+    };
+    serializer.serialize_str(status_str)
+}
+
+fn deserialize_disbursement_status<'de, D>(deserializer: D) -> Result<DisbursementStatus, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let status_str = String::deserialize(deserializer)?;
+    match status_str.as_str() {
+        "Pending" => Ok(DisbursementStatus::Pending),
+        "Approved" => Ok(DisbursementStatus::Approved),
+        "Executed" => Ok(DisbursementStatus::Executed),
+        "Cancelled" => Ok(DisbursementStatus::Cancelled),
+        "Failed" => Ok(DisbursementStatus::Failed),
+        "PartiallyExecuted" => Ok(DisbursementStatus::PartiallyExecuted),
+        _ => Err(serde::de::Error::custom(format!("Invalid disbursement status: {status_str}"))),
+    }
+}
 
 impl AccountModel {
     /// Set product code from string with validation

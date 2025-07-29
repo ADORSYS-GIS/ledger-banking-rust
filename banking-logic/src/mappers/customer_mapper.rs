@@ -76,6 +76,10 @@ impl CustomerMapper {
             IdentityType::NationalId => DbIdentityType::NationalId,
             IdentityType::Passport => DbIdentityType::Passport,
             IdentityType::CompanyRegistration => DbIdentityType::CompanyRegistration,
+            IdentityType::PermanentResidentCard => DbIdentityType::PermanentResidentCard,
+            IdentityType::AsylumCard => DbIdentityType::AsylumCard,  
+            IdentityType::TemporaryResidentPermit => DbIdentityType::TemporaryResidentPermit,
+            IdentityType::Unknown => DbIdentityType::Unknown,
         }
     }
 
@@ -84,6 +88,10 @@ impl CustomerMapper {
             DbIdentityType::NationalId => IdentityType::NationalId,
             DbIdentityType::Passport => IdentityType::Passport,
             DbIdentityType::CompanyRegistration => IdentityType::CompanyRegistration,
+            DbIdentityType::PermanentResidentCard => IdentityType::PermanentResidentCard,
+            DbIdentityType::AsylumCard => IdentityType::AsylumCard,
+            DbIdentityType::TemporaryResidentPermit => IdentityType::TemporaryResidentPermit,
+            DbIdentityType::Unknown => IdentityType::Unknown,
         }
     }
 

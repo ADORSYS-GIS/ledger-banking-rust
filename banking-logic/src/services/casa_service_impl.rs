@@ -119,7 +119,7 @@ impl CasaService for CasaServiceImpl {
         new_limit: Option<Decimal>,
         new_rate: Option<Decimal>,
         new_expiry_date: Option<NaiveDate>,
-        updated_by: Uuid, // References ReferencedPerson.person_id
+        updated_by: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftFacility> {
         // Implementation would update facility and account
         todo!("Implement overdraft facility update")
@@ -130,7 +130,7 @@ impl CasaService for CasaServiceImpl {
         facility_id: Uuid,
         new_status: OverdraftStatus,
         reason: String,
-        updated_by: Uuid, // References ReferencedPerson.person_id
+        updated_by: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftFacility> {
         todo!("Implement overdraft status update")
     }
@@ -148,7 +148,7 @@ impl CasaService for CasaServiceImpl {
         requested_limit: Decimal,
         adjustment_reason: String,
         supporting_documents: Vec<String>,
-        requested_by: Uuid, // References ReferencedPerson.person_id
+        requested_by: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftLimitAdjustment> {
         todo!("Implement overdraft limit adjustment request")
     }
@@ -157,7 +157,7 @@ impl CasaService for CasaServiceImpl {
         &self,
         adjustment_id: Uuid,
         approved: bool,
-        approved_by: Uuid, // References ReferencedPerson.person_id
+        approved_by: Uuid, // References Person.person_id
         approval_notes: Option<HeaplessString<512>>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<OverdraftLimitAdjustment> {
@@ -444,7 +444,7 @@ impl CasaService for CasaServiceImpl {
         calculation_period_start: NaiveDate,
         calculation_period_end: NaiveDate,
         posting_date: NaiveDate,
-        posted_by: Uuid, // References ReferencedPerson.person_id
+        posted_by: Uuid, // References Person.person_id
     ) -> BankingResult<InterestPostingRecord> {
         todo!("Implement overdraft interest posting")
     }

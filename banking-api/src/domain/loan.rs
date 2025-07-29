@@ -107,8 +107,8 @@ pub struct CollectionAction {
     pub follow_up_required: bool,
     pub follow_up_date: Option<NaiveDate>,
     pub action_status: ActionStatus,
-    pub assigned_to: Uuid, // References ReferencedPerson.person_id
-    pub created_by: Uuid, // References ReferencedPerson.person_id
+    pub assigned_to: Uuid, // References Person.person_id
+    pub created_by: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
 
@@ -147,7 +147,7 @@ pub struct LoanPayment {
     pub allocation: PaymentAllocation,
     pub payment_status: PaymentStatus,
     pub external_reference: Option<String>,
-    pub processed_by: Uuid, // References ReferencedPerson.person_id
+    pub processed_by: Uuid, // References Person.person_id
     pub processed_at: DateTime<Utc>,
     pub reversal_info: Option<PaymentReversal>,
 }
@@ -228,7 +228,7 @@ pub struct PaymentReversal {
     /// Additional context for reversal
     pub additional_details: Option<HeaplessString<200>>,
     pub reversed_amount: Decimal,
-    pub reversed_by: Uuid, // References ReferencedPerson.person_id
+    pub reversed_by: Uuid, // References Person.person_id
     pub reversed_at: DateTime<Utc>,
     pub schedule_adjusted: bool,
 }
@@ -264,10 +264,10 @@ pub struct LoanRestructuring {
     pub capitalized_interest: Option<Decimal>,
     pub waived_penalty_amount: Option<Decimal>,
     pub approval_status: LoanApprovalStatus,
-    pub approved_by: Option<Uuid>, // References ReferencedPerson.person_id
+    pub approved_by: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<DateTime<Utc>>,
     pub conditions: Vec<String>,
-    pub created_by: Uuid, // References ReferencedPerson.person_id
+    pub created_by: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
 
@@ -406,6 +406,6 @@ pub struct CreateCollectionActionRequest {
     pub description: String,
     pub amount_demanded: Option<Decimal>,
     pub due_date: Option<NaiveDate>,
-    pub assigned_to: Uuid, // References ReferencedPerson.person_id
-    pub created_by: Uuid, // References ReferencedPerson.person_id
+    pub assigned_to: Uuid, // References Person.person_id
+    pub created_by: Uuid, // References Person.person_id
 }

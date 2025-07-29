@@ -59,7 +59,7 @@ pub struct AccountHoldView {
     pub amount: rust_decimal::Decimal,
     pub hold_type: String,
     pub status: String,
-    pub placed_by: Uuid, // References ReferencedPerson.person_id
+    pub placed_by: Uuid, // References Person.person_id
     pub placed_at: chrono::DateTime<chrono::Utc>,
     pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
     
@@ -67,7 +67,7 @@ pub struct AccountHoldView {
     pub reason: ReasonView,
     
     pub released_at: Option<chrono::DateTime<chrono::Utc>>,
-    pub released_by: Option<Uuid>, // References ReferencedPerson.person_id
+    pub released_by: Option<Uuid>, // References Person.person_id
 }
 
 /// Fee waiver view model with resolved reason
@@ -77,14 +77,14 @@ pub struct FeeWaiverView {
     pub fee_application_id: Uuid,
     pub account_id: Uuid,
     pub waived_amount: rust_decimal::Decimal,
-    pub waived_by: Uuid, // References ReferencedPerson.person_id
+    pub waived_by: Uuid, // References Person.person_id
     pub waived_at: chrono::DateTime<chrono::Utc>,
     
     // Resolved reason
     pub reason: ReasonView,
     
     pub approval_required: bool,
-    pub approved_by: Option<Uuid>, // References ReferencedPerson.person_id
+    pub approved_by: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
@@ -94,7 +94,7 @@ pub struct TransactionAuditView {
     pub audit_id: Uuid,
     pub transaction_id: Uuid,
     pub action_type: String,
-    pub performed_by: Uuid, // References ReferencedPerson.person_id
+    pub performed_by: Uuid, // References Person.person_id
     pub performed_at: chrono::DateTime<chrono::Utc>,
     pub old_status: Option<String>,
     pub new_status: Option<String>,
@@ -149,7 +149,7 @@ pub struct WorkflowApprovalView {
     pub workflow_type: String,
     pub current_step: String,
     pub status: String,
-    pub initiated_by: Uuid, // References ReferencedPerson.person_id
+    pub initiated_by: Uuid, // References Person.person_id
     pub initiated_at: chrono::DateTime<chrono::Utc>,
     pub timeout_at: chrono::DateTime<chrono::Utc>,
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,

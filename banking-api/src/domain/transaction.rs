@@ -63,7 +63,7 @@ pub struct TransactionRequest {
     pub description: HeaplessString<500>,
     pub channel: ChannelType,
     pub terminal_id: Option<Uuid>,
-    pub initiator_id: Uuid, // References ReferencedPerson.person_id
+    pub initiator_id: Uuid, // References Person.person_id
     pub external_reference: Option<HeaplessString<100>>,
     pub metadata: HashMap<String, String>,
 }
@@ -197,7 +197,7 @@ pub struct TransactionAudit {
     pub audit_id: Uuid,
     pub transaction_id: Uuid,
     pub action_type: TransactionAuditAction,
-    /// References ReferencedPerson.person_id
+    /// References Person.person_id
     pub performed_by: Uuid,
     pub performed_at: DateTime<Utc>,
     pub old_status: Option<TransactionStatus>,

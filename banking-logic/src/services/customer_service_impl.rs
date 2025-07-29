@@ -38,6 +38,10 @@ impl CustomerService for CustomerServiceImpl {
             banking_api::domain::IdentityType::NationalId => "NationalId",
             banking_api::domain::IdentityType::Passport => "Passport",
             banking_api::domain::IdentityType::CompanyRegistration => "CompanyRegistration",
+            banking_api::domain::IdentityType::PermanentResidentCard => "PermanentResidentCard",
+            banking_api::domain::IdentityType::AsylumCard => "AsylumCard",
+            banking_api::domain::IdentityType::TemporaryResidentPermit => "TemporaryResidentPermit",
+            banking_api::domain::IdentityType::Unknown => "Unknown",
         };
         
         if let Some(existing) = self.customer_repository
@@ -233,6 +237,10 @@ impl CustomerService for CustomerServiceImpl {
             banking_api::domain::IdentityType::NationalId => "NationalId",
             banking_api::domain::IdentityType::Passport => "Passport",
             banking_api::domain::IdentityType::CompanyRegistration => "CompanyRegistration",
+            banking_api::domain::IdentityType::PermanentResidentCard => "PermanentResidentCard",
+            banking_api::domain::IdentityType::AsylumCard => "AsylumCard",
+            banking_api::domain::IdentityType::TemporaryResidentPermit => "TemporaryResidentPermit",
+            banking_api::domain::IdentityType::Unknown => "Unknown",
         };
         
         let customer_model = self.customer_repository
