@@ -13,6 +13,7 @@ pub mod hold_service;
 pub mod casa_service;
 pub mod loan_service;
 pub mod reason_service;
+pub mod collateral_service;
 
 pub use customer_service::*;
 pub use account_service::*;
@@ -29,3 +30,4 @@ pub use hold_service::*;
 pub use casa_service::*;
 pub use loan_service::*;
 pub use reason_service::*;
+pub use collateral_service::*;
