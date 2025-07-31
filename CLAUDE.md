@@ -114,9 +114,12 @@ pub currency: HeaplessString<3>,
 pub product_code: HeaplessString<12>,
 pub branch_code: HeaplessString<8>,
 
-// Names and descriptions
-pub full_name: HeaplessString<255>,
-pub description: HeaplessString<500>,
+// Names, notes, details and descriptions
+pub <*>name: HeaplessString<100>,
+pub <*>description: HeaplessString<200>,
+pub <*>details: HeaplessString<200>,
+pub <*>notes: Option<HeaplessString<500>>,
+pub <*>conditions: Option<HeaplessString<500>>,
 
 // Status enums (type-safe)
 pub account_status: AccountStatus,  // vs String

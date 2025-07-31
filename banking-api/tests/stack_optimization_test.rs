@@ -6,7 +6,7 @@ use banking_api::domain::transaction::{TransactionAudit, TransactionAuditAction}
 use chrono::{NaiveDate, Utc};
 use rust_decimal::Decimal;
 use uuid::Uuid;
-use heapless::{String as HeaplessString, Vec as HeaplessVec};
+use heapless::{String as HeaplessString};
 
 /// Test comprehensive serialization/deserialization of optimized stack-based types
 #[cfg(test)]
@@ -45,7 +45,7 @@ mod stack_optimization_tests {
             dormancy_threshold_days: Some(90),
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: HeaplessVec::new(),
+            last_disbursement_instruction_id: None,
             status_changed_by: Some(Uuid::new_v4()), // Changed to UUID for Person.person_id
             status_change_reason_id: None,  // Changed to UUID, using None for test
             status_change_timestamp: Some(Utc::now()),

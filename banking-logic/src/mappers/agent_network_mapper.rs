@@ -2,12 +2,18 @@ use banking_api::domain::{
     AgentNetwork, AgencyBranch, AgentTerminal,
     NetworkType, NetworkStatus, BranchStatus, TerminalType, TerminalStatus, BranchType, BranchRiskRating
 };
+use banking_api::domain::person::MessagingType as DomainMessagingType;
+use banking_db::models::person::MessagingType as DbMessagingType;
 use banking_db::models::agent_network::{
     AgentNetworkModel, AgencyBranchModel, AgentTerminalModel,
     NetworkType as DbNetworkType, NetworkStatus as DbNetworkStatus,
     BranchStatus as DbBranchStatus, TerminalType as DbTerminalType,
     TerminalStatus as DbTerminalStatus, BranchType as DbBranchType,
-    BranchRiskRating as DbBranchRiskRating
+    BranchRiskRating as DbBranchRiskRating,
+    // New models for agent network related structures
+    HollidayPlanModel, TemporaryClosureModel,
+    OperatingHoursModel, BranchCapabilitiesModel, SecurityAccessModel,
+    RequiredDocumentModel, ComplianceCertModel
 };
 use uuid::Uuid;
 
@@ -65,24 +71,33 @@ impl AgentNetworkMapper {
             created_at: branch.created_at,
             
             // Location fields - normalized to UUID references
-            address_id: branch.address, // Now a UUID reference
+            address: branch.address, // UUID reference to address
             landmark_description: branch.landmark_description,
             
             // Operational details - normalized to UUID references
-            operating_hours_id: branch.operating_hours, // Now a UUID reference
-            holiday_schedule_json: heapless::String::try_from("{}").unwrap_or_default(), // Placeholder for holiday schedule
-            temporary_closure_json: None, // Simplified for now
+            operating_hours: branch.operating_hours, // UUID reference to operating hours
+            holiday_plan: branch.holiday_plan, // UUID reference to holiday plan
+            temporary_closure_id: branch.temporary_closure_id, // UUID reference to temporary closure
             
-            // Contact information - now serialized as JSON array of messaging UUIDs
-            messaging_json: heapless::String::try_from("[]").unwrap_or_default(), // Placeholder for messaging array
+            // Contact information - individual messaging fields
+            messaging1_id: branch.messaging1_id,
+            messaging1_type: branch.messaging1_type.map(Self::messaging_type_to_db),
+            messaging2_id: branch.messaging2_id,
+            messaging2_type: branch.messaging2_type.map(Self::messaging_type_to_db),
+            messaging3_id: branch.messaging3_id,
+            messaging3_type: branch.messaging3_type.map(Self::messaging_type_to_db),
+            messaging4_id: branch.messaging4_id,
+            messaging4_type: branch.messaging4_type.map(Self::messaging_type_to_db),
+            messaging5_id: branch.messaging5_id,
+            messaging5_type: branch.messaging5_type.map(Self::messaging_type_to_db),
             branch_manager_id: branch.branch_manager_id,
             
             // Services and capabilities - normalized to UUID reference
             branch_type: Self::branch_type_to_db(branch.branch_type),
-            branch_capabilities_id: branch.branch_capabilities, // Now a UUID reference
+            branch_capabilities: branch.branch_capabilities, // UUID reference to capabilities
             
             // Security and access - normalized to UUID reference
-            security_access_id: branch.security_access, // Now a UUID reference
+            security_access: branch.security_access, // UUID reference to security access
             
             // Customer capacity
             max_daily_customers: branch.max_daily_customers,
@@ -95,7 +110,7 @@ impl AgentNetworkMapper {
             // Compliance and risk
             risk_rating: Self::branch_risk_rating_to_db(branch.risk_rating),
             last_audit_date: branch.last_audit_date,
-            compliance_certifications_json: heapless::String::try_from("[]").unwrap_or_default(), // Placeholder
+            last_compliance_certification_id: branch.last_compliance_certification_id, // UUID reference to compliance cert
             
             // Metadata
             last_updated_at: branch.last_updated_at,
@@ -104,36 +119,69 @@ impl AgentNetworkMapper {
     }
 
     /// Map from database AgencyBranchModel to domain AgencyBranch
-    /// Uses create_minimal for backward compatibility with old database schema
     pub fn branch_from_model(model: AgencyBranchModel) -> AgencyBranch {
-        let mut branch = AgencyBranch::create_minimal(
-            model.branch_id,
-            model.network_id,
-            model.parent_branch_id,
-            model.branch_name,
-            model.branch_code,
-            model.branch_level,
-            model.gl_code_prefix,
-            Self::branch_status_from_db(model.status),
-            model.daily_transaction_limit,
-            model.current_daily_volume,
-            model.max_cash_limit,
-            model.current_cash_balance,
-            model.minimum_cash_balance,
-            model.created_at,
-            model.address_id,
-            model.operating_hours_id,
-            model.branch_capabilities_id,
-            model.security_access_id,
-        );
-        
-        // Set parsed branch type and risk rating from database
-        branch.branch_type = Self::branch_type_from_db(model.branch_type);
-        branch.risk_rating = Self::branch_risk_rating_from_db(model.risk_rating);
-        branch.last_updated_at = model.last_updated_at;
-        branch.updated_by = model.updated_by;
-        
-        branch
+        AgencyBranch {
+            branch_id: model.branch_id,
+            network_id: model.network_id,
+            parent_branch_id: model.parent_branch_id,
+            branch_name: model.branch_name,
+            branch_code: model.branch_code,
+            branch_level: model.branch_level,
+            gl_code_prefix: model.gl_code_prefix,
+            status: Self::branch_status_from_db(model.status),
+            daily_transaction_limit: model.daily_transaction_limit,
+            current_daily_volume: model.current_daily_volume,
+            max_cash_limit: model.max_cash_limit,
+            current_cash_balance: model.current_cash_balance,
+            minimum_cash_balance: model.minimum_cash_balance,
+            created_at: model.created_at,
+            
+            // Location fields
+            address: model.address,
+            landmark_description: model.landmark_description,
+            
+            // Operational details
+            operating_hours: model.operating_hours,
+            holiday_plan: model.holiday_plan,
+            temporary_closure_id: model.temporary_closure_id,
+            
+            // Contact information - individual messaging fields
+            messaging1_id: model.messaging1_id,
+            messaging1_type: model.messaging1_type.map(Self::messaging_type_from_db),
+            messaging2_id: model.messaging2_id,
+            messaging2_type: model.messaging2_type.map(Self::messaging_type_from_db),
+            messaging3_id: model.messaging3_id,
+            messaging3_type: model.messaging3_type.map(Self::messaging_type_from_db),
+            messaging4_id: model.messaging4_id,
+            messaging4_type: model.messaging4_type.map(Self::messaging_type_from_db),
+            messaging5_id: model.messaging5_id,
+            messaging5_type: model.messaging5_type.map(Self::messaging_type_from_db),
+            branch_manager_id: model.branch_manager_id,
+            
+            // Services and capabilities
+            branch_type: Self::branch_type_from_db(model.branch_type),
+            branch_capabilities: model.branch_capabilities,
+            
+            // Security and access
+            security_access: model.security_access,
+            
+            // Customer capacity
+            max_daily_customers: model.max_daily_customers,
+            average_wait_time_minutes: model.average_wait_time_minutes,
+            
+            // Transaction limits
+            per_transaction_limit: model.per_transaction_limit,
+            monthly_transaction_limit: model.monthly_transaction_limit,
+            
+            // Compliance and risk
+            risk_rating: Self::branch_risk_rating_from_db(model.risk_rating),
+            last_audit_date: model.last_audit_date,
+            last_compliance_certification_id: model.last_compliance_certification_id,
+            
+            // Metadata
+            last_updated_at: model.last_updated_at,
+            updated_by: model.updated_by,
+        }
     }
 
     /// Map from domain AgentTerminal to database AgentTerminalModel
@@ -302,5 +350,114 @@ impl AgentNetworkMapper {
             DbTerminalStatus::Suspended => TerminalStatus::Suspended,
             DbTerminalStatus::Decommissioned => TerminalStatus::Decommissioned,
         }
+    }
+
+    fn messaging_type_to_db(messaging_type: DomainMessagingType) -> DbMessagingType {
+        match messaging_type {
+            DomainMessagingType::Email => DbMessagingType::Email,
+            DomainMessagingType::Phone => DbMessagingType::Phone,
+            DomainMessagingType::Sms => DbMessagingType::Sms,
+            DomainMessagingType::WhatsApp => DbMessagingType::WhatsApp,
+            DomainMessagingType::Telegram => DbMessagingType::Telegram,
+            DomainMessagingType::Skype => DbMessagingType::Skype,
+            DomainMessagingType::Teams => DbMessagingType::Teams,
+            DomainMessagingType::Signal => DbMessagingType::Signal,
+            DomainMessagingType::WeChat => DbMessagingType::WeChat,
+            DomainMessagingType::Viber => DbMessagingType::Viber,
+            DomainMessagingType::Messenger => DbMessagingType::Messenger,
+            DomainMessagingType::LinkedIn => DbMessagingType::LinkedIn,
+            DomainMessagingType::Slack => DbMessagingType::Slack,
+            DomainMessagingType::Discord => DbMessagingType::Discord,
+            DomainMessagingType::Other => DbMessagingType::Other,
+        }
+    }
+
+    fn messaging_type_from_db(db_type: DbMessagingType) -> DomainMessagingType {
+        match db_type {
+            DbMessagingType::Email => DomainMessagingType::Email,
+            DbMessagingType::Phone => DomainMessagingType::Phone,
+            DbMessagingType::Sms => DomainMessagingType::Sms,
+            DbMessagingType::WhatsApp => DomainMessagingType::WhatsApp,
+            DbMessagingType::Telegram => DomainMessagingType::Telegram,
+            DbMessagingType::Skype => DomainMessagingType::Skype,
+            DbMessagingType::Teams => DomainMessagingType::Teams,
+            DbMessagingType::Signal => DomainMessagingType::Signal,
+            DbMessagingType::WeChat => DomainMessagingType::WeChat,
+            DbMessagingType::Viber => DomainMessagingType::Viber,
+            DbMessagingType::Messenger => DomainMessagingType::Messenger,
+            DbMessagingType::LinkedIn => DomainMessagingType::LinkedIn,
+            DbMessagingType::Slack => DomainMessagingType::Slack,
+            DbMessagingType::Discord => DomainMessagingType::Discord,
+            DbMessagingType::Other => DomainMessagingType::Other,
+        }
+    }
+
+    // New mappers for additional agent network structures
+
+    /// Map from domain HollidayPlan to database HollidayPlanModel
+    /// Note: This is a placeholder as domain models for these don't exist yet
+    pub fn holiday_plan_to_model(
+        id: Uuid,
+        name_l1: &str,
+        name_l2: Option<&str>,
+        name_l3: Option<&str>,
+        created_by: Uuid,
+    ) -> HollidayPlanModel {
+        use heapless::String as HeaplessString;
+        use chrono::Utc;
+        
+        HollidayPlanModel {
+            id,
+            name_l1: HeaplessString::try_from(name_l1).unwrap_or_default(),
+            name_l2: name_l2.map(|n| HeaplessString::try_from(n).unwrap_or_default()).unwrap_or_default(),
+            name_l3: name_l3.map(|n| HeaplessString::try_from(n).unwrap_or_default()).unwrap_or_default(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            created_by,
+            updated_by: created_by,
+        }
+    }
+
+    /// Map from database HollidayPlanModel to tuple (for now, until domain model exists)
+    pub fn holiday_plan_from_model(model: HollidayPlanModel) -> (Uuid, String, String, String) {
+        (
+            model.id,
+            model.name_l1.to_string(),
+            model.name_l2.to_string(),
+            model.name_l3.to_string(),
+        )
+    }
+
+    /// Placeholder mapper for OperatingHoursModel
+    pub fn operating_hours_from_model(model: OperatingHoursModel) -> (Uuid, String) {
+        (model.id, model.name_l1.to_string())
+    }
+
+    /// Placeholder mapper for BranchCapabilitiesModel
+    pub fn branch_capabilities_from_model(model: BranchCapabilitiesModel) -> (Uuid, String) {
+        (model.id, model.name_l1.to_string())
+    }
+
+    /// Placeholder mapper for SecurityAccessModel
+    pub fn security_access_from_model(model: SecurityAccessModel) -> (Uuid, String) {
+        (model.id, model.name_l1.to_string())
+    }
+
+    /// Placeholder mapper for TemporaryClosureModel
+    pub fn temporary_closure_from_model(model: TemporaryClosureModel) -> (Uuid, String) {
+        (
+            model.id,
+            model.additional_details_l1.map(|s| s.to_string()).unwrap_or_default(),
+        )
+    }
+
+    /// Placeholder mapper for RequiredDocumentModel
+    pub fn required_document_from_model(model: RequiredDocumentModel) -> (Uuid, String) {
+        (model.id, model.document_type_l1.to_string())
+    }
+
+    /// Placeholder mapper for ComplianceCertModel
+    pub fn compliance_cert_from_model(model: ComplianceCertModel) -> (Uuid, String) {
+        (model.id, model.certification_name_l1.to_string())
     }
 }

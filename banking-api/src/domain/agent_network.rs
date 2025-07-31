@@ -1,8 +1,11 @@
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
-use heapless::{String as HeaplessString, Vec as HeaplessVec};
+use heapless::{String as HeaplessString};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+/// Import MessagingType from person domain
+use super::person::MessagingType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentNetwork {
@@ -41,12 +44,21 @@ pub struct AgencyBranch {
     
     // Operational details
     pub operating_hours: Uuid,
-    pub holiday_schedule: HeaplessVec<HolidaySchedule, 20>,
-    pub temporary_closure: Option<TemporaryClosure>,
+    pub holiday_plan: Uuid,
+    pub temporary_closure_id: Option<Uuid>,
     
-    // Contact information
-    /// References to Messaging.messaging_id from person.rs (up to 20 messaging methods)
-    pub messaging: HeaplessVec<Uuid, 20>,
+    // Contact information - individual messaging fields (up to 5 entries)
+    /// References to Messaging.messaging_id from person.rs
+    pub messaging1_id: Option<Uuid>,
+    pub messaging1_type: Option<MessagingType>,
+    pub messaging2_id: Option<Uuid>,
+    pub messaging2_type: Option<MessagingType>,
+    pub messaging3_id: Option<Uuid>,
+    pub messaging3_type: Option<MessagingType>,
+    pub messaging4_id: Option<Uuid>,
+    pub messaging4_type: Option<MessagingType>,
+    pub messaging5_id: Option<Uuid>,
+    pub messaging5_type: Option<MessagingType>,
     pub branch_manager_id: Option<Uuid>,
     
     // Services and capabilities - references to separate entities
@@ -67,7 +79,7 @@ pub struct AgencyBranch {
     // Compliance and risk
     pub risk_rating: BranchRiskRating,
     pub last_audit_date: Option<NaiveDate>,
-    pub compliance_certifications: HeaplessVec<ComplianceCert, 5>,
+    pub last_compliance_certification_id: Option<Uuid>,
     
     // Metadata
     pub last_updated_at: DateTime<Utc>,
@@ -189,10 +201,29 @@ pub enum BranchType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BranchCapabilities {
     pub id: Uuid,
-    pub name: HeaplessString<100>,
-    pub supported_services: HeaplessVec<ServiceType, 20>,
-    pub supported_currencies: HeaplessVec<[u8; 3], 10>,
-    pub languages_spoken: HeaplessVec<[u8; 3], 5>,
+    // Multi-language name support
+    pub name_l1: HeaplessString<100>,
+    pub name_l2: HeaplessString<100>,
+    pub name_l3: HeaplessString<100>,
+    // Supported services (up to 10 individual fields)
+    pub supported_service1: Option<ServiceType>,
+    pub supported_service2: Option<ServiceType>,
+    pub supported_service3: Option<ServiceType>,
+    pub supported_service4: Option<ServiceType>,
+    pub supported_service5: Option<ServiceType>,
+    pub supported_service6: Option<ServiceType>,
+    pub supported_service7: Option<ServiceType>,
+    pub supported_service8: Option<ServiceType>,
+    pub supported_service9: Option<ServiceType>,
+    pub supported_service10: Option<ServiceType>,
+    // Supported currencies (up to 3 individual fields)
+    pub supported_currency1: Option<HeaplessString<3>>,
+    pub supported_currency2: Option<HeaplessString<3>>,
+    pub supported_currency3: Option<HeaplessString<3>>,
+    // Languages spoken (up to 3 individual fields)
+    pub language_spoken1: Option<HeaplessString<3>>,
+    pub language_spoken2: Option<HeaplessString<3>>,
+    pub language_spoken3: Option<HeaplessString<3>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub created_by: Uuid,
@@ -202,10 +233,33 @@ pub struct BranchCapabilities {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityAccess {
     pub id: Uuid,
-    pub name: HeaplessString<100>,
+    // Multi-language name support
+    pub name_l1: HeaplessString<100>,
+    pub name_l2: HeaplessString<100>,
+    pub name_l3: HeaplessString<100>,
     pub security_features: SecurityFeatures,
     pub accessibility_features: AccessibilityFeatures,
-    pub required_documents: HeaplessVec<RequiredDocument, 10>,
+    // Required documents (up to 20 individual references)
+    pub required_document1: Option<Uuid>,
+    pub required_document2: Option<Uuid>,
+    pub required_document3: Option<Uuid>,
+    pub required_document4: Option<Uuid>,
+    pub required_document5: Option<Uuid>,
+    pub required_document6: Option<Uuid>,
+    pub required_document7: Option<Uuid>,
+    pub required_document8: Option<Uuid>,
+    pub required_document9: Option<Uuid>,
+    pub required_document10: Option<Uuid>,
+    pub required_document11: Option<Uuid>,
+    pub required_document12: Option<Uuid>,
+    pub required_document13: Option<Uuid>,
+    pub required_document14: Option<Uuid>,
+    pub required_document15: Option<Uuid>,
+    pub required_document16: Option<Uuid>,
+    pub required_document17: Option<Uuid>,
+    pub required_document18: Option<Uuid>,
+    pub required_document19: Option<Uuid>,
+    pub required_document20: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub created_by: Uuid,
@@ -215,7 +269,10 @@ pub struct SecurityAccess {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperatingHours {
     pub id: Uuid,
-    pub name: HeaplessString<100>,
+    // Multi-language name support
+    pub name_l1: HeaplessString<100>,
+    pub name_l2: HeaplessString<100>,
+    pub name_l3: HeaplessString<100>,
     pub monday: Option<DayHours>,
     pub tuesday: Option<DayHours>,
     pub wednesday: Option<DayHours>,
@@ -239,22 +296,46 @@ pub struct DayHours {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HollidayPlan {
+    pub id: Uuid,
+    pub name_l1: HeaplessString<100>,
+    pub name_l2: HeaplessString<100>,
+    pub name_l3: HeaplessString<100>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HolidaySchedule {
+    pub id: Uuid,
+    pub holiday_plan_id: Uuid,
     pub date: NaiveDate,
-    pub name: HeaplessString<100>,
+    // Multi-language name support
+    pub name_l1: HeaplessString<100>,
+    pub name_l2: HeaplessString<100>,
+    pub name_l3: HeaplessString<100>,
     pub is_closed: bool,
     pub special_hours: Option<DayHours>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemporaryClosure {
+    pub id: Uuid,
     pub start_date: NaiveDate,
     pub end_date: Option<NaiveDate>,
     /// References ReasonAndPurpose.id for closure reason
     pub reason_id: Uuid,
-    /// Additional context for closure
-    pub additional_details: Option<HeaplessString<200>>,
+    /// Additional context for closure (multi-language support)
+    pub additional_details_l1: Option<HeaplessString<100>>,
+    pub additional_details_l2: Option<HeaplessString<100>>,
+    pub additional_details_l3: Option<HeaplessString<100>>,
     pub alternative_branch_id: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -302,14 +383,25 @@ pub enum BranchRiskRating {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequiredDocument {
-    pub document_type: HeaplessString<50>,
+    pub id: Uuid,
+    // Multi-language document type support
+    pub document_type_l1: HeaplessString<50>,
+    pub document_type_l2: HeaplessString<50>,
+    pub document_type_l3: HeaplessString<50>,
     pub is_mandatory: bool,
-    pub alternatives: HeaplessVec<HeaplessString<50>, 3>,
+    // Alternative document references (up to 3)
+    pub alternative1_id: Option<Uuid>,
+    pub alternative2_id: Option<Uuid>,
+    pub alternative3_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceCert {
-    pub certification_name: HeaplessString<100>,
+    pub id: Uuid,
+    // Multi-language certification name support
+    pub certification_name_l1: HeaplessString<100>,
+    pub certification_name_l2: HeaplessString<100>,
+    pub certification_name_l3: HeaplessString<100>,
     pub issuer: Uuid,
     pub issue_date: NaiveDate,
     pub expiry_date: Option<NaiveDate>,
@@ -453,9 +545,18 @@ impl AgencyBranch {
             address: default_address_id,
             landmark_description: None,
             operating_hours: default_operating_hours_id,
-            holiday_schedule: HeaplessVec::new(),
-            temporary_closure: None,
-            messaging: HeaplessVec::new(),
+            holiday_plan: Uuid::nil(), // Default to nil UUID
+            temporary_closure_id: None,
+            messaging1_id: None,
+            messaging1_type: None,
+            messaging2_id: None,
+            messaging2_type: None,
+            messaging3_id: None,
+            messaging3_type: None,
+            messaging4_id: None,
+            messaging4_type: None,
+            messaging5_id: None,
+            messaging5_type: None,
             branch_manager_id: None,
             branch_type: BranchType::SubBranch,
             branch_capabilities: default_capabilities_id,
@@ -466,7 +567,7 @@ impl AgencyBranch {
             monthly_transaction_limit: None,
             risk_rating: BranchRiskRating::Low,
             last_audit_date: None,
-            compliance_certifications: HeaplessVec::new(),
+            last_compliance_certification_id: None,
             last_updated_at: created_at,
             updated_by: Uuid::nil(), // Default to nil UUID for system-generated records
         }

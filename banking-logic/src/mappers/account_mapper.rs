@@ -2,7 +2,7 @@ use banking_api::domain::{
     Account, AccountOwnership, AccountRelationship, AccountMandate, UltimateBeneficiary,
     AccountHold, StatusChangeRecord
 };
-use heapless::{String as HeaplessString, Vec as HeaplessVec};
+use heapless::{String as HeaplessString};
 use banking_db::models::{
     AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel,
     UltimateBeneficiaryModel, AccountHoldModel, AccountStatusHistoryModel
@@ -43,7 +43,7 @@ impl AccountMapper {
             dormancy_threshold_days: account.dormancy_threshold_days,
             reactivation_required: account.reactivation_required,
             pending_closure_reason_id: account.pending_closure_reason_id,
-            disbursement_instructions: serde_json::to_value(&account.disbursement_instructions).unwrap_or(serde_json::Value::Array(vec![])),
+            last_disbursement_instruction_id: account.last_disbursement_instruction_id,
             status_changed_by: account.status_changed_by,
             status_change_reason_id: account.status_change_reason_id,
             status_change_timestamp: account.status_change_timestamp,
@@ -86,7 +86,7 @@ impl AccountMapper {
             dormancy_threshold_days: model.dormancy_threshold_days,
             reactivation_required: model.reactivation_required,
             pending_closure_reason_id: model.pending_closure_reason_id,
-            disbursement_instructions: serde_json::from_value(model.disbursement_instructions).unwrap_or_else(|_| HeaplessVec::new()),
+            last_disbursement_instruction_id: model.last_disbursement_instruction_id,
             status_changed_by: model.status_changed_by,
             status_change_reason_id: model.status_change_reason_id,
             status_change_timestamp: model.status_change_timestamp,
@@ -97,8 +97,7 @@ impl AccountMapper {
         })
     }
 
-    // Note: Disbursement instructions are now stored as UUID references in HeaplessVec
-    // and serialized directly to JSON, so individual mapper functions are not needed
+    // Note: Disbursement instructions are now handled via last_disbursement_instruction_id reference
 
     // Account Ownership mappers
     pub fn account_ownership_to_model(ownership: AccountOwnership) -> AccountOwnershipModel {

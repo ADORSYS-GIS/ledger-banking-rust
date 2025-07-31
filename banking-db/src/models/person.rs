@@ -49,6 +49,24 @@ pub enum PersonType {
     Unknown,
 }
 
+/// Database model for person entity type enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "person_entity_type", rename_all = "lowercase")]
+pub enum RelationshipRole {
+    Customer,
+    Employee,
+    Shareholder,
+    Director,
+    BeneficialOwner,
+    Agent,
+    Vendor,
+    Partner,
+    RegulatoryContact,
+    EmergencyContact,
+    SystemAdmin,
+    Other,
+}
+
 /// Database model for Country
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CountryModel {
@@ -126,9 +144,27 @@ pub struct MessagingModel {
     pub value: HeaplessString<100>,
     pub other_type: Option<HeaplessString<20>>,
     pub is_active: bool,
-    pub priority: Option<i16>, // Database uses i16 for small integers
+    pub priority: Option<u8>, // Changed from i16 to u8 to match domain model
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+/// Database model for EntityReference
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct EntityReferenceModel {
+    pub id: Uuid,
+    pub person_id: Uuid,
+    #[serde(serialize_with = "serialize_person_entity_type", deserialize_with = "deserialize_person_entity_type")]
+    pub entity_role: RelationshipRole,
+    pub reference_external_id: Option<HeaplessString<50>>,
+    pub reference_details_l1: Option<HeaplessString<50>>,
+    pub reference_details_l2: Option<HeaplessString<50>>,
+    pub reference_details_l3: Option<HeaplessString<50>>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
 }
 
 /// Database model for person
@@ -144,16 +180,28 @@ pub struct PersonModel {
     /// References PersonModel.person_id for organizational hierarchy
     pub organization: Option<Uuid>,
     
-    /// References to MessagingModel.messaging_id (stored as JSON array in database)
-    pub messaging: serde_json::Value, // Will store Vec<Uuid> as JSON
+    /// References to MessagingModel.messaging_id (up to 5 messaging methods)
+    pub messaging1_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging1_type: Option<MessagingType>,
+    pub messaging2_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging2_type: Option<MessagingType>,
+    pub messaging3_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging3_type: Option<MessagingType>,
+    pub messaging4_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging4_type: Option<MessagingType>,
+    pub messaging5_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging5_type: Option<MessagingType>,
     
     pub department: Option<HeaplessString<50>>,
     /// References AddressModel.address_id for person's location
     pub location: Option<Uuid>,
     
     pub duplicate_of: Option<Uuid>,
-    pub entity_reference: Option<Uuid>,
-    pub entity_type: Option<HeaplessString<50>>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -268,6 +316,89 @@ where
         "discord" => Ok(MessagingType::Discord),
         "other" => Ok(MessagingType::Other),
         _ => Err(serde::de::Error::custom(format!("Unknown messaging type: {s}"))),
+    }
+}
+
+// Serialization functions for Option<MessagingType>
+fn serialize_messaging_type_option<S>(messaging_type: &Option<MessagingType>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match messaging_type {
+        Some(msg_type) => serialize_messaging_type(msg_type, serializer),
+        None => serializer.serialize_none(),
+    }
+}
+
+fn deserialize_messaging_type_option<'de, D>(deserializer: D) -> Result<Option<MessagingType>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let opt: Option<String> = Option::deserialize(deserializer)?;
+    match opt {
+        Some(s) => match s.as_str() {
+            "email" => Ok(Some(MessagingType::Email)),
+            "phone" => Ok(Some(MessagingType::Phone)),
+            "sms" => Ok(Some(MessagingType::Sms)),
+            "whatsapp" => Ok(Some(MessagingType::WhatsApp)),
+            "telegram" => Ok(Some(MessagingType::Telegram)),
+            "skype" => Ok(Some(MessagingType::Skype)),
+            "teams" => Ok(Some(MessagingType::Teams)),
+            "signal" => Ok(Some(MessagingType::Signal)),
+            "wechat" => Ok(Some(MessagingType::WeChat)),
+            "viber" => Ok(Some(MessagingType::Viber)),
+            "messenger" => Ok(Some(MessagingType::Messenger)),
+            "linkedin" => Ok(Some(MessagingType::LinkedIn)),
+            "slack" => Ok(Some(MessagingType::Slack)),
+            "discord" => Ok(Some(MessagingType::Discord)),
+            "other" => Ok(Some(MessagingType::Other)),
+            _ => Err(serde::de::Error::custom(format!("Unknown messaging type: {s}"))),
+        },
+        None => Ok(None),
+    }
+}
+
+// Serialization functions for RelationshipRole
+fn serialize_person_entity_type<S>(entity_role: &RelationshipRole, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let type_str = match entity_role {
+        RelationshipRole::Customer => "customer",
+        RelationshipRole::Employee => "employee",
+        RelationshipRole::Shareholder => "shareholder",
+        RelationshipRole::Director => "director",
+        RelationshipRole::BeneficialOwner => "beneficialowner",
+        RelationshipRole::Agent => "agent",
+        RelationshipRole::Vendor => "vendor",
+        RelationshipRole::Partner => "partner",
+        RelationshipRole::RegulatoryContact => "regulatorycontact",
+        RelationshipRole::EmergencyContact => "emergencycontact",
+        RelationshipRole::SystemAdmin => "systemadmin",
+        RelationshipRole::Other => "other",
+    };
+    serializer.serialize_str(type_str)
+}
+
+fn deserialize_person_entity_type<'de, D>(deserializer: D) -> Result<RelationshipRole, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "customer" => Ok(RelationshipRole::Customer),
+        "employee" => Ok(RelationshipRole::Employee),
+        "shareholder" => Ok(RelationshipRole::Shareholder),
+        "director" => Ok(RelationshipRole::Director),
+        "beneficialowner" => Ok(RelationshipRole::BeneficialOwner),
+        "agent" => Ok(RelationshipRole::Agent),
+        "vendor" => Ok(RelationshipRole::Vendor),
+        "partner" => Ok(RelationshipRole::Partner),
+        "regulatorycontact" => Ok(RelationshipRole::RegulatoryContact),
+        "emergencycontact" => Ok(RelationshipRole::EmergencyContact),
+        "systemadmin" => Ok(RelationshipRole::SystemAdmin),
+        "other" => Ok(RelationshipRole::Other),
+        _ => Err(serde::de::Error::custom(format!("Unknown person entity type: {s}"))),
     }
 }
 

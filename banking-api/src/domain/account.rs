@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use heapless::{String as HeaplessString, Vec as HeaplessVec};
+use heapless::{String as HeaplessString};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -43,8 +43,8 @@ pub struct Account {
     pub reactivation_required: bool,
     /// References ReasonAndPurpose.id for pending closure
     pub pending_closure_reason_id: Option<Uuid>,
-    /// References to DisbursementInstructions.disbursement_id (max 10 stages)
-    pub disbursement_instructions: HeaplessVec<Uuid, 10>,
+    /// References the last DisbursementInstructions.disbursement_id
+    pub last_disbursement_instruction_id: Option<Uuid>,
     
     // Enhanced audit trail
     /// References Person.person_id
@@ -290,32 +290,19 @@ impl Account {
         Ok(())
     }
     
-    /// Add a disbursement instruction to the account (max 10)
-    pub fn add_disbursement_instruction(&mut self, instruction_id: Uuid) -> Result<(), &'static str> {
-        self.disbursement_instructions
-            .push(instruction_id)
-            .map_err(|_| "Maximum 10 disbursement instructions allowed")?;
-        Ok(())
+    /// Set the last disbursement instruction for the account
+    pub fn set_last_disbursement_instruction(&mut self, instruction_id: Option<Uuid>) {
+        self.last_disbursement_instruction_id = instruction_id;
     }
     
-    /// Remove a disbursement instruction by ID
-    pub fn remove_disbursement_instruction(&mut self, instruction_id: Uuid) -> bool {
-        if let Some(pos) = self.disbursement_instructions.iter().position(|&id| id == instruction_id) {
-            self.disbursement_instructions.swap_remove(pos);
-            true
-        } else {
-            false
-        }
+    /// Check if account has a disbursement instruction
+    pub fn has_disbursement_instruction(&self) -> bool {
+        self.last_disbursement_instruction_id.is_some()
     }
     
-    /// Check if account has disbursement instructions
-    pub fn has_disbursement_instructions(&self) -> bool {
-        !self.disbursement_instructions.is_empty()
-    }
-    
-    /// Get count of disbursement instructions
-    pub fn disbursement_instruction_count(&self) -> usize {
-        self.disbursement_instructions.len()
+    /// Get the last disbursement instruction ID
+    pub fn get_last_disbursement_instruction(&self) -> Option<Uuid> {
+        self.last_disbursement_instruction_id
     }
 }
 
@@ -368,7 +355,7 @@ mod tests {
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: HeaplessVec::new(),
+            last_disbursement_instruction_id: None,
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
@@ -441,7 +428,7 @@ mod tests {
     }
 
     #[test]
-    fn test_disbursement_instructions_management() {
+    fn test_disbursement_instruction_management() {
         let mut account = Account {
             account_id: uuid::Uuid::new_v4(),
             product_code: HeaplessString::try_from("LNST0001").unwrap(),
@@ -471,7 +458,7 @@ mod tests {
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: HeaplessVec::new(),
+            last_disbursement_instruction_id: None,
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
@@ -481,37 +468,28 @@ mod tests {
         };
         
         // Test initial state
-        assert!(!account.has_disbursement_instructions());
-        assert_eq!(account.disbursement_instruction_count(), 0);
+        assert!(!account.has_disbursement_instruction());
+        assert_eq!(account.get_last_disbursement_instruction(), None);
         
-        // Test adding disbursement instructions (construction loan stages)
-        let stage1_id = Uuid::new_v4();
-        let stage2_id = Uuid::new_v4();
-        let stage3_id = Uuid::new_v4();
+        // Test setting disbursement instruction
+        let instruction_id = Uuid::new_v4();
+        account.set_last_disbursement_instruction(Some(instruction_id));
         
-        assert!(account.add_disbursement_instruction(stage1_id).is_ok());
-        assert!(account.add_disbursement_instruction(stage2_id).is_ok());
-        assert!(account.add_disbursement_instruction(stage3_id).is_ok());
+        assert!(account.has_disbursement_instruction());
+        assert_eq!(account.get_last_disbursement_instruction(), Some(instruction_id));
         
-        assert!(account.has_disbursement_instructions());
-        assert_eq!(account.disbursement_instruction_count(), 3);
+        // Test updating to a new instruction (replaces the previous one)
+        let new_instruction_id = Uuid::new_v4();
+        account.set_last_disbursement_instruction(Some(new_instruction_id));
         
-        // Test removing disbursement instruction
-        assert!(account.remove_disbursement_instruction(stage2_id));
-        assert_eq!(account.disbursement_instruction_count(), 2);
-        assert!(!account.remove_disbursement_instruction(stage2_id)); // Should return false for non-existent
+        assert!(account.has_disbursement_instruction());
+        assert_eq!(account.get_last_disbursement_instruction(), Some(new_instruction_id));
         
-        // Test maximum limit (10 stages)
-        for _ in 0..8 {
-            let stage_id = Uuid::new_v4();
-            assert!(account.add_disbursement_instruction(stage_id).is_ok());
-        }
-        assert_eq!(account.disbursement_instruction_count(), 10);
+        // Test clearing the instruction
+        account.set_last_disbursement_instruction(None);
         
-        // Test exceeding maximum limit
-        let overflow_id = Uuid::new_v4();
-        assert!(account.add_disbursement_instruction(overflow_id).is_err());
-        assert_eq!(account.disbursement_instruction_count(), 10); // Should remain 10
+        assert!(!account.has_disbursement_instruction());
+        assert_eq!(account.get_last_disbursement_instruction(), None);
     }
 }
 

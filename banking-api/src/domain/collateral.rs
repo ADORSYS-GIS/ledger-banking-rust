@@ -148,12 +148,12 @@ pub enum PerfectionStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsuranceCoverage {
     pub policy_number: HeaplessString<100>,
-    pub insurance_company: HeaplessString<255>,
+    pub insurance_company_details: HeaplessString<255>,
     pub coverage_amount: Decimal,
     pub premium_amount: Decimal,
     pub policy_start_date: NaiveDate,
     pub policy_end_date: NaiveDate,
-    pub beneficiary: HeaplessString<255>,
+    pub beneficiary_details: HeaplessString<255>,
     pub coverage_type: InsuranceCoverageType,
 }
 
