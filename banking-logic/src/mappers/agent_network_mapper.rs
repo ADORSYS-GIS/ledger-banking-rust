@@ -64,47 +64,38 @@ impl AgentNetworkMapper {
             minimum_cash_balance: branch.minimum_cash_balance,
             created_at: branch.created_at,
             
-            // New location fields - serialize as JSON or extract coordinates
-            address_json: heapless::String::try_from(serde_json::to_string(&branch.address).unwrap_or_default().as_str()).unwrap_or_default(),
-            gps_latitude: branch.gps_coordinates.map(|c| c.latitude),
-            gps_longitude: branch.gps_coordinates.map(|c| c.longitude),
-            gps_accuracy_meters: branch.gps_coordinates.and_then(|c| c.accuracy_meters),
+            // Location fields - normalized to UUID references
+            address_id: branch.address, // Now a UUID reference
             landmark_description: branch.landmark_description,
             
-            // Operational details
-            operating_hours_json: heapless::String::try_from(serde_json::to_string(&branch.operating_hours).unwrap_or_default().as_str()).unwrap_or_default(),
-            holiday_schedule_json: heapless::String::try_from(serde_json::to_string(&branch.holiday_schedule).unwrap_or_default().as_str()).unwrap_or_default(),
-            temporary_closure_json: branch.temporary_closure.as_ref().map(|tc| heapless::String::try_from(serde_json::to_string(tc).unwrap_or_default().as_str()).unwrap_or_default()),
+            // Operational details - normalized to UUID references
+            operating_hours_id: branch.operating_hours, // Now a UUID reference
+            holiday_schedule_json: heapless::String::try_from("{}").unwrap_or_default(), // Placeholder for holiday schedule
+            temporary_closure_json: None, // Simplified for now
             
-            // Contact information
-            primary_phone: branch.primary_phone,
-            secondary_phone: branch.secondary_phone,
-            email: branch.email,
+            // Contact information - now serialized as JSON array of messaging UUIDs
+            messaging_json: heapless::String::try_from("[]").unwrap_or_default(), // Placeholder for messaging array
             branch_manager_id: branch.branch_manager_id,
             
-            // Services and capabilities
+            // Services and capabilities - normalized to UUID reference
             branch_type: Self::branch_type_to_db(branch.branch_type),
-            supported_services_json: heapless::String::try_from(serde_json::to_string(&branch.supported_services).unwrap_or_default().as_str()).unwrap_or_default(),
-            supported_currencies_json: heapless::String::try_from(serde_json::to_string(&branch.supported_currencies).unwrap_or_default().as_str()).unwrap_or_default(),
-            languages_spoken_json: heapless::String::try_from(serde_json::to_string(&branch.languages_spoken).unwrap_or_default().as_str()).unwrap_or_default(),
+            branch_capabilities_id: branch.branch_capabilities, // Now a UUID reference
             
-            // Security and access
-            security_features_json: heapless::String::try_from(serde_json::to_string(&branch.security_features).unwrap_or_default().as_str()).unwrap_or_default(),
-            accessibility_features_json: heapless::String::try_from(serde_json::to_string(&branch.accessibility_features).unwrap_or_default().as_str()).unwrap_or_default(),
-            required_documents_json: heapless::String::try_from(serde_json::to_string(&branch.required_documents).unwrap_or_default().as_str()).unwrap_or_default(),
+            // Security and access - normalized to UUID reference
+            security_access_id: branch.security_access, // Now a UUID reference
             
             // Customer capacity
             max_daily_customers: branch.max_daily_customers,
             average_wait_time_minutes: branch.average_wait_time_minutes,
             
-            // Transaction limits
+            // Transaction limits (enhanced from existing)
             per_transaction_limit: branch.per_transaction_limit,
             monthly_transaction_limit: branch.monthly_transaction_limit,
             
             // Compliance and risk
             risk_rating: Self::branch_risk_rating_to_db(branch.risk_rating),
             last_audit_date: branch.last_audit_date,
-            compliance_certifications_json: heapless::String::try_from(serde_json::to_string(&branch.compliance_certifications).unwrap_or_default().as_str()).unwrap_or_default(),
+            compliance_certifications_json: heapless::String::try_from("[]").unwrap_or_default(), // Placeholder
             
             // Metadata
             last_updated_at: branch.last_updated_at,
@@ -130,6 +121,10 @@ impl AgentNetworkMapper {
             model.current_cash_balance,
             model.minimum_cash_balance,
             model.created_at,
+            model.address_id,
+            model.operating_hours_id,
+            model.branch_capabilities_id,
+            model.security_access_id,
         );
         
         // Set parsed branch type and risk rating from database

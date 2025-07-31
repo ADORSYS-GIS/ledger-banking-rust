@@ -99,12 +99,15 @@ pub struct CityModel {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AddressModel {
     pub address_id: Uuid,
-    pub street_address: Option<HeaplessString<200>>,
+    pub street_line1: HeaplessString<50>,
+    pub street_line2: HeaplessString<50>,
+    pub street_line3: HeaplessString<50>,
+    pub street_line4: HeaplessString<50>,
     pub city_id: Option<Uuid>,
     pub postal_code: Option<HeaplessString<20>>,
     pub latitude: Option<Decimal>,
     pub longitude: Option<Decimal>,
-    pub address_detail: Option<HeaplessString<200>>,
+    pub accuracy_meters: Option<f32>,
     #[serde(serialize_with = "serialize_address_type", deserialize_with = "deserialize_address_type")]
     pub address_type: AddressType,
     pub is_active: bool,

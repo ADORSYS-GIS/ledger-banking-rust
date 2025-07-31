@@ -16,6 +16,33 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Person type enum for referenced persons
 CREATE TYPE person_type AS ENUM ('natural', 'legal', 'system', 'integration', 'unknown');
 
+-- Address type enum
+CREATE TYPE address_type AS ENUM ('residential', 'business', 'mailing', 'temporary', 'branch', 'other');
+
+-- Messaging type enum
+CREATE TYPE messaging_type AS ENUM ('email', 'phone', 'sms', 'whatsapp', 'telegram', 'skype', 'teams', 'signal', 'wechat', 'viber', 'messenger', 'linkedin', 'slack', 'discord', 'other');
+
+-- Agent network type enum
+CREATE TYPE network_type AS ENUM ('internal', 'partner', 'thirdparty');
+
+-- Agent network status enum
+CREATE TYPE network_status AS ENUM ('active', 'suspended', 'terminated');
+
+-- Branch status enum
+CREATE TYPE branch_status AS ENUM ('active', 'suspended', 'closed', 'temporarilyclosed');
+
+-- Branch type enum
+CREATE TYPE branch_type AS ENUM ('main_branch', 'sub_branch', 'agent_outlet', 'standalone_kiosk', 'partner_agent', 'atm_location', 'mobile_unit');
+
+-- Terminal type enum
+CREATE TYPE terminal_type AS ENUM ('pos', 'mobile', 'atm', 'webportal');
+
+-- Terminal status enum
+CREATE TYPE terminal_status AS ENUM ('active', 'maintenance', 'suspended', 'decommissioned');
+
+-- Branch risk rating enum
+CREATE TYPE branch_risk_rating AS ENUM ('low', 'medium', 'high', 'critical');
+
 -- Customer related enums
 CREATE TYPE customer_type AS ENUM ('Individual', 'Corporate');
 CREATE TYPE identity_type AS ENUM ('NationalId', 'Passport', 'CompanyRegistration');
@@ -106,6 +133,109 @@ CREATE TRIGGER update_persons_updated_at
     BEFORE UPDATE ON persons
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================================
+-- GEOGRAPHIC AND LOCATION TABLES
+-- =============================================================================
+
+-- Countries table
+CREATE TABLE countries (
+    country_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    iso2 CHAR(2) NOT NULL UNIQUE,
+    name_l1 VARCHAR(100) NOT NULL,
+    name_l2 VARCHAR(100),
+    name_l3 VARCHAR(100),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL REFERENCES persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id)
+);
+
+-- States/Provinces table
+CREATE TABLE state_provinces (
+    state_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    country_id UUID NOT NULL REFERENCES countries(country_id),
+    name_l1 VARCHAR(100) NOT NULL,
+    name_l2 VARCHAR(100),
+    name_l3 VARCHAR(100),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL REFERENCES persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id)
+);
+
+-- Cities table
+CREATE TABLE cities (
+    city_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    country_id UUID NOT NULL REFERENCES countries(country_id),
+    state_id UUID REFERENCES state_provinces(state_id),
+    name_l1 VARCHAR(100) NOT NULL,
+    name_l2 VARCHAR(100),
+    name_l3 VARCHAR(100),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL REFERENCES persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id)
+);
+
+-- Addresses table
+CREATE TABLE addresses (
+    address_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    street_line1 VARCHAR(50) NOT NULL DEFAULT '',
+    street_line2 VARCHAR(50) NOT NULL DEFAULT '',
+    street_line3 VARCHAR(50) NOT NULL DEFAULT '',
+    street_line4 VARCHAR(50) NOT NULL DEFAULT '',
+    city_id UUID REFERENCES cities(city_id),
+    postal_code VARCHAR(20),
+    latitude DECIMAL(10,8),
+    longitude DECIMAL(11,8),
+    accuracy_meters REAL,
+    address_type address_type NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL REFERENCES persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id)
+);
+
+-- Messaging table
+CREATE TABLE messaging (
+    messaging_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    messaging_type messaging_type NOT NULL,
+    value VARCHAR(100) NOT NULL,
+    other_type VARCHAR(20),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    priority SMALLINT CHECK (priority > 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Person-Messaging junction table
+CREATE TABLE person_messaging (
+    person_id UUID NOT NULL REFERENCES persons(person_id),
+    messaging_id UUID NOT NULL REFERENCES messaging(messaging_id),
+    PRIMARY KEY (person_id, messaging_id)
+);
+
+-- Indexes for geographic tables
+CREATE INDEX idx_countries_iso2 ON countries(iso2);
+CREATE INDEX idx_state_provinces_country ON state_provinces(country_id);
+CREATE INDEX idx_cities_country ON cities(country_id);
+CREATE INDEX idx_cities_state ON cities(state_id) WHERE state_id IS NOT NULL;
+CREATE INDEX idx_addresses_city ON addresses(city_id) WHERE city_id IS NOT NULL;
+CREATE INDEX idx_addresses_coordinates ON addresses(latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+CREATE INDEX idx_messaging_type ON messaging(messaging_type);
+CREATE INDEX idx_messaging_value ON messaging(value);
+
+-- Triggers for updated_at
+CREATE TRIGGER tr_countries_updated_at BEFORE UPDATE ON countries FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_state_provinces_updated_at BEFORE UPDATE ON state_provinces FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_cities_updated_at BEFORE UPDATE ON cities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_addresses_updated_at BEFORE UPDATE ON addresses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_messaging_updated_at BEFORE UPDATE ON messaging FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================================================
 -- CUSTOMER INFORMATION FILE (CIF) - Master Repository
@@ -403,58 +533,172 @@ CREATE TABLE transaction_audit_trail (
 -- AGENT BANKING NETWORK MANAGEMENT
 -- =============================================================================
 
+-- Operating Hours standalone table
+CREATE TABLE operating_hours (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    monday_open TIME,
+    monday_close TIME,
+    monday_break_start TIME,
+    monday_break_end TIME,
+    tuesday_open TIME,
+    tuesday_close TIME,
+    tuesday_break_start TIME,
+    tuesday_break_end TIME,
+    wednesday_open TIME,
+    wednesday_close TIME,
+    wednesday_break_start TIME,
+    wednesday_break_end TIME,
+    thursday_open TIME,
+    thursday_close TIME,
+    thursday_break_start TIME,
+    thursday_break_end TIME,
+    friday_open TIME,
+    friday_close TIME,
+    friday_break_start TIME,
+    friday_break_end TIME,
+    saturday_open TIME,
+    saturday_close TIME,
+    saturday_break_start TIME,
+    saturday_break_end TIME,
+    sunday_open TIME,
+    sunday_close TIME,
+    sunday_break_start TIME,
+    sunday_break_end TIME,
+    timezone VARCHAR(50) NOT NULL DEFAULT 'UTC',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id)
+);
+
+-- Branch Capabilities standalone table
+CREATE TABLE branch_capabilities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    supported_services_json TEXT NOT NULL DEFAULT '[]', -- JSON array of ServiceType enums
+    supported_currencies_json TEXT NOT NULL DEFAULT '[]', -- JSON array of 3-char currency codes
+    languages_spoken_json TEXT NOT NULL DEFAULT '[]', -- JSON array of 3-char language codes
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id)
+);
+
+-- Security Access standalone table
+CREATE TABLE security_access (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    security_features_json TEXT NOT NULL DEFAULT '{}', -- SecurityFeatures struct as JSON
+    accessibility_features_json TEXT NOT NULL DEFAULT '{}', -- AccessibilityFeatures struct as JSON
+    required_documents_json TEXT NOT NULL DEFAULT '[]', -- Array of RequiredDocument structs as JSON
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
+    updated_by UUID NOT NULL REFERENCES persons(person_id)
+);
+
 -- Agent networks - hierarchical structure for agent banking
 CREATE TABLE agent_networks (
     network_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    network_code VARCHAR(20) NOT NULL UNIQUE,
     network_name VARCHAR(100) NOT NULL,
-    network_type VARCHAR(30) NOT NULL CHECK (network_type IN ('Rural', 'Urban', 'Corporate', 'Educational', 'Healthcare')),
-    status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive', 'Suspended', 'UnderReview')),
-    max_transaction_limit DECIMAL(15,2) NOT NULL,
-    max_daily_limit DECIMAL(15,2) NOT NULL,
-    commission_rate DECIMAL(5,4) NOT NULL CHECK (commission_rate >= 0 AND commission_rate <= 1),
-    settlement_gl_code VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT ck_network_limits CHECK (max_daily_limit >= max_transaction_limit)
+    network_type network_type NOT NULL,
+    status network_status NOT NULL DEFAULT 'active',
+    contract_id UUID,
+    aggregate_daily_limit DECIMAL(15,2) NOT NULL,
+    current_daily_volume DECIMAL(15,2) NOT NULL DEFAULT 0,
+    settlement_gl_code VARCHAR(8) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 -- Agent branches within networks
 CREATE TABLE agent_branches (
     branch_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     network_id UUID NOT NULL REFERENCES agent_networks(network_id),
-    branch_code VARCHAR(20) NOT NULL,
+    parent_branch_id UUID REFERENCES agent_branches(branch_id),
     branch_name VARCHAR(100) NOT NULL,
-    contact_person VARCHAR(100),
-    phone_number VARCHAR(20),
-    email VARCHAR(100),
-    physical_address TEXT,
-    gps_coordinates POINT, -- PostGIS point for location
-    status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive', 'Suspended', 'TemporarilyClosed')),
-    max_transaction_limit DECIMAL(15,2) NOT NULL,
-    max_daily_limit DECIMAL(15,2) NOT NULL,
-    settlement_account_id UUID, -- Internal settlement account
+    branch_code VARCHAR(8) NOT NULL,
+    branch_level INTEGER NOT NULL DEFAULT 1,
+    gl_code_prefix VARCHAR(6) NOT NULL,
+    status branch_status NOT NULL DEFAULT 'active',
+    daily_transaction_limit DECIMAL(15,2) NOT NULL,
+    current_daily_volume DECIMAL(15,2) NOT NULL DEFAULT 0,
+    max_cash_limit DECIMAL(15,2) NOT NULL,
+    current_cash_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+    minimum_cash_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
+    -- Location fields
+    address_id UUID NOT NULL REFERENCES addresses(address_id),
+    landmark_description VARCHAR(200),
+    
+    -- Operational details
+    operating_hours_id UUID NOT NULL REFERENCES operating_hours(id),
+    holiday_schedule_json TEXT,
+    temporary_closure_json TEXT,
+    
+    -- Contact information (JSON array of messaging UUIDs)
+    messaging_json TEXT NOT NULL DEFAULT '[]',
+    branch_manager_id UUID,
+    
+    -- Services and capabilities
+    branch_type branch_type NOT NULL,
+    branch_capabilities_id UUID NOT NULL REFERENCES branch_capabilities(id),
+    
+    -- Security and access
+    security_access_id UUID NOT NULL REFERENCES security_access(id),
+    
+    -- Customer capacity
+    max_daily_customers INTEGER,
+    average_wait_time_minutes SMALLINT,
+    
+    -- Transaction limits
+    per_transaction_limit DECIMAL(15,2) NOT NULL,
+    monthly_transaction_limit DECIMAL(15,2),
+    
+    -- Compliance and risk
+    risk_rating branch_risk_rating NOT NULL DEFAULT 'low',
+    last_audit_date DATE,
+    compliance_certifications_json TEXT,
+    
+    -- Metadata
+    last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_by UUID NOT NULL REFERENCES persons(person_id),
+    
     CONSTRAINT uk_branch_code_per_network UNIQUE (network_id, branch_code)
+);
+
+-- Branch Messaging junction table
+CREATE TABLE branch_messaging (
+    branch_id UUID NOT NULL REFERENCES agent_branches(branch_id),
+    messaging_id UUID NOT NULL REFERENCES messaging(messaging_id),
+    PRIMARY KEY (branch_id, messaging_id)
 );
 
 -- Agent terminals - individual POS/mobile terminals
 CREATE TABLE agent_terminals (
     terminal_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     branch_id UUID NOT NULL REFERENCES agent_branches(branch_id),
-    terminal_code VARCHAR(20) NOT NULL,
-    terminal_type VARCHAR(20) NOT NULL CHECK (terminal_type IN ('POS', 'Mobile', 'Web', 'USSD')),
-    agent_user_id UUID NOT NULL, -- Reference to agent user account
-    status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive', 'Suspended', 'Blocked')),
-    max_transaction_limit DECIMAL(15,2) NOT NULL,
-    max_daily_limit DECIMAL(15,2) NOT NULL,
-    last_activity_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT uk_terminal_code_per_branch UNIQUE (branch_id, terminal_code),
-    CONSTRAINT ck_terminal_limits CHECK (max_daily_limit >= max_transaction_limit)
+    agent_user_id UUID NOT NULL,
+    terminal_type terminal_type NOT NULL,
+    terminal_name VARCHAR(100) NOT NULL,
+    daily_transaction_limit DECIMAL(15,2) NOT NULL,
+    current_daily_volume DECIMAL(15,2) NOT NULL DEFAULT 0,
+    max_cash_limit DECIMAL(15,2) NOT NULL,
+    current_cash_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+    minimum_cash_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+    status terminal_status NOT NULL DEFAULT 'active',
+    last_sync_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+-- Triggers for agent network tables
+CREATE TRIGGER tr_agent_networks_updated_at BEFORE UPDATE ON agent_networks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_agent_branches_updated_at BEFORE UPDATE ON agent_branches FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_agent_terminals_updated_at BEFORE UPDATE ON agent_terminals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_operating_hours_updated_at BEFORE UPDATE ON operating_hours FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_branch_capabilities_updated_at BEFORE UPDATE ON branch_capabilities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_security_access_updated_at BEFORE UPDATE ON security_access FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================================================
 -- CALENDAR AND BUSINESS DAY MANAGEMENT
@@ -1561,7 +1805,16 @@ CREATE INDEX idx_transactions_reference ON transactions(reference_number);
 -- Agent network indexes
 CREATE INDEX idx_agent_networks_status ON agent_networks(status);
 CREATE INDEX idx_agent_branches_network ON agent_branches(network_id);
+CREATE INDEX idx_agent_branches_address ON agent_branches(address_id);
+CREATE INDEX idx_agent_branches_operating_hours ON agent_branches(operating_hours_id);
+CREATE INDEX idx_agent_branches_capabilities ON agent_branches(branch_capabilities_id);
+CREATE INDEX idx_agent_branches_security ON agent_branches(security_access_id);
 CREATE INDEX idx_agent_terminals_branch ON agent_terminals(branch_id);
+CREATE INDEX idx_operating_hours_name ON operating_hours(name);
+CREATE INDEX idx_branch_capabilities_name ON branch_capabilities(name);
+CREATE INDEX idx_security_access_name ON security_access(name);
+CREATE INDEX idx_branch_messaging_branch ON branch_messaging(branch_id);
+CREATE INDEX idx_branch_messaging_messaging ON branch_messaging(messaging_id);
 
 -- Compliance and risk indexes
 CREATE INDEX idx_kyc_results_customer ON kyc_results(customer_id);
