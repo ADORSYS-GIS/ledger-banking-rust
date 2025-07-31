@@ -79,8 +79,11 @@ pub struct City {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Address {
     pub address_id: Uuid,
-    /// Structured address components
-    pub street_address: Option<HeaplessString<200>>,
+    /// Structured address components - 4 street lines
+    pub street_line1: HeaplessString<50>,
+    pub street_line2: HeaplessString<50>,
+    pub street_line3: HeaplessString<50>,
+    pub street_line4: HeaplessString<50>,
     /// References City.city_id (city contains country and state references)
     pub city_id: Option<Uuid>,
     pub postal_code: Option<HeaplessString<20>>,
@@ -88,9 +91,8 @@ pub struct Address {
     /// Geographical coordinates (decimal degrees)
     pub latitude: Option<Decimal>,
     pub longitude: Option<Decimal>,
+    pub accuracy_meters: Option<f32>,
     
-    /// Verbal description for African locations ("near the big baobab tree, 2km from the market")
-    pub address_detail: Option<HeaplessString<200>>,
     
     /// Address type for categorization
     pub address_type: AddressType,
@@ -116,12 +118,15 @@ impl Address {
     ) -> Self {
         Self {
             address_id,
-            street_address: None,
+            street_line1: HeaplessString::new(),
+            street_line2: HeaplessString::new(),
+            street_line3: HeaplessString::new(),
+            street_line4: HeaplessString::new(),
             city_id: None,
             postal_code: None,
             latitude: None,
             longitude: None,
-            address_detail: None,
+            accuracy_meters: None,
             address_type,
             is_active: true,
             created_at: Utc::now(),
@@ -147,6 +152,14 @@ impl Address {
         self.updated_at = Utc::now();
     }
     
+    /// Set geographical coordinates with accuracy
+    pub fn set_coordinates_with_accuracy(&mut self, latitude: Decimal, longitude: Decimal, accuracy_meters: f32) {
+        self.latitude = Some(latitude);
+        self.longitude = Some(longitude);
+        self.accuracy_meters = Some(accuracy_meters);
+        self.updated_at = Utc::now();
+    }
+    
     /// Check if address has valid coordinates
     pub fn has_coordinates(&self) -> bool {
         self.latitude.is_some() && self.longitude.is_some()
@@ -156,12 +169,15 @@ impl Address {
 /// Builder for Address
 pub struct AddressBuilder {
     address_id: Uuid,
-    street_address: Option<String>,
+    street_line1: Option<String>,
+    street_line2: Option<String>,
+    street_line3: Option<String>,
+    street_line4: Option<String>,
     city_id: Option<Uuid>,
     postal_code: Option<String>,
     latitude: Option<Decimal>,
     longitude: Option<Decimal>,
-    address_detail: Option<String>,
+    accuracy_meters: Option<f32>,
     address_type: AddressType,
     is_active: bool,
     created_by: Uuid,
@@ -175,20 +191,38 @@ impl AddressBuilder {
     ) -> Self {
         Self {
             address_id,
-            street_address: None,
+            street_line1: None,
+            street_line2: None,
+            street_line3: None,
+            street_line4: None,
             city_id: None,
             postal_code: None,
             latitude: None,
             longitude: None,
-            address_detail: None,
+            accuracy_meters: None,
             address_type,
             is_active: true,
             created_by,
         }
     }
     
-    pub fn street_address(mut self, address: impl AsRef<str>) -> Self {
-        self.street_address = Some(address.as_ref().to_string());
+    pub fn street_line1(mut self, line: impl AsRef<str>) -> Self {
+        self.street_line1 = Some(line.as_ref().to_string());
+        self
+    }
+    
+    pub fn street_line2(mut self, line: impl AsRef<str>) -> Self {
+        self.street_line2 = Some(line.as_ref().to_string());
+        self
+    }
+    
+    pub fn street_line3(mut self, line: impl AsRef<str>) -> Self {
+        self.street_line3 = Some(line.as_ref().to_string());
+        self
+    }
+    
+    pub fn street_line4(mut self, line: impl AsRef<str>) -> Self {
+        self.street_line4 = Some(line.as_ref().to_string());
         self
     }
     
@@ -208,10 +242,13 @@ impl AddressBuilder {
         self
     }
     
-    pub fn address_detail(mut self, detail: impl AsRef<str>) -> Self {
-        self.address_detail = Some(detail.as_ref().to_string());
+    pub fn coordinates_with_accuracy(mut self, latitude: Decimal, longitude: Decimal, accuracy_meters: f32) -> Self {
+        self.latitude = Some(latitude);
+        self.longitude = Some(longitude);
+        self.accuracy_meters = Some(accuracy_meters);
         self
     }
+    
     
     pub fn is_active(mut self, active: bool) -> Self {
         self.is_active = active;
@@ -219,29 +256,46 @@ impl AddressBuilder {
     }
     
     pub fn build(self) -> Result<Address, &'static str> {
-        let street_address = self.street_address
+        let street_line1 = self.street_line1
             .map(|s| HeaplessString::try_from(s.as_str()))
             .transpose()
-            .map_err(|_| "Street address exceeds maximum length")?;
+            .map_err(|_| "Street line 1 exceeds maximum length")?
+            .unwrap_or_default();
+            
+        let street_line2 = self.street_line2
+            .map(|s| HeaplessString::try_from(s.as_str()))
+            .transpose()
+            .map_err(|_| "Street line 2 exceeds maximum length")?
+            .unwrap_or_default();
+            
+        let street_line3 = self.street_line3
+            .map(|s| HeaplessString::try_from(s.as_str()))
+            .transpose()
+            .map_err(|_| "Street line 3 exceeds maximum length")?
+            .unwrap_or_default();
+            
+        let street_line4 = self.street_line4
+            .map(|s| HeaplessString::try_from(s.as_str()))
+            .transpose()
+            .map_err(|_| "Street line 4 exceeds maximum length")?
+            .unwrap_or_default();
             
         let postal_code = self.postal_code
             .map(|s| HeaplessString::try_from(s.as_str()))
             .transpose()
             .map_err(|_| "Postal code exceeds maximum length")?;
             
-        let address_detail = self.address_detail
-            .map(|s| HeaplessString::try_from(s.as_str()))
-            .transpose()
-            .map_err(|_| "Address detail exceeds maximum length")?;
-            
         Ok(Address {
             address_id: self.address_id,
-            street_address,
+            street_line1,
+            street_line2,
+            street_line3,
+            street_line4,
             city_id: self.city_id,
             postal_code,
             latitude: self.latitude,
             longitude: self.longitude,
-            address_detail,
+            accuracy_meters: self.accuracy_meters,
             address_type: self.address_type,
             is_active: self.is_active,
             created_at: Utc::now(),

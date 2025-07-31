@@ -25,7 +25,7 @@ impl AgentNetworkRepositoryImpl {
         // Fetch parent network limits
         let network = sqlx::query!(
             r#"
-            SELECT max_transaction_limit, max_daily_limit, status
+            SELECT aggregate_daily_limit, status::text
             FROM agent_networks 
             WHERE network_id = $1
             "#,
@@ -42,33 +42,27 @@ impl AgentNetworkRepositoryImpl {
         })?;
 
         // Check if network is active
-        if network.status != "Active" {
+        if network.status.as_deref() != Some("active") {
             return Err(banking_api::error::BankingError::ValidationError {
                 field: "network_status".to_string(),
-                message: format!("Cannot create branch under inactive network (status: {})", network.status),
+                message: format!("Cannot create branch under inactive network (status: {:?})", network.status),
             });
         }
 
-        // Validate per-transaction limit against network transaction limit
-        let network_tx_limit = network.max_transaction_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
-        if branch.per_transaction_limit > network_tx_limit {
-            return Err(banking_api::error::BankingError::ValidationError {
-                field: "per_transaction_limit".to_string(),
-                message: format!(
-                    "Branch per-transaction limit ({}) exceeds network transaction limit ({})",
-                    branch.per_transaction_limit, network_tx_limit
-                ),
-            });
-        }
-
-        // Validate daily limit against network daily limit
-        let network_daily_limit = network.max_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
-        if branch.daily_transaction_limit > network_daily_limit {
+        // Convert BigDecimal to Decimal for comparison
+        let network_aggregate_limit = network.aggregate_daily_limit.to_string().parse::<Decimal>()
+            .map_err(|_| banking_api::error::BankingError::ValidationError {
+                field: "aggregate_daily_limit".to_string(),
+                message: "Invalid network aggregate daily limit".to_string(),
+            })?;
+        
+        // Validate daily limit against network aggregate limit
+        if branch.daily_transaction_limit > network_aggregate_limit {
             return Err(banking_api::error::BankingError::ValidationError {
                 field: "daily_transaction_limit".to_string(),
                 message: format!(
-                    "Branch daily transaction limit ({}) exceeds network daily limit ({})",
-                    branch.daily_transaction_limit, network_daily_limit
+                    "Branch daily transaction limit ({}) exceeds network aggregate limit ({})",
+                    branch.daily_transaction_limit, network_aggregate_limit
                 ),
             });
         }
@@ -81,7 +75,7 @@ impl AgentNetworkRepositoryImpl {
         // Fetch parent branch limits
         let branch = sqlx::query!(
             r#"
-            SELECT max_transaction_limit, max_daily_limit, status
+            SELECT daily_transaction_limit, status::text
             FROM agent_branches 
             WHERE branch_id = $1
             "#,
@@ -98,27 +92,21 @@ impl AgentNetworkRepositoryImpl {
         })?;
 
         // Check if branch is active
-        if branch.status != "Active" {
+        if branch.status.as_deref() != Some("active") {
             return Err(banking_api::error::BankingError::ValidationError {
                 field: "branch_status".to_string(),
-                message: format!("Cannot create terminal under inactive branch (status: {})", branch.status),
+                message: format!("Cannot create terminal under inactive branch (status: {:?})", branch.status),
             });
         }
 
-        // Validate terminal daily limit against branch transaction limit
-        let branch_tx_limit = branch.max_transaction_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
-        if terminal.daily_transaction_limit > branch_tx_limit {
-            return Err(banking_api::error::BankingError::ValidationError {
+        // Convert BigDecimal to Decimal for comparison
+        let branch_daily_limit = branch.daily_transaction_limit.to_string().parse::<Decimal>()
+            .map_err(|_| banking_api::error::BankingError::ValidationError {
                 field: "daily_transaction_limit".to_string(),
-                message: format!(
-                    "Terminal daily transaction limit ({}) exceeds branch transaction limit ({})",
-                    terminal.daily_transaction_limit, branch_tx_limit
-                ),
-            });
-        }
+                message: "Invalid branch daily transaction limit".to_string(),
+            })?;
 
-        // Validate terminal daily limit against branch daily limit  
-        let branch_daily_limit = branch.max_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
+        // Validate terminal daily limit against branch daily limit
         if terminal.daily_transaction_limit > branch_daily_limit {
             return Err(banking_api::error::BankingError::ValidationError {
                 field: "daily_transaction_limit".to_string(),
@@ -228,15 +216,12 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
         let hierarchy = sqlx::query!(
             r#"
             SELECT 
-                t.max_transaction_limit as terminal_tx_limit,
-                t.max_daily_limit as terminal_daily_limit,
-                t.status as terminal_status,
-                b.max_transaction_limit as branch_tx_limit,
-                b.max_daily_limit as branch_daily_limit,
-                b.status as branch_status,
-                n.max_transaction_limit as network_tx_limit,
-                n.max_daily_limit as network_daily_limit,
-                n.status as network_status
+                t.daily_transaction_limit as terminal_daily_limit,
+                t.status::text as terminal_status,
+                b.daily_transaction_limit as branch_daily_limit,
+                b.status::text as branch_status,
+                n.aggregate_daily_limit as network_daily_limit,
+                n.status::text as network_status
             FROM agent_terminals t
             JOIN agent_branches b ON t.branch_id = b.branch_id
             JOIN agent_networks n ON b.network_id = n.network_id
@@ -254,27 +239,27 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
             }
         })?;
 
-        // Convert BigDecimal to Decimal for comparison
-        let terminal_tx_limit = hierarchy.terminal_tx_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
-        let branch_tx_limit = hierarchy.branch_tx_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
-        let network_tx_limit = hierarchy.network_tx_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
+        // Convert BigDecimal to Decimal via string conversion
+        let terminal_daily_limit = hierarchy.terminal_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
+        let branch_daily_limit = hierarchy.branch_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
+        let network_daily_limit = hierarchy.network_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO);
 
         // Check status at each level
-        let terminal_approved = hierarchy.terminal_status == "Active" && amount <= terminal_tx_limit;
-        let branch_approved = hierarchy.branch_status == "Active" && amount <= branch_tx_limit;
-        let network_approved = hierarchy.network_status == "Active" && amount <= network_tx_limit;
+        let terminal_approved = hierarchy.terminal_status.as_deref() == Some("active") && amount <= terminal_daily_limit;
+        let branch_approved = hierarchy.branch_status.as_deref() == Some("active") && amount <= branch_daily_limit;
+        let network_approved = hierarchy.network_status.as_deref() == Some("active") && amount <= network_daily_limit;
 
         let overall_approved = terminal_approved && branch_approved && network_approved;
 
         let rejection_reason = if !overall_approved {
             Some(format!(
                 "Transaction rejected: Terminal({}/{}), Branch({}/{}), Network({}/{})",
-                if hierarchy.terminal_status == "Active" { "Active" } else { &hierarchy.terminal_status },
-                if amount <= terminal_tx_limit { "Limit OK" } else { "Limit Exceeded" },
-                if hierarchy.branch_status == "Active" { "Active" } else { &hierarchy.branch_status },
-                if amount <= branch_tx_limit { "Limit OK" } else { "Limit Exceeded" },
-                if hierarchy.network_status == "Active" { "Active" } else { &hierarchy.network_status },
-                if amount <= network_tx_limit { "Limit OK" } else { "Limit Exceeded" }
+                if hierarchy.terminal_status.as_deref() == Some("active") { "Active" } else { hierarchy.terminal_status.as_deref().unwrap_or("Unknown") },
+                if amount <= terminal_daily_limit { "Limit OK" } else { "Limit Exceeded" },
+                if hierarchy.branch_status.as_deref() == Some("active") { "Active" } else { hierarchy.branch_status.as_deref().unwrap_or("Unknown") },
+                if amount <= branch_daily_limit { "Limit OK" } else { "Limit Exceeded" },
+                if hierarchy.network_status.as_deref() == Some("active") { "Active" } else { hierarchy.network_status.as_deref().unwrap_or("Unknown") },
+                if amount <= network_daily_limit { "Limit OK" } else { "Limit Exceeded" }
             ))
         } else {
             None
@@ -363,7 +348,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
 
     async fn update_terminal_sync(&self, terminal_id: Uuid, sync_time: DateTime<Utc>) -> BankingResult<()> {
         sqlx::query!(
-            "UPDATE agent_terminals SET last_activity_at = $1 WHERE terminal_id = $2",
+            "UPDATE agent_terminals SET last_sync_at = $1 WHERE terminal_id = $2",
             sync_time,
             terminal_id
         )
@@ -386,7 +371,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
     async fn get_terminal_limits(&self, terminal_id: Uuid) -> BankingResult<Option<TerminalLimits>> {
         let limits = sqlx::query!(
             r#"
-            SELECT max_daily_limit, status
+            SELECT daily_transaction_limit, status::text
             FROM agent_terminals 
             WHERE terminal_id = $1
             "#,
@@ -396,16 +381,16 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
         .await?;
 
         Ok(limits.map(|l| TerminalLimits {
-            daily_limit: l.max_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO),
+            daily_limit: l.daily_transaction_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO),
             current_volume: Decimal::ZERO, // TODO: Calculate from transactions
-            status: l.status,
+            status: l.status.unwrap_or_else(|| "unknown".to_string()),
         }))
     }
 
     async fn get_branch_limits(&self, branch_id: Uuid) -> BankingResult<Option<BranchLimits>> {
         let limits = sqlx::query!(
             r#"
-            SELECT max_daily_limit, status
+            SELECT daily_transaction_limit, status::text
             FROM agent_branches 
             WHERE branch_id = $1
             "#,
@@ -415,16 +400,16 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
         .await?;
 
         Ok(limits.map(|l| BranchLimits {
-            daily_limit: l.max_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO),
+            daily_limit: l.daily_transaction_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO),
             current_volume: Decimal::ZERO, // TODO: Calculate from transactions
-            status: l.status,
+            status: l.status.unwrap_or_else(|| "unknown".to_string()),
         }))
     }
 
     async fn get_network_limits(&self, network_id: Uuid) -> BankingResult<Option<NetworkLimits>> {
         let limits = sqlx::query!(
             r#"
-            SELECT max_daily_limit, status
+            SELECT aggregate_daily_limit, status::text
             FROM agent_networks 
             WHERE network_id = $1
             "#,
@@ -434,9 +419,9 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
         .await?;
 
         Ok(limits.map(|l| NetworkLimits {
-            daily_limit: l.max_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO),
+            daily_limit: l.aggregate_daily_limit.to_string().parse::<Decimal>().unwrap_or(Decimal::ZERO),
             current_volume: Decimal::ZERO, // TODO: Calculate from transactions
-            status: l.status,
+            status: l.status.unwrap_or_else(|| "unknown".to_string()),
         }))
     }
 

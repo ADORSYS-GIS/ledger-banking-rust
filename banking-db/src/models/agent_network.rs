@@ -99,13 +99,13 @@ pub enum CashLimitValidationResult {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AgentNetworkModel {
     pub network_id: Uuid,
-    pub network_name: HeaplessString<255>,
+    pub network_name: HeaplessString<100>,
     pub network_type: NetworkType,
     pub status: NetworkStatus,
     pub contract_id: Option<Uuid>,
     pub aggregate_daily_limit: Decimal,
     pub current_daily_volume: Decimal,
-    pub settlement_gl_code: HeaplessString<10>,
+    pub settlement_gl_code: HeaplessString<8>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     pub updated_by: Uuid,
@@ -118,7 +118,7 @@ pub struct AgencyBranchModel {
     pub branch_id: Uuid,
     pub network_id: Uuid,
     pub parent_branch_id: Option<Uuid>,
-    pub branch_name: HeaplessString<255>,
+    pub branch_name: HeaplessString<100>,
     pub branch_code: HeaplessString<8>,
     pub branch_level: i32,
     pub gl_code_prefix: HeaplessString<6>,
@@ -130,35 +130,26 @@ pub struct AgencyBranchModel {
     pub minimum_cash_balance: Decimal,
     pub created_at: DateTime<Utc>,
     
-    // === NEW LOCATION FIELDS ===
-    // Physical address (serialized as JSON)
-    pub address_json: HeaplessString<500>,
-    pub gps_latitude: Option<f64>,
-    pub gps_longitude: Option<f64>,
-    pub gps_accuracy_meters: Option<f32>,
+    // === LOCATION FIELDS ===
+    // Physical address reference
+    pub address_id: Uuid,
     pub landmark_description: Option<HeaplessString<200>>,
     
-    // Operational details (serialized as JSON)
-    pub operating_hours_json: HeaplessString<1000>,
+    // Operational details
+    pub operating_hours_id: Uuid,
     pub holiday_schedule_json: HeaplessString<2000>,
     pub temporary_closure_json: Option<HeaplessString<500>>,
     
     // Contact information
-    pub primary_phone: HeaplessString<20>,
-    pub secondary_phone: Option<HeaplessString<20>>,
-    pub email: Option<HeaplessString<100>>,
+    pub messaging_json: HeaplessString<500>, // JSON array of messaging UUIDs
     pub branch_manager_id: Option<Uuid>,
     
     // Services and capabilities
     pub branch_type: BranchType,
-    pub supported_services_json: HeaplessString<500>, // JSON array
-    pub supported_currencies_json: HeaplessString<100>, // JSON array
-    pub languages_spoken_json: HeaplessString<50>, // JSON array
+    pub branch_capabilities_id: Uuid,
     
-    // Security and access (serialized as JSON)
-    pub security_features_json: HeaplessString<500>,
-    pub accessibility_features_json: HeaplessString<500>,
-    pub required_documents_json: HeaplessString<1000>,
+    // Security and access
+    pub security_access_id: Uuid,
     
     // Customer capacity
     pub max_daily_customers: Option<u32>,
@@ -185,7 +176,7 @@ pub struct AgentTerminalModel {
     pub branch_id: Uuid,
     pub agent_user_id: Uuid,
     pub terminal_type: TerminalType,
-    pub terminal_name: HeaplessString<255>,
+    pub terminal_name: HeaplessString<100>,
     pub daily_transaction_limit: Decimal,
     pub current_daily_volume: Decimal,
     pub max_cash_limit: Decimal,
@@ -214,5 +205,72 @@ pub struct CashLimitCheckModel {
     pub checked_by: Uuid,
 }
 
+/// Operating Hours database model
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct OperatingHoursModel {
+    pub id: Uuid,
+    pub name: HeaplessString<100>,
+    pub monday_open: Option<chrono::NaiveTime>,
+    pub monday_close: Option<chrono::NaiveTime>,
+    pub monday_break_start: Option<chrono::NaiveTime>,
+    pub monday_break_end: Option<chrono::NaiveTime>,
+    pub tuesday_open: Option<chrono::NaiveTime>,
+    pub tuesday_close: Option<chrono::NaiveTime>,
+    pub tuesday_break_start: Option<chrono::NaiveTime>,
+    pub tuesday_break_end: Option<chrono::NaiveTime>,
+    pub wednesday_open: Option<chrono::NaiveTime>,
+    pub wednesday_close: Option<chrono::NaiveTime>,
+    pub wednesday_break_start: Option<chrono::NaiveTime>,
+    pub wednesday_break_end: Option<chrono::NaiveTime>,
+    pub thursday_open: Option<chrono::NaiveTime>,
+    pub thursday_close: Option<chrono::NaiveTime>,
+    pub thursday_break_start: Option<chrono::NaiveTime>,
+    pub thursday_break_end: Option<chrono::NaiveTime>,
+    pub friday_open: Option<chrono::NaiveTime>,
+    pub friday_close: Option<chrono::NaiveTime>,
+    pub friday_break_start: Option<chrono::NaiveTime>,
+    pub friday_break_end: Option<chrono::NaiveTime>,
+    pub saturday_open: Option<chrono::NaiveTime>,
+    pub saturday_close: Option<chrono::NaiveTime>,
+    pub saturday_break_start: Option<chrono::NaiveTime>,
+    pub saturday_break_end: Option<chrono::NaiveTime>,
+    pub sunday_open: Option<chrono::NaiveTime>,
+    pub sunday_close: Option<chrono::NaiveTime>,
+    pub sunday_break_start: Option<chrono::NaiveTime>,
+    pub sunday_break_end: Option<chrono::NaiveTime>,
+    pub timezone: HeaplessString<50>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
+}
+
+/// Branch Capabilities database model
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct BranchCapabilitiesModel {
+    pub id: Uuid,
+    pub name: HeaplessString<100>,
+    pub supported_services_json: HeaplessString<500>, // JSON array of ServiceType enums
+    pub supported_currencies_json: HeaplessString<100>, // JSON array of 3-char currency codes
+    pub languages_spoken_json: HeaplessString<50>, // JSON array of 3-char language codes
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
+}
+
+/// Security Access database model
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SecurityAccessModel {
+    pub id: Uuid,
+    pub name: HeaplessString<100>,
+    pub security_features_json: HeaplessString<500>, // SecurityFeatures struct as JSON
+    pub accessibility_features_json: HeaplessString<500>, // AccessibilityFeatures struct as JSON
+    pub required_documents_json: HeaplessString<1000>, // Array of RequiredDocument structs as JSON
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
+}
 
 

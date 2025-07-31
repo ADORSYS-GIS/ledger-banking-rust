@@ -7,23 +7,23 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentNetwork {
     pub network_id: Uuid,
-    pub network_name: HeaplessString<255>,
+    pub network_name: HeaplessString<100>,
     pub network_type: NetworkType,
     pub status: NetworkStatus,
     pub contract_id: Option<Uuid>,
     pub aggregate_daily_limit: Decimal,
     pub current_daily_volume: Decimal,
-    pub settlement_gl_code: HeaplessString<10>,
+    pub settlement_gl_code: HeaplessString<8>,
     pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgencyBranch {
-    // === EXISTING FIELDS ===
+
     pub branch_id: Uuid,
     pub network_id: Uuid,
     pub parent_branch_id: Option<Uuid>,
-    pub branch_name: HeaplessString<255>,
+    pub branch_name: HeaplessString<100>,
     pub branch_code: HeaplessString<8>,
     pub branch_level: i32,
     pub gl_code_prefix: HeaplessString<6>,
@@ -35,33 +35,26 @@ pub struct AgencyBranch {
     pub minimum_cash_balance: Decimal,
     pub created_at: DateTime<Utc>,
     
-    // === NEW LOCATION FIELDS ===
     // Physical address
-    pub address: AgentAddress,
-    pub gps_coordinates: Option<GpsCoordinates>,
+    pub address: Uuid,
     pub landmark_description: Option<HeaplessString<200>>,
     
     // Operational details
-    pub operating_hours: OperatingHours,
+    pub operating_hours: Uuid,
     pub holiday_schedule: HeaplessVec<HolidaySchedule, 20>,
     pub temporary_closure: Option<TemporaryClosure>,
     
     // Contact information
-    pub primary_phone: HeaplessString<20>,
-    pub secondary_phone: Option<HeaplessString<20>>,
-    pub email: Option<HeaplessString<100>>,
+    /// References to Messaging.messaging_id from person.rs (up to 20 messaging methods)
+    pub messaging: HeaplessVec<Uuid, 20>,
     pub branch_manager_id: Option<Uuid>,
     
-    // Services and capabilities
+    // Services and capabilities - references to separate entities
     pub branch_type: BranchType,  // Replaces LocationType
-    pub supported_services: HeaplessVec<ServiceType, 20>,
-    pub supported_currencies: HeaplessVec<[u8; 3], 10>,
-    pub languages_spoken: HeaplessVec<[u8; 3], 5>,
+    pub branch_capabilities: Uuid,
     
-    // Security and access
-    pub security_features: SecurityFeatures,
-    pub accessibility_features: AccessibilityFeatures,
-    pub required_documents: HeaplessVec<RequiredDocument, 10>,
+    // Security and access - reference to separate entity
+    pub security_access: Uuid,
     
     // Customer capacity
     pub max_daily_customers: Option<u32>,
@@ -87,7 +80,7 @@ pub struct AgentTerminal {
     pub branch_id: Uuid,
     pub agent_user_id: Uuid,
     pub terminal_type: TerminalType,
-    pub terminal_name: HeaplessString<255>,
+    pub terminal_name: HeaplessString<100>,
     pub daily_transaction_limit: Decimal,
     pub current_daily_volume: Decimal,
     pub max_cash_limit: Decimal,
@@ -191,26 +184,38 @@ pub enum BranchType {
     MobileUnit,
 }
 
-// Supporting structs
+// Supporting structs - AgentAddress and GpsCoordinates removed, using person::Address instead
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentAddress {
-    pub street_line1: HeaplessString<100>,
-    pub street_line2: Option<HeaplessString<100>>,
-    pub city: HeaplessString<50>,
-    pub state_province: HeaplessString<50>,
-    pub postal_code: HeaplessString<20>,
-    pub country_code: [u8; 2],
+pub struct BranchCapabilities {
+    pub id: Uuid,
+    pub name: HeaplessString<100>,
+    pub supported_services: HeaplessVec<ServiceType, 20>,
+    pub supported_currencies: HeaplessVec<[u8; 3], 10>,
+    pub languages_spoken: HeaplessVec<[u8; 3], 5>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct GpsCoordinates {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub accuracy_meters: Option<f32>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityAccess {
+    pub id: Uuid,
+    pub name: HeaplessString<100>,
+    pub security_features: SecurityFeatures,
+    pub accessibility_features: AccessibilityFeatures,
+    pub required_documents: HeaplessVec<RequiredDocument, 10>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperatingHours {
+    pub id: Uuid,
+    pub name: HeaplessString<100>,
     pub monday: Option<DayHours>,
     pub tuesday: Option<DayHours>,
     pub wednesday: Option<DayHours>,
@@ -219,6 +224,10 @@ pub struct OperatingHours {
     pub saturday: Option<DayHours>,
     pub sunday: Option<DayHours>,
     pub timezone: HeaplessString<50>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub created_by: Uuid,
+    pub updated_by: Uuid,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -338,10 +347,9 @@ impl AgencyBranch {
     }
     
     // === NEW METHODS ===
-    /// Check if branch can be used for cash pickup
-    pub fn is_cash_pickup_enabled(&self) -> bool {
+    /// Check if branch can be used for cash pickup (requires capabilities lookup)
+    pub fn is_cash_pickup_enabled_basic(&self) -> bool {
         self.status == BranchStatus::Active
-            && self.supported_services.contains(&ServiceType::CashWithdrawal)
             && self.current_cash_balance > self.minimum_cash_balance
     }
     
@@ -392,21 +400,14 @@ impl AgencyBranch {
         }
     }
     
-    /// Get formatted address
-    pub fn get_formatted_address(&self) -> String {
-        format!(
-            "{}, {}, {} {}, {}",
-            self.address.street_line1,
-            self.address.city,
-            self.address.state_province,
-            self.address.postal_code,
-            std::str::from_utf8(&self.address.country_code).unwrap_or("??")
-        )
+    /// Get address reference ID
+    pub fn get_address_id(&self) -> Uuid {
+        self.address
     }
     
-    /// Check if branch supports a specific service
-    pub fn supports_service(&self, service: ServiceType) -> bool {
-        self.supported_services.contains(&service)
+    /// Get capabilities reference ID
+    pub fn get_capabilities_id(&self) -> Uuid {
+        self.branch_capabilities
     }
     
     /// Create a minimal AgencyBranch for backward compatibility with existing mappers
@@ -416,7 +417,7 @@ impl AgencyBranch {
         branch_id: Uuid,
         network_id: Uuid,
         parent_branch_id: Option<Uuid>,
-        branch_name: HeaplessString<255>,
+        branch_name: HeaplessString<100>,
         branch_code: HeaplessString<8>,
         branch_level: i32,
         gl_code_prefix: HeaplessString<6>,
@@ -427,6 +428,10 @@ impl AgencyBranch {
         current_cash_balance: Decimal,
         minimum_cash_balance: Decimal,
         created_at: DateTime<Utc>,
+        default_address_id: Uuid,
+        default_operating_hours_id: Uuid,
+        default_capabilities_id: Uuid,
+        default_security_access_id: Uuid,
     ) -> Self {
         AgencyBranch {
             branch_id,
@@ -445,54 +450,16 @@ impl AgencyBranch {
             created_at,
             
             // Default values for new fields
-            address: AgentAddress {
-                street_line1: HeaplessString::new(),
-                street_line2: None,
-                city: HeaplessString::new(),
-                state_province: HeaplessString::new(),
-                postal_code: HeaplessString::new(),
-                country_code: [0, 0],
-            },
-            gps_coordinates: None,
+            address: default_address_id,
             landmark_description: None,
-            operating_hours: OperatingHours {
-                monday: None,
-                tuesday: None,
-                wednesday: None,
-                thursday: None,
-                friday: None,
-                saturday: None,
-                sunday: None,
-                timezone: HeaplessString::try_from("UTC").unwrap_or_default(),
-            },
+            operating_hours: default_operating_hours_id,
             holiday_schedule: HeaplessVec::new(),
             temporary_closure: None,
-            primary_phone: HeaplessString::new(),
-            secondary_phone: None,
-            email: None,
+            messaging: HeaplessVec::new(),
             branch_manager_id: None,
             branch_type: BranchType::SubBranch,
-            supported_services: HeaplessVec::new(),
-            supported_currencies: HeaplessVec::new(),
-            languages_spoken: HeaplessVec::new(),
-            security_features: SecurityFeatures {
-                has_security_guard: false,
-                has_cctv: false,
-                has_panic_button: false,
-                has_safe: false,
-                has_biometric_verification: false,
-                police_station_distance_km: None,
-            },
-            accessibility_features: AccessibilityFeatures {
-                wheelchair_accessible: false,
-                has_ramp: false,
-                has_braille_signage: false,
-                has_audio_assistance: false,
-                has_sign_language_support: false,
-                parking_available: false,
-                public_transport_nearby: false,
-            },
-            required_documents: HeaplessVec::new(),
+            branch_capabilities: default_capabilities_id,
+            security_access: default_security_access_id,
             max_daily_customers: None,
             average_wait_time_minutes: None,
             per_transaction_limit: daily_transaction_limit,
@@ -507,12 +474,12 @@ impl AgencyBranch {
 }
 
 // Helper function for calculating distance between GPS coordinates
-pub fn calculate_distance(coord1: GpsCoordinates, coord2: GpsCoordinates) -> f64 {
+pub fn calculate_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     // Haversine formula for calculating distance between two points on Earth
-    let lat1_rad = coord1.latitude.to_radians();
-    let lat2_rad = coord2.latitude.to_radians();
-    let delta_lat = (coord2.latitude - coord1.latitude).to_radians();
-    let delta_lon = (coord2.longitude - coord1.longitude).to_radians();
+    let lat1_rad = lat1.to_radians();
+    let lat2_rad = lat2.to_radians();
+    let delta_lat = (lat2 - lat1).to_radians();
+    let delta_lon = (lon2 - lon1).to_radians();
     
     let a = (delta_lat / 2.0).sin().powi(2) + 
             lat1_rad.cos() * lat2_rad.cos() * (delta_lon / 2.0).sin().powi(2);
