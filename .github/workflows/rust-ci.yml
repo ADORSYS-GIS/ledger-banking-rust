@@ -49,9 +49,9 @@ jobs:
         DATABASE_URL: postgresql://user:password@localhost:5432/mydb
       run: cargo test --workspace --features postgres_tests --verbose
 
-    - name: Stop Databases
-      if: always()
-      run: docker compose down
-
     - name: Run clippy
       run: cargo clippy --workspace -- -D warnings
+
+    - name: Stop Databases
+      if: always()
+      run: docker compose down -v

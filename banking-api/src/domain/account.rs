@@ -635,3 +635,156 @@ pub enum UboStatus {
     Inactive,
     UnderReview,
 }
+
+// Display implementations for database compatibility
+impl std::fmt::Display for AccountType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AccountType::Savings => write!(f, "Savings"),
+            AccountType::Current => write!(f, "Current"),
+            AccountType::Loan => write!(f, "Loan"),
+        }
+    }
+}
+
+impl std::fmt::Display for AccountStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AccountStatus::PendingApproval => write!(f, "PendingApproval"),
+            AccountStatus::Active => write!(f, "Active"),
+            AccountStatus::Dormant => write!(f, "Dormant"),
+            AccountStatus::Frozen => write!(f, "Frozen"),
+            AccountStatus::PendingClosure => write!(f, "PendingClosure"),
+            AccountStatus::Closed => write!(f, "Closed"),
+            AccountStatus::PendingReactivation => write!(f, "PendingReactivation"),
+        }
+    }
+}
+
+impl std::fmt::Display for SigningCondition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SigningCondition::None => write!(f, "None"),
+            SigningCondition::AnyOwner => write!(f, "AnyOwner"),
+            SigningCondition::AllOwners => write!(f, "AllOwners"),
+        }
+    }
+}
+
+impl std::fmt::Display for DisbursementMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DisbursementMethod::Transfer => write!(f, "Transfer"),
+            DisbursementMethod::CashWithdrawal => write!(f, "CashWithdrawal"),
+            DisbursementMethod::Check => write!(f, "Check"),
+            DisbursementMethod::HoldFunds => write!(f, "HoldFunds"),
+            DisbursementMethod::OverdraftFacility => write!(f, "OverdraftFacility"),
+            DisbursementMethod::StagedRelease => write!(f, "StagedRelease"),
+        }
+    }
+}
+
+impl std::fmt::Display for HoldType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HoldType::UnclearedFunds => write!(f, "UnclearedFunds"),
+            HoldType::JudicialLien => write!(f, "JudicialLien"),
+            HoldType::LoanPledge => write!(f, "LoanPledge"),
+            HoldType::ComplianceHold => write!(f, "ComplianceHold"),
+            HoldType::AdministrativeHold => write!(f, "AdministrativeHold"),
+            HoldType::FraudHold => write!(f, "FraudHold"),
+            HoldType::PendingAuthorization => write!(f, "PendingAuthorization"),
+            HoldType::OverdraftReserve => write!(f, "OverdraftReserve"),
+            HoldType::CardAuthorization => write!(f, "CardAuthorization"),
+            HoldType::Other => write!(f, "Other"),
+        }
+    }
+}
+
+impl std::fmt::Display for HoldStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HoldStatus::Active => write!(f, "Active"),
+            HoldStatus::Released => write!(f, "Released"),
+            HoldStatus::Expired => write!(f, "Expired"),
+            HoldStatus::Cancelled => write!(f, "Cancelled"),
+            HoldStatus::PartiallyReleased => write!(f, "PartiallyReleased"),
+        }
+    }
+}
+
+impl std::fmt::Display for HoldPriority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HoldPriority::Critical => write!(f, "Critical"),
+            HoldPriority::High => write!(f, "High"),
+            HoldPriority::Medium => write!(f, "Medium"),
+            HoldPriority::Low => write!(f, "Low"),
+        }
+    }
+}
+
+impl std::fmt::Display for OwnershipType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OwnershipType::Single => write!(f, "Single"),
+            OwnershipType::Joint => write!(f, "Joint"),
+            OwnershipType::Corporate => write!(f, "Corporate"),
+        }
+    }
+}
+
+impl std::fmt::Display for EntityType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EntityType::Branch => write!(f, "Branch"),
+            EntityType::Agent => write!(f, "Agent"),
+            EntityType::RiskManager => write!(f, "RiskManager"),
+            EntityType::ComplianceOfficer => write!(f, "ComplianceOfficer"),
+            EntityType::CustomerService => write!(f, "CustomerService"),
+        }
+    }
+}
+
+impl std::fmt::Display for RelationshipType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RelationshipType::PrimaryHandler => write!(f, "PrimaryHandler"),
+            RelationshipType::BackupHandler => write!(f, "BackupHandler"),
+            RelationshipType::RiskOversight => write!(f, "RiskOversight"),
+            RelationshipType::ComplianceOversight => write!(f, "ComplianceOversight"),
+        }
+    }
+}
+
+impl std::fmt::Display for RelationshipStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RelationshipStatus::Active => write!(f, "Active"),
+            RelationshipStatus::Inactive => write!(f, "Inactive"),
+            RelationshipStatus::Suspended => write!(f, "Suspended"),
+        }
+    }
+}
+
+impl std::fmt::Display for PermissionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PermissionType::ViewOnly => write!(f, "ViewOnly"),
+            PermissionType::LimitedWithdrawal => write!(f, "LimitedWithdrawal"),
+            PermissionType::JointApproval => write!(f, "JointApproval"),
+            PermissionType::FullAccess => write!(f, "FullAccess"),
+        }
+    }
+}
+
+impl std::fmt::Display for MandateStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MandateStatus::Active => write!(f, "Active"),
+            MandateStatus::Suspended => write!(f, "Suspended"),
+            MandateStatus::Revoked => write!(f, "Revoked"),
+            MandateStatus::Expired => write!(f, "Expired"),
+        }
+    }
+}

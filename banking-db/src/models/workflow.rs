@@ -39,7 +39,7 @@ pub enum WorkflowStepModel {
 }
 
 /// Database representation of WorkflowStatus enum
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum WorkflowStatusModel {
     InProgress,
     PendingAction,
@@ -47,6 +47,19 @@ pub enum WorkflowStatusModel {
     Failed,
     Cancelled,
     TimedOut,
+}
+
+impl std::fmt::Display for WorkflowStatusModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WorkflowStatusModel::InProgress => write!(f, "InProgress"),
+            WorkflowStatusModel::PendingAction => write!(f, "PendingAction"),
+            WorkflowStatusModel::Completed => write!(f, "Completed"),
+            WorkflowStatusModel::Failed => write!(f, "Failed"),
+            WorkflowStatusModel::Cancelled => write!(f, "Cancelled"),
+            WorkflowStatusModel::TimedOut => write!(f, "TimedOut"),
+        }
+    }
 }
 
 /// Database representation of ClosureReason enum
