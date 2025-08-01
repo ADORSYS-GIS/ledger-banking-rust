@@ -15,6 +15,15 @@ pub enum TransactionType {
     Debit 
 }
 
+impl std::fmt::Display for TransactionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionType::Credit => write!(f, "Credit"),
+            TransactionType::Debit => write!(f, "Debit"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TransactionStatus { 
     Pending, 
@@ -25,12 +34,36 @@ pub enum TransactionStatus {
     ApprovalRejected,
 }
 
+impl std::fmt::Display for TransactionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionStatus::Pending => write!(f, "Pending"),
+            TransactionStatus::Posted => write!(f, "Posted"),
+            TransactionStatus::Reversed => write!(f, "Reversed"),
+            TransactionStatus::Failed => write!(f, "Failed"),
+            TransactionStatus::AwaitingApproval => write!(f, "AwaitingApproval"),
+            TransactionStatus::ApprovalRejected => write!(f, "ApprovalRejected"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TransactionApprovalStatus { 
     Pending, 
     Approved, 
     Rejected, 
     PartiallyApproved 
+}
+
+impl std::fmt::Display for TransactionApprovalStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionApprovalStatus::Pending => write!(f, "Pending"),
+            TransactionApprovalStatus::Approved => write!(f, "Approved"),
+            TransactionApprovalStatus::Rejected => write!(f, "Rejected"),
+            TransactionApprovalStatus::PartiallyApproved => write!(f, "PartiallyApproved"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -1034,7 +1034,7 @@ impl AccountRepository for AccountRepositoryImpl {
                    pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
                    status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
             FROM accounts 
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, account_id ASC
             LIMIT $1 OFFSET $2
             "#,
         )
