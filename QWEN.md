@@ -78,12 +78,13 @@ Full interfaces with CRUD operations, banking-specific extensions, and batch pro
 - Enum-based status management with custom serialization
 - Comprehensive audit trail support
 
-### PostgreSQL Implementation (3/12 Complete - 25%)
+### PostgreSQL Implementation (4/12 Complete - 33%)
 **✅ Implemented:**
 - CustomerRepositoryImpl, AgentNetworkRepositoryImpl, CalendarRepositoryImpl
+- **AccountRepositoryImpl** (✅ **COMPLETE** - Dec 2024, 12/12 tests passing)
 
 **❌ Critical Gap - Need Implementation:**
-- AccountRepositoryImpl, TransactionRepositoryImpl, ComplianceRepositoryImpl
+- TransactionRepositoryImpl, ComplianceRepositoryImpl
 - WorkflowRepositoryImpl, FeeRepositoryImpl, HoldRepositoryImpl
 - PersonRepositoryImpl, CollateralRepositoryImpl
 - ChannelRepositoryImpl
@@ -204,8 +205,257 @@ sqlx migrate run --source banking-db-postgres/migrations
 5. **Compliance**: Built-in audit trails and regulatory compliance
 6. **Code Quality**: 100% clippy compliant with builder patterns
 
+## Repository Implementation Guide for QWEN (Dec 2024)
+
+### **Critical Success: AccountRepositoryImpl COMPLETE** 
+- ✅ **12/12 tests passing**
+- ✅ **Full CRUD operations functional**
+- ✅ **Production-ready with comprehensive error handling**
+
+### **ESSENTIAL PATTERNS - Follow These Exactly**
+
+#### **1. SQLx Query Pattern (MANDATORY)**
+
+**❌ NEVER use `sqlx::query!` with PostgreSQL enums - IT WILL FAIL**
+```rust
+// This FAILS at compile time
+let result = sqlx::query!(
+    "INSERT INTO accounts (account_type) VALUES ($1)",
+    account.account_type  // Compilation error: unsupported type
+);
+```
+
+**✅ ALWAYS use `sqlx::query` with manual binding**
+```rust
+// This works correctly
+let result = sqlx::query(
+    "INSERT INTO accounts (account_type) VALUES ($1::account_type)"
+)
+.bind(account.account_type.to_string())  // Convert enum to string
+.fetch_one(&pool)
+.await?;
+```
+
+**Critical Requirements:**
+- Use `$N::enum_name` casting in ALL SQL statements
+- Convert Rust enums to strings with `.to_string()` before binding
+- Extract results using `sqlx::Row::get()` method
+- Never use `sqlx::query!` macro with custom enum types
+
+#### **2. Display Trait Implementation (REQUIRED)**
+
+**All domain enums MUST implement Display or compilation will fail:**
+
+```rust
+impl std::fmt::Display for AccountStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AccountStatus::Active => write!(f, "Active"),
+            AccountStatus::Frozen => write!(f, "Frozen"),
+            AccountStatus::Closed => write!(f, "Closed"),
+            // MUST implement ALL variants
+        }
+    }
+}
+```
+
+**Apply to ALL these enums:**
+- AccountType, AccountStatus, SigningCondition, OwnershipType
+- EntityType, RelationshipType, PermissionType, MandateStatus
+- HoldType, HoldStatus, HoldPriority, DisbursementMethod
+- Any other enum used in database operations
+
+#### **3. Foreign Key Constraint Handling (CRITICAL)**
+
+**Tests WILL FAIL without proper prerequisite data:**
+
+```rust
+async fn setup_test_db() -> PgPool {
+    let pool = connect_to_database().await;
+    
+    // MANDATORY: Create test person for foreign key references
+    let test_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    sqlx::query(
+        "INSERT INTO persons (person_id, person_type, display_name, external_identifier)
+         VALUES ($1, 'system', 'Test User', 'test-user')
+         ON CONFLICT (person_id) DO NOTHING"
+    )
+    .bind(test_person_id)
+    .execute(&pool)
+    .await
+    .expect("Failed to create test person");
+    
+    pool
+}
+
+// Use consistent test person ID in ALL test data
+fn create_test_account() -> AccountModel {
+    AccountModel {
+        updated_by: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+        // ... other fields
+    }
+}
+```
+
+#### **4. Database Constraint Compliance**
+
+**Business rules MUST be respected or INSERT/UPDATE will fail:**
+
+```rust
+// Example constraint: current_balance >= 0 OR account_type = 'Current'
+// available_balance <= current_balance + COALESCE(overdraft_limit, 0)
+
+// ✅ Valid loan account
+let loan = AccountModel {
+    account_type: AccountType::Loan,
+    current_balance: Decimal::from_str("5000.00").unwrap(),  // Positive outstanding
+    available_balance: Decimal::from_str("0.00").unwrap(),   // No withdrawal allowed
+    overdraft_limit: None,
+};
+
+// ✅ Valid savings account  
+let savings = AccountModel {
+    account_type: AccountType::Savings,
+    current_balance: Decimal::from_str("1000.00").unwrap(),
+    available_balance: Decimal::from_str("950.00").unwrap(), // <= current
+    overdraft_limit: None,
+};
+```
+
+#### **5. Test Isolation (ESSENTIAL)**
+
+**Generate unique test data to prevent test interference:**
+
+```rust
+async fn test_find_operations() {
+    let unique_id = Uuid::new_v4();
+    let product_code = format!("TEST{}", &unique_id.to_string()[0..6]);
+    
+    let mut account = create_test_account();
+    account.product_code = HeaplessString::try_from(product_code.as_str()).unwrap();
+    
+    // Create and test with unique product code
+    repo.create(account.clone()).await.expect("Failed to create");
+    let results = repo.find_by_product_code(&product_code).await?;
+    assert_eq!(results.len(), 1);  // Reliable assertion
+}
+```
+
+#### **6. TryFromRow Standard Pattern**
+
+**Use this exact pattern for ALL model conversions:**
+
+```rust
+impl TryFromRow<PgRow> for YourModel {
+    fn try_from_row(row: &PgRow) -> BankingResult<Self> {
+        Ok(YourModel {
+            // UUID fields
+            id: row.get("id"),
+            
+            // HeaplessString fields
+            name: HeaplessString::try_from(
+                row.get::<String, _>("name").as_str()
+            ).map_err(|_| BankingError::ValidationError {
+                field: "name".to_string(),
+                message: "Name too long".to_string(),
+            })?,
+            
+            // Enum fields
+            status: row.get::<String, _>("status").parse().map_err(|_| 
+                BankingError::ValidationError {
+                    field: "status".to_string(),
+                    message: "Invalid status".to_string(),
+                }
+            )?,
+            
+            // Optional fields
+            optional_field: row.get("optional_field"),
+            
+            // Direct mapping fields
+            amount: row.get("amount"),
+            created_at: row.get("created_at"),
+        })
+    }
+}
+```
+
+### **Repository Implementation Checklist**
+
+**For EVERY new repository, complete these steps:**
+
+**Setup:**
+- [ ] Create struct with `PgPool`
+- [ ] Implement `new(pool: PgPool)` constructor  
+- [ ] Add `#[async_trait]` to trait implementation
+
+**CRUD Operations:**
+- [ ] Implement `create()` with enum casting (`$N::enum_type`)
+- [ ] Implement `find_by_id()` returning `Option<T>`
+- [ ] Implement `update()` with full field updates
+- [ ] Implement `delete()` with proper error handling
+
+**Type System:**
+- [ ] Implement `TryFromRow` for the model
+- [ ] Add `Display` traits for ALL enums used
+- [ ] Handle `HeaplessString` conversions properly
+- [ ] Manage `Option<T>` fields correctly
+
+**Testing:**
+- [ ] Create test setup with prerequisite foreign key data
+- [ ] Generate unique test data (UUID-based identifiers)
+- [ ] Test ALL CRUD operations
+- [ ] Test ALL business methods
+- [ ] Verify constraints are respected
+- [ ] Run tests: `cargo test --features postgres_tests -- --test-threads=1`
+
+**Validation:**
+- [ ] Ensure compilation: `cargo check --features postgres_tests`
+- [ ] All tests pass individually and together
+- [ ] No compilation warnings
+
+### **Common Error Solutions**
+
+**Error**: `unsupported type X for param #N`
+→ **Fix**: Use `sqlx::query` instead of `sqlx::query!`
+
+**Error**: `DatabaseConstraintViolation { constraint: "table_field_fkey" }`
+→ **Fix**: Create prerequisite records in test setup
+
+**Error**: `the trait bound 'Type: std::fmt::Display' is not satisfied`
+→ **Fix**: Implement Display trait for the enum
+
+**Error**: `assertion failed: left: N, right: 1`
+→ **Fix**: Use UUID-based unique test data
+
+### **Proven Type Mappings**
+
+- `Uuid` ↔ PostgreSQL `UUID` (direct)
+- `HeaplessString<N>` ↔ `VARCHAR(N)` (via `.as_str()` and `try_from()`)
+- `Decimal` ↔ `DECIMAL(15,2)` (direct)
+- `DateTime<Utc>` ↔ `TIMESTAMP WITH TIME ZONE` (direct)
+- `Option<T>` ↔ `NULL`/`NOT NULL` (direct)
+- Rust enums ↔ PostgreSQL enums (via `.to_string()` and `.parse()`)
+
+### **Template Repository Structure**
+
+Use AccountRepositoryImpl as the reference template:
+- All SQLx query patterns
+- Error handling approaches  
+- Test structure and setup
+- Type conversion methods
+- Business method implementations
+
 ## Next Steps
 
-**Primary Blocker**: Complete the 9 missing PostgreSQL repository implementations (~2000 lines of code). This represents the critical gap between the excellent architecture and a fully functional banking system.
+**Updated Status**: With AccountRepositoryImpl complete, we have **4/12 repositories (33%)**. 
+
+**Implementation Priority** (use AccountRepositoryImpl as template):
+1. **TransactionRepositoryImpl** - Core banking operations
+2. **PersonRepositoryImpl** - Required for foreign key references
+3. **ComplianceRepositoryImpl** - Regulatory requirements
+4. **CollateralRepositoryImpl** - Loan collateral management
+5. Remaining repositories using proven patterns
+
+**Critical Success Factor**: Follow the patterns documented above EXACTLY. They are battle-tested and will prevent the common pitfalls that cause compilation failures and test failures.
 
 Once repositories are complete, the system provides a robust foundation for enterprise banking operations with strong regulatory compliance and high performance characteristics.

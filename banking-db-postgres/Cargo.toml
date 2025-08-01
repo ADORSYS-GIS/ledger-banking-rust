@@ -10,6 +10,7 @@ repository.workspace = true
 default = []
 postgres_tests = []
 offline = []
+full_sqlx = []
 
 [dependencies]
 # Workspace dependencies
@@ -17,7 +18,7 @@ banking-api = { path = "../banking-api", features = ["sqlx"] }
 banking-db = { path = "../banking-db" }
 
 # Database
-sqlx.workspace = true
+sqlx = { workspace = true, features = ["rust_decimal"] }
 tokio.workspace = true
 
 # Serialization
@@ -42,6 +43,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 tokio-test.workspace = true
+sqlx = { workspace = true, features = ["migrate"] }
 
 [package.metadata.sqlx]
 migrations = "./migrations"
