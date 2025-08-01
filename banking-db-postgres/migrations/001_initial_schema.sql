@@ -57,7 +57,7 @@ CREATE TYPE branch_risk_rating AS ENUM ('low', 'medium', 'high', 'critical');
 
 -- Customer related enums
 CREATE TYPE customer_type AS ENUM ('Individual', 'Corporate');
-CREATE TYPE identity_type AS ENUM ('NationalId', 'Passport', 'CompanyRegistration');
+CREATE TYPE identity_type AS ENUM ('NationalId', 'Passport', 'CompanyRegistration', 'PermanentResidentCard', 'AsylumCard', 'TemporaryResidentPermit', 'Unknown');
 CREATE TYPE risk_rating AS ENUM ('Low', 'Medium', 'High', 'Blacklisted');
 CREATE TYPE customer_status AS ENUM ('Active', 'PendingVerification', 'Deceased', 'Dissolved', 'Blacklisted');
 CREATE TYPE kyc_status AS ENUM ('NotStarted', 'InProgress', 'Pending', 'Complete', 'Approved', 'Rejected', 'RequiresUpdate', 'Failed');
@@ -77,6 +77,19 @@ CREATE TYPE relationship_type AS ENUM ('PrimaryHandler', 'BackupHandler', 'RiskO
 CREATE TYPE relationship_status AS ENUM ('Active', 'Inactive', 'Suspended');
 CREATE TYPE permission_type AS ENUM ('ViewOnly', 'LimitedWithdrawal', 'JointApproval', 'FullAccess');
 CREATE TYPE mandate_status AS ENUM ('Active', 'Suspended', 'Revoked', 'Expired');
+
+-- Transaction related enums
+CREATE TYPE transaction_type AS ENUM ('Credit', 'Debit');
+CREATE TYPE transaction_status AS ENUM ('Pending', 'Posted', 'Reversed', 'Failed', 'AwaitingApproval', 'ApprovalRejected');
+CREATE TYPE transaction_approval_status AS ENUM ('Pending', 'Approved', 'Rejected', 'PartiallyApproved');
+CREATE TYPE transaction_workflow_status AS ENUM ('Pending', 'Approved', 'Rejected', 'TimedOut');
+CREATE TYPE transaction_audit_action AS ENUM ('Created', 'StatusChanged', 'Posted', 'Reversed', 'Failed', 'Approved', 'Rejected');
+CREATE TYPE channel_type AS ENUM ('MobileApp', 'AgentTerminal', 'ATM', 'InternetBanking', 'BranchTeller', 'USSD', 'ApiGateway');
+CREATE TYPE channel_status AS ENUM ('Active', 'Inactive', 'Maintenance', 'Suspended');
+CREATE TYPE channel_fee_type AS ENUM ('TransactionFee', 'MaintenanceFee', 'ServiceFee', 'PenaltyFee', 'ProcessingFee', 'ComplianceFee', 'InterchangeFee', 'NetworkFee');
+CREATE TYPE channel_fee_calculation_method AS ENUM ('Fixed', 'Percentage', 'Tiered', 'BalanceBased', 'RuleBased', 'Hybrid');
+CREATE TYPE reconciliation_status AS ENUM ('InProgress', 'Completed', 'Failed', 'RequiresManualReview');
+CREATE TYPE permitted_operation AS ENUM ('Credit', 'Debit', 'InterestPosting', 'FeeApplication', 'ClosureSettlement', 'None');
 CREATE TYPE ubo_status AS ENUM ('Active', 'Inactive', 'UnderReview');
 
 -- Compliance related enums
@@ -118,6 +131,28 @@ CREATE TYPE concentration_category AS ENUM ('CollateralType', 'GeographicLocatio
 CREATE TYPE enforcement_type AS ENUM ('PrivateSale', 'PublicAuction', 'CourtOrdered', 'SelfHelp', 'ForeClosureAction', 'Repossession');
 CREATE TYPE enforcement_method AS ENUM ('DirectSale', 'AuctionHouse', 'OnlinePlatform', 'BrokerSale', 'CourtSale', 'AssetManagementCompany');
 CREATE TYPE enforcement_status AS ENUM ('Initiated', 'InProgress', 'Completed', 'Suspended', 'Cancelled', 'UnderLegalReview');
+
+-- Reason and workflow related enums
+CREATE TYPE reason_severity AS ENUM ('Critical', 'High', 'Medium', 'Low', 'Informational');
+CREATE TYPE workflow_type AS ENUM ('AccountOpening', 'AccountClosure', 'LoanApplication', 'LoanDisbursement', 'TransactionApproval', 'ComplianceCheck', 'KycUpdate', 'DocumentVerification', 'CreditDecision', 'CollateralValuation', 'InterestRateChange', 'FeeWaiver', 'LimitChange', 'StatusChange', 'ManualIntervention');
+CREATE TYPE workflow_status AS ENUM ('Pending', 'InProgress', 'Approved', 'Rejected', 'Cancelled', 'OnHold', 'Expired', 'Completed');
+CREATE TYPE restructuring_type AS ENUM ('Rescheduling', 'Renewal', 'Refinancing', 'Restructuring', 'WriteOff');
+
+-- Update existing transaction_audit_action to match API enum
+DROP TYPE IF EXISTS transaction_audit_action CASCADE;
+CREATE TYPE transaction_audit_action AS ENUM ('Create', 'Approve', 'Reject', 'Cancel', 'Reverse', 'Modify', 'StatusChange');
+
+-- Update existing hold_type to match API enum  
+DROP TYPE IF EXISTS hold_type CASCADE;
+CREATE TYPE hold_type AS ENUM ('Regulatory', 'Legal', 'Credit', 'Administrative', 'Collateral', 'Temporary');
+
+-- Update existing hold_status to match API enum
+DROP TYPE IF EXISTS hold_status CASCADE;
+CREATE TYPE hold_status AS ENUM ('Active', 'Released', 'Expired', 'Cancelled', 'PartiallyReleased');
+
+-- Update existing sar_status to match API enum
+DROP TYPE IF EXISTS sar_status CASCADE;
+CREATE TYPE sar_status AS ENUM ('Draft', 'Submitted', 'Acknowledged', 'UnderReview', 'Closed');
 
 -- =============================================================================
 -- UTILITY FUNCTIONS
@@ -321,7 +356,7 @@ CREATE TRIGGER tr_entity_reference_updated_at BEFORE UPDATE ON entity_reference 
 CREATE TABLE customers (
     customer_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     customer_type customer_type NOT NULL,
-    full_name VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
     id_type identity_type NOT NULL,
     id_number VARCHAR(50) NOT NULL,
     risk_rating risk_rating NOT NULL DEFAULT 'Low',
@@ -388,7 +423,7 @@ CREATE TABLE reason_and_purpose (
     -- Reason properties
     requires_details BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
-    severity VARCHAR(20),
+    severity reason_severity,
     display_order INTEGER DEFAULT 0,
     
     -- Compliance metadata fields
@@ -590,15 +625,15 @@ CREATE TABLE ultimate_beneficial_owners (
 CREATE TABLE transactions (
     transaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID NOT NULL REFERENCES accounts(account_id),
-    transaction_code VARCHAR(20) NOT NULL, -- Internal transaction type code
-    transaction_type VARCHAR(10) NOT NULL CHECK (transaction_type IN ('Credit', 'Debit')),
+    transaction_code VARCHAR(8) NOT NULL, -- Internal transaction type code
+    transaction_type transaction_type NOT NULL,
     amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     description VARCHAR(200) NOT NULL,
     
     -- Multi-channel processing support
     channel_id VARCHAR(50) NOT NULL, -- 'BranchTeller', 'ATM', 'OnlineBanking', 'MobileBanking', 'AgentBanking'
-    terminal_id VARCHAR(50), -- For ATM/POS transactions
+    terminal_id UUID, -- For ATM/POS transactions, references terminals table
     agent_user_id UUID, -- For agent banking transactions
     
     -- Transaction timing
@@ -606,16 +641,16 @@ CREATE TABLE transactions (
     value_date DATE NOT NULL, -- When the transaction affects the balance
     
     -- Status and approval workflow
-    status VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Posted', 'Failed', 'Reversed', 'OnHold')),
+    status transaction_status NOT NULL DEFAULT 'Pending',
     reference_number VARCHAR(200) NOT NULL UNIQUE,
     external_reference VARCHAR(100), -- For external system correlation
     
     -- Financial posting integration
-    gl_code VARCHAR(20) NOT NULL, -- General Ledger account code
+    gl_code VARCHAR(10) NOT NULL, -- General Ledger account code
     
     -- Risk and compliance
     requires_approval BOOLEAN NOT NULL DEFAULT FALSE,
-    approval_status VARCHAR(20) CHECK (approval_status IN ('Pending', 'Approved', 'Rejected')),
+    approval_status transaction_approval_status,
     risk_score DECIMAL(5,2) CHECK (risk_score >= 0 AND risk_score <= 100),
     
     -- Audit
@@ -632,14 +667,93 @@ CREATE TABLE transactions (
 CREATE TABLE transaction_audit_trail (
     audit_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
-    action_type VARCHAR(50) NOT NULL, -- 'Created', 'StatusChanged', 'Posted', 'Reversed', 'Failed', 'Approved', 'Rejected'
+    action_type transaction_audit_action NOT NULL,
     performed_by UUID NOT NULL REFERENCES persons(person_id),
     performed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    old_status VARCHAR(20), -- TransactionStatus enum values
-    new_status VARCHAR(20), -- TransactionStatus enum values  
+    old_status transaction_status,
+    new_status transaction_status,  
     reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for audit reason
-    details_hash BYTEA -- Blake3 hash of additional details for tamper detection
+    details BYTEA -- Blake3 hash of additional details for tamper detection
 );
+
+-- General Ledger Entries table
+CREATE TABLE gl_entries (
+    entry_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
+    account_code UUID NOT NULL, -- References GL account structure
+    debit_amount DECIMAL(15,2) CHECK (debit_amount >= 0),
+    credit_amount DECIMAL(15,2) CHECK (credit_amount >= 0),
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    description VARCHAR(200) NOT NULL,
+    reference_number VARCHAR(200) NOT NULL,
+    value_date DATE NOT NULL,
+    posting_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_gl_entry_amount CHECK (
+        (debit_amount IS NOT NULL AND credit_amount IS NULL) OR
+        (debit_amount IS NULL AND credit_amount IS NOT NULL)
+    ),
+    CONSTRAINT ck_gl_currency_format CHECK (LENGTH(currency) = 3 AND currency = UPPER(currency))
+);
+
+-- Transaction Request table for tracking requests
+CREATE TABLE transaction_requests (
+    request_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL REFERENCES accounts(account_id),
+    transaction_type transaction_type NOT NULL,
+    amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    description VARCHAR(200) NOT NULL,
+    channel VARCHAR(20) NOT NULL CHECK (channel IN ('MobileApp', 'AgentTerminal', 'ATM', 'InternetBanking', 'BranchTeller', 'USSD', 'ApiGateway')),
+    terminal_id UUID,
+    initiator_id UUID NOT NULL REFERENCES persons(person_id),
+    external_reference VARCHAR(100),
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_request_currency_format CHECK (LENGTH(currency) = 3 AND currency = UPPER(currency))
+);
+
+-- Transaction Results table
+CREATE TABLE transaction_results (
+    result_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
+    reference_number VARCHAR(200) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Validation Results table
+CREATE TABLE validation_results (
+    validation_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    transaction_id UUID REFERENCES transactions(transaction_id),
+    is_valid BOOLEAN NOT NULL DEFAULT FALSE,
+    errors JSONB, -- JSON array of error messages
+    warnings JSONB, -- JSON array of warning messages
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Approval table (separate from approval workflow)
+CREATE TABLE approvals (
+    approval_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
+    approver_id UUID NOT NULL REFERENCES persons(person_id),
+    approved_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX idx_gl_entries_transaction ON gl_entries(transaction_id);
+CREATE INDEX idx_gl_entries_account_code ON gl_entries(account_code);
+CREATE INDEX idx_gl_entries_posting_date ON gl_entries(posting_date);
+CREATE INDEX idx_transaction_requests_account ON transaction_requests(account_id);
+CREATE INDEX idx_transaction_requests_initiator ON transaction_requests(initiator_id);
+CREATE INDEX idx_transaction_results_transaction ON transaction_results(transaction_id);
+CREATE INDEX idx_validation_results_transaction ON validation_results(transaction_id);
+CREATE INDEX idx_approvals_transaction ON approvals(transaction_id);
+CREATE INDEX idx_approvals_approver ON approvals(approver_id);
 
 -- =============================================================================
 -- AGENT BANKING NETWORK MANAGEMENT
@@ -1057,19 +1171,19 @@ CREATE TABLE business_day_cache (
 CREATE TABLE account_workflows (
     workflow_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID NOT NULL REFERENCES accounts(account_id),
-    workflow_type VARCHAR(50) NOT NULL CHECK (workflow_type IN (
-        'AccountOpening', 'AccountClosure', 'AccountReactivation', 
-        'ComplianceVerification', 'MultiPartyApproval'
+    workflow_type workflow_type NOT NULL,
+    current_step VARCHAR(50) NOT NULL CHECK (current_step IN (
+        'InitiateRequest', 'ComplianceCheck', 'DocumentVerification',
+        'ApprovalRequired', 'FinalSettlement', 'Completed'
     )),
-    current_step VARCHAR(50) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Rejected', 'TimedOut')),
+    status VARCHAR(20) NOT NULL CHECK (status IN (
+        'InProgress', 'PendingAction', 'Completed', 'Failed', 'Cancelled', 'TimedOut'
+    )),
     initiated_by UUID NOT NULL REFERENCES persons(person_id),
     initiated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    timeout_at TIMESTAMP WITH TIME ZONE NOT NULL,
     completed_at TIMESTAMP WITH TIME ZONE,
     next_action_required VARCHAR(500),
-    rejection_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for rejection
-    metadata JSONB,
+    timeout_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -1078,12 +1192,74 @@ CREATE TABLE account_workflows (
 CREATE TABLE workflow_step_records (
     step_record_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workflow_id UUID NOT NULL REFERENCES account_workflows(workflow_id) ON DELETE CASCADE,
-    step_name VARCHAR(50) NOT NULL,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('Pending', 'InProgress', 'Completed', 'Skipped', 'Failed')),
-    assigned_to VARCHAR(100),
-    started_at TIMESTAMP WITH TIME ZONE,
-    completed_at TIMESTAMP WITH TIME ZONE,
-    notes VARCHAR(1000),
+    step VARCHAR(50) NOT NULL CHECK (step IN (
+        'InitiateRequest', 'ComplianceCheck', 'DocumentVerification',
+        'ApprovalRequired', 'FinalSettlement', 'Completed'
+    )),
+    completed_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    completed_by UUID NOT NULL REFERENCES persons(person_id),
+    notes VARCHAR(500),
+    supporting_documents JSONB, -- Array of document names/IDs
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Account opening requests (workflow-specific data)
+CREATE TABLE account_opening_requests (
+    request_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workflow_id UUID NOT NULL REFERENCES account_workflows(workflow_id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES customers(customer_id),
+    product_code VARCHAR(12) NOT NULL,
+    initial_deposit DECIMAL(15,2),
+    channel VARCHAR(50) NOT NULL,
+    initiated_by UUID NOT NULL REFERENCES persons(person_id),
+    supporting_documents JSONB, -- Array of document references
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Closure requests (workflow-specific data)
+CREATE TABLE closure_requests (
+    request_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workflow_id UUID NOT NULL REFERENCES account_workflows(workflow_id) ON DELETE CASCADE,
+    reason VARCHAR(50) NOT NULL CHECK (reason IN (
+        'CustomerRequest', 'Regulatory', 'Compliance', 'Dormancy', 'SystemMaintenance'
+    )),
+    requested_by UUID NOT NULL REFERENCES persons(person_id),
+    force_closure BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Final settlements (workflow-specific data)
+CREATE TABLE final_settlements (
+    settlement_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workflow_id UUID NOT NULL REFERENCES account_workflows(workflow_id) ON DELETE CASCADE,
+    current_balance DECIMAL(15,2) NOT NULL,
+    accrued_interest DECIMAL(15,2) NOT NULL DEFAULT 0,
+    pending_fees DECIMAL(15,2) NOT NULL DEFAULT 0,
+    closure_fees DECIMAL(15,2) NOT NULL DEFAULT 0,
+    final_amount DECIMAL(15,2) NOT NULL,
+    requires_disbursement BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Dormancy assessments (workflow-specific data)
+CREATE TABLE dormancy_assessments (
+    assessment_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workflow_id UUID NOT NULL REFERENCES account_workflows(workflow_id) ON DELETE CASCADE,
+    is_eligible BOOLEAN NOT NULL,
+    last_activity_date DATE,
+    days_inactive INTEGER NOT NULL,
+    threshold_days INTEGER NOT NULL,
+    product_specific_rules JSONB, -- Array of rule descriptions
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Document references (for workflows)
+CREATE TABLE document_references (
+    reference_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    workflow_id UUID REFERENCES account_workflows(workflow_id) ON DELETE CASCADE,
+    document_id BYTEA NOT NULL, -- Blake3 hash
+    document_type VARCHAR(50) NOT NULL,
+    document_path BYTEA, -- Blake3 hash of path content
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -1093,7 +1269,7 @@ CREATE TABLE transaction_approvals (
     workflow_id UUID NOT NULL REFERENCES account_workflows(workflow_id),
     transaction_id UUID NOT NULL REFERENCES transactions(transaction_id),
     approver_id UUID NOT NULL,
-    approval_action VARCHAR(20) NOT NULL CHECK (approval_action IN ('Pending', 'Approved', 'Rejected', 'PartiallyApproved')),
+    approval_action transaction_approval_status NOT NULL,
     approved_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     approval_notes VARCHAR(512),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -1223,15 +1399,15 @@ CREATE TABLE fee_applications (
     transaction_id UUID REFERENCES transactions(transaction_id),
     fee_type VARCHAR(20) NOT NULL CHECK (fee_type IN ('EventBased', 'Periodic')),
     fee_category VARCHAR(30) NOT NULL CHECK (fee_category IN ('Transaction', 'Maintenance', 'Service', 'Penalty', 'Card', 'Loan', 'Regulatory')),
-    product_code VARCHAR(50) NOT NULL,
-    fee_code VARCHAR(50) NOT NULL,
-    description VARCHAR(255) NOT NULL,
+    product_code VARCHAR(12) NOT NULL,
+    fee_code VARCHAR(12) NOT NULL,
+    description VARCHAR(200) NOT NULL,
     amount DECIMAL(15,2) NOT NULL,
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     calculation_method VARCHAR(20) NOT NULL CHECK (calculation_method IN ('Fixed', 'Percentage', 'Tiered', 'BalanceBased', 'RuleBased')),
     calculation_base_amount DECIMAL(15,2),
     fee_rate DECIMAL(8,6),
-    trigger_event VARCHAR(50) NOT NULL,
+    trigger_event VARCHAR(50) NOT NULL CHECK (trigger_event IN ('AtmWithdrawal', 'PosTraction', 'WireTransfer', 'OnlineTransfer', 'CheckDeposit', 'InsufficientFunds', 'OverdraftUsage', 'BelowMinimumBalance', 'AccountOpening', 'AccountClosure', 'AccountMaintenance', 'StatementGeneration', 'MonthlyMaintenance', 'QuarterlyMaintenance', 'AnnualMaintenance', 'CardIssuance', 'CardReplacement', 'CardActivation', 'Manual', 'Regulatory')),
     status VARCHAR(20) NOT NULL DEFAULT 'Applied' CHECK (status IN ('Applied', 'Pending', 'Waived', 'Reversed', 'Failed')),
     applied_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     value_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -1320,7 +1496,7 @@ CREATE TABLE overdraft_facilities (
     review_frequency VARCHAR(20) NOT NULL CHECK (review_frequency IN ('Monthly', 'Quarterly', 'SemiAnnually', 'Annually')),
     next_review_date DATE NOT NULL,
     security_required BOOLEAN NOT NULL DEFAULT FALSE,
-    security_details VARCHAR(255),
+    security_details VARCHAR(500),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -1403,6 +1579,64 @@ CREATE TABLE overdraft_interest_calculations (
     CONSTRAINT ck_interest_calculation_valid CHECK (interest_amount >= 0)
 );
 
+-- Overdraft utilization tracking for interest calculation
+CREATE TABLE overdraft_utilization (
+    utilization_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL REFERENCES accounts(account_id),
+    utilization_date DATE NOT NULL,
+    opening_balance DECIMAL(15,2) NOT NULL, -- Negative for overdrawn
+    closing_balance DECIMAL(15,2) NOT NULL, -- Negative for overdrawn
+    average_daily_balance DECIMAL(15,2) NOT NULL,
+    days_overdrawn INTEGER NOT NULL CHECK (days_overdrawn >= 0),
+    interest_accrued DECIMAL(15,2) NOT NULL CHECK (interest_accrued >= 0),
+    interest_rate DECIMAL(8,6) NOT NULL CHECK (interest_rate >= 0),
+    capitalized BOOLEAN NOT NULL DEFAULT FALSE,
+    capitalization_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_utilization_dates_valid CHECK (capitalization_date IS NULL OR capitalization_date >= utilization_date)
+);
+
+-- Daily overdraft processing jobs for EOD
+CREATE TABLE overdraft_processing_jobs (
+    job_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    processing_date DATE NOT NULL UNIQUE,
+    accounts_processed INTEGER NOT NULL DEFAULT 0 CHECK (accounts_processed >= 0),
+    total_interest_accrued DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    accounts_capitalized INTEGER NOT NULL DEFAULT 0 CHECK (accounts_capitalized >= 0),
+    total_capitalized_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(20) NOT NULL DEFAULT 'Scheduled' CHECK (status IN ('Scheduled', 'Running', 'Completed', 'Failed', 'PartiallyCompleted')),
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    errors TEXT[], -- Array of error messages
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_job_timing CHECK (started_at IS NULL OR completed_at IS NULL OR completed_at >= started_at)
+);
+
+-- CASA transaction validation contexts
+CREATE TABLE casa_transaction_validations (
+    validation_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL REFERENCES accounts(account_id),
+    transaction_amount DECIMAL(15,2) NOT NULL,
+    transaction_type VARCHAR(50) NOT NULL,
+    current_balance DECIMAL(15,2) NOT NULL,
+    available_balance DECIMAL(15,2) NOT NULL,
+    overdraft_limit DECIMAL(15,2),
+    post_transaction_balance DECIMAL(15,2) NOT NULL,
+    overdraft_utilization DECIMAL(15,2),
+    validation_result VARCHAR(30) NOT NULL CHECK (validation_result IN ('Approved', 'Rejected', 'RequiresAuthorization', 'RequiresHoldRelease')),
+    validation_messages TEXT[], -- Array of validation messages
+    requires_authorization BOOLEAN NOT NULL DEFAULT FALSE,
+    authorization_level VARCHAR(20) CHECK (authorization_level IN ('Teller', 'Supervisor', 'Manager', 'CreditCommittee')),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_validation_auth_consistency CHECK (
+        (requires_authorization = TRUE AND authorization_level IS NOT NULL) OR
+        (requires_authorization = FALSE AND authorization_level IS NULL)
+    )
+);
+
 -- =============================================================================
 -- CHANNEL MANAGEMENT TABLES
 -- =============================================================================
@@ -1411,9 +1645,9 @@ CREATE TABLE overdraft_interest_calculations (
 CREATE TABLE channels (
     channel_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     channel_code VARCHAR(50) NOT NULL UNIQUE,
-    channel_name VARCHAR(255) NOT NULL,
+    channel_name VARCHAR(100) NOT NULL,
     channel_type VARCHAR(30) NOT NULL CHECK (channel_type IN ('BranchTeller', 'ATM', 'InternetBanking', 'MobileApp', 'AgentTerminal', 'USSD', 'ApiGateway')),
-    status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive', 'Maintenance', 'Suspended')),
+    status channel_status NOT NULL DEFAULT 'Active',
     daily_limit DECIMAL(15,2),
     per_transaction_limit DECIMAL(15,2),
     supported_currencies VARCHAR(3)[] NOT NULL DEFAULT ARRAY['USD'], -- Array of 3-character currency codes
@@ -1445,10 +1679,10 @@ CREATE TABLE fee_schedules (
 CREATE TABLE fee_items (
     fee_item_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     schedule_id UUID NOT NULL REFERENCES fee_schedules(schedule_id) ON DELETE CASCADE,
-    fee_code VARCHAR(20) NOT NULL,
+    fee_code VARCHAR(12) NOT NULL,
     fee_name VARCHAR(100) NOT NULL,
-    fee_type VARCHAR(30) NOT NULL CHECK (fee_type IN ('TransactionFee', 'MaintenanceFee', 'ServiceFee', 'PenaltyFee', 'ProcessingFee', 'ComplianceFee', 'InterchangeFee', 'NetworkFee')),
-    calculation_method VARCHAR(20) NOT NULL CHECK (calculation_method IN ('Fixed', 'Percentage', 'Tiered', 'BalanceBased', 'RuleBased', 'Hybrid')),
+    fee_type channel_fee_type NOT NULL,
+    calculation_method channel_fee_calculation_method NOT NULL,
     fee_amount DECIMAL(15,2),
     fee_percentage DECIMAL(8,6),
     minimum_fee DECIMAL(15,2),
@@ -1491,7 +1725,7 @@ CREATE TABLE channel_reconciliation_reports (
     reconciliation_date DATE NOT NULL,
     total_transactions BIGINT NOT NULL DEFAULT 0,
     total_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-    status VARCHAR(30) NOT NULL DEFAULT 'InProgress' CHECK (status IN ('InProgress', 'Completed', 'Failed', 'RequiresManualReview')),
+    status reconciliation_status NOT NULL DEFAULT 'InProgress',
     generated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -1511,6 +1745,17 @@ CREATE TABLE reconciliation_discrepancies (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_discrepancy_difference CHECK (difference = expected_amount - actual_amount)
+);
+
+-- Channel fees table
+CREATE TABLE channel_fees (
+    fee_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fee_type channel_fee_type NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    description VARCHAR(200) NOT NULL,
+    applies_to_transaction UUID NOT NULL REFERENCES transactions(transaction_id),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 -- Add foreign key constraint for channels fee_schedule_id after fee_schedules table is created
@@ -1533,6 +1778,8 @@ CREATE INDEX idx_reconciliation_reports_channel ON channel_reconciliation_report
 CREATE INDEX idx_reconciliation_reports_date ON channel_reconciliation_reports(reconciliation_date);
 CREATE INDEX idx_reconciliation_discrepancies_report ON reconciliation_discrepancies(report_id);
 CREATE INDEX idx_reconciliation_discrepancies_transaction ON reconciliation_discrepancies(transaction_id);
+CREATE INDEX idx_channel_fees_type ON channel_fees(fee_type);
+CREATE INDEX idx_channel_fees_transaction ON channel_fees(applies_to_transaction);
 
 -- Triggers for updated_at timestamps
 CREATE TRIGGER update_channels_updated_at
@@ -1549,33 +1796,95 @@ CREATE TRIGGER update_fee_schedules_updated_at
 -- LOAN SPECIALIZED TABLES
 -- =============================================================================
 
--- Collection actions for delinquent loans
-CREATE TABLE collection_actions (
-    action_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    delinquency_id UUID NOT NULL,
+-- Amortization schedules for loan installment planning
+CREATE TABLE amortization_schedules (
+    schedule_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     loan_account_id UUID NOT NULL REFERENCES accounts(account_id),
-    action_type VARCHAR(30) NOT NULL CHECK (action_type IN ('EmailReminder', 'SmsNotification', 'PhoneCall', 'LetterNotice', 'LegalNotice', 'FieldVisit', 'PaymentPlan', 'Restructuring', 'LegalAction', 'AssetRecovery')),
-    action_date DATE NOT NULL,
-    due_date DATE,
-    description VARCHAR(500) NOT NULL,
-    amount_demanded DECIMAL(15,2),
-    response_received BOOLEAN NOT NULL DEFAULT FALSE,
-    response_date DATE,
-    response_details VARCHAR(1000),
-    follow_up_required BOOLEAN NOT NULL DEFAULT FALSE,
-    follow_up_date DATE,
-    action_status VARCHAR(20) NOT NULL CHECK (action_status IN ('Planned', 'InProgress', 'Completed', 'Failed', 'Cancelled')),
-    assigned_to UUID NOT NULL REFERENCES persons(person_id),
-    created_by UUID NOT NULL REFERENCES persons(person_id),
+    original_principal DECIMAL(15,2) NOT NULL,
+    interest_rate DECIMAL(8,6) NOT NULL,
+    term_months INTEGER NOT NULL,
+    installment_amount DECIMAL(15,2) NOT NULL,
+    first_payment_date DATE NOT NULL,
+    maturity_date DATE NOT NULL,
+    total_interest DECIMAL(15,2) NOT NULL,
+    total_payments DECIMAL(15,2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Individual installments in amortization schedule
+CREATE TABLE amortization_entries (
+    entry_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    schedule_id UUID NOT NULL REFERENCES amortization_schedules(schedule_id),
+    installment_number INTEGER NOT NULL,
+    due_date DATE NOT NULL,
+    opening_principal_balance DECIMAL(15,2) NOT NULL,
+    installment_amount DECIMAL(15,2) NOT NULL,
+    principal_component DECIMAL(15,2) NOT NULL,
+    interest_component DECIMAL(15,2) NOT NULL,
+    closing_principal_balance DECIMAL(15,2) NOT NULL,
+    cumulative_principal_paid DECIMAL(15,2) NOT NULL,
+    cumulative_interest_paid DECIMAL(15,2) NOT NULL,
+    payment_status VARCHAR(20) NOT NULL CHECK (payment_status IN ('Scheduled', 'Due', 'PartiallyPaid', 'Paid', 'Overdue', 'WriteOff')),
+    paid_date DATE,
+    paid_amount DECIMAL(15,2),
+    days_overdue INTEGER,
     
-    CONSTRAINT ck_response_consistency CHECK (
-        (response_received = FALSE AND response_date IS NULL) OR
-        (response_received = TRUE AND response_date IS NOT NULL)
+    CONSTRAINT ck_installment_components CHECK (principal_component + interest_component = installment_amount),
+    CONSTRAINT ck_payment_consistency CHECK (
+        (payment_status IN ('Paid', 'PartiallyPaid') AND paid_date IS NOT NULL) OR
+        (payment_status NOT IN ('Paid', 'PartiallyPaid') AND paid_date IS NULL)
     )
 );
 
--- Loan payments and allocations
+-- Loan delinquency tracking and management
+CREATE TABLE loan_delinquencies (
+    delinquency_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    loan_account_id UUID NOT NULL REFERENCES accounts(account_id),
+    delinquency_start_date DATE NOT NULL,
+    current_dpd INTEGER NOT NULL DEFAULT 0, -- Days Past Due
+    highest_dpd INTEGER NOT NULL DEFAULT 0,
+    delinquency_stage VARCHAR(20) NOT NULL CHECK (delinquency_stage IN ('Current', 'Stage1', 'Stage2', 'Stage3', 'NonPerforming', 'WriteOff')),
+    overdue_principal DECIMAL(15,2) NOT NULL DEFAULT 0,
+    overdue_interest DECIMAL(15,2) NOT NULL DEFAULT 0,
+    penalty_interest_accrued DECIMAL(15,2) NOT NULL DEFAULT 0,
+    total_overdue_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    last_payment_date DATE,
+    last_payment_amount DECIMAL(15,2),
+    restructuring_eligibility BOOLEAN NOT NULL DEFAULT TRUE,
+    npl_date DATE, -- Non-Performing Loan classification
+    provisioning_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_dpd_consistency CHECK (highest_dpd >= current_dpd),
+    CONSTRAINT ck_overdue_total CHECK (total_overdue_amount = overdue_principal + overdue_interest + penalty_interest_accrued)
+);
+
+-- Loan delinquency processing jobs for EOD
+CREATE TABLE loan_delinquency_jobs (
+    job_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    processing_date DATE NOT NULL,
+    loans_processed INTEGER NOT NULL DEFAULT 0,
+    new_delinquent_loans INTEGER NOT NULL DEFAULT 0,
+    recovered_loans INTEGER NOT NULL DEFAULT 0,
+    npl_classifications INTEGER NOT NULL DEFAULT 0,
+    total_penalty_interest DECIMAL(15,2) NOT NULL DEFAULT 0,
+    collection_actions_triggered INTEGER NOT NULL DEFAULT 0,
+    notifications_sent INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('Scheduled', 'Running', 'Completed', 'Failed', 'PartiallyCompleted')),
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    errors TEXT[],
+    
+    CONSTRAINT ck_job_timing CHECK (
+        (status IN ('Completed', 'Failed') AND started_at IS NOT NULL AND completed_at IS NOT NULL) OR
+        (status = 'Running' AND started_at IS NOT NULL AND completed_at IS NULL) OR
+        (status = 'Scheduled' AND started_at IS NULL AND completed_at IS NULL)
+    )
+);
+
+-- Loan payments
 CREATE TABLE loan_payments (
     payment_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     loan_account_id UUID NOT NULL REFERENCES accounts(account_id),
@@ -1605,6 +1914,50 @@ CREATE TABLE payment_allocations (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
+-- Prepayment handling options and results
+CREATE TABLE prepayment_handlings (
+    handling_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    payment_allocation_id UUID NOT NULL REFERENCES payment_allocations(allocation_id),
+    handling_type VARCHAR(30) NOT NULL CHECK (handling_type IN ('TermReduction', 'InstallmentReduction', 'HoldInSuspense', 'Refund')),
+    excess_amount DECIMAL(15,2) NOT NULL,
+    new_outstanding_principal DECIMAL(15,2) NOT NULL,
+    term_reduction_months INTEGER,
+    new_installment_amount DECIMAL(15,2),
+    new_maturity_date DATE,
+    schedule_regenerated BOOLEAN NOT NULL DEFAULT FALSE,
+    customer_choice BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Collection actions for delinquent loans
+CREATE TABLE collection_actions (
+    action_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    delinquency_id UUID NOT NULL REFERENCES loan_delinquencies(delinquency_id),
+    loan_account_id UUID NOT NULL REFERENCES accounts(account_id),
+    action_type VARCHAR(30) NOT NULL CHECK (action_type IN ('EmailReminder', 'SmsNotification', 'PhoneCall', 'LetterNotice', 'LegalNotice', 'FieldVisit', 'PaymentPlan', 'Restructuring', 'LegalAction', 'AssetRecovery')),
+    action_date DATE NOT NULL,
+    due_date DATE,
+    description VARCHAR(500) NOT NULL,
+    amount_demanded DECIMAL(15,2),
+    response_received BOOLEAN NOT NULL DEFAULT FALSE,
+    response_date DATE,
+    response_details VARCHAR(1000),
+    follow_up_required BOOLEAN NOT NULL DEFAULT FALSE,
+    follow_up_date DATE,
+    action_status VARCHAR(20) NOT NULL CHECK (action_status IN ('Planned', 'InProgress', 'Completed', 'Failed', 'Cancelled')),
+    assigned_to UUID NOT NULL REFERENCES persons(person_id),
+    created_by UUID NOT NULL REFERENCES persons(person_id),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_response_consistency CHECK (
+        (response_received = FALSE AND response_date IS NULL) OR
+        (response_received = TRUE AND response_date IS NOT NULL)
+    )
+);
+
+-- Loan payments and allocations
+
+
 -- Payment reversals
 CREATE TABLE payment_reversals (
     reversal_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -1621,7 +1974,7 @@ CREATE TABLE payment_reversals (
 CREATE TABLE loan_restructurings (
     restructuring_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     loan_account_id UUID NOT NULL REFERENCES accounts(account_id),
-    restructuring_type VARCHAR(30) NOT NULL CHECK (restructuring_type IN ('PaymentHoliday', 'TermExtension', 'RateReduction', 'PrincipalReduction', 'InstallmentReduction', 'InterestCapitalization', 'FullRestructuring')),
+    restructuring_type restructuring_type NOT NULL,
     request_date DATE NOT NULL,
     effective_date DATE,
     restructuring_reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
@@ -2057,6 +2410,47 @@ CREATE INDEX idx_accounts_type ON accounts(account_type);
 CREATE INDEX idx_accounts_branch ON accounts(domicile_branch_id);
 CREATE INDEX idx_accounts_balance ON accounts(current_balance);
 CREATE INDEX idx_accounts_loan_maturity ON accounts(maturity_date) WHERE account_type = 'Loan';
+
+-- Loan table indexes
+CREATE INDEX idx_amortization_schedules_loan_account ON amortization_schedules(loan_account_id);
+CREATE INDEX idx_amortization_schedules_maturity ON amortization_schedules(maturity_date);
+
+CREATE INDEX idx_amortization_entries_schedule ON amortization_entries(schedule_id);
+CREATE INDEX idx_amortization_entries_due_date ON amortization_entries(due_date);
+CREATE INDEX idx_amortization_entries_status ON amortization_entries(payment_status);
+CREATE INDEX idx_amortization_entries_overdue ON amortization_entries(days_overdue) WHERE days_overdue > 0;
+
+CREATE INDEX idx_loan_delinquencies_account ON loan_delinquencies(loan_account_id);
+CREATE INDEX idx_loan_delinquencies_stage ON loan_delinquencies(delinquency_stage);
+CREATE INDEX idx_loan_delinquencies_dpd ON loan_delinquencies(current_dpd);
+CREATE INDEX idx_loan_delinquencies_npl_date ON loan_delinquencies(npl_date) WHERE npl_date IS NOT NULL;
+
+CREATE INDEX idx_collection_actions_delinquency ON collection_actions(delinquency_id);
+CREATE INDEX idx_collection_actions_loan_account ON collection_actions(loan_account_id);
+CREATE INDEX idx_collection_actions_type ON collection_actions(action_type);
+CREATE INDEX idx_collection_actions_status ON collection_actions(action_status);
+CREATE INDEX idx_collection_actions_assigned ON collection_actions(assigned_to);
+
+CREATE INDEX idx_loan_payments_account ON loan_payments(loan_account_id);
+CREATE INDEX idx_loan_payments_date ON loan_payments(payment_date);
+CREATE INDEX idx_loan_payments_status ON loan_payments(payment_status);
+CREATE INDEX idx_loan_payments_type ON loan_payments(payment_type);
+
+CREATE INDEX idx_payment_allocations_payment ON payment_allocations(payment_id);
+
+CREATE INDEX idx_payment_reversals_original_payment ON payment_reversals(original_payment_id);
+CREATE INDEX idx_payment_reversals_reason ON payment_reversals(reversal_reason_id);
+
+CREATE INDEX idx_loan_restructurings_account ON loan_restructurings(loan_account_id);
+CREATE INDEX idx_loan_restructurings_type ON loan_restructurings(restructuring_type);
+CREATE INDEX idx_loan_restructurings_status ON loan_restructurings(approval_status);
+CREATE INDEX idx_loan_restructurings_request_date ON loan_restructurings(request_date);
+
+CREATE INDEX idx_loan_delinquency_jobs_date ON loan_delinquency_jobs(processing_date);
+CREATE INDEX idx_loan_delinquency_jobs_status ON loan_delinquency_jobs(status);
+
+CREATE INDEX idx_prepayment_handlings_allocation ON prepayment_handlings(payment_allocation_id);
+CREATE INDEX idx_prepayment_handlings_type ON prepayment_handlings(handling_type);
 
 -- Transaction table indexes
 CREATE INDEX idx_transactions_account ON transactions(account_id);

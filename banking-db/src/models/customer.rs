@@ -11,7 +11,7 @@ pub struct CustomerModel {
     pub customer_id: Uuid,
     #[serde(serialize_with = "serialize_customer_type", deserialize_with = "deserialize_customer_type")]
     pub customer_type: CustomerType,
-    pub full_name: HeaplessString<255>,
+    pub full_name: HeaplessString<100>,
     #[serde(serialize_with = "serialize_identity_type", deserialize_with = "deserialize_identity_type")]
     pub id_type: IdentityType,
     pub id_number: HeaplessString<50>,
@@ -81,7 +81,7 @@ pub struct RiskSummaryModel {
     #[serde(serialize_with = "serialize_risk_rating", deserialize_with = "deserialize_risk_rating")]
     pub current_rating: RiskRating,
     pub last_assessment_date: DateTime<Utc>,
-    pub flags: Vec<String>,
+    pub flags: Vec<HeaplessString<200>>,
 }
 
 /// Database model for Customer compliance status
@@ -150,6 +150,20 @@ pub enum DocumentStatus {
     Verified,
     Rejected,
     Expired,
+}
+
+impl std::fmt::Display for IdentityType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IdentityType::NationalId => write!(f, "NationalId"),
+            IdentityType::Passport => write!(f, "Passport"),
+            IdentityType::CompanyRegistration => write!(f, "CompanyRegistration"),
+            IdentityType::PermanentResidentCard => write!(f, "PermanentResidentCard"),
+            IdentityType::AsylumCard => write!(f, "AsylumCard"),
+            IdentityType::TemporaryResidentPermit => write!(f, "TemporaryResidentPermit"),
+            IdentityType::Unknown => write!(f, "Unknown"),
+        }
+    }
 }
 
 // ============================================================================

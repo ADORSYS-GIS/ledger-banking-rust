@@ -7,7 +7,7 @@ use uuid::Uuid;
 pub struct Customer {
     pub customer_id: Uuid,
     pub customer_type: CustomerType,
-    pub full_name: HeaplessString<255>,
+    pub full_name: HeaplessString<100>,
     pub id_type: IdentityType,
     pub id_number: HeaplessString<50>,
     pub risk_rating: RiskRating,
@@ -74,7 +74,7 @@ pub struct CustomerPortfolio {
     pub total_loan_outstanding: Option<rust_decimal::Decimal>,
     pub last_activity_date: Option<DateTime<Utc>>,
     pub risk_score: Option<rust_decimal::Decimal>,
-    pub kyc_status: String,
+    pub kyc_status: KycStatus,
     pub sanctions_checked: bool,
     pub last_screening_date: Option<DateTime<Utc>>,
 }
@@ -83,7 +83,7 @@ pub struct CustomerPortfolio {
 pub struct RiskSummary {
     pub current_rating: RiskRating,
     pub last_assessment_date: DateTime<Utc>,
-    pub flags: Vec<String>,
+    pub flags: Vec<HeaplessString<200>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -247,21 +247,21 @@ mod tests {
     fn test_heapless_string_memory_efficiency() {
         // Compare memory sizes between String and HeaplessString
         let string_name = String::from("John Smith");
-        let heapless_name: HeaplessString<255> = HeaplessString::try_from("John Smith").unwrap();
+        let heapless_name: HeaplessString<100> = HeaplessString::try_from("John Smith").unwrap();
         
         println!("String name size: {} bytes", mem::size_of_val(&string_name));
         println!("HeaplessString name size: {} bytes", mem::size_of_val(&heapless_name));
         
-        // HeaplessString should be fixed size (255 + small overhead for length/alignment)
-        // Allow for small alignment overhead (typically 8 bytes or less)
+        // HeaplessString should be fixed size (100 + small overhead for length/alignment)
+        // Allow for reasonable alignment overhead (typically 12 bytes or less)
         let heapless_size = mem::size_of_val(&heapless_name);
-        assert!(heapless_size >= 256 && heapless_size <= 264, "HeaplessString size {} should be between 256-264 bytes", heapless_size);
+        assert!(heapless_size >= 101 && heapless_size <= 116, "HeaplessString size {} should be between 101-116 bytes", heapless_size);
         
         // String has heap allocation overhead
         assert!(mem::size_of_val(&string_name) < mem::size_of_val(&heapless_name));
         
         // But HeaplessString provides predictable memory usage
-        let another_heapless: HeaplessString<255> = HeaplessString::try_from("A").unwrap();
+        let another_heapless: HeaplessString<100> = HeaplessString::try_from("A").unwrap();
         assert_eq!(mem::size_of_val(&heapless_name), mem::size_of_val(&another_heapless));
     }
     
@@ -316,7 +316,7 @@ mod tests {
     fn test_customer_builder_validation() {
         // Test that builder properly validates string lengths
         let customer_id = Uuid::new_v4();
-        let long_name = "a".repeat(300); // Exceeds 255 character limit
+        let long_name = "a".repeat(150); // Exceeds 100 character limit
         
         let result = Customer::builder(customer_id, CustomerType::Individual)
             .full_name(&long_name)
@@ -331,7 +331,7 @@ mod tests {
     #[test]
     fn test_heapless_string_overflow_protection() {
         // Test that overly long strings are rejected
-        let long_name = "a".repeat(300); // Exceeds 255 char limit
+        let long_name = "a".repeat(150); // Exceeds 100 char limit
         
         #[allow(deprecated)]
         let result = Customer::new(

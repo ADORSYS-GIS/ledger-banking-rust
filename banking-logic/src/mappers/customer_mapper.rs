@@ -1,6 +1,6 @@
-use banking_api::domain::{Customer, CustomerType, IdentityType, RiskRating, CustomerStatus, CustomerPortfolio};
+use banking_api::domain::{Customer, CustomerType, IdentityType, RiskRating, CustomerStatus, CustomerPortfolio, KycStatus, RiskSummary, CustomerComplianceStatus};
 use banking_db::models::{
-    CustomerModel, CustomerPortfolioModel,
+    CustomerModel, CustomerPortfolioModel, RiskSummaryModel, CustomerComplianceStatusModel,
     CustomerType as DbCustomerType, IdentityType as DbIdentityType, 
     RiskRating as DbRiskRating, CustomerStatus as DbCustomerStatus,
     KycStatus as DbKycStatus
@@ -50,7 +50,7 @@ impl CustomerMapper {
             total_loan_outstanding: model.total_loan_outstanding,
             last_activity_date: model.last_activity_date,
             risk_score: model.risk_score,
-            kyc_status: Self::db_to_kyc_status_string(model.kyc_status),
+            kyc_status: Self::db_to_kyc_status(model.kyc_status),
             sanctions_checked: model.sanctions_checked,
             last_screening_date: model.last_screening_date,
         }
@@ -133,16 +133,65 @@ impl CustomerMapper {
         }
     }
 
-    fn db_to_kyc_status_string(db_status: DbKycStatus) -> String {
+    fn db_to_kyc_status(db_status: DbKycStatus) -> KycStatus {
         match db_status {
-            DbKycStatus::NotStarted => "NotStarted".to_string(),
-            DbKycStatus::InProgress => "InProgress".to_string(),
-            DbKycStatus::Pending => "Pending".to_string(),
-            DbKycStatus::Complete => "Complete".to_string(),
-            DbKycStatus::Approved => "Approved".to_string(),
-            DbKycStatus::Rejected => "Rejected".to_string(),
-            DbKycStatus::RequiresUpdate => "RequiresUpdate".to_string(),
-            DbKycStatus::Failed => "Failed".to_string(),
+            DbKycStatus::NotStarted => KycStatus::NotStarted,
+            DbKycStatus::InProgress => KycStatus::InProgress,
+            DbKycStatus::Pending => KycStatus::Pending,
+            DbKycStatus::Complete => KycStatus::Complete,
+            DbKycStatus::Approved => KycStatus::Approved,
+            DbKycStatus::Rejected => KycStatus::Rejected,
+            DbKycStatus::RequiresUpdate => KycStatus::RequiresUpdate,
+            DbKycStatus::Failed => KycStatus::Failed,
+        }
+    }
+
+    fn kyc_status_to_db(status: KycStatus) -> DbKycStatus {
+        match status {
+            KycStatus::NotStarted => DbKycStatus::NotStarted,
+            KycStatus::InProgress => DbKycStatus::InProgress,
+            KycStatus::Pending => DbKycStatus::Pending,
+            KycStatus::Complete => DbKycStatus::Complete,
+            KycStatus::Approved => DbKycStatus::Approved,
+            KycStatus::Rejected => DbKycStatus::Rejected,
+            KycStatus::RequiresUpdate => DbKycStatus::RequiresUpdate,
+            KycStatus::Failed => DbKycStatus::Failed,
+        }
+    }
+
+    /// Map from database RiskSummaryModel to domain RiskSummary
+    pub fn risk_summary_from_model(model: RiskSummaryModel) -> RiskSummary {
+        RiskSummary {
+            current_rating: Self::db_to_risk_rating(model.current_rating),
+            last_assessment_date: model.last_assessment_date,
+            flags: model.flags,
+        }
+    }
+
+    /// Map from domain RiskSummary to database RiskSummaryModel
+    pub fn risk_summary_to_model(summary: RiskSummary) -> RiskSummaryModel {
+        RiskSummaryModel {
+            current_rating: Self::risk_rating_to_db(summary.current_rating),
+            last_assessment_date: summary.last_assessment_date,
+            flags: summary.flags,
+        }
+    }
+
+    /// Map from database CustomerComplianceStatusModel to domain CustomerComplianceStatus
+    pub fn compliance_status_from_model(model: CustomerComplianceStatusModel) -> CustomerComplianceStatus {
+        CustomerComplianceStatus {
+            kyc_status: Self::db_to_kyc_status(model.kyc_status),
+            sanctions_checked: model.sanctions_checked,
+            last_screening_date: model.last_screening_date,
+        }
+    }
+
+    /// Map from domain CustomerComplianceStatus to database CustomerComplianceStatusModel
+    pub fn compliance_status_to_model(status: CustomerComplianceStatus) -> CustomerComplianceStatusModel {
+        CustomerComplianceStatusModel {
+            kyc_status: Self::kyc_status_to_db(status.kyc_status),
+            sanctions_checked: status.sanctions_checked,
+            last_screening_date: status.last_screening_date,
         }
     }
 

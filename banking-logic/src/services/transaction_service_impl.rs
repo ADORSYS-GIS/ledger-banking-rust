@@ -295,7 +295,7 @@ impl TransactionService for TransactionServiceImpl {
             .await?
             .ok_or(banking_api::BankingError::TransactionNotFound(transaction_id.to_string()))?;
 
-        if transaction.status != TransactionStatus::AwaitingApproval {
+        if transaction.status != banking_db::models::TransactionStatus::AwaitingApproval {
             return Err(banking_api::BankingError::ValidationError {
                 field: "status".to_string(),
                 message: format!("Transaction {transaction_id} is not awaiting approval"),
@@ -370,12 +370,12 @@ impl TransactionService for TransactionServiceImpl {
     /// Update transaction status
     async fn update_transaction_status(&self, transaction_id: Uuid, status: banking_api::domain::TransactionStatus, reason: String) -> BankingResult<()> {
         let status_str = match status {
-            banking_api::domain::TransactionStatus::Pending => "Pending",
-            banking_api::domain::TransactionStatus::Posted => "Posted",
-            banking_api::domain::TransactionStatus::Reversed => "Reversed",
-            banking_api::domain::TransactionStatus::Failed => "Failed",
-            banking_api::domain::TransactionStatus::AwaitingApproval => "AwaitingApproval",
-            banking_api::domain::TransactionStatus::ApprovalRejected => "ApprovalRejected",
+            TransactionStatus::Pending => "Pending",
+            TransactionStatus::Posted => "Posted",
+            TransactionStatus::Reversed => "Reversed",
+            TransactionStatus::Failed => "Failed",
+            TransactionStatus::AwaitingApproval => "AwaitingApproval",
+            TransactionStatus::ApprovalRejected => "ApprovalRejected",
         };
         self.transaction_repository.update_status(transaction_id, status_str, &reason).await
     }

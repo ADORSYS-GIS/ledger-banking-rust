@@ -4,7 +4,8 @@ use uuid::Uuid;
 use rust_decimal::Decimal;
 use chrono::{DateTime, Utc, NaiveDate};
 
-use crate::models::{TransactionModel, ApprovalWorkflowModel, TransactionApprovalModel};
+use crate::models::{TransactionModel};
+use crate::models::workflow::{ApprovalWorkflowModel, WorkflowTransactionApprovalModel};
 
 #[async_trait]
 pub trait TransactionRepository: Send + Sync {
@@ -77,9 +78,9 @@ pub trait TransactionRepository: Send + Sync {
     async fn find_expired_workflows(&self, reference_time: DateTime<Utc>) -> BankingResult<Vec<ApprovalWorkflowModel>>;
     
     /// Transaction Approval Operations
-    async fn create_approval(&self, approval: TransactionApprovalModel) -> BankingResult<TransactionApprovalModel>;
-    async fn find_approvals_by_workflow(&self, workflow_id: Uuid) -> BankingResult<Vec<TransactionApprovalModel>>;
-    async fn find_approvals_by_approver(&self, approver_id: Uuid) -> BankingResult<Vec<TransactionApprovalModel>>;
+    async fn create_approval(&self, approval: WorkflowTransactionApprovalModel) -> BankingResult<WorkflowTransactionApprovalModel>;
+    async fn find_approvals_by_workflow(&self, workflow_id: Uuid) -> BankingResult<Vec<WorkflowTransactionApprovalModel>>;
+    async fn find_approvals_by_approver(&self, approver_id: Uuid) -> BankingResult<Vec<WorkflowTransactionApprovalModel>>;
     async fn count_approvals_for_workflow(&self, workflow_id: Uuid) -> BankingResult<i64>;
     
     /// Utility Operations

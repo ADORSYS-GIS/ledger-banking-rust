@@ -68,14 +68,14 @@ pub struct WorkflowStepRecord {
     pub completed_at: DateTime<Utc>,
     /// References Person.person_id
     pub completed_by: Uuid,
-    pub notes: Option<HeaplessString<1000>>,
+    pub notes: Option<HeaplessString<500>>,
     pub supporting_documents: Vec<HeaplessString<100>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountOpeningRequest {
     pub customer_id: Uuid,
-    pub product_code: HeaplessString<50>,
+    pub product_code: HeaplessString<12>,
     pub initial_deposit: Option<Decimal>,
     pub channel: HeaplessString<50>,
     /// References Person.person_id

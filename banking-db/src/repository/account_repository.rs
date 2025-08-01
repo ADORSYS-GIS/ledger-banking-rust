@@ -4,7 +4,7 @@ use uuid::Uuid;
 use rust_decimal::Decimal;
 use chrono::{DateTime, Utc, NaiveDate};
 
-use crate::models::{AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, AccountHoldModel, FinalSettlementModel, StatusChangeModel};
+use crate::models::{AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, AccountHoldModel, StatusChangeModel, AccountFinalSettlementModel};
 
 #[async_trait]
 pub trait AccountRepository: Send + Sync {
@@ -78,8 +78,8 @@ pub trait AccountRepository: Send + Sync {
     async fn release_expired_holds(&self, reference_date: DateTime<Utc>) -> BankingResult<i64>;
     
     /// Final Settlement Operations
-    async fn create_final_settlement(&self, settlement: FinalSettlementModel) -> BankingResult<FinalSettlementModel>;
-    async fn find_settlement_by_account(&self, account_id: Uuid) -> BankingResult<Option<FinalSettlementModel>>;
+    async fn create_final_settlement(&self, settlement: AccountFinalSettlementModel) -> BankingResult<AccountFinalSettlementModel>;
+    async fn find_settlement_by_account(&self, account_id: Uuid) -> BankingResult<Option<AccountFinalSettlementModel>>;
     async fn update_settlement_status(&self, settlement_id: Uuid, status: &str) -> BankingResult<()>;
     
     /// Status History Operations

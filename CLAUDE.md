@@ -120,6 +120,8 @@ pub <*>description: HeaplessString<200>,
 pub <*>details: HeaplessString<200>,
 pub <*>notes: Option<HeaplessString<500>>,
 pub <*>conditions: Option<HeaplessString<500>>,
+pub <*>alerts: Vec<HeaplessString<256>>,
+pub <*>messages: Vec<HeaplessString<200>>,
 
 // Status enums (type-safe)
 pub account_status: AccountStatus,  // vs String

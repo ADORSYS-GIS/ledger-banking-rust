@@ -113,6 +113,29 @@ pub struct DisbursementInstructions {
     pub updated_by: Uuid,
 }
 
+impl Default for DisbursementInstructions {
+    fn default() -> Self {
+        let now = Utc::now();
+        Self {
+            disbursement_id: Uuid::new_v4(),
+            source_account_id: Uuid::nil(),
+            method: DisbursementMethod::Transfer,
+            target_account: None,
+            cash_pickup_branch_id: None,
+            authorized_recipient: None,
+            disbursement_amount: None,
+            disbursement_date: None,
+            stage_number: None,
+            stage_description: None,
+            status: DisbursementStatus::Pending,
+            created_at: now,
+            last_updated_at: now,
+            created_by: Uuid::nil(),
+            updated_by: Uuid::nil(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DisbursementMethod {
     Transfer,

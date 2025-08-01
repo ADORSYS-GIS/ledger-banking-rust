@@ -222,7 +222,7 @@ pub struct ScreeningResultModel {
 /// Sanctions Match database model - aligned with domain SanctionsMatch
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SanctionsMatchModel {
-    pub matched_name: HeaplessString<255>,
+    pub matched_name: HeaplessString<100>,
     pub confidence_score: Decimal,
     pub details: Option<HeaplessString<500>>,
     pub list_source: HeaplessString<50>,

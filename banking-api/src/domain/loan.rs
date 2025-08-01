@@ -97,13 +97,11 @@ pub struct CollectionAction {
     pub action_type: CollectionActionType,
     pub action_date: NaiveDate,
     pub due_date: Option<NaiveDate>,
-    #[validate(length(max = 500))]
-    pub description: String,
+    pub description: HeaplessString<500>,
     pub amount_demanded: Option<Decimal>,
     pub response_received: bool,
     pub response_date: Option<NaiveDate>,
-    #[validate(length(max = 1000))]
-    pub response_details: Option<String>,
+    pub response_details: Option<HeaplessString<500>>,
     pub follow_up_required: bool,
     pub follow_up_date: Option<NaiveDate>,
     pub action_status: ActionStatus,
@@ -146,7 +144,7 @@ pub struct LoanPayment {
     pub payment_method: PaymentMethod,
     pub allocation: PaymentAllocation,
     pub payment_status: PaymentStatus,
-    pub external_reference: Option<String>,
+    pub external_reference: Option<HeaplessString<100>>,
     pub processed_by: Uuid, // References Person.person_id
     pub processed_at: DateTime<Utc>,
     pub reversal_info: Option<PaymentReversal>,
@@ -266,7 +264,7 @@ pub struct LoanRestructuring {
     pub approval_status: LoanApprovalStatus,
     pub approved_by: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<DateTime<Utc>>,
-    pub conditions: Vec<String>,
+    pub conditions: Vec<HeaplessString<500>>,
     pub created_by: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
@@ -306,7 +304,7 @@ pub struct LoanDelinquencyJob {
     pub status: super::casa::ProcessingJobStatus,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
-    pub errors: Vec<String>,
+    pub errors: Vec<HeaplessString<200>>,
 }
 
 /// Loan portfolio summary for management reporting
@@ -402,8 +400,7 @@ pub struct GenerateAmortizationScheduleRequest {
 pub struct CreateCollectionActionRequest {
     pub loan_account_id: Uuid,
     pub action_type: CollectionActionType,
-    #[validate(length(max = 500))]
-    pub description: String,
+    pub description: HeaplessString<500>,
     pub amount_demanded: Option<Decimal>,
     pub due_date: Option<NaiveDate>,
     pub assigned_to: Uuid, // References Person.person_id

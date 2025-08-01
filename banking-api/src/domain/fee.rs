@@ -13,12 +13,11 @@ pub struct FeeApplication {
     pub transaction_id: Option<Uuid>, // For event-based fees
     pub fee_type: FeeType,
     pub fee_category: FeeCategory,
-    pub product_code: String,
-    pub fee_code: String,
-    #[validate(length(max = 255))]
-    pub description: String,
+    pub product_code: HeaplessString<12>,
+    pub fee_code: HeaplessString<12>,
+    pub description: HeaplessString<200>,
     pub amount: Decimal,
-    pub currency: String,
+    pub currency: HeaplessString<3>,
     pub calculation_method: FeeCalculationMethod,
     pub calculation_base_amount: Option<Decimal>,
     pub fee_rate: Option<Decimal>,
@@ -127,7 +126,7 @@ pub enum FeeApplicationStatus {
 /// Fee Schedule from Product Catalog
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductFeeSchedule {
-    pub product_code: String,
+    pub product_code: HeaplessString<12>,
     pub fees: Vec<ProductFee>,
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
@@ -136,9 +135,8 @@ pub struct ProductFeeSchedule {
 /// Individual fee configuration in product catalog
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct ProductFee {
-    pub fee_code: String,
-    #[validate(length(max = 255))]
-    pub description: String,
+    pub fee_code: HeaplessString<12>,
+    pub description: HeaplessString<200>,
     pub fee_category: FeeCategory,
     pub trigger_event: FeeTriggerEvent,
     pub calculation_method: FeeCalculationMethod,
@@ -146,11 +144,11 @@ pub struct ProductFee {
     pub percentage_rate: Option<Decimal>,
     pub minimum_amount: Option<Decimal>,
     pub maximum_amount: Option<Decimal>,
-    pub currency: String,
+    pub currency: HeaplessString<3>,
     pub frequency: FeeFrequency,
     pub tier_schedule: Option<Vec<FeeTier>>,
     pub conditions: Vec<FeeCondition>,
-    pub gl_code: String,
+    pub gl_code: HeaplessString<10>,
     pub waivable: bool,
     pub active: bool,
 }

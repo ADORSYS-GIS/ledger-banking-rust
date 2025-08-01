@@ -1,3 +1,4 @@
+use heapless::String as HeaplessString;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -5,13 +6,13 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReasonView {
     pub id: Uuid,
-    pub code: String,
-    pub text: String,  // Resolved based on user's language preference
+    pub code: HeaplessString<50>,
+    pub text: HeaplessString<200>,  // Resolved based on user's language preference
     pub requires_details: bool,
-    pub additional_details: Option<String>,
-    pub severity: Option<String>,
-    pub category: String,
-    pub context: String,
+    pub additional_details: Option<HeaplessString<500>>,
+    pub severity: Option<HeaplessString<50>>,
+    pub category: HeaplessString<100>,
+    pub context: HeaplessString<100>,
 }
 
 impl ReasonView {
@@ -34,10 +35,10 @@ impl ReasonView {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountView {
     pub account_id: Uuid,
-    pub product_code: String,
-    pub account_type: String,
-    pub account_status: String,
-    pub currency: String,
+    pub product_code: HeaplessString<12>,
+    pub account_type: HeaplessString<50>,
+    pub account_status: HeaplessString<50>,
+    pub currency: HeaplessString<3>,
     pub current_balance: rust_decimal::Decimal,
     pub available_balance: rust_decimal::Decimal,
     
@@ -57,8 +58,8 @@ pub struct AccountHoldView {
     pub hold_id: Uuid,
     pub account_id: Uuid,
     pub amount: rust_decimal::Decimal,
-    pub hold_type: String,
-    pub status: String,
+    pub hold_type: HeaplessString<50>,
+    pub status: HeaplessString<50>,
     pub placed_by: Uuid, // References Person.person_id
     pub placed_at: chrono::DateTime<chrono::Utc>,
     pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -93,11 +94,11 @@ pub struct FeeWaiverView {
 pub struct TransactionAuditView {
     pub audit_id: Uuid,
     pub transaction_id: Uuid,
-    pub action_type: String,
+    pub action_type: HeaplessString<50>,
     pub performed_by: Uuid, // References Person.person_id
     pub performed_at: chrono::DateTime<chrono::Utc>,
-    pub old_status: Option<String>,
-    pub new_status: Option<String>,
+    pub old_status: Option<HeaplessString<50>>,
+    pub new_status: Option<HeaplessString<50>>,
     
     // Resolved reason
     pub reason: Option<ReasonView>,
@@ -110,7 +111,7 @@ pub struct SarDataView {
     pub customer_id: Uuid,
     pub supporting_transactions: Vec<Uuid>,
     pub generated_at: chrono::DateTime<chrono::Utc>,
-    pub status: String,
+    pub status: HeaplessString<50>,
     
     // Resolved reason
     pub reason: ReasonView,
@@ -121,7 +122,7 @@ pub struct SarDataView {
 pub struct LoanRestructuringView {
     pub restructuring_id: Uuid,
     pub loan_account_id: Uuid,
-    pub restructuring_type: String,
+    pub restructuring_type: HeaplessString<50>,
     pub request_date: chrono::NaiveDate,
     pub effective_date: Option<chrono::NaiveDate>,
     
@@ -146,9 +147,9 @@ pub struct LoanRestructuringView {
 pub struct WorkflowApprovalView {
     pub workflow_id: Uuid,
     pub account_id: Uuid,
-    pub workflow_type: String,
-    pub current_step: String,
-    pub status: String,
+    pub workflow_type: HeaplessString<50>,
+    pub current_step: HeaplessString<50>,
+    pub status: HeaplessString<50>,
     pub initiated_by: Uuid, // References Person.person_id
     pub initiated_at: chrono::DateTime<chrono::Utc>,
     pub timeout_at: chrono::DateTime<chrono::Utc>,

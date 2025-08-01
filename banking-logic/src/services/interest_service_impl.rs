@@ -10,7 +10,9 @@ use banking_api::{
     service::{InterestService, CalendarService},
     domain::{AccountType, TransactionType, TransactionStatus, Transaction},
 };
-use banking_db::repository::{AccountRepository, TransactionRepository};
+use banking_db::{
+    repository::{AccountRepository, TransactionRepository},
+};
 use crate::{
     mappers::{AccountMapper, TransactionMapper},
     integration::ProductCatalogClient,
@@ -666,13 +668,13 @@ mod tests {
         async fn find_expired_workflows(&self, _reference_time: chrono::DateTime<Utc>) -> BankingResult<Vec<banking_db::models::ApprovalWorkflowModel>> {
             Ok(Vec::new())
         }
-        async fn create_approval(&self, approval: banking_db::models::TransactionApprovalModel) -> BankingResult<banking_db::models::TransactionApprovalModel> {
+        async fn create_approval(&self, approval: banking_db::models::workflow::WorkflowTransactionApprovalModel) -> BankingResult<banking_db::models::workflow::WorkflowTransactionApprovalModel> {
             Ok(approval)
         }
-        async fn find_approvals_by_workflow(&self, _workflow_id: Uuid) -> BankingResult<Vec<banking_db::models::TransactionApprovalModel>> {
+        async fn find_approvals_by_workflow(&self, _workflow_id: Uuid) -> BankingResult<Vec<banking_db::models::workflow::WorkflowTransactionApprovalModel>> {
             Ok(Vec::new())
         }
-        async fn find_approvals_by_approver(&self, _approver_id: Uuid) -> BankingResult<Vec<banking_db::models::TransactionApprovalModel>> {
+        async fn find_approvals_by_approver(&self, _approver_id: Uuid) -> BankingResult<Vec<banking_db::models::workflow::WorkflowTransactionApprovalModel>> {
             Ok(Vec::new())
         }
         async fn count_approvals_for_workflow(&self, _workflow_id: Uuid) -> BankingResult<i64> {

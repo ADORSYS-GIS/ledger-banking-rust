@@ -1,17 +1,181 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
+
+/// Channel status enum for database compatibility
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChannelStatus {
+    Active,
+    Inactive,
+    Maintenance,
+    Suspended,
+}
+
+/// Channel fee types for categorization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChannelFeeType {
+    TransactionFee,
+    MaintenanceFee,
+    ServiceFee,
+    PenaltyFee,
+    ProcessingFee,
+    ComplianceFee,
+    InterchangeFee,
+    NetworkFee,
+}
+
+/// Channel fee calculation methods
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChannelFeeCalculationMethod {
+    Fixed,
+    Percentage,
+    Tiered,
+    BalanceBased,
+    RuleBased,
+    Hybrid,
+}
+
+/// Reconciliation status enum
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ReconciliationStatus {
+    InProgress,
+    Completed,
+    Failed,
+    RequiresManualReview,
+}
+
+// Custom serialization functions for database compatibility
+fn serialize_channel_status<S>(value: &ChannelStatus, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let value_str = match value {
+        ChannelStatus::Active => "Active",
+        ChannelStatus::Inactive => "Inactive",
+        ChannelStatus::Maintenance => "Maintenance",
+        ChannelStatus::Suspended => "Suspended",
+    };
+    serializer.serialize_str(value_str)
+}
+
+fn deserialize_channel_status<'de, D>(deserializer: D) -> Result<ChannelStatus, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "Active" => Ok(ChannelStatus::Active),
+        "Inactive" => Ok(ChannelStatus::Inactive),
+        "Maintenance" => Ok(ChannelStatus::Maintenance),
+        "Suspended" => Ok(ChannelStatus::Suspended),
+        _ => Err(serde::de::Error::custom(format!("Unknown channel status: {s}"))),
+    }
+}
+
+fn serialize_channel_fee_type<S>(value: &ChannelFeeType, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let value_str = match value {
+        ChannelFeeType::TransactionFee => "TransactionFee",
+        ChannelFeeType::MaintenanceFee => "MaintenanceFee",
+        ChannelFeeType::ServiceFee => "ServiceFee",
+        ChannelFeeType::PenaltyFee => "PenaltyFee",
+        ChannelFeeType::ProcessingFee => "ProcessingFee",
+        ChannelFeeType::ComplianceFee => "ComplianceFee",
+        ChannelFeeType::InterchangeFee => "InterchangeFee",
+        ChannelFeeType::NetworkFee => "NetworkFee",
+    };
+    serializer.serialize_str(value_str)
+}
+
+fn deserialize_channel_fee_type<'de, D>(deserializer: D) -> Result<ChannelFeeType, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "TransactionFee" => Ok(ChannelFeeType::TransactionFee),
+        "MaintenanceFee" => Ok(ChannelFeeType::MaintenanceFee),
+        "ServiceFee" => Ok(ChannelFeeType::ServiceFee),
+        "PenaltyFee" => Ok(ChannelFeeType::PenaltyFee),
+        "ProcessingFee" => Ok(ChannelFeeType::ProcessingFee),
+        "ComplianceFee" => Ok(ChannelFeeType::ComplianceFee),
+        "InterchangeFee" => Ok(ChannelFeeType::InterchangeFee),
+        "NetworkFee" => Ok(ChannelFeeType::NetworkFee),
+        _ => Err(serde::de::Error::custom(format!("Unknown channel fee type: {s}"))),
+    }
+}
+
+fn serialize_channel_fee_calculation_method<S>(value: &ChannelFeeCalculationMethod, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let value_str = match value {
+        ChannelFeeCalculationMethod::Fixed => "Fixed",
+        ChannelFeeCalculationMethod::Percentage => "Percentage",
+        ChannelFeeCalculationMethod::Tiered => "Tiered",
+        ChannelFeeCalculationMethod::BalanceBased => "BalanceBased",
+        ChannelFeeCalculationMethod::RuleBased => "RuleBased",
+        ChannelFeeCalculationMethod::Hybrid => "Hybrid",
+    };
+    serializer.serialize_str(value_str)
+}
+
+fn deserialize_channel_fee_calculation_method<'de, D>(deserializer: D) -> Result<ChannelFeeCalculationMethod, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "Fixed" => Ok(ChannelFeeCalculationMethod::Fixed),
+        "Percentage" => Ok(ChannelFeeCalculationMethod::Percentage),
+        "Tiered" => Ok(ChannelFeeCalculationMethod::Tiered),
+        "BalanceBased" => Ok(ChannelFeeCalculationMethod::BalanceBased),
+        "RuleBased" => Ok(ChannelFeeCalculationMethod::RuleBased),
+        "Hybrid" => Ok(ChannelFeeCalculationMethod::Hybrid),
+        _ => Err(serde::de::Error::custom(format!("Unknown channel fee calculation method: {s}"))),
+    }
+}
+
+fn serialize_reconciliation_status<S>(value: &ReconciliationStatus, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let value_str = match value {
+        ReconciliationStatus::InProgress => "InProgress",
+        ReconciliationStatus::Completed => "Completed",
+        ReconciliationStatus::Failed => "Failed",
+        ReconciliationStatus::RequiresManualReview => "RequiresManualReview",
+    };
+    serializer.serialize_str(value_str)
+}
+
+fn deserialize_reconciliation_status<'de, D>(deserializer: D) -> Result<ReconciliationStatus, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "InProgress" => Ok(ReconciliationStatus::InProgress),
+        "Completed" => Ok(ReconciliationStatus::Completed),
+        "Failed" => Ok(ReconciliationStatus::Failed),
+        "RequiresManualReview" => Ok(ReconciliationStatus::RequiresManualReview),
+        _ => Err(serde::de::Error::custom(format!("Unknown reconciliation status: {s}"))),
+    }
+}
 
 /// Database model for channels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelModel {
     pub channel_id: Uuid,
     pub channel_code: HeaplessString<50>,
-    pub channel_name: HeaplessString<255>,
+    pub channel_name: HeaplessString<100>,
     pub channel_type: String,
-    pub status: String,
+    #[serde(serialize_with = "serialize_channel_status", deserialize_with = "deserialize_channel_status")]
+    pub status: ChannelStatus,
     pub daily_limit: Option<Decimal>,
     pub per_transaction_limit: Option<Decimal>,
     pub supported_currencies: Vec<HeaplessString<3>>,
@@ -42,8 +206,10 @@ pub struct FeeItemModel {
     pub schedule_id: Uuid,
     pub fee_code: HeaplessString<20>,
     pub fee_name: HeaplessString<100>,
-    pub fee_type: String,
-    pub calculation_method: String,
+    #[serde(serialize_with = "serialize_channel_fee_type", deserialize_with = "deserialize_channel_fee_type")]
+    pub fee_type: ChannelFeeType,
+    #[serde(serialize_with = "serialize_channel_fee_calculation_method", deserialize_with = "deserialize_channel_fee_calculation_method")]
+    pub calculation_method: ChannelFeeCalculationMethod,
     pub fee_amount: Option<Decimal>,
     pub fee_percentage: Option<Decimal>,
     pub minimum_fee: Option<Decimal>,
@@ -76,7 +242,8 @@ pub struct ChannelReconciliationReportModel {
     pub reconciliation_date: NaiveDate,
     pub total_transactions: i64,
     pub total_amount: Decimal,
-    pub status: String,
+    #[serde(serialize_with = "serialize_reconciliation_status", deserialize_with = "deserialize_reconciliation_status")]
+    pub status: ReconciliationStatus,
     pub generated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -88,7 +255,7 @@ pub struct ReconciliationDiscrepancyModel {
     pub discrepancy_id: Uuid,
     pub report_id: Uuid,
     pub transaction_id: Uuid,
-    pub description: HeaplessString<500>,
+    pub description: HeaplessString<200>,
     pub expected_amount: Decimal,
     pub actual_amount: Decimal,
     pub difference: Decimal,
@@ -97,103 +264,17 @@ pub struct ReconciliationDiscrepancyModel {
     pub created_at: DateTime<Utc>,
 }
 
-/// Conversion from domain Channel to database ChannelModel
-impl From<banking_api::domain::channel::Channel> for ChannelModel {
-    fn from(channel: banking_api::domain::channel::Channel) -> Self {
-        Self {
-            channel_id: channel.channel_id,
-            channel_code: channel.channel_code,
-            channel_name: channel.channel_name,
-            channel_type: format!("{:?}", channel.channel_type),
-            status: format!("{:?}", channel.status),
-            daily_limit: channel.daily_limit,
-            per_transaction_limit: channel.per_transaction_limit,
-            supported_currencies: channel.supported_currencies,
-            requires_additional_auth: channel.requires_additional_auth,
-            fee_schedule_id: channel.fee_schedule_id,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        }
-    }
+/// Database model for channel fees
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelFeeModel {
+    pub fee_id: Uuid,
+    #[serde(serialize_with = "serialize_channel_fee_type", deserialize_with = "deserialize_channel_fee_type")]
+    pub fee_type: ChannelFeeType,
+    pub amount: Decimal,
+    pub currency: HeaplessString<3>,
+    pub description: HeaplessString<200>,
+    pub applies_to_transaction: Uuid,
+    pub created_at: DateTime<Utc>,
 }
 
-/// Conversion from database ChannelModel to domain Channel
-impl TryFrom<ChannelModel> for banking_api::domain::channel::Channel {
-    type Error = String;
 
-    fn try_from(model: ChannelModel) -> Result<Self, Self::Error> {
-        use banking_api::domain::channel::{Channel, ChannelStatus};
-        use banking_api::domain::transaction::ChannelType;
-
-        let channel_type = match model.channel_type.as_str() {
-            "BranchTeller" => ChannelType::BranchTeller,
-            "ATM" => ChannelType::ATM,
-            "InternetBanking" => ChannelType::InternetBanking,
-            "MobileApp" => ChannelType::MobileApp,
-            "AgentTerminal" => ChannelType::AgentTerminal,
-            "USSD" => ChannelType::USSD,
-            "ApiGateway" => ChannelType::ApiGateway,
-            _ => return Err(format!("Unknown channel type: {}", model.channel_type)),
-        };
-
-        let status = match model.status.as_str() {
-            "Active" => ChannelStatus::Active,
-            "Inactive" => ChannelStatus::Inactive,
-            "Maintenance" => ChannelStatus::Maintenance,
-            "Suspended" => ChannelStatus::Suspended,
-            _ => return Err(format!("Unknown channel status: {}", model.status)),
-        };
-
-        Ok(Channel {
-            channel_id: model.channel_id,
-            channel_code: model.channel_code,
-            channel_name: model.channel_name,
-            channel_type,
-            status,
-            daily_limit: model.daily_limit,
-            per_transaction_limit: model.per_transaction_limit,
-            supported_currencies: model.supported_currencies,
-            requires_additional_auth: model.requires_additional_auth,
-            fee_schedule_id: model.fee_schedule_id,
-        })
-    }
-}
-
-/// Conversion from domain FeeSchedule to database FeeScheduleModel
-impl From<banking_api::domain::channel::FeeSchedule> for FeeScheduleModel {
-    fn from(schedule: banking_api::domain::channel::FeeSchedule) -> Self {
-        Self {
-            schedule_id: schedule.schedule_id,
-            schedule_name: schedule.schedule_name,
-            channel_id: Some(schedule.channel_id),
-            effective_date: schedule.effective_date,
-            expiry_date: schedule.expiry_date,
-            currency: schedule.currency,
-            is_active: schedule.is_active,
-            created_at: schedule.created_at,
-            updated_at: schedule.updated_at,
-        }
-    }
-}
-
-/// Conversion from database FeeScheduleModel to domain FeeSchedule
-impl TryFrom<FeeScheduleModel> for banking_api::domain::channel::FeeSchedule {
-    type Error = String;
-
-    fn try_from(model: FeeScheduleModel) -> Result<Self, Self::Error> {
-        use banking_api::domain::channel::FeeSchedule;
-
-        Ok(FeeSchedule {
-            schedule_id: model.schedule_id,
-            schedule_name: model.schedule_name,
-            channel_id: model.channel_id.ok_or("Channel ID is required for fee schedule")?,
-            effective_date: model.effective_date,
-            expiry_date: model.expiry_date,
-            currency: model.currency,
-            fee_items: Vec::new(), // To be populated separately via repository
-            is_active: model.is_active,
-            created_at: model.created_at,
-            updated_at: model.updated_at,
-        })
-    }
-}

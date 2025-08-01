@@ -26,7 +26,7 @@ pub struct OverdraftFacility {
     pub review_frequency: ReviewFrequency,
     pub next_review_date: NaiveDate,
     pub security_required: bool,
-    pub security_details: Option<HeaplessString<255>>,
+    pub security_details: Option<HeaplessString<200>>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
 }
@@ -134,7 +134,7 @@ pub struct CasaComplianceStatus {
     pub kyc_status: KycStatus,
     pub last_kyc_update: Option<NaiveDate>,
     pub aml_risk_rating: RiskRating,
-    pub regulatory_alerts: Vec<HeaplessString<256>>,
+    pub regulatory_alerts: Vec<HeaplessString<200>>,
 }
 
 /// Daily overdraft processing job for EOD
@@ -178,7 +178,7 @@ pub struct OverdraftLimitAdjustment {
     pub approval_status: CasaApprovalStatus,
     pub approved_by: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<DateTime<Utc>>,
-    pub approval_notes: Option<HeaplessString<512>>,
+    pub approval_notes: Option<HeaplessString<500>>,
     pub effective_date: Option<NaiveDate>,
 }
 
@@ -203,7 +203,7 @@ pub struct CasaTransactionValidation {
     pub post_transaction_balance: Decimal,
     pub overdraft_utilization: Option<Decimal>,
     pub validation_result: CasaValidationResult,
-    pub validation_messages: Vec<HeaplessString<256>>,
+    pub validation_messages: Vec<HeaplessString<200>>,
     pub requires_authorization: bool,
     pub authorization_level: Option<AuthorizationLevel>,
 }
@@ -268,5 +268,5 @@ pub struct CreateOverdraftFacilityRequest {
     pub approved_by: Uuid, // References Person.person_id
     pub expiry_date: Option<NaiveDate>,
     pub security_required: bool,
-    pub security_details: Option<HeaplessString<256>>,
+    pub security_details: Option<HeaplessString<200>>,
 }

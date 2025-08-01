@@ -1,23 +1,20 @@
 use banking_api::domain::{
     Collateral, CollateralType, CollateralCategory, CustodyLocation, PerfectionStatus,
-    CollateralRiskRating, CollateralStatus, EnvironmentalRiskLevel, EnvironmentalComplianceStatus,
-    InsuranceCoverageType, ValuationMethod, PledgePriority, PledgeStatus, CovenantComplianceStatus,
-    CollateralAlertType, AlertSeverity, CollateralAlertStatus, ConcentrationCategory,
+    CollateralRiskRating, CollateralStatus, ValuationMethod, PledgePriority, PledgeStatus,
+    CollateralAlertType, AlertSeverity, CollateralAlertStatus,
     EnforcementType, EnforcementMethod, EnforcementStatus,
-    CollateralValuation, CollateralPledge, CollateralAlert, CollateralEnforcement,
-    CustodianDetails, InsuranceCoverage, EnvironmentalRisk, CovenantCompliance
+    CollateralValuation, CollateralPledge, CollateralAlert, CollateralEnforcement
 };
 use banking_db::models::{
     CollateralModel, CollateralValuationModel, CollateralPledgeModel, CollateralAlertModel, CollateralEnforcementModel,
     CollateralType as DbCollateralType, CollateralCategory as DbCollateralCategory, 
     CustodyLocation as DbCustodyLocation, PerfectionStatus as DbPerfectionStatus,
     CollateralRiskRating as DbCollateralRiskRating, CollateralStatus as DbCollateralStatus,
-    EnvironmentalRiskLevel as DbEnvironmentalRiskLevel, EnvironmentalComplianceStatus as DbEnvironmentalComplianceStatus,
-    InsuranceCoverageType as DbInsuranceCoverageType, ValuationMethod as DbValuationMethod,
+    ValuationMethod as DbValuationMethod,
     PledgePriority as DbPledgePriority, PledgeStatus as DbPledgeStatus, 
-    CovenantComplianceStatus as DbCovenantComplianceStatus, CollateralAlertType as DbCollateralAlertType,
+    CollateralAlertType as DbCollateralAlertType,
     AlertSeverity as DbAlertSeverity, CollateralAlertStatus as DbCollateralAlertStatus,
-    ConcentrationCategory as DbConcentrationCategory, EnforcementType as DbEnforcementType,
+    EnforcementType as DbEnforcementType,
     EnforcementMethod as DbEnforcementMethod, EnforcementStatus as DbEnforcementStatus
 };
 
