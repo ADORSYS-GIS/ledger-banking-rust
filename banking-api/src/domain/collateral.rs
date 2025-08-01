@@ -148,12 +148,12 @@ pub enum PerfectionStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsuranceCoverage {
     pub policy_number: HeaplessString<100>,
-    pub insurance_company: HeaplessString<255>,
+    pub insurance_company_details: HeaplessString<255>,
     pub coverage_amount: Decimal,
     pub premium_amount: Decimal,
     pub policy_start_date: NaiveDate,
     pub policy_end_date: NaiveDate,
-    pub beneficiary: HeaplessString<255>,
+    pub beneficiary_details: HeaplessString<255>,
     pub coverage_type: InsuranceCoverageType,
 }
 
@@ -310,8 +310,25 @@ pub struct CovenantCompliance {
     pub last_compliance_check: NaiveDate,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl Default for CovenantCompliance {
+    fn default() -> Self {
+        Self {
+            loan_to_value_ratio: Decimal::ZERO,
+            maximum_ltv_allowed: Decimal::ZERO,
+            debt_service_coverage: None,
+            minimum_dscr_required: None,
+            insurance_compliance: true,
+            maintenance_compliance: true,
+            reporting_compliance: true,
+            overall_compliance_status: CovenantComplianceStatus::default(),
+            last_compliance_check: chrono::Utc::now().date_naive(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum CovenantComplianceStatus {
+    #[default]
     Compliant,
     MinorBreach,
     MaterialBreach,

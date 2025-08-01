@@ -5,8 +5,8 @@ use uuid::Uuid;
 use banking_api::BankingResult;
 
 use crate::models::{
-    AccountHoldModel, HoldReleaseRecordModel, HoldExpiryJobModel, 
-    BalanceCalculationModel
+    AccountHoldModel, HoldReleaseRecordModel, AccountHoldExpiryJobModel, 
+    AccountBalanceCalculationModel
 };
 
 /// Repository for hold management data access
@@ -95,15 +95,15 @@ pub trait HoldRepository: Send + Sync {
     /// Cache balance calculation result
     async fn cache_balance_calculation(
         &self,
-        calculation: BalanceCalculationModel,
-    ) -> BankingResult<BalanceCalculationModel>;
+        calculation: AccountBalanceCalculationModel,
+    ) -> BankingResult<AccountBalanceCalculationModel>;
     
     /// Get cached balance calculation if still valid
     async fn get_cached_balance_calculation(
         &self,
         account_id: Uuid,
         max_age_seconds: u64,
-    ) -> BankingResult<Option<BalanceCalculationModel>>;
+    ) -> BankingResult<Option<AccountBalanceCalculationModel>>;
     
     // ============================================================================
     // HOLD RELEASE OPERATIONS
@@ -161,14 +161,14 @@ pub trait HoldRepository: Send + Sync {
     /// Create hold expiry job record
     async fn create_hold_expiry_job(
         &self,
-        job: HoldExpiryJobModel,
-    ) -> BankingResult<HoldExpiryJobModel>;
+        job: AccountHoldExpiryJobModel,
+    ) -> BankingResult<AccountHoldExpiryJobModel>;
     
     /// Update hold expiry job with results
     async fn update_hold_expiry_job(
         &self,
-        job: HoldExpiryJobModel,
-    ) -> BankingResult<HoldExpiryJobModel>;
+        job: AccountHoldExpiryJobModel,
+    ) -> BankingResult<AccountHoldExpiryJobModel>;
     
     /// Bulk place holds (for regulatory/compliance scenarios)
     async fn bulk_place_holds(

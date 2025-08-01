@@ -1,6 +1,6 @@
 use banking_api::domain;
-use banking_db::models::person::{PersonType, PersonModel};
-use heapless::Vec as HeaplessVec;
+use banking_api::domain::person::MessagingType as DomainMessagingType;
+use banking_db::models::person::{PersonType, PersonModel, RelationshipRole, EntityReferenceModel, MessagingType as DbMessagingType};
 
 #[cfg(test)]
 use heapless::String as HeaplessString;
@@ -39,12 +39,21 @@ impl PersonMapper {
             display_name: person.display_name,
             external_identifier: person.external_identifier,
             organization: person.organization,
-            messaging: serde_json::to_value(&person.messaging).unwrap_or(serde_json::Value::Array(vec![])),
+            // Individual messaging fields
+            messaging1_id: person.messaging1_id,
+            messaging1_type: person.messaging1_type.map(Self::messaging_type_to_db),
+            messaging2_id: person.messaging2_id,
+            messaging2_type: person.messaging2_type.map(Self::messaging_type_to_db),
+            messaging3_id: person.messaging3_id,
+            messaging3_type: person.messaging3_type.map(Self::messaging_type_to_db),
+            messaging4_id: person.messaging4_id,
+            messaging4_type: person.messaging4_type.map(Self::messaging_type_to_db),
+            messaging5_id: person.messaging5_id,
+            messaging5_type: person.messaging5_type.map(Self::messaging_type_to_db),
             department: person.department,
             location: person.location,
             duplicate_of: person.duplicate_of,
-            entity_reference: person.entity_reference,
-            entity_type: person.entity_type,
+            // Note: entity_reference and entity_type fields removed from Person domain model
             is_active: person.is_active,
             created_at: person.created_at,
             updated_at: person.updated_at,
@@ -59,12 +68,21 @@ impl PersonMapper {
             display_name: model.display_name,
             external_identifier: model.external_identifier,
             organization: model.organization,
-            messaging: serde_json::from_value(model.messaging).unwrap_or_else(|_| HeaplessVec::new()),
+            // Individual messaging fields
+            messaging1_id: model.messaging1_id,
+            messaging1_type: model.messaging1_type.map(Self::messaging_type_from_db),
+            messaging2_id: model.messaging2_id,
+            messaging2_type: model.messaging2_type.map(Self::messaging_type_from_db),
+            messaging3_id: model.messaging3_id,
+            messaging3_type: model.messaging3_type.map(Self::messaging_type_from_db),
+            messaging4_id: model.messaging4_id,
+            messaging4_type: model.messaging4_type.map(Self::messaging_type_from_db),
+            messaging5_id: model.messaging5_id,
+            messaging5_type: model.messaging5_type.map(Self::messaging_type_from_db),
             department: model.department,
             location: model.location,
             duplicate_of: model.duplicate_of,
-            entity_reference: model.entity_reference,
-            entity_type: model.entity_type,
+            // Note: entity_reference and entity_type fields removed from Person domain model
             is_active: model.is_active,
             created_at: model.created_at,
             updated_at: model.updated_at,
@@ -79,6 +97,123 @@ impl PersonMapper {
     /// Convert a vector of domain models to database models
     pub fn to_models(persons: Vec<domain::Person>) -> Vec<PersonModel> {
         persons.into_iter().map(Self::to_model).collect()
+    }
+
+    /// Convert domain MessagingType to database MessagingType
+    fn messaging_type_to_db(messaging_type: DomainMessagingType) -> DbMessagingType {
+        match messaging_type {
+            DomainMessagingType::Email => DbMessagingType::Email,
+            DomainMessagingType::Phone => DbMessagingType::Phone,
+            DomainMessagingType::Sms => DbMessagingType::Sms,
+            DomainMessagingType::WhatsApp => DbMessagingType::WhatsApp,
+            DomainMessagingType::Telegram => DbMessagingType::Telegram,
+            DomainMessagingType::Skype => DbMessagingType::Skype,
+            DomainMessagingType::Teams => DbMessagingType::Teams,
+            DomainMessagingType::Signal => DbMessagingType::Signal,
+            DomainMessagingType::WeChat => DbMessagingType::WeChat,
+            DomainMessagingType::Viber => DbMessagingType::Viber,
+            DomainMessagingType::Messenger => DbMessagingType::Messenger,
+            DomainMessagingType::LinkedIn => DbMessagingType::LinkedIn,
+            DomainMessagingType::Slack => DbMessagingType::Slack,
+            DomainMessagingType::Discord => DbMessagingType::Discord,
+            DomainMessagingType::Other => DbMessagingType::Other,
+        }
+    }
+
+    /// Convert database MessagingType to domain MessagingType
+    fn messaging_type_from_db(db_type: DbMessagingType) -> DomainMessagingType {
+        match db_type {
+            DbMessagingType::Email => DomainMessagingType::Email,
+            DbMessagingType::Phone => DomainMessagingType::Phone,
+            DbMessagingType::Sms => DomainMessagingType::Sms,
+            DbMessagingType::WhatsApp => DomainMessagingType::WhatsApp,
+            DbMessagingType::Telegram => DomainMessagingType::Telegram,
+            DbMessagingType::Skype => DomainMessagingType::Skype,
+            DbMessagingType::Teams => DomainMessagingType::Teams,
+            DbMessagingType::Signal => DomainMessagingType::Signal,
+            DbMessagingType::WeChat => DomainMessagingType::WeChat,
+            DbMessagingType::Viber => DomainMessagingType::Viber,
+            DbMessagingType::Messenger => DomainMessagingType::Messenger,
+            DbMessagingType::LinkedIn => DomainMessagingType::LinkedIn,
+            DbMessagingType::Slack => DomainMessagingType::Slack,
+            DbMessagingType::Discord => DomainMessagingType::Discord,
+            DbMessagingType::Other => DomainMessagingType::Other,
+        }
+    }
+
+    // EntityReference mappers (for the new separate entity reference table)
+
+    /// Convert domain RelationshipRole to database RelationshipRole
+    pub fn relationship_role_to_model(entity_role: domain::RelationshipRole) -> RelationshipRole {
+        match entity_role {
+            domain::RelationshipRole::Customer => RelationshipRole::Customer,
+            domain::RelationshipRole::Employee => RelationshipRole::Employee,
+            domain::RelationshipRole::Shareholder => RelationshipRole::Shareholder,
+            domain::RelationshipRole::Director => RelationshipRole::Director,
+            domain::RelationshipRole::BeneficialOwner => RelationshipRole::BeneficialOwner,
+            domain::RelationshipRole::Agent => RelationshipRole::Agent,
+            domain::RelationshipRole::Vendor => RelationshipRole::Vendor,
+            domain::RelationshipRole::Partner => RelationshipRole::Partner,
+            domain::RelationshipRole::RegulatoryContact => RelationshipRole::RegulatoryContact,
+            domain::RelationshipRole::EmergencyContact => RelationshipRole::EmergencyContact,
+            domain::RelationshipRole::SystemAdmin => RelationshipRole::SystemAdmin,
+            domain::RelationshipRole::Other => RelationshipRole::Other,
+        }
+    }
+
+    /// Convert database RelationshipRole to domain RelationshipRole
+    pub fn relationship_role_from_model(model: RelationshipRole) -> domain::RelationshipRole {
+        match model {
+            RelationshipRole::Customer => domain::RelationshipRole::Customer,
+            RelationshipRole::Employee => domain::RelationshipRole::Employee,
+            RelationshipRole::Shareholder => domain::RelationshipRole::Shareholder,
+            RelationshipRole::Director => domain::RelationshipRole::Director,
+            RelationshipRole::BeneficialOwner => domain::RelationshipRole::BeneficialOwner,
+            RelationshipRole::Agent => domain::RelationshipRole::Agent,
+            RelationshipRole::Vendor => domain::RelationshipRole::Vendor,
+            RelationshipRole::Partner => domain::RelationshipRole::Partner,
+            RelationshipRole::RegulatoryContact => domain::RelationshipRole::RegulatoryContact,
+            RelationshipRole::EmergencyContact => domain::RelationshipRole::EmergencyContact,
+            RelationshipRole::SystemAdmin => domain::RelationshipRole::SystemAdmin,
+            RelationshipRole::Other => domain::RelationshipRole::Other,
+        }
+    }
+
+    /// Placeholder mapper for EntityReferenceModel (until domain model exists)
+    pub fn entity_reference_from_model(model: EntityReferenceModel) -> (uuid::Uuid, uuid::Uuid, RelationshipRole, Option<String>) {
+        (
+            model.id,
+            model.person_id,
+            model.entity_role,
+            model.reference_external_id.map(|s| s.to_string())
+        )
+    }
+
+    /// Placeholder mapper to EntityReferenceModel (until domain model exists)
+    pub fn entity_reference_to_model(
+        id: uuid::Uuid,
+        person_id: uuid::Uuid,
+        entity_role: RelationshipRole,
+        reference_external_id: Option<&str>,
+        created_by: uuid::Uuid,
+    ) -> EntityReferenceModel {
+        use chrono::Utc;
+        use heapless::String as HeaplessString;
+        
+        EntityReferenceModel {
+            id,
+            person_id,
+            entity_role,
+            reference_external_id: reference_external_id.map(|s| HeaplessString::try_from(s).unwrap_or_default()),
+            reference_details_l1: None,
+            reference_details_l2: None,
+            reference_details_l3: None,
+            is_active: true,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            created_by,
+            updated_by: created_by,
+        }
     }
 }
 
@@ -117,12 +252,21 @@ mod tests {
             display_name: HeaplessString::try_from("John Doe").unwrap(),
             external_identifier: Some(HeaplessString::try_from("EMP001").unwrap()),
             organization: Some(Uuid::new_v4()), // Changed to UUID reference
-            messaging: HeaplessVec::new(), // Use correct field name
+            // Individual messaging fields
+            messaging1_id: Some(Uuid::new_v4()),
+            messaging1_type: Some(DomainMessagingType::Email),
+            messaging2_id: None,
+            messaging2_type: None,
+            messaging3_id: None,
+            messaging3_type: None,
+            messaging4_id: None,
+            messaging4_type: None,
+            messaging5_id: None,
+            messaging5_type: None,
             department: Some(HeaplessString::try_from("Engineering").unwrap()),
             location: Some(Uuid::new_v4()), // Use correct field name for address reference
             duplicate_of: None,
-            entity_reference: Some(Uuid::new_v4()),
-            entity_type: Some(HeaplessString::try_from("employee").unwrap()),
+            // Note: entity_reference and entity_type fields removed
             is_active: true,
             created_at: now,
             updated_at: now,

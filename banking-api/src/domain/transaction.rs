@@ -14,7 +14,7 @@ pub struct Transaction {
     pub transaction_type: TransactionType,
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
-    pub description: HeaplessString<500>,
+    pub description: HeaplessString<200>,
     pub channel_id: HeaplessString<50>,
     pub terminal_id: Option<Uuid>,
     pub agent_user_id: Option<Uuid>,
@@ -60,7 +60,7 @@ pub struct TransactionRequest {
     pub transaction_type: TransactionType,
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
-    pub description: HeaplessString<500>,
+    pub description: HeaplessString<200>,
     pub channel: ChannelType,
     pub terminal_id: Option<Uuid>,
     pub initiator_id: Uuid, // References Person.person_id

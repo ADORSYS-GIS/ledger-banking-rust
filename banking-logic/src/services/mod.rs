@@ -6,6 +6,8 @@ pub mod interest_service_impl;
 pub mod lifecycle_service_impl;
 pub mod calendar_service_impl;
 pub mod compliance_service_impl;
+pub mod channel_service_impl;
+pub mod loan_service_impl;
 
 pub use customer_service_impl::*;
 pub use account_service_impl::*;
@@ -15,3 +17,5 @@ pub use interest_service_impl::*;
 pub use lifecycle_service_impl::*;
 pub use calendar_service_impl::*;
 pub use compliance_service_impl::*;
+pub use channel_service_impl::*;
+pub use loan_service_impl::*;

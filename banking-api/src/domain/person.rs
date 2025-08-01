@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use heapless::{String as HeaplessString, Vec as HeaplessVec};
+use heapless::{String as HeaplessString};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -449,6 +449,119 @@ pub enum PersonType {
     Unknown,
 }
 
+/// Type of entity that the person is referenced as
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RelationshipRole {
+    /// Customer reference
+    Customer,
+    /// Employee reference
+    Employee,
+    /// Shareholder reference
+    Shareholder,
+    /// Director or board member
+    Director,
+    /// Beneficial owner
+    BeneficialOwner,
+    /// Agent or representative
+    Agent,
+    /// Vendor or supplier
+    Vendor,
+    /// Partner organization
+    Partner,
+    /// Regulatory contact
+    RegulatoryContact,
+    /// Emergency contact
+    EmergencyContact,
+    /// System administrator
+    SystemAdmin,
+    /// Other entity type
+    Other,
+}
+
+/// Entity reference table for managing person-to-entity relationships
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityReference {
+    /// Unique identifier for this entity reference
+    pub id: Uuid,
+    /// References Person.person_id
+    pub person_id: Uuid,
+    /// Type of entity relationship
+    pub entity_role: RelationshipRole,
+    /// External identifier for the reference (e.g., customer ID, employee ID)
+    pub reference_external_id: Option<HeaplessString<50>>,
+    /// Reference details in language 1
+    pub reference_details_l1: Option<HeaplessString<50>>,
+    /// Reference details in language 2
+    pub reference_details_l2: Option<HeaplessString<50>>,
+    /// Reference details in language 3
+    pub reference_details_l3: Option<HeaplessString<50>>,
+    /// Whether this entity reference is currently active
+    pub is_active: bool,
+    /// When this reference was created
+    pub created_at: DateTime<Utc>,
+    /// When this reference was last updated
+    pub updated_at: DateTime<Utc>,
+    /// Who created this reference
+    pub created_by: Uuid,
+    /// Who last updated this reference
+    pub updated_by: Uuid,
+}
+
+impl EntityReference {
+    /// Create a new entity reference
+    pub fn new(
+        person_id: Uuid,
+        entity_role: RelationshipRole,
+        reference_external_id: Option<HeaplessString<50>>,
+        created_by: Uuid,
+    ) -> Self {
+        let now = Utc::now();
+        Self {
+            id: Uuid::new_v4(),
+            person_id,
+            entity_role,
+            reference_external_id,
+            reference_details_l1: None,
+            reference_details_l2: None,
+            reference_details_l3: None,
+            is_active: true,
+            created_at: now,
+            updated_at: now,
+            created_by,
+            updated_by: created_by,
+        }
+    }
+
+    /// Update reference details with multi-language support
+    pub fn set_reference_details(
+        &mut self,
+        details_l1: Option<HeaplessString<50>>,
+        details_l2: Option<HeaplessString<50>>,
+        details_l3: Option<HeaplessString<50>>,
+        updated_by: Uuid,
+    ) {
+        self.reference_details_l1 = details_l1;
+        self.reference_details_l2 = details_l2;
+        self.reference_details_l3 = details_l3;
+        self.updated_at = Utc::now();
+        self.updated_by = updated_by;
+    }
+
+    /// Deactivate this entity reference
+    pub fn deactivate(&mut self, updated_by: Uuid) {
+        self.is_active = false;
+        self.updated_at = Utc::now();
+        self.updated_by = updated_by;
+    }
+
+    /// Reactivate this entity reference
+    pub fn reactivate(&mut self, updated_by: Uuid) {
+        self.is_active = true;
+        self.updated_at = Utc::now();
+        self.updated_by = updated_by;
+    }
+}
+
 /// Represents a person throughout the system for audit and tracking purposes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Person {
@@ -467,8 +580,17 @@ pub struct Person {
     /// References another Person.person_id for organizational hierarchy
     pub organization: Option<Uuid>,
     
-    /// References to Messaging.messaging_id (up to 20 messaging methods)
-    pub messaging: HeaplessVec<Uuid, 20>,
+    /// References to Messaging.messaging_id (up to 5 messaging methods)
+    pub messaging1_id: Option<Uuid>,
+    pub messaging1_type: Option<MessagingType>,
+    pub messaging2_id: Option<Uuid>,
+    pub messaging2_type: Option<MessagingType>,
+    pub messaging3_id: Option<Uuid>,
+    pub messaging3_type: Option<MessagingType>,
+    pub messaging4_id: Option<Uuid>,
+    pub messaging4_type: Option<MessagingType>,
+    pub messaging5_id: Option<Uuid>,
+    pub messaging5_type: Option<MessagingType>,
     
     /// Department within organization
     pub department: Option<HeaplessString<50>>,
@@ -479,11 +601,6 @@ pub struct Person {
     /// Reference to another Person if this is a duplicate
     pub duplicate_of: Option<Uuid>,
     
-    /// Reference to related entity (customer_id, employee_id, etc.)
-    pub entity_reference: Option<Uuid>,
-    
-    /// Entity type for the reference (e.g., "customer", "employee", "shareholder")
-    pub entity_type: Option<HeaplessString<50>>,
     
     /// Whether this person reference is currently active
     pub is_active: bool,
@@ -511,12 +628,19 @@ impl Person {
             display_name,
             external_identifier: None,
             organization: None,
-            messaging: HeaplessVec::new(),
+            messaging1_id: None,
+            messaging1_type: None,
+            messaging2_id: None,
+            messaging2_type: None,
+            messaging3_id: None,
+            messaging3_type: None,
+            messaging4_id: None,
+            messaging4_type: None,
+            messaging5_id: None,
+            messaging5_type: None,
             department: None,
             location: None,
             duplicate_of: None,
-            entity_reference: None,
-            entity_type: None,
             is_active: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -531,12 +655,19 @@ impl Person {
             display_name: HeaplessString::try_from("SYSTEM").unwrap(),
             external_identifier: None,
             organization: None,
-            messaging: HeaplessVec::new(),
+            messaging1_id: None,
+            messaging1_type: None,
+            messaging2_id: None,
+            messaging2_type: None,
+            messaging3_id: None,
+            messaging3_type: None,
+            messaging4_id: None,
+            messaging4_type: None,
+            messaging5_id: None,
+            messaging5_type: None,
             department: None,
             location: None,
             duplicate_of: None,
-            entity_reference: None,
-            entity_type: None,
             is_active: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -549,37 +680,82 @@ impl Person {
     }
     
     /// Add a messaging method reference to the person
-    pub fn add_messaging_reference(&mut self, messaging_id: Uuid) -> Result<(), &'static str> {
-        self.messaging.push(messaging_id)
-            .map_err(|_| "Maximum 20 messaging entries allowed")?;
+    pub fn add_messaging_reference(&mut self, messaging_id: Uuid, messaging_type: Option<MessagingType>) -> Result<(), &'static str> {
+        if self.messaging1_id.is_none() {
+            self.messaging1_id = Some(messaging_id);
+            self.messaging1_type = messaging_type;
+        } else if self.messaging2_id.is_none() {
+            self.messaging2_id = Some(messaging_id);
+            self.messaging2_type = messaging_type;
+        } else if self.messaging3_id.is_none() {
+            self.messaging3_id = Some(messaging_id);
+            self.messaging3_type = messaging_type;
+        } else if self.messaging4_id.is_none() {
+            self.messaging4_id = Some(messaging_id);
+            self.messaging4_type = messaging_type;
+        } else if self.messaging5_id.is_none() {
+            self.messaging5_id = Some(messaging_id);
+            self.messaging5_type = messaging_type;
+        } else {
+            return Err("Maximum 5 messaging entries allowed");
+        }
         self.updated_at = Utc::now();
         Ok(())
     }
     
     /// Remove a messaging method reference by ID
     pub fn remove_messaging_reference(&mut self, messaging_id: Uuid) -> bool {
-        if let Some(pos) = self.messaging.iter().position(|&id| id == messaging_id) {
-            self.messaging.swap_remove(pos);
-            self.updated_at = Utc::now();
-            true
+        if self.messaging1_id == Some(messaging_id) {
+            self.messaging1_id = None;
+            self.messaging1_type = None;
+        } else if self.messaging2_id == Some(messaging_id) {
+            self.messaging2_id = None;
+            self.messaging2_type = None;
+        } else if self.messaging3_id == Some(messaging_id) {
+            self.messaging3_id = None;
+            self.messaging3_type = None;
+        } else if self.messaging4_id == Some(messaging_id) {
+            self.messaging4_id = None;
+            self.messaging4_type = None;
+        } else if self.messaging5_id == Some(messaging_id) {
+            self.messaging5_id = None;
+            self.messaging5_type = None;
         } else {
-            false
+            return false;
         }
+        self.updated_at = Utc::now();
+        true
     }
     
     /// Check if person has a specific messaging method reference
     pub fn has_messaging_reference(&self, messaging_id: Uuid) -> bool {
-        self.messaging.contains(&messaging_id)
+        self.messaging1_id == Some(messaging_id) ||
+        self.messaging2_id == Some(messaging_id) ||
+        self.messaging3_id == Some(messaging_id) ||
+        self.messaging4_id == Some(messaging_id) ||
+        self.messaging5_id == Some(messaging_id)
     }
     
     /// Get all messaging reference IDs
-    pub fn get_messaging_references(&self) -> &[Uuid] {
-        &self.messaging
+    pub fn get_messaging_references(&self) -> Vec<Uuid> {
+        let mut refs = Vec::new();
+        if let Some(id) = self.messaging1_id { refs.push(id); }
+        if let Some(id) = self.messaging2_id { refs.push(id); }
+        if let Some(id) = self.messaging3_id { refs.push(id); }
+        if let Some(id) = self.messaging4_id { refs.push(id); }
+        if let Some(id) = self.messaging5_id { refs.push(id); }
+        refs
     }
     
     /// Get count of messaging references
     pub fn messaging_count(&self) -> usize {
-        self.messaging.len()
+        let mut count = 0;
+        if self.messaging1_id.is_some() { count += 1; }
+        if self.messaging2_id.is_some() { count += 1; }
+        if self.messaging3_id.is_some() { count += 1; }
+        if self.messaging4_id.is_some() { count += 1; }
+        if self.messaging5_id.is_some() { count += 1; }
+        count
     }
 }
 
@@ -594,8 +770,6 @@ pub struct PersonBuilder {
     department: Option<String>,
     location: Option<Uuid>,
     duplicate_of: Option<Uuid>,
-    entity_reference: Option<Uuid>,
-    entity_type: Option<String>,
     is_active: bool,
 }
 
@@ -611,8 +785,6 @@ impl PersonBuilder {
             department: None,
             location: None,
             duplicate_of: None,
-            entity_reference: None,
-            entity_type: None,
             is_active: true,
         }
     }
@@ -647,12 +819,6 @@ impl PersonBuilder {
         self
     }
     
-    pub fn entity_reference(mut self, entity_id: Uuid, entity_type: impl AsRef<str>) -> Self {
-        self.entity_reference = Some(entity_id);
-        self.entity_type = Some(entity_type.as_ref().to_string());
-        self
-    }
-    
     pub fn is_active(mut self, active: bool) -> Self {
         self.is_active = active;
         self
@@ -667,22 +833,20 @@ impl PersonBuilder {
             .transpose()
             .map_err(|_| "External identifier exceeds maximum length")?;
             
-        let entity_type = self.entity_type
-            .map(|s| HeaplessString::try_from(s.as_str()))
-            .transpose()
-            .map_err(|_| "Entity type exceeds maximum length")?;
-            
         let department = self.department
             .map(|s| HeaplessString::try_from(s.as_str()))
             .transpose()
             .map_err(|_| "Department exceeds maximum length")?;
             
-        // Convert Vec<Uuid> to HeaplessVec<Uuid, 20>
-        let mut messaging_vec = HeaplessVec::new();
-        for messaging_id in self.messaging {
-            messaging_vec.push(messaging_id)
-                .map_err(|_| "Maximum 20 messaging entries allowed")?;
-        }
+        // Handle messaging entries (limit to 5)
+        let messaging_ids: Vec<_> = self.messaging.into_iter().take(5).collect();
+        let (msg1_id, msg2_id, msg3_id, msg4_id, msg5_id) = (
+            messaging_ids.first().copied(),
+            messaging_ids.get(1).copied(),
+            messaging_ids.get(2).copied(),
+            messaging_ids.get(3).copied(),
+            messaging_ids.get(4).copied(),
+        );
             
         Ok(Person {
             person_id: self.person_id,
@@ -690,12 +854,19 @@ impl PersonBuilder {
             display_name,
             external_identifier,
             organization: self.organization,
-            messaging: messaging_vec,
+            messaging1_id: msg1_id,
+            messaging1_type: None,  // Type will be set separately if needed
+            messaging2_id: msg2_id,
+            messaging2_type: None,
+            messaging3_id: msg3_id,
+            messaging3_type: None,
+            messaging4_id: msg4_id,
+            messaging4_type: None,
+            messaging5_id: msg5_id,
+            messaging5_type: None,
             department,
             location: self.location,
             duplicate_of: self.duplicate_of,
-            entity_reference: self.entity_reference,
-            entity_type,
             is_active: self.is_active,
             created_at: Utc::now(),
             updated_at: Utc::now(),

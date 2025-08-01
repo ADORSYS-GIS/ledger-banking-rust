@@ -5,7 +5,7 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 #[cfg(test)]
-use heapless::{String as HeaplessString, Vec as HeaplessVec};
+use heapless::String as HeaplessString;
 
 use banking_api::{
     BankingResult, Account, AccountStatus,
@@ -901,7 +901,7 @@ mod tests {
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: HeaplessVec::new(),
+            last_disbursement_instruction_id: None,
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
@@ -1150,7 +1150,7 @@ mod tests {
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: serde_json::Value::Array(vec![]),
+            last_disbursement_instruction_id: None,
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
@@ -1190,7 +1190,7 @@ mod tests {
             dormancy_threshold_days: None,
             reactivation_required: false,
             pending_closure_reason_id: None,
-            disbursement_instructions: serde_json::Value::Array(vec![]),
+            last_disbursement_instruction_id: None,
             status_changed_by: None,
             status_change_reason_id: None,
             status_change_timestamp: None,

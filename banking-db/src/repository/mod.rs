@@ -9,6 +9,7 @@ pub mod fee_repository;
 pub mod hold_repository;
 pub mod person_repository;
 pub mod collateral_repository;
+pub mod channel_repository;
 
 pub use customer_repository::*;
 pub use account_repository::*;
@@ -21,3 +22,4 @@ pub use fee_repository::*;
 pub use hold_repository::*;
 pub use person_repository::*;
 pub use collateral_repository::*;
+pub use channel_repository::*;

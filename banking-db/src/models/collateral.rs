@@ -162,6 +162,101 @@ pub enum EnforcementStatus {
     UnderLegalReview,
 }
 
+/// Database model for valuation method enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "valuation_method", rename_all = "lowercase")]
+pub enum ValuationMethod {
+    MarketComparison,
+    IncomeApproach,
+    CostApproach,
+    ExpertAppraisal,
+    AuctionValue,
+    BookValue,
+    MarkToMarket,
+}
+
+/// Database model for pledge priority enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "pledge_priority", rename_all = "lowercase")]
+pub enum PledgePriority {
+    First,
+    Second,
+    Third,
+    Subordinate,
+}
+
+/// Database model for pledge status enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "pledge_status", rename_all = "lowercase")]
+pub enum PledgeStatus {
+    Active,
+    Released,
+    PartiallyReleased,
+    Substituted,
+    Disputed,
+    UnderEnforcement,
+}
+
+/// Database model for covenant compliance status enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "covenant_compliance_status", rename_all = "lowercase")]
+pub enum CovenantComplianceStatus {
+    Compliant,
+    MinorBreach,
+    MaterialBreach,
+    Critical,
+}
+
+/// Database model for collateral alert type enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "collateral_alert_type", rename_all = "lowercase")]
+pub enum CollateralAlertType {
+    ValuationDue,
+    ValuationOverdue,
+    InsuranceExpiring,
+    InsuranceExpired,
+    PerfectionExpiring,
+    PerfectionExpired,
+    LtvBreach,
+    CovenantBreach,
+    MaintenanceRequired,
+    DocumentationMissing,
+    EnvironmentalRisk,
+    MarketValueDecline,
+}
+
+/// Database model for alert severity enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "alert_severity", rename_all = "lowercase")]
+pub enum AlertSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// Database model for collateral alert status enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "collateral_alert_status", rename_all = "lowercase")]
+pub enum CollateralAlertStatus {
+    Open,
+    InProgress,
+    Resolved,
+    Dismissed,
+    Escalated,
+}
+
+/// Database model for concentration category enum  
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "concentration_category", rename_all = "lowercase")]
+pub enum ConcentrationCategory {
+    CollateralType,
+    GeographicLocation,
+    Industry,
+    Borrower,
+    CustodyLocation,
+}
+
 /// Database model for Collateral
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CollateralModel {
@@ -230,6 +325,82 @@ pub struct CollateralModel {
     pub updated_by: Uuid,
     pub last_valuation_by: Option<Uuid>,
     pub next_review_date: Option<NaiveDate>,
+}
+
+/// Database model for CollateralValuation
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CollateralValuationModel {
+    pub valuation_id: Uuid,
+    pub collateral_id: Uuid,
+    pub valuation_date: NaiveDate,
+    #[serde(serialize_with = "serialize_valuation_method", deserialize_with = "deserialize_valuation_method")]
+    pub valuation_method: ValuationMethod,
+    pub market_value: Decimal,
+    pub forced_sale_value: Option<Decimal>,
+    pub appraiser_name: HeaplessString<255>,
+    pub appraiser_license: Option<HeaplessString<100>>,
+    pub valuation_report_reference: HeaplessString<100>,
+    pub validity_period_months: i32,
+    pub next_valuation_due: NaiveDate,
+    pub valuation_notes: Option<HeaplessString<1000>>,
+    
+    // Audit trail
+    pub created_at: DateTime<Utc>,
+    /// References PersonModel.person_id
+    pub created_by: Uuid,
+}
+
+/// Database model for CollateralPledge
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CollateralPledgeModel {
+    pub pledge_id: Uuid,
+    pub collateral_id: Uuid,
+    pub loan_account_id: Uuid,
+    pub pledged_amount: Decimal,
+    pub pledge_percentage: Decimal,
+    #[serde(serialize_with = "serialize_pledge_priority", deserialize_with = "deserialize_pledge_priority")]
+    pub pledge_priority: PledgePriority,
+    pub pledge_date: NaiveDate,
+    pub release_conditions: Option<HeaplessString<500>>,
+    #[serde(serialize_with = "serialize_pledge_status", deserialize_with = "deserialize_pledge_status")]
+    pub status: PledgeStatus,
+    
+    // Legal documentation
+    pub security_agreement_reference: HeaplessString<100>,
+    pub pledge_registration_number: Option<HeaplessString<100>>,
+    
+    // Monitoring
+    pub last_review_date: Option<NaiveDate>,
+    pub next_review_date: Option<NaiveDate>,
+    pub covenant_compliance: serde_json::Value, // JSON field for CovenantCompliance
+    
+    // Audit trail
+    pub created_at: DateTime<Utc>,
+    pub last_updated_at: DateTime<Utc>,
+    /// References PersonModel.person_id
+    pub created_by: Uuid,
+    /// References PersonModel.person_id
+    pub updated_by: Uuid,
+}
+
+/// Database model for CollateralAlert
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CollateralAlertModel {
+    pub alert_id: Uuid,
+    pub collateral_id: Uuid,
+    #[serde(serialize_with = "serialize_collateral_alert_type", deserialize_with = "deserialize_collateral_alert_type")]
+    pub alert_type: CollateralAlertType,
+    #[serde(serialize_with = "serialize_alert_severity", deserialize_with = "deserialize_alert_severity")]
+    pub severity: AlertSeverity,
+    pub message: HeaplessString<500>,
+    pub trigger_date: DateTime<Utc>,
+    pub due_date: Option<DateTime<Utc>>,
+    #[serde(serialize_with = "serialize_collateral_alert_status", deserialize_with = "deserialize_collateral_alert_status")]
+    pub status: CollateralAlertStatus,
+    pub assigned_to: Option<Uuid>,
+    pub resolution_notes: Option<HeaplessString<1000>>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub resolved_by: Option<Uuid>,
 }
 
 /// Database model for CollateralEnforcement
@@ -575,5 +746,201 @@ where
         "Cancelled" => Ok(EnforcementStatus::Cancelled),
         "UnderLegalReview" => Ok(EnforcementStatus::UnderLegalReview),
         _ => Err(serde::de::Error::custom(format!("Unknown enforcement status: {s}"))),
+    }
+}
+
+// Serialization functions for ValuationMethod
+fn serialize_valuation_method<S>(method: &ValuationMethod, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let method_str = match method {
+        ValuationMethod::MarketComparison => "MarketComparison",
+        ValuationMethod::IncomeApproach => "IncomeApproach",
+        ValuationMethod::CostApproach => "CostApproach",
+        ValuationMethod::ExpertAppraisal => "ExpertAppraisal",
+        ValuationMethod::AuctionValue => "AuctionValue",
+        ValuationMethod::BookValue => "BookValue",
+        ValuationMethod::MarkToMarket => "MarkToMarket",
+    };
+    serializer.serialize_str(method_str)
+}
+
+fn deserialize_valuation_method<'de, D>(deserializer: D) -> Result<ValuationMethod, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "MarketComparison" => Ok(ValuationMethod::MarketComparison),
+        "IncomeApproach" => Ok(ValuationMethod::IncomeApproach),
+        "CostApproach" => Ok(ValuationMethod::CostApproach),
+        "ExpertAppraisal" => Ok(ValuationMethod::ExpertAppraisal),
+        "AuctionValue" => Ok(ValuationMethod::AuctionValue),
+        "BookValue" => Ok(ValuationMethod::BookValue),
+        "MarkToMarket" => Ok(ValuationMethod::MarkToMarket),
+        _ => Err(serde::de::Error::custom(format!("Unknown valuation method: {s}"))),
+    }
+}
+
+// Serialization functions for PledgePriority
+fn serialize_pledge_priority<S>(priority: &PledgePriority, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let priority_str = match priority {
+        PledgePriority::First => "First",
+        PledgePriority::Second => "Second",
+        PledgePriority::Third => "Third",
+        PledgePriority::Subordinate => "Subordinate",
+    };
+    serializer.serialize_str(priority_str)
+}
+
+fn deserialize_pledge_priority<'de, D>(deserializer: D) -> Result<PledgePriority, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "First" => Ok(PledgePriority::First),
+        "Second" => Ok(PledgePriority::Second),
+        "Third" => Ok(PledgePriority::Third),
+        "Subordinate" => Ok(PledgePriority::Subordinate),
+        _ => Err(serde::de::Error::custom(format!("Unknown pledge priority: {s}"))),
+    }
+}
+
+// Serialization functions for PledgeStatus
+fn serialize_pledge_status<S>(status: &PledgeStatus, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let status_str = match status {
+        PledgeStatus::Active => "Active",
+        PledgeStatus::Released => "Released",
+        PledgeStatus::PartiallyReleased => "PartiallyReleased",
+        PledgeStatus::Substituted => "Substituted",
+        PledgeStatus::Disputed => "Disputed",
+        PledgeStatus::UnderEnforcement => "UnderEnforcement",
+    };
+    serializer.serialize_str(status_str)
+}
+
+fn deserialize_pledge_status<'de, D>(deserializer: D) -> Result<PledgeStatus, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "Active" => Ok(PledgeStatus::Active),
+        "Released" => Ok(PledgeStatus::Released),
+        "PartiallyReleased" => Ok(PledgeStatus::PartiallyReleased),
+        "Substituted" => Ok(PledgeStatus::Substituted),
+        "Disputed" => Ok(PledgeStatus::Disputed),
+        "UnderEnforcement" => Ok(PledgeStatus::UnderEnforcement),
+        _ => Err(serde::de::Error::custom(format!("Unknown pledge status: {s}"))),
+    }
+}
+
+// Serialization functions for CollateralAlertType
+fn serialize_collateral_alert_type<S>(alert_type: &CollateralAlertType, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let type_str = match alert_type {
+        CollateralAlertType::ValuationDue => "ValuationDue",
+        CollateralAlertType::ValuationOverdue => "ValuationOverdue",
+        CollateralAlertType::InsuranceExpiring => "InsuranceExpiring",
+        CollateralAlertType::InsuranceExpired => "InsuranceExpired",
+        CollateralAlertType::PerfectionExpiring => "PerfectionExpiring",
+        CollateralAlertType::PerfectionExpired => "PerfectionExpired",
+        CollateralAlertType::LtvBreach => "LtvBreach",
+        CollateralAlertType::CovenantBreach => "CovenantBreach",
+        CollateralAlertType::MaintenanceRequired => "MaintenanceRequired",
+        CollateralAlertType::DocumentationMissing => "DocumentationMissing",
+        CollateralAlertType::EnvironmentalRisk => "EnvironmentalRisk",
+        CollateralAlertType::MarketValueDecline => "MarketValueDecline",
+    };
+    serializer.serialize_str(type_str)
+}
+
+fn deserialize_collateral_alert_type<'de, D>(deserializer: D) -> Result<CollateralAlertType, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "ValuationDue" => Ok(CollateralAlertType::ValuationDue),
+        "ValuationOverdue" => Ok(CollateralAlertType::ValuationOverdue),
+        "InsuranceExpiring" => Ok(CollateralAlertType::InsuranceExpiring),
+        "InsuranceExpired" => Ok(CollateralAlertType::InsuranceExpired),
+        "PerfectionExpiring" => Ok(CollateralAlertType::PerfectionExpiring),
+        "PerfectionExpired" => Ok(CollateralAlertType::PerfectionExpired),
+        "LtvBreach" => Ok(CollateralAlertType::LtvBreach),
+        "CovenantBreach" => Ok(CollateralAlertType::CovenantBreach),
+        "MaintenanceRequired" => Ok(CollateralAlertType::MaintenanceRequired),
+        "DocumentationMissing" => Ok(CollateralAlertType::DocumentationMissing),
+        "EnvironmentalRisk" => Ok(CollateralAlertType::EnvironmentalRisk),
+        "MarketValueDecline" => Ok(CollateralAlertType::MarketValueDecline),
+        _ => Err(serde::de::Error::custom(format!("Unknown collateral alert type: {s}"))),
+    }
+}
+
+// Serialization functions for AlertSeverity
+fn serialize_alert_severity<S>(severity: &AlertSeverity, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let severity_str = match severity {
+        AlertSeverity::Low => "Low",
+        AlertSeverity::Medium => "Medium",
+        AlertSeverity::High => "High",
+        AlertSeverity::Critical => "Critical",
+    };
+    serializer.serialize_str(severity_str)
+}
+
+fn deserialize_alert_severity<'de, D>(deserializer: D) -> Result<AlertSeverity, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "Low" => Ok(AlertSeverity::Low),
+        "Medium" => Ok(AlertSeverity::Medium),
+        "High" => Ok(AlertSeverity::High),
+        "Critical" => Ok(AlertSeverity::Critical),
+        _ => Err(serde::de::Error::custom(format!("Unknown alert severity: {s}"))),
+    }
+}
+
+// Serialization functions for CollateralAlertStatus
+fn serialize_collateral_alert_status<S>(status: &CollateralAlertStatus, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let status_str = match status {
+        CollateralAlertStatus::Open => "Open",
+        CollateralAlertStatus::InProgress => "InProgress",
+        CollateralAlertStatus::Resolved => "Resolved",
+        CollateralAlertStatus::Dismissed => "Dismissed",
+        CollateralAlertStatus::Escalated => "Escalated",
+    };
+    serializer.serialize_str(status_str)
+}
+
+fn deserialize_collateral_alert_status<'de, D>(deserializer: D) -> Result<CollateralAlertStatus, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "Open" => Ok(CollateralAlertStatus::Open),
+        "InProgress" => Ok(CollateralAlertStatus::InProgress),
+        "Resolved" => Ok(CollateralAlertStatus::Resolved),
+        "Dismissed" => Ok(CollateralAlertStatus::Dismissed),
+        "Escalated" => Ok(CollateralAlertStatus::Escalated),
+        _ => Err(serde::de::Error::custom(format!("Unknown collateral alert status: {s}"))),
     }
 }

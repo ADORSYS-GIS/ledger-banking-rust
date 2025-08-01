@@ -4,7 +4,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 use banking_api::domain::{
-    AccountType, AccountStatus, SigningCondition, DisbursementMethod, HoldType, HoldStatus, 
+    AccountType, AccountStatus, SigningCondition, DisbursementMethod, DisbursementStatus, HoldType, HoldStatus, 
     HoldPriority, OwnershipType, EntityType, RelationshipType, RelationshipStatus, 
     PermissionType, MandateStatus, ControlType, VerificationStatus, UboStatus
 };
@@ -61,8 +61,8 @@ pub struct AccountModel {
     pub reactivation_required: bool,
     /// References ReasonAndPurpose.id for pending closure
     pub pending_closure_reason_id: Option<Uuid>,
-    /// References to DisbursementInstructions.disbursement_id (stored as JSON array, max 10 stages)
-    pub disbursement_instructions: serde_json::Value, // Will store Vec<Uuid> as JSON
+    /// References the last DisbursementInstructions.disbursement_id
+    pub last_disbursement_instruction_id: Option<Uuid>,
     
     // Enhanced audit trail
     /// References Person.person_id
@@ -273,17 +273,7 @@ pub struct DisbursementInstructionsModel {
     pub updated_by: Uuid,
 }
 
-/// Database model for disbursement status enum
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "disbursement_status", rename_all = "lowercase")]
-pub enum DisbursementStatus {
-    Pending,
-    Approved,
-    Executed,
-    Cancelled,
-    Failed,
-    PartiallyExecuted,
-}
+// Note: DisbursementStatus is now imported from banking_api::domain
 
 /// Database model for Ultimate Beneficial Owner
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -298,7 +288,7 @@ pub struct UltimateBeneficiaryModel {
         deserialize_with = "deserialize_control_type"
     )]
     pub control_type: ControlType,
-    pub description: Option<HeaplessString<256>>,
+    pub description: Option<HeaplessString<200>>,
     #[serde(
         serialize_with = "serialize_ubo_status",
         deserialize_with = "deserialize_ubo_status"
@@ -310,6 +300,115 @@ pub struct UltimateBeneficiaryModel {
     )]
     pub verification_status: VerificationStatus,
     pub created_at: DateTime<Utc>,
+}
+
+/// Database model for Account Balance Calculation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct AccountBalanceCalculationModel {
+    pub account_id: Uuid,
+    pub current_balance: Decimal,
+    pub available_balance: Decimal,
+    pub overdraft_limit: Option<Decimal>,
+    pub total_holds: Decimal,
+    pub active_hold_count: u32,
+    pub calculation_timestamp: DateTime<Utc>,
+    pub hold_breakdown: serde_json::Value, // Will store Vec<AccountHoldSummaryModel> as JSON
+}
+
+/// Database model for Account Hold Summary
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountHoldSummaryModel {
+    #[serde(
+        serialize_with = "serialize_hold_type",
+        deserialize_with = "deserialize_hold_type"
+    )]
+    pub hold_type: HoldType,
+    pub total_amount: Decimal,
+    pub hold_count: u32,
+    #[serde(
+        serialize_with = "serialize_hold_priority",
+        deserialize_with = "deserialize_hold_priority"
+    )]
+    pub priority: HoldPriority,
+}
+
+/// Database model for Hold Release Request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct HoldReleaseRequestModel {
+    pub hold_id: Uuid,
+    pub release_amount: Option<Decimal>, // For partial releases
+    /// References ReasonAndPurpose.id for release
+    pub release_reason_id: Uuid,
+    /// Additional context for release
+    pub release_additional_details: Option<HeaplessString<200>>,
+    /// References Person.person_id
+    pub released_by: Uuid,
+    pub override_authorization: bool,
+}
+
+/// Database model for Account Hold Expiry Job
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct AccountHoldExpiryJobModel {
+    pub job_id: Uuid,
+    pub processing_date: NaiveDate,
+    pub expired_holds_count: u32,
+    pub total_released_amount: Decimal,
+    pub processed_at: DateTime<Utc>,
+    pub errors: serde_json::Value, // Will store Vec<HeaplessString<100>> as JSON
+}
+
+/// Database model for Status Change Record
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct StatusChangeRecordModel {
+    pub change_id: Uuid,
+    pub account_id: Uuid,
+    #[serde(
+        serialize_with = "serialize_account_status_option",
+        deserialize_with = "deserialize_account_status_option"
+    )]
+    pub old_status: Option<AccountStatus>,
+    #[serde(
+        serialize_with = "serialize_account_status",
+        deserialize_with = "deserialize_account_status"
+    )]
+    pub new_status: AccountStatus,
+    /// References ReasonAndPurpose.id
+    pub reason_id: Uuid,
+    /// Additional context beyond the standard reason
+    pub additional_context: Option<HeaplessString<200>>,
+    /// References Person.person_id
+    pub changed_by: Uuid,
+    pub changed_at: DateTime<Utc>,
+    pub system_triggered: bool,
+}
+
+/// Database model for Place Hold Request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlaceHoldRequestModel {
+    pub account_id: Uuid,
+    #[serde(
+        serialize_with = "serialize_hold_type",
+        deserialize_with = "deserialize_hold_type"
+    )]
+    pub hold_type: HoldType,
+    pub amount: Decimal,
+    /// References ReasonAndPurpose.id - required field
+    pub reason_id: Uuid,
+    /// Additional context beyond the standard reason
+    pub additional_details: Option<HeaplessString<200>>,
+    /// References Person.person_id
+    pub placed_by: Uuid,
+    pub expires_at: Option<DateTime<Utc>>,
+    #[serde(
+        serialize_with = "serialize_hold_priority",
+        deserialize_with = "deserialize_hold_priority"
+    )]
+    pub priority: HoldPriority,
+    pub source_reference: Option<HeaplessString<100>>,
 }
 
 // Enum serialization helpers for database compatibility

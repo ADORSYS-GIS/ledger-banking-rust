@@ -9,7 +9,7 @@ use validator::Validate;
 pub struct Channel {
     pub channel_id: Uuid,
     pub channel_code: HeaplessString<50>,
-    pub channel_name: HeaplessString<255>,
+    pub channel_name: HeaplessString<100>,
     pub channel_type: super::transaction::ChannelType,
     pub status: ChannelStatus,
     pub daily_limit: Option<Decimal>,
@@ -33,7 +33,7 @@ pub struct ChannelFee {
     pub fee_type: ChannelFeeType,
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
-    pub description: HeaplessString<500>,
+    pub description: HeaplessString<200>,
     pub applies_to_transaction: Uuid,
 }
 
@@ -53,7 +53,7 @@ pub struct ReconciliationReport {
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Discrepancy {
     pub transaction_id: Uuid,
-    pub description: HeaplessString<500>,
+    pub description: HeaplessString<200>,
     pub expected_amount: Decimal,
     pub actual_amount: Decimal,
     pub difference: Decimal,

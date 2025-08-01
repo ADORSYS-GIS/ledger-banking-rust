@@ -1,9 +1,77 @@
+use blake3::Hash;
 use chrono::{DateTime, NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
-use banking_api::domain::{TransactionType, TransactionStatus, TransactionApprovalStatus, TransactionAuditAction, TransactionWorkflowStatus};
+
+// ============================================================================
+// ENUMS - Database layer enums matching API domain
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TransactionType { 
+    Credit, 
+    Debit 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TransactionStatus { 
+    Pending, 
+    Posted, 
+    Reversed, 
+    Failed,
+    AwaitingApproval,
+    ApprovalRejected,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TransactionApprovalStatus { 
+    Pending, 
+    Approved, 
+    Rejected, 
+    PartiallyApproved 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TransactionWorkflowStatus { 
+    Pending, 
+    Approved, 
+    Rejected, 
+    TimedOut 
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TransactionAuditAction {
+    Created,
+    StatusChanged,
+    Posted,
+    Reversed,
+    Failed,
+    Approved,
+    Rejected,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ChannelType {
+    MobileApp,
+    AgentTerminal,
+    ATM,
+    InternetBanking,
+    BranchTeller,
+    USSD,
+    ApiGateway,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PermittedOperation {
+    Credit,
+    Debit,
+    InterestPosting,
+    FeeApplication,
+    ClosureSettlement,
+    None,
+}
 
 /// Database model for Transaction table
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,7 +87,7 @@ pub struct TransactionModel {
     pub transaction_type: TransactionType,
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
-    pub description: HeaplessString<500>,
+    pub description: HeaplessString<200>,
     pub channel_id: HeaplessString<50>,
     pub terminal_id: Option<Uuid>,
     pub agent_user_id: Option<Uuid>,
@@ -120,7 +188,72 @@ pub struct TransactionAuditModel {
     /// References ReasonAndPurpose.id for audit reason
     pub reason_id: Option<Uuid>,
     /// Blake3 hash of additional details for tamper detection
-    pub details_hash: Option<Vec<u8>>,
+    #[serde(
+        serialize_with = "serialize_hash_option",
+        deserialize_with = "deserialize_hash_option"
+    )]
+    pub details: Option<Hash>,
+}
+
+/// Database model for Transaction Request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct TransactionRequestModel {
+    pub request_id: Uuid,
+    pub account_id: Uuid,
+    #[serde(
+        serialize_with = "serialize_transaction_type",
+        deserialize_with = "deserialize_transaction_type"
+    )]
+    pub transaction_type: TransactionType,
+    pub amount: Decimal,
+    pub currency: HeaplessString<3>,
+    pub description: HeaplessString<200>,
+    #[serde(
+        serialize_with = "serialize_channel_type",
+        deserialize_with = "deserialize_channel_type"
+    )]
+    pub channel: ChannelType,
+    pub terminal_id: Option<Uuid>,
+    pub initiator_id: Uuid, // References Person.person_id
+    pub external_reference: Option<HeaplessString<100>>,
+    pub metadata: String, // JSON-serialized HashMap
+    pub created_at: DateTime<Utc>,
+}
+
+/// Database model for Transaction Result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct TransactionResultModel {
+    pub result_id: Uuid,
+    pub transaction_id: Uuid,
+    pub reference_number: HeaplessString<200>,
+    pub timestamp: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Database model for Validation Result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct ValidationResultModel {
+    pub validation_id: Uuid,
+    pub transaction_id: Option<Uuid>,
+    pub is_valid: bool,
+    pub errors: String, // JSON array
+    pub warnings: String, // JSON array
+    pub created_at: DateTime<Utc>,
+}
+
+/// Database model for Approval
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct ApprovalModel {
+    pub approval_id: Uuid,
+    pub transaction_id: Uuid,
+    pub approver_id: Uuid,
+    pub approved_at: DateTime<Utc>,
+    pub notes: Option<String>,
+    pub created_at: DateTime<Utc>,
 }
 
 // Transaction enum serialization helpers for database compatibility
@@ -349,5 +482,103 @@ where
     }
 }
 
+// ChannelType serialization helpers
+fn serialize_channel_type<S>(channel: &ChannelType, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let channel_str = match channel {
+        ChannelType::MobileApp => "MobileApp",
+        ChannelType::AgentTerminal => "AgentTerminal",
+        ChannelType::ATM => "ATM",
+        ChannelType::InternetBanking => "InternetBanking",
+        ChannelType::BranchTeller => "BranchTeller",
+        ChannelType::USSD => "USSD",
+        ChannelType::ApiGateway => "ApiGateway",
+    };
+    serializer.serialize_str(channel_str)
+}
 
+fn deserialize_channel_type<'de, D>(deserializer: D) -> Result<ChannelType, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let channel_str = String::deserialize(deserializer)?;
+    match channel_str.as_str() {
+        "MobileApp" => Ok(ChannelType::MobileApp),
+        "AgentTerminal" => Ok(ChannelType::AgentTerminal),
+        "ATM" => Ok(ChannelType::ATM),
+        "InternetBanking" => Ok(ChannelType::InternetBanking),
+        "BranchTeller" => Ok(ChannelType::BranchTeller),
+        "USSD" => Ok(ChannelType::USSD),
+        "ApiGateway" => Ok(ChannelType::ApiGateway),
+        _ => Err(serde::de::Error::custom(format!("Invalid channel type: {channel_str}"))),
+    }
+}
+
+// PermittedOperation serialization helpers (unused but kept for future use)
+#[allow(dead_code)]
+fn serialize_permitted_operation<S>(operation: &PermittedOperation, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let operation_str = match operation {
+        PermittedOperation::Credit => "Credit",
+        PermittedOperation::Debit => "Debit",
+        PermittedOperation::InterestPosting => "InterestPosting",
+        PermittedOperation::FeeApplication => "FeeApplication",
+        PermittedOperation::ClosureSettlement => "ClosureSettlement",
+        PermittedOperation::None => "None",
+    };
+    serializer.serialize_str(operation_str)
+}
+
+#[allow(dead_code)]
+fn deserialize_permitted_operation<'de, D>(deserializer: D) -> Result<PermittedOperation, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let operation_str = String::deserialize(deserializer)?;
+    match operation_str.as_str() {
+        "Credit" => Ok(PermittedOperation::Credit),
+        "Debit" => Ok(PermittedOperation::Debit),
+        "InterestPosting" => Ok(PermittedOperation::InterestPosting),
+        "FeeApplication" => Ok(PermittedOperation::FeeApplication),
+        "ClosureSettlement" => Ok(PermittedOperation::ClosureSettlement),
+        "None" => Ok(PermittedOperation::None),
+        _ => Err(serde::de::Error::custom(format!("Invalid permitted operation: {operation_str}"))),
+    }
+}
+
+// Blake3 Hash serialization helpers
+fn serialize_hash_option<S>(hash: &Option<Hash>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match hash {
+        Some(hash) => {
+            let hash_bytes = hash.as_bytes();
+            serializer.serialize_some(hash_bytes)
+        }
+        None => serializer.serialize_none(),
+    }
+}
+
+fn deserialize_hash_option<'de, D>(deserializer: D) -> Result<Option<Hash>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let bytes_opt: Option<Vec<u8>> = Option::deserialize(deserializer)?;
+    match bytes_opt {
+        Some(bytes) => {
+            if bytes.len() != 32 {
+                return Err(serde::de::Error::custom(format!("Invalid hash length: expected 32 bytes, got {}", bytes.len())));
+            }
+            let mut hash_array = [0u8; 32];
+            hash_array.copy_from_slice(&bytes);
+            Ok(Some(Hash::from(hash_array)))
+        }
+        None => Ok(None),
+    }
+}
 

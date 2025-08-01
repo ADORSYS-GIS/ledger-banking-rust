@@ -16,7 +16,7 @@ use banking_api::{
 };
 use banking_db::repository::{AccountRepository, WorkflowRepository};
 use crate::{
-    mappers::AccountMapper, 
+    mappers::{AccountMapper, WorkflowMapper}, 
     integration::ProductCatalogClient,
     constants::*,
 };
@@ -858,32 +858,7 @@ impl AccountLifecycleServiceImpl {
 
     /// Convert domain AccountWorkflow to database AccountWorkflowModel
     fn to_workflow_model(&self, workflow: &AccountWorkflow) -> banking_db::models::AccountWorkflowModel {
-        use heapless::String as HeaplessString;
-        
-        banking_db::models::AccountWorkflowModel {
-            workflow_id: workflow.workflow_id,
-            account_id: workflow.account_id,
-            workflow_type: HeaplessString::try_from(format!("{:?}", workflow.workflow_type).as_str())
-                .unwrap_or_else(|_| HeaplessString::new()),
-            current_step: HeaplessString::try_from(format!("{:?}", workflow.current_step).as_str())
-                .unwrap_or_else(|_| HeaplessString::new()),
-            status: HeaplessString::try_from(format!("{:?}", workflow.status).as_str())
-                .unwrap_or_else(|_| HeaplessString::new()),
-            initiated_by: HeaplessString::try_from(workflow.initiated_by.to_string().as_str())
-                .unwrap_or_else(|_| HeaplessString::new()),
-            initiated_at: workflow.initiated_at,
-            completed_at: workflow.completed_at,
-            next_action_required: workflow.next_action_required.clone(),
-            timeout_at: workflow.timeout_at,
-            metadata: None, // Could serialize steps_completed if needed
-            priority: HeaplessString::try_from("Medium")
-                .unwrap_or_else(|_| HeaplessString::new()),
-            assigned_to: None,
-            created_at: chrono::Utc::now(),
-            last_updated_at: chrono::Utc::now(),
-            updated_by: HeaplessString::try_from(SYSTEM_PERSON_ID.to_string().as_str())
-                .unwrap_or_else(|_| HeaplessString::new()),
-        }
+        WorkflowMapper::to_model(workflow.clone())
     }
 }
 
