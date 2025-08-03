@@ -190,6 +190,42 @@ docker compose up -d postgres
 sqlx migrate run --source banking-db-postgres/migrations
 ```
 
+### Database Testing (Test Isolation System)
+
+**📖 Full Documentation**: See [`banking-db-postgres/tests/README_CLEANUP.md`](banking-db-postgres/tests/README_CLEANUP.md) for complete database testing guidelines.
+
+**⚠️ Critical**: Database tests **must run sequentially** to avoid data pollution:
+
+```bash
+# Local testing
+env DATABASE_URL=postgresql://user:password@localhost:5432/mydb \
+cargo test --features postgres_tests -- --test-threads=1
+
+# Specific test files
+cargo test --test workflow_repository_tests --features postgres_tests -- --test-threads=1
+```
+
+**Test Pattern**: Use database cleanup for reliable test isolation:
+```rust
+#[cfg(feature = "postgres_tests")]
+#[tokio::test]
+async fn test_with_isolation() {
+    let (pool, _person_id, _account_id) = setup_test_db().await;
+    cleanup_database(&pool).await;  // Clean start
+    
+    // Recreate prerequisites after cleanup
+    let person_id = create_test_person(&pool).await;
+    let account_id = create_test_account(&pool, person_id).await;
+    
+    // Test operations with guaranteed data isolation
+    // ...
+    
+    cleanup_database(&pool).await;  // Optional end cleanup
+}
+```
+
+**CI Configuration**: GitHub Actions runs with `--test-threads=1` for database tests to ensure stability.
+
 ### Type Mappings (Rust → PostgreSQL)
 - `Uuid` → `UUID`
 - `HeaplessString<N>` → `VARCHAR(N)`
