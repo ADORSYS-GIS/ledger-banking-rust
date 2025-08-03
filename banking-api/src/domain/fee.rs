@@ -37,7 +37,7 @@ pub struct FeeApplication {
 }
 
 /// Fee Type Classification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeeType {
     /// Real-time fees applied during transaction processing
     EventBased,
@@ -46,7 +46,7 @@ pub enum FeeType {
 }
 
 /// Fee Categories for business logic
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeeCategory {
     /// Transaction-related fees
     Transaction,
@@ -114,7 +114,7 @@ pub enum FeeTriggerEvent {
 }
 
 /// Status of fee application
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeeApplicationStatus {
     Applied,
     Pending,

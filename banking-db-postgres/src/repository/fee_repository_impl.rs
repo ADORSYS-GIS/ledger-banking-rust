@@ -23,6 +23,10 @@ impl FeeRepositoryImpl {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+    
+    pub fn get_pool(&self) -> &PgPool {
+        &self.pool
+    }
 }
 
 impl TryFromRow<sqlx::postgres::PgRow> for FeeApplicationModel {
@@ -109,8 +113,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for FeeWaiverModel {
             waived_amount: row.get("waived_amount"),
             reason_id: row.get("reason_id"),
             additional_details: row.get::<Option<String>, _>("additional_details")
-                .map(|s| HeaplessString::try_from(s.as_str()).ok())
-                .flatten(),
+                .and_then(|s| HeaplessString::try_from(s.as_str()).ok()),
             waived_by: row.get("waived_by"),
             waived_at: row.get("waived_at"),
             approval_required: row.get("approval_required"),
@@ -356,7 +359,7 @@ impl FeeRepository for FeeRepositoryImpl {
         
         query.push_str(" ORDER BY applied_at DESC");
         
-        if let Some(lim) = limit {
+        if limit.is_some() {
             param_count += 1;
             query.push_str(&format!(" LIMIT ${param_count}"));
         }
@@ -584,7 +587,7 @@ impl FeeRepository for FeeRepositoryImpl {
     
     async fn create_fee_processing_job(
         &self,
-        job: FeeProcessingJobModel,
+        _job: FeeProcessingJobModel,
     ) -> BankingResult<FeeProcessingJobModel> {
         // Since there's no fee_processing_jobs table in the schema, we'll implement a stub
         Err(BankingError::NotImplemented("Fee processing jobs table not implemented in schema".to_string()))
@@ -626,7 +629,7 @@ impl FeeRepository for FeeRepositoryImpl {
         );
         let mut param_count = 0;
         
-        if let Some(codes) = product_codes {
+        if let Some(ref codes) = product_codes {
             if !codes.is_empty() {
                 param_count += 1;
                 query.push_str(&format!(" AND product_code = ANY(${param_count})"));
@@ -650,7 +653,6 @@ impl FeeRepository for FeeRepositoryImpl {
         
         let rows = sql_query
             .fetch_all(&self.pool)
-            .await
             .await?;
         
         let mut account_ids = Vec::new();
@@ -768,7 +770,6 @@ impl FeeRepository for FeeRepositoryImpl {
         
         let row = sql_query
             .fetch_one(&self.pool)
-            .await
             .await?;
         
         Ok(FeeRevenueSummary {
@@ -842,7 +843,7 @@ impl FeeRepository for FeeRepositoryImpl {
         let rows = sqlx::query(&format!(
             r#"
             SELECT 
-                TO_CHAR(value_date, '{}') as period,
+                TO_CHAR(value_date, '{date_format}') as period,
                 fee_category,
                 COUNT(*) as application_count,
                 COALESCE(SUM(CASE WHEN status = 'Applied' AND waived = FALSE THEN amount ELSE 0 END), 0) as total_amount,
@@ -850,9 +851,9 @@ impl FeeRepository for FeeRepositoryImpl {
                 COALESCE(SUM(CASE WHEN waived = TRUE THEN amount ELSE 0 END), 0) as waived_amount
             FROM fee_applications
             WHERE value_date >= $1 AND value_date <= $2
-            GROUP BY TO_CHAR(value_date, '{}'), fee_category
+            GROUP BY TO_CHAR(value_date, '{date_format}'), fee_category
             ORDER BY period, fee_category
-            "#, date_format, date_format
+            "#
         ))
         .bind(from_date)
         .bind(to_date)
@@ -896,7 +897,7 @@ impl FeeRepository for FeeRepositoryImpl {
                 status = 'Reversed',
                 waived_reason_id = (
                     SELECT id FROM reason_and_purpose 
-                    WHERE reason_code = 'REVERSAL' 
+                    WHERE category = 'FEE_REVERSAL' 
                     LIMIT 1
                 ),
                 applied_by = $3
@@ -939,7 +940,7 @@ impl FeeRepository for FeeRepositoryImpl {
                     status = 'Reversed',
                     waived_reason_id = (
                         SELECT id FROM reason_and_purpose 
-                        WHERE reason_code = 'REVERSAL' 
+                        WHERE category = 'FEE_REVERSAL' 
                         LIMIT 1
                     ),
                     applied_by = $4

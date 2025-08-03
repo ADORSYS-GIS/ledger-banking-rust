@@ -1,3 +1,5 @@
+mod commons;
+
 #[cfg(feature = "postgres_tests")]
 mod fee_repository_tests {
     use banking_api::domain::fee::{
@@ -12,14 +14,13 @@ mod fee_repository_tests {
     use sqlx::PgPool;
     use std::str::FromStr;
     use uuid::Uuid;
-
-    mod commons;
+    use super::commons;
 
     /// Test helper to create a sample fee application
     fn create_test_fee_application() -> FeeApplicationModel {
         let fee_application_id = Uuid::new_v4();
         let account_id = Uuid::new_v4();
-        let transaction_id = Some(Uuid::new_v4());
+        let transaction_id = None; // Don't require specific transaction for test fees
         // Use a fixed UUID that we'll insert into persons table in setup
         let applied_by = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
         
@@ -112,11 +113,12 @@ mod fee_repository_tests {
         // Create test reason for fee waivers
         let test_reason_id = Uuid::new_v4();
         sqlx::query(
-            "INSERT INTO reason_and_purpose (id, reason_category, reason_code, reason_description)
-             VALUES ($1, 'FEE_WAIVER', 'GOODWILL', 'Customer goodwill gesture')
+            "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
+             VALUES ($1, 'GOODWILL', 'FEE_WAIVER', 'WAIVER', 'Customer goodwill gesture', $2, $2)
              ON CONFLICT (id) DO NOTHING"
         )
         .bind(test_reason_id)
+        .bind(test_person_id)
         .execute(&pool)
         .await
         .expect("Failed to create test reason");
@@ -129,7 +131,7 @@ mod fee_repository_tests {
         let _ = sqlx::query("DELETE FROM fee_waivers").execute(pool).await;
         let _ = sqlx::query("DELETE FROM fee_applications").execute(pool).await;
         let _ = sqlx::query("DELETE FROM accounts WHERE product_code = 'SAV01'").execute(pool).await;
-        let _ = sqlx::query("DELETE FROM reason_and_purpose WHERE reason_category = 'FEE_WAIVER'").execute(pool).await;
+        let _ = sqlx::query("DELETE FROM reason_and_purpose WHERE category = 'FEE_WAIVER'").execute(pool).await;
     }
 
     #[tokio::test]
@@ -150,7 +152,7 @@ mod fee_repository_tests {
         assert_eq!(created.fee_category, FeeCategory::Transaction);
         assert_eq!(created.status, FeeApplicationStatus::Applied);
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -183,7 +185,7 @@ mod fee_repository_tests {
         assert!(result.is_ok(), "Should handle non-existent ID gracefully");
         assert!(result.unwrap().is_none(), "Should return None for non-existent ID");
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -198,22 +200,41 @@ mod fee_repository_tests {
         let created = repo.create_fee_application(fee_app.clone()).await
             .expect("Should create fee application");
         
-        // Update the fee application
+        // Create a waiver reason first
+        let waiver_reason_id = Uuid::new_v4();
+        let unique_waiver_code = format!("WAIVER_{}", waiver_reason_id.to_string()[0..8].to_uppercase());
+        sqlx::query(
+            "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
+             VALUES ($1, $2, 'FEE_WAIVER', 'WAIVER', 'Fee update waiver', $3, $3)"
+        )
+        .bind(waiver_reason_id)
+        .bind(unique_waiver_code)
+        .bind(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap())
+        .execute(repo.get_pool())
+        .await
+        .expect("Should create waiver reason");
+
+        // Update the fee application (keep original amount, just change status)
         let mut updated_app = created.clone();
         updated_app.status = FeeApplicationStatus::Waived;
         updated_app.waived = true;
-        updated_app.amount = Decimal::from_str("0.00").unwrap();
+        updated_app.waived_by = Some(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        updated_app.waived_reason_id = Some(waiver_reason_id);
+        // Keep original amount since fee_amount must be positive
         
         let result = repo.update_fee_application(updated_app.clone()).await;
-        assert!(result.is_ok(), "Should update fee application successfully");
+        if let Err(e) = &result {
+            println!("Update error: {e:?}");
+        }
+        assert!(result.is_ok(), "Should update fee application successfully: {result:?}");
         
         let updated = result.unwrap();
         assert_eq!(updated.fee_application_id, created.fee_application_id);
         assert_eq!(updated.status, FeeApplicationStatus::Waived);
-        assert_eq!(updated.waived, true);
-        assert_eq!(updated.amount, Decimal::from_str("0.00").unwrap());
+        assert!(updated.waived);
+        assert_eq!(updated.amount, fee_app.amount); // Amount should remain the same
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -266,7 +287,7 @@ mod fee_repository_tests {
         let date_filtered = result.unwrap();
         assert_eq!(date_filtered.len(), 1, "Should find only applications after date");
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -296,7 +317,7 @@ mod fee_repository_tests {
         assert!(result.is_ok(), "Should retrieve applications by status successfully");
         
         let applications = result.unwrap();
-        assert!(applications.len() >= 1, "Should find at least one applied application");
+        assert!(!applications.is_empty(), "Should find at least one applied application");
         
         for app in &applications {
             assert_eq!(app.status, FeeApplicationStatus::Applied);
@@ -311,7 +332,7 @@ mod fee_repository_tests {
         let limited = result.unwrap();
         assert!(limited.len() <= 1, "Should respect limit parameter");
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -325,7 +346,7 @@ mod fee_repository_tests {
             let mut fee_app = create_test_fee_application();
             fee_app.account_id = account_id;
             fee_app.fee_application_id = Uuid::new_v4();
-            fee_app.fee_code = HeaplessString::try_from(&format!("FEE{:02}", i)).unwrap();
+            fee_app.fee_code = HeaplessString::try_from(format!("FEE{i:02}").as_str()).unwrap();
             fee_app.amount = Decimal::from_str(&format!("{}.00", i + 1)).unwrap();
             apps.push(fee_app);
         }
@@ -341,7 +362,7 @@ mod fee_repository_tests {
             assert_eq!(app.amount, Decimal::from_str(&format!("{}.00", i + 1)).unwrap());
         }
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -355,14 +376,17 @@ mod fee_repository_tests {
         let created_app = repo.create_fee_application(fee_app).await
             .expect("Should create fee application");
         
-        // Create reason for waiver
+        // Create reason for waiver with unique code
         let reason_id = Uuid::new_v4();
+        let unique_code = format!("GOODWILL_{}", reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
-            "INSERT INTO reason_and_purpose (id, reason_category, reason_code, reason_description)
-             VALUES ($1, 'FEE_WAIVER', 'GOODWILL', 'Customer goodwill gesture')"
+            "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
+             VALUES ($1, $2, 'FEE_WAIVER', 'WAIVER', 'Customer goodwill gesture', $3, $3)"
         )
         .bind(reason_id)
-        .execute(&repo.pool)
+        .bind(unique_code)
+        .bind(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap())
+        .execute(repo.get_pool())
         .await
         .expect("Should create test reason");
         
@@ -379,7 +403,7 @@ mod fee_repository_tests {
         assert_eq!(created.account_id, account_id);
         assert_eq!(created.waived_amount, waiver.waived_amount);
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -393,14 +417,17 @@ mod fee_repository_tests {
         let created_app = repo.create_fee_application(fee_app).await
             .expect("Should create fee application");
         
-        // Create reason for waiver
+        // Create reason for waiver with unique code
         let reason_id = Uuid::new_v4();
+        let unique_code = format!("GOODWILL_{}", reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
-            "INSERT INTO reason_and_purpose (id, reason_category, reason_code, reason_description)
-             VALUES ($1, 'FEE_WAIVER', 'GOODWILL', 'Customer goodwill gesture')"
+            "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
+             VALUES ($1, $2, 'FEE_WAIVER', 'WAIVER', 'Customer goodwill gesture', $3, $3)"
         )
         .bind(reason_id)
-        .execute(&repo.pool)
+        .bind(unique_code)
+        .bind(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap())
+        .execute(repo.get_pool())
         .await
         .expect("Should create test reason");
         
@@ -421,7 +448,7 @@ mod fee_repository_tests {
         assert_eq!(found_waiver.account_id, account_id);
         assert_eq!(found_waiver.waived_amount, waiver.waived_amount);
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -441,10 +468,10 @@ mod fee_repository_tests {
         assert!(result.is_ok(), "Should retrieve eligible accounts successfully");
         
         let accounts = result.unwrap();
-        assert!(accounts.len() >= 1, "Should find at least one eligible account");
+        assert!(!accounts.is_empty(), "Should find at least one eligible account");
         assert!(accounts.contains(&account_id), "Should include our test account");
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -459,12 +486,28 @@ mod fee_repository_tests {
         fee_app1.status = FeeApplicationStatus::Applied;
         fee_app1.waived = false;
         
+        // Create waiver reason for second application
+        let waiver_reason_id2 = Uuid::new_v4();
+        let unique_waiver_code2 = format!("WAIVER2_{}", waiver_reason_id2.to_string()[0..8].to_uppercase());
+        sqlx::query(
+            "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
+             VALUES ($1, $2, 'FEE_WAIVER', 'WAIVER', 'Revenue test waiver', $3, $3)"
+        )
+        .bind(waiver_reason_id2)
+        .bind(unique_waiver_code2)
+        .bind(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap())
+        .execute(repo.get_pool())
+        .await
+        .expect("Should create waiver reason for second app");
+
         let mut fee_app2 = create_test_fee_application();
         fee_app2.account_id = account_id;
         fee_app2.fee_application_id = Uuid::new_v4();
-        fee_app2.amount = Decimal::from_str("5.00").unwrap();
-        fee_app2.status = FeeApplicationStatus::Applied;
+        fee_app2.amount = Decimal::from_str("5.00").unwrap(); // Amount must remain positive
+        fee_app2.status = FeeApplicationStatus::Waived; // Must be Waived if waived = true
         fee_app2.waived = true;
+        fee_app2.waived_by = Some(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        fee_app2.waived_reason_id = Some(waiver_reason_id2);
         
         repo.create_fee_application(fee_app1.clone()).await
             .expect("Should create first fee application");
@@ -483,7 +526,7 @@ mod fee_repository_tests {
         assert!(summary.waived_amount >= Decimal::from_str("5.00").unwrap());
         assert!(summary.fee_count >= 1);
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -512,7 +555,7 @@ mod fee_repository_tests {
         assert!(result.is_ok(), "Should get top fee accounts successfully");
         
         let top_accounts = result.unwrap();
-        assert!(top_accounts.len() >= 1, "Should find at least one top account");
+        assert!(!top_accounts.is_empty(), "Should find at least one top account");
         
         // Find our test account in the results
         let test_account = top_accounts.iter()
@@ -523,7 +566,7 @@ mod fee_repository_tests {
         assert!(account.total_fees >= Decimal::from_str("15.00").unwrap());
         assert!(account.fee_count >= 3);
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -548,7 +591,7 @@ mod fee_repository_tests {
         assert!(result.is_ok(), "Should get fee statistics successfully");
         
         let stats = result.unwrap();
-        assert!(stats.len() >= 1, "Should find at least one statistic entry");
+        assert!(!stats.is_empty(), "Should find at least one statistic entry");
         
         // Find Transaction category stats
         let transaction_stats = stats.iter()
@@ -559,7 +602,7 @@ mod fee_repository_tests {
         assert!(stat.application_count >= 1);
         assert!(stat.total_amount >= Decimal::from_str("10.00").unwrap());
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -575,14 +618,17 @@ mod fee_repository_tests {
         let created = repo.create_fee_application(fee_app).await
             .expect("Should create fee application");
         
-        // Create a reversal reason
+        // Create a reversal reason with unique code
+        let reversal_reason_id = Uuid::new_v4();
+        let unique_reversal_code = format!("REVERSAL_{}", reversal_reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
-            "INSERT INTO reason_and_purpose (id, reason_category, reason_code, reason_description)
-             VALUES ($1, 'FEE_REVERSAL', 'REVERSAL', 'Fee reversal')
-             ON CONFLICT (reason_code) DO NOTHING"
+            "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
+             VALUES ($1, $2, 'FEE_REVERSAL', 'REVERSAL', 'Fee reversal', $3, $3)"
         )
-        .bind(Uuid::new_v4())
-        .execute(&repo.pool)
+        .bind(reversal_reason_id)
+        .bind(unique_reversal_code)
+        .bind(person_id)
+        .execute(repo.get_pool())
         .await
         .expect("Should create reversal reason");
         
@@ -594,13 +640,16 @@ mod fee_repository_tests {
             Utc::now(),
         ).await;
         
-        assert!(result.is_ok(), "Should reverse fee application successfully");
+        if let Err(e) = &result {
+            println!("Reverse error: {:?}", e);
+        }
+        assert!(result.is_ok(), "Should reverse fee application successfully: {:?}", result);
         
         let reversed = result.unwrap();
         assert_eq!(reversed.fee_application_id, created.fee_application_id);
         assert_eq!(reversed.status, FeeApplicationStatus::Reversed);
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 
     #[tokio::test]
@@ -614,7 +663,7 @@ mod fee_repository_tests {
             let mut fee_app = create_test_fee_application();
             fee_app.account_id = account_id;
             fee_app.fee_application_id = Uuid::new_v4();
-            fee_app.fee_code = HeaplessString::try_from(&format!("FEE{}", i)).unwrap();
+            fee_app.fee_code = HeaplessString::try_from(format!("FEE{i:02}").as_str()).unwrap();
             fee_app.status = FeeApplicationStatus::Applied;
             
             let created = repo.create_fee_application(fee_app).await
@@ -622,14 +671,17 @@ mod fee_repository_tests {
             fee_ids.push(created.fee_application_id);
         }
         
-        // Create a reversal reason
+        // Create a reversal reason with unique code
+        let reversal_reason_id = Uuid::new_v4();
+        let unique_reversal_code = format!("REVERSAL_{}", reversal_reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
-            "INSERT INTO reason_and_purpose (id, reason_category, reason_code, reason_description)
-             VALUES ($1, 'FEE_REVERSAL', 'REVERSAL', 'Fee reversal')
-             ON CONFLICT (reason_code) DO NOTHING"
+            "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
+             VALUES ($1, $2, 'FEE_REVERSAL', 'REVERSAL', 'Fee reversal', $3, $3)"
         )
-        .bind(Uuid::new_v4())
-        .execute(&repo.pool)
+        .bind(reversal_reason_id)
+        .bind(unique_reversal_code)
+        .bind(person_id)
+        .execute(repo.get_pool())
         .await
         .expect("Should create reversal reason");
         
@@ -641,7 +693,10 @@ mod fee_repository_tests {
             person_id.to_string(),
         ).await;
         
-        assert!(result.is_ok(), "Should bulk reverse fee applications successfully");
+        if let Err(e) = &result {
+            println!("Bulk reverse error: {:?}", e);
+        }
+        assert!(result.is_ok(), "Should bulk reverse fee applications successfully: {:?}", result);
         
         let reversed = result.unwrap();
         assert_eq!(reversed.len(), fee_ids.len(), "Should reverse all applications");
@@ -651,6 +706,6 @@ mod fee_repository_tests {
             assert!(fee_ids.contains(&app.fee_application_id));
         }
         
-        cleanup_database(&repo.pool).await;
+        cleanup_database(repo.get_pool()).await;
     }
 }
