@@ -6,13 +6,23 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Database representation of WorkflowType enum
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WorkflowTypeModel {
     AccountOpening,
     AccountClosure,
-    AccountReactivation,
-    ComplianceVerification,
-    MultiPartyApproval,
+    LoanApplication,
+    LoanDisbursement,
+    TransactionApproval,
+    ComplianceCheck,
+    KycUpdate,
+    DocumentVerification,
+    CreditDecision,
+    CollateralValuation,
+    InterestRateChange,
+    FeeWaiver,
+    LimitChange,
+    StatusChange,
+    ManualIntervention,
 }
 
 impl std::fmt::Display for WorkflowTypeModel {
@@ -20,15 +30,50 @@ impl std::fmt::Display for WorkflowTypeModel {
         match self {
             WorkflowTypeModel::AccountOpening => write!(f, "AccountOpening"),
             WorkflowTypeModel::AccountClosure => write!(f, "AccountClosure"),
-            WorkflowTypeModel::AccountReactivation => write!(f, "AccountReactivation"),
-            WorkflowTypeModel::ComplianceVerification => write!(f, "ComplianceVerification"),
-            WorkflowTypeModel::MultiPartyApproval => write!(f, "MultiPartyApproval"),
+            WorkflowTypeModel::LoanApplication => write!(f, "LoanApplication"),
+            WorkflowTypeModel::LoanDisbursement => write!(f, "LoanDisbursement"),
+            WorkflowTypeModel::TransactionApproval => write!(f, "TransactionApproval"),
+            WorkflowTypeModel::ComplianceCheck => write!(f, "ComplianceCheck"),
+            WorkflowTypeModel::KycUpdate => write!(f, "KycUpdate"),
+            WorkflowTypeModel::DocumentVerification => write!(f, "DocumentVerification"),
+            WorkflowTypeModel::CreditDecision => write!(f, "CreditDecision"),
+            WorkflowTypeModel::CollateralValuation => write!(f, "CollateralValuation"),
+            WorkflowTypeModel::InterestRateChange => write!(f, "InterestRateChange"),
+            WorkflowTypeModel::FeeWaiver => write!(f, "FeeWaiver"),
+            WorkflowTypeModel::LimitChange => write!(f, "LimitChange"),
+            WorkflowTypeModel::StatusChange => write!(f, "StatusChange"),
+            WorkflowTypeModel::ManualIntervention => write!(f, "ManualIntervention"),
+        }
+    }
+}
+
+impl std::str::FromStr for WorkflowTypeModel {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "AccountOpening" => Ok(WorkflowTypeModel::AccountOpening),
+            "AccountClosure" => Ok(WorkflowTypeModel::AccountClosure),
+            "LoanApplication" => Ok(WorkflowTypeModel::LoanApplication),
+            "LoanDisbursement" => Ok(WorkflowTypeModel::LoanDisbursement),
+            "TransactionApproval" => Ok(WorkflowTypeModel::TransactionApproval),
+            "ComplianceCheck" => Ok(WorkflowTypeModel::ComplianceCheck),
+            "KycUpdate" => Ok(WorkflowTypeModel::KycUpdate),
+            "DocumentVerification" => Ok(WorkflowTypeModel::DocumentVerification),
+            "CreditDecision" => Ok(WorkflowTypeModel::CreditDecision),
+            "CollateralValuation" => Ok(WorkflowTypeModel::CollateralValuation),
+            "InterestRateChange" => Ok(WorkflowTypeModel::InterestRateChange),
+            "FeeWaiver" => Ok(WorkflowTypeModel::FeeWaiver),
+            "LimitChange" => Ok(WorkflowTypeModel::LimitChange),
+            "StatusChange" => Ok(WorkflowTypeModel::StatusChange),
+            "ManualIntervention" => Ok(WorkflowTypeModel::ManualIntervention),
+            _ => Err(format!("Invalid workflow type: {s}")),
         }
     }
 }
 
 /// Database representation of WorkflowStep enum
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum WorkflowStepModel {
     InitiateRequest,
     ComplianceCheck,
@@ -36,6 +81,35 @@ pub enum WorkflowStepModel {
     ApprovalRequired,
     FinalSettlement,
     Completed,
+}
+
+impl std::fmt::Display for WorkflowStepModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WorkflowStepModel::InitiateRequest => write!(f, "InitiateRequest"),
+            WorkflowStepModel::ComplianceCheck => write!(f, "ComplianceCheck"),
+            WorkflowStepModel::DocumentVerification => write!(f, "DocumentVerification"),
+            WorkflowStepModel::ApprovalRequired => write!(f, "ApprovalRequired"),
+            WorkflowStepModel::FinalSettlement => write!(f, "FinalSettlement"),
+            WorkflowStepModel::Completed => write!(f, "Completed"),
+        }
+    }
+}
+
+impl std::str::FromStr for WorkflowStepModel {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "InitiateRequest" => Ok(WorkflowStepModel::InitiateRequest),
+            "ComplianceCheck" => Ok(WorkflowStepModel::ComplianceCheck),
+            "DocumentVerification" => Ok(WorkflowStepModel::DocumentVerification),
+            "ApprovalRequired" => Ok(WorkflowStepModel::ApprovalRequired),
+            "FinalSettlement" => Ok(WorkflowStepModel::FinalSettlement),
+            "Completed" => Ok(WorkflowStepModel::Completed),
+            _ => Err(format!("Invalid workflow step: {s}")),
+        }
+    }
 }
 
 /// Database representation of WorkflowStatus enum
@@ -58,6 +132,22 @@ impl std::fmt::Display for WorkflowStatusModel {
             WorkflowStatusModel::Failed => write!(f, "Failed"),
             WorkflowStatusModel::Cancelled => write!(f, "Cancelled"),
             WorkflowStatusModel::TimedOut => write!(f, "TimedOut"),
+        }
+    }
+}
+
+impl std::str::FromStr for WorkflowStatusModel {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "InProgress" => Ok(WorkflowStatusModel::InProgress),
+            "PendingAction" => Ok(WorkflowStatusModel::PendingAction),
+            "Completed" => Ok(WorkflowStatusModel::Completed),
+            "Failed" => Ok(WorkflowStatusModel::Failed),
+            "Cancelled" => Ok(WorkflowStatusModel::Cancelled),
+            "TimedOut" => Ok(WorkflowStatusModel::TimedOut),
+            _ => Err(format!("Invalid workflow status: {s}")),
         }
     }
 }

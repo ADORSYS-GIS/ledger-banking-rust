@@ -47,7 +47,7 @@ jobs:
     - name: Run tests for PostgreSQL
       env:
         DATABASE_URL: postgresql://user:password@localhost:5432/mydb
-      run: cargo test --workspace --features postgres_tests --verbose
+      run: cargo test --workspace --features postgres_tests --verbose -- --test-threads=1
 
     - name: Run clippy
       run: cargo clippy --workspace -- -D warnings
