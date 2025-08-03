@@ -30,7 +30,7 @@ fn parse_transaction_status(status_str: &str) -> BankingResult<TransactionStatus
         "ApprovalRejected" => Ok(TransactionStatus::ApprovalRejected),
         _ => Err(BankingError::ValidationError {
             field: "status".to_string(),
-            message: format!("Invalid transaction status: {}", status_str),
+            message: format!("Invalid transaction status: {status_str}"),
         }),
     }
 }
@@ -44,7 +44,7 @@ fn parse_approval_status(status_str: &str) -> BankingResult<TransactionApprovalS
         "PartiallyApproved" => Ok(TransactionApprovalStatus::PartiallyApproved),
         _ => Err(BankingError::ValidationError {
             field: "approval_status".to_string(),
-            message: format!("Invalid approval status: {}", status_str),
+            message: format!("Invalid approval status: {status_str}"),
         }),
     }
 }
@@ -60,7 +60,7 @@ fn parse_workflow_status(status_str: &str) -> BankingResult<WorkflowStatusModel>
         "TimedOut" => Ok(WorkflowStatusModel::TimedOut),
         _ => Err(BankingError::ValidationError {
             field: "workflow_status".to_string(),
-            message: format!("Invalid workflow status: {}", status_str),
+            message: format!("Invalid workflow status: {status_str}"),
         }),
     }
 }
@@ -268,12 +268,12 @@ impl TransactionRepository for TransactionRepositoryImpl {
         
         if from_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date >= ${}", param_count));
+            query.push_str(&format!(" AND value_date >= ${param_count}"));
         }
         
         if to_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date <= ${}", param_count));
+            query.push_str(&format!(" AND value_date <= ${param_count}"));
         }
         
         query.push_str(" ORDER BY transaction_date DESC");
@@ -440,12 +440,12 @@ impl TransactionRepository for TransactionRepositoryImpl {
         
         if from_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date >= ${}", param_count));
+            query.push_str(&format!(" AND value_date >= ${param_count}"));
         }
         
         if to_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date <= ${}", param_count));
+            query.push_str(&format!(" AND value_date <= ${param_count}"));
         }
         
         query.push_str(" ORDER BY transaction_date DESC");
@@ -489,12 +489,12 @@ impl TransactionRepository for TransactionRepositoryImpl {
         
         if from_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date >= ${}", param_count));
+            query.push_str(&format!(" AND value_date >= ${param_count}"));
         }
         
         if to_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date <= ${}", param_count));
+            query.push_str(&format!(" AND value_date <= ${param_count}"));
         }
         
         query.push_str(" ORDER BY transaction_date DESC");
@@ -538,12 +538,12 @@ impl TransactionRepository for TransactionRepositoryImpl {
         
         if from_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date >= ${}", param_count));
+            query.push_str(&format!(" AND value_date >= ${param_count}"));
         }
         
         if to_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date <= ${}", param_count));
+            query.push_str(&format!(" AND value_date <= ${param_count}"));
         }
         
         query.push_str(" ORDER BY transaction_date DESC");
@@ -1000,10 +1000,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
                 result.get::<String, _>("approval_action").as_str()
             ).unwrap(),
             approved_at: result.get("approved_at"),
-            approval_notes: match result.get::<Option<String>, _>("approval_notes") {
-                Some(notes) => Some(HeaplessString::try_from(notes.as_str()).unwrap()),
-                None => None,
-            },
+            approval_notes: result.get::<Option<String>, _>("approval_notes").map(|notes| HeaplessString::try_from(notes.as_str()).unwrap()),
             approval_method: approval.approval_method,
             approval_location: approval.approval_location,
             created_at: result.get("created_at"),
@@ -1035,10 +1032,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
                     row.get::<String, _>("approval_action").as_str()
                 ).unwrap(),
                 approved_at: row.get("approved_at"),
-                approval_notes: match row.get::<Option<String>, _>("approval_notes") {
-                    Some(notes) => Some(HeaplessString::try_from(notes.as_str()).unwrap()),
-                    None => None,
-                },
+                approval_notes: row.get::<Option<String>, _>("approval_notes").map(|notes| HeaplessString::try_from(notes.as_str()).unwrap()),
                 approval_method: HeaplessString::try_from("Manual").unwrap(),
                 approval_location: None,
                 created_at: row.get("created_at"),
@@ -1073,10 +1067,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
                     row.get::<String, _>("approval_action").as_str()
                 ).unwrap(),
                 approved_at: row.get("approved_at"),
-                approval_notes: match row.get::<Option<String>, _>("approval_notes") {
-                    Some(notes) => Some(HeaplessString::try_from(notes.as_str()).unwrap()),
-                    None => None,
-                },
+                approval_notes: row.get::<Option<String>, _>("approval_notes").map(|notes| HeaplessString::try_from(notes.as_str()).unwrap()),
                 approval_method: HeaplessString::try_from("Manual").unwrap(),
                 approval_location: None,
                 created_at: row.get("created_at"),
@@ -1119,12 +1110,12 @@ impl TransactionRepository for TransactionRepositoryImpl {
         
         if from_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date >= ${}", param_count));
+            query.push_str(&format!(" AND value_date >= ${param_count}"));
         }
         
         if to_date.is_some() {
             param_count += 1;
-            query.push_str(&format!(" AND value_date <= ${}", param_count));
+            query.push_str(&format!(" AND value_date <= ${param_count}"));
         }
 
         let mut db_query = sqlx::query(&query).bind(account_id);

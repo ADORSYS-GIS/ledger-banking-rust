@@ -26,7 +26,7 @@ fn parse_person_type(type_str: &str) -> BankingResult<PersonType> {
         "unknown" => Ok(PersonType::Unknown),
         _ => Err(BankingError::ValidationError {
             field: "person_type".to_string(),
-            message: format!("Invalid person type: {}", type_str),
+            message: format!("Invalid person type: {type_str}"),
         }),
     }
 }
@@ -356,7 +356,7 @@ impl PersonRepository for PersonRepositoryImpl {
     }
 
     async fn search_by_name(&self, query: &str) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
-        let search_pattern = format!("%{}%", query);
+        let search_pattern = format!("%{query}%");
         let results = sqlx::query(
             r#"
             SELECT person_id, person_type::text as person_type, display_name, external_identifier, organization,
@@ -478,7 +478,7 @@ mod tests {
         test_person.external_identifier = Some(HeaplessString::try_from(external_id.as_str()).unwrap());
 
         // Create person first
-        let created = repo.create(test_person.clone()).await.expect("Failed to create person");
+        let _created = repo.create(test_person.clone()).await.expect("Failed to create person");
         
         // Retrieve by external identifier
         let result = repo.get_by_external_identifier(&external_id).await;

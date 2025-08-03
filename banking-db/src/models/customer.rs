@@ -172,7 +172,7 @@ impl std::str::FromStr for KycStatus {
             "Rejected" => Ok(KycStatus::Rejected),
             "RequiresUpdate" => Ok(KycStatus::RequiresUpdate),
             "Failed" => Ok(KycStatus::Failed),
-            _ => Err(format!("Invalid KycStatus: {}", s)),
+            _ => Err(format!("Invalid KycStatus: {s}")),
         }
     }
 }
