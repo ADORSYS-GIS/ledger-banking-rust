@@ -79,6 +79,86 @@ pub enum CollateralRiskRating {
     Unacceptable,
 }
 
+// Display implementations for collateral enums
+impl std::fmt::Display for CollateralType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CollateralType::ResidentialProperty => write!(f, "residentialproperty"),
+            CollateralType::CommercialProperty => write!(f, "commercialproperty"),
+            CollateralType::IndustrialProperty => write!(f, "industrialproperty"),
+            CollateralType::Land => write!(f, "land"),
+            CollateralType::PassengerVehicle => write!(f, "passengervehicle"),
+            CollateralType::CommercialVehicle => write!(f, "commercialvehicle"),
+            CollateralType::Motorcycle => write!(f, "motorcycle"),
+            CollateralType::Boat => write!(f, "boat"),
+            CollateralType::Aircraft => write!(f, "aircraft"),
+            CollateralType::CashDeposit => write!(f, "cashdeposit"),
+            CollateralType::GovernmentSecurities => write!(f, "governmentsecurities"),
+            CollateralType::CorporateBonds => write!(f, "corporatebonds"),
+            CollateralType::Stocks => write!(f, "stocks"),
+            CollateralType::MutualFunds => write!(f, "mutualfunds"),
+            CollateralType::Inventory => write!(f, "inventory"),
+            CollateralType::AccountsReceivable => write!(f, "accountsreceivable"),
+            CollateralType::Equipment => write!(f, "equipment"),
+            CollateralType::Machinery => write!(f, "machinery"),
+            CollateralType::Jewelry => write!(f, "jewelry"),
+            CollateralType::ArtAndAntiques => write!(f, "artandantiques"),
+            CollateralType::Electronics => write!(f, "electronics"),
+            CollateralType::PreciousMetals => write!(f, "preciousmetals"),
+            CollateralType::AgriculturalProducts => write!(f, "agriculturalproducts"),
+            CollateralType::Other => write!(f, "other"),
+        }
+    }
+}
+
+impl std::fmt::Display for CollateralCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CollateralCategory::Immovable => write!(f, "immovable"),
+            CollateralCategory::Movable => write!(f, "movable"),
+            CollateralCategory::Financial => write!(f, "financial"),
+            CollateralCategory::Intangible => write!(f, "intangible"),
+        }
+    }
+}
+
+impl std::fmt::Display for CustodyLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CustodyLocation::BankVault => write!(f, "bankvault"),
+            CustodyLocation::ThirdPartyCustodian => write!(f, "thirdpartycustodian"),
+            CustodyLocation::ClientPremises => write!(f, "clientpremises"),
+            CustodyLocation::RegisteredWarehouse => write!(f, "registeredwarehouse"),
+            CustodyLocation::GovernmentRegistry => write!(f, "governmentregistry"),
+            CustodyLocation::Other => write!(f, "other"),
+        }
+    }
+}
+
+impl std::fmt::Display for PerfectionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PerfectionStatus::Pending => write!(f, "pending"),
+            PerfectionStatus::Perfected => write!(f, "perfected"),
+            PerfectionStatus::Imperfected => write!(f, "imperfected"),
+            PerfectionStatus::Expired => write!(f, "expired"),
+            PerfectionStatus::UnderDispute => write!(f, "underdispute"),
+        }
+    }
+}
+
+impl std::fmt::Display for CollateralRiskRating {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CollateralRiskRating::Excellent => write!(f, "excellent"),
+            CollateralRiskRating::Good => write!(f, "good"),
+            CollateralRiskRating::Average => write!(f, "average"),
+            CollateralRiskRating::Poor => write!(f, "poor"),
+            CollateralRiskRating::Unacceptable => write!(f, "unacceptable"),
+        }
+    }
+}
+
 /// Database model for collateral status enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "collateral_status", rename_all = "lowercase")]

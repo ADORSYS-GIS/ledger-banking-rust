@@ -8,6 +8,7 @@ Use this prompt when you need to:
 - Analyze all pending changes in the git working directory
 - Create a comprehensive commit message
 - Commit with proper signing (-s -S flags)
+- use "git add --all" if you want to add all changes
 
 ## Prompt Template
 
@@ -36,10 +37,10 @@ When this prompt is used, the assistant should:
 4. **Create Comprehensive Commit Message**:
    - Follow conventional commit format: `<type>(<scope>): <subject>`
    - Include detailed body explaining the changes
-   - List major modifications in bullet points
    - Specify affected components
    - Explain benefits and impact
    - Add Claude Code attribution
+   - Add Qwen Code attribution
 
 5. **Commit with Proper Signing**:
    - Use both `-s` (DCO sign-off) and `-S` (GPG signature) flags
@@ -51,11 +52,6 @@ When this prompt is used, the assistant should:
 <type>(<scope>): <subject>
 
 <detailed description of changes and why they were made>
-
-Major changes:
-- Change 1 with specific details
-- Change 2 with specific details
-- Change 3 with specific details
 
 Components affected:
 - Component 1: Description of changes
@@ -70,6 +66,11 @@ Benefits:
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
+
+🤖 Generated with [Qwen Code](https://tongyi.aliyun.com/qianwen/)
+
+Co-Authored-By: Qwen <noreply@alibaba.com>
+
 ```
 
 ## Commit Types
