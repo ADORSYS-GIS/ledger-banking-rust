@@ -49,6 +49,17 @@ pub enum RiskLevel {
     Critical,
 }
 
+impl std::fmt::Display for RiskLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RiskLevel::Low => write!(f, "Low"),
+            RiskLevel::Medium => write!(f, "Medium"),
+            RiskLevel::High => write!(f, "High"),
+            RiskLevel::Critical => write!(f, "Critical"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AlertType {
     StructuringDetection,
@@ -57,6 +68,19 @@ pub enum AlertType {
     SuspiciousPattern,
     GeographicAnomaly,
     CrossBorderTransaction,
+}
+
+impl std::fmt::Display for AlertType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AlertType::StructuringDetection => write!(f, "StructuringDetection"),
+            AlertType::VelocityCheck => write!(f, "VelocityCheck"),
+            AlertType::LargeCashTransaction => write!(f, "LargeCashTransaction"),
+            AlertType::SuspiciousPattern => write!(f, "SuspiciousPattern"),
+            AlertType::GeographicAnomaly => write!(f, "GeographicAnomaly"),
+            AlertType::CrossBorderTransaction => write!(f, "CrossBorderTransaction"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

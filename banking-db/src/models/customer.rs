@@ -144,6 +144,39 @@ pub enum KycStatus {
     Failed,
 }
 
+impl std::fmt::Display for KycStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KycStatus::NotStarted => write!(f, "NotStarted"),
+            KycStatus::InProgress => write!(f, "InProgress"),
+            KycStatus::Pending => write!(f, "Pending"),
+            KycStatus::Complete => write!(f, "Complete"),
+            KycStatus::Approved => write!(f, "Approved"),
+            KycStatus::Rejected => write!(f, "Rejected"),
+            KycStatus::RequiresUpdate => write!(f, "RequiresUpdate"),
+            KycStatus::Failed => write!(f, "Failed"),
+        }
+    }
+}
+
+impl std::str::FromStr for KycStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NotStarted" => Ok(KycStatus::NotStarted),
+            "InProgress" => Ok(KycStatus::InProgress),
+            "Pending" => Ok(KycStatus::Pending),
+            "Complete" => Ok(KycStatus::Complete),
+            "Approved" => Ok(KycStatus::Approved),
+            "Rejected" => Ok(KycStatus::Rejected),
+            "RequiresUpdate" => Ok(KycStatus::RequiresUpdate),
+            "Failed" => Ok(KycStatus::Failed),
+            _ => Err(format!("Invalid KycStatus: {}", s)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DocumentStatus {
     Uploaded,

@@ -49,6 +49,18 @@ pub enum PersonType {
     Unknown,
 }
 
+impl std::fmt::Display for PersonType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PersonType::Natural => write!(f, "natural"),
+            PersonType::Legal => write!(f, "legal"),
+            PersonType::System => write!(f, "system"),
+            PersonType::Integration => write!(f, "integration"),
+            PersonType::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
 /// Database model for person entity type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "person_entity_type", rename_all = "lowercase")]
