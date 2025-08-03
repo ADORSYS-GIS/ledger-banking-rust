@@ -177,6 +177,121 @@ impl std::str::FromStr for KycStatus {
     }
 }
 
+impl std::fmt::Display for CustomerType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CustomerType::Individual => write!(f, "Individual"),
+            CustomerType::Corporate => write!(f, "Corporate"),
+        }
+    }
+}
+
+impl std::str::FromStr for CustomerType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Individual" => Ok(CustomerType::Individual),
+            "Corporate" => Ok(CustomerType::Corporate),
+            _ => Err(format!("Invalid CustomerType: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for IdentityType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NationalId" => Ok(IdentityType::NationalId),
+            "Passport" => Ok(IdentityType::Passport),
+            "CompanyRegistration" => Ok(IdentityType::CompanyRegistration),
+            "PermanentResidentCard" => Ok(IdentityType::PermanentResidentCard),
+            "AsylumCard" => Ok(IdentityType::AsylumCard),
+            "TemporaryResidentPermit" => Ok(IdentityType::TemporaryResidentPermit),
+            "Unknown" => Ok(IdentityType::Unknown),
+            _ => Err(format!("Invalid IdentityType: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for RiskRating {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RiskRating::Low => write!(f, "Low"),
+            RiskRating::Medium => write!(f, "Medium"),
+            RiskRating::High => write!(f, "High"),
+            RiskRating::Blacklisted => write!(f, "Blacklisted"),
+        }
+    }
+}
+
+impl std::str::FromStr for RiskRating {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Low" => Ok(RiskRating::Low),
+            "Medium" => Ok(RiskRating::Medium),
+            "High" => Ok(RiskRating::High),
+            "Blacklisted" => Ok(RiskRating::Blacklisted),
+            _ => Err(format!("Invalid RiskRating: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for CustomerStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CustomerStatus::Active => write!(f, "Active"),
+            CustomerStatus::PendingVerification => write!(f, "PendingVerification"),
+            CustomerStatus::Deceased => write!(f, "Deceased"),  
+            CustomerStatus::Dissolved => write!(f, "Dissolved"),
+            CustomerStatus::Blacklisted => write!(f, "Blacklisted"),
+        }
+    }
+}
+
+impl std::str::FromStr for CustomerStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(CustomerStatus::Active),
+            "PendingVerification" => Ok(CustomerStatus::PendingVerification),
+            "Deceased" => Ok(CustomerStatus::Deceased),
+            "Dissolved" => Ok(CustomerStatus::Dissolved),
+            "Blacklisted" => Ok(CustomerStatus::Blacklisted),
+            _ => Err(format!("Invalid CustomerStatus: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for DocumentStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DocumentStatus::Uploaded => write!(f, "Uploaded"),
+            DocumentStatus::Verified => write!(f, "Verified"),
+            DocumentStatus::Rejected => write!(f, "Rejected"),
+            DocumentStatus::Expired => write!(f, "Expired"),
+        }
+    }
+}
+
+impl std::str::FromStr for DocumentStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Uploaded" => Ok(DocumentStatus::Uploaded),
+            "Verified" => Ok(DocumentStatus::Verified),
+            "Rejected" => Ok(DocumentStatus::Rejected),
+            "Expired" => Ok(DocumentStatus::Expired),
+            _ => Err(format!("Invalid DocumentStatus: {s}")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DocumentStatus {
     Uploaded,
