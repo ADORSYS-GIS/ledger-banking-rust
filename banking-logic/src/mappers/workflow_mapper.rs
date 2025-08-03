@@ -188,9 +188,9 @@ impl WorkflowMapper {
         match workflow_type {
             WorkflowType::AccountOpening => WorkflowTypeModel::AccountOpening,
             WorkflowType::AccountClosure => WorkflowTypeModel::AccountClosure,
-            WorkflowType::AccountReactivation => WorkflowTypeModel::AccountReactivation,
-            WorkflowType::ComplianceVerification => WorkflowTypeModel::ComplianceVerification,
-            WorkflowType::MultiPartyApproval => WorkflowTypeModel::MultiPartyApproval,
+            WorkflowType::AccountReactivation => WorkflowTypeModel::KycUpdate,
+            WorkflowType::ComplianceVerification => WorkflowTypeModel::ComplianceCheck,
+            WorkflowType::MultiPartyApproval => WorkflowTypeModel::TransactionApproval,
         }
     }
 
@@ -231,9 +231,19 @@ impl WorkflowMapper {
         match workflow_type {
             WorkflowTypeModel::AccountOpening => WorkflowType::AccountOpening,
             WorkflowTypeModel::AccountClosure => WorkflowType::AccountClosure,
-            WorkflowTypeModel::AccountReactivation => WorkflowType::AccountReactivation,
-            WorkflowTypeModel::ComplianceVerification => WorkflowType::ComplianceVerification,
-            WorkflowTypeModel::MultiPartyApproval => WorkflowType::MultiPartyApproval,
+            WorkflowTypeModel::LoanApplication => WorkflowType::AccountOpening, // Map to closest domain equivalent
+            WorkflowTypeModel::LoanDisbursement => WorkflowType::AccountOpening,
+            WorkflowTypeModel::TransactionApproval => WorkflowType::MultiPartyApproval,
+            WorkflowTypeModel::ComplianceCheck => WorkflowType::ComplianceVerification,
+            WorkflowTypeModel::KycUpdate => WorkflowType::AccountReactivation,
+            WorkflowTypeModel::DocumentVerification => WorkflowType::ComplianceVerification,
+            WorkflowTypeModel::CreditDecision => WorkflowType::MultiPartyApproval,
+            WorkflowTypeModel::CollateralValuation => WorkflowType::ComplianceVerification,
+            WorkflowTypeModel::InterestRateChange => WorkflowType::MultiPartyApproval,
+            WorkflowTypeModel::FeeWaiver => WorkflowType::MultiPartyApproval,
+            WorkflowTypeModel::LimitChange => WorkflowType::MultiPartyApproval,
+            WorkflowTypeModel::StatusChange => WorkflowType::MultiPartyApproval,
+            WorkflowTypeModel::ManualIntervention => WorkflowType::MultiPartyApproval,
         }
     }
 

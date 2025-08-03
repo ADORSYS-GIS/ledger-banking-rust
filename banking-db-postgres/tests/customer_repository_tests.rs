@@ -296,23 +296,42 @@ mod tests {
         let pool = setup_test_db().await;
         let repo = PostgresCustomerRepository::new(pool);
 
-        // Test list with pagination
-        let customers_page1 = repo.list(0, 5).await
+        // Create test customers with predictable names for pagination testing
+        let mut test_customers = Vec::new();
+        let unique_suffix = Uuid::new_v4().to_string()[0..8].to_string(); // Use UUID for uniqueness
+        for i in 1..=8 {
+            let mut customer = create_test_customer();
+            customer.customer_id = Uuid::new_v4(); // Ensure unique ID
+            customer.full_name = HeaplessString::try_from(format!("PaginatedCust{:02}_{}", i, unique_suffix).as_str()).unwrap();
+            customer.id_number = HeaplessString::try_from(format!("PAG{}{:02}", unique_suffix, i).as_str()).unwrap();
+            
+            let created_customer = repo.create(customer).await
+                .expect("Failed to create test customer");
+            test_customers.push(created_customer);
+        }
+
+        // Test list with pagination - get first 3 customers
+        let customers_page1 = repo.list(0, 3).await
             .expect("Failed to list customers page 1");
         
-        let customers_page2 = repo.list(5, 5).await
+        let customers_page2 = repo.list(3, 3).await
             .expect("Failed to list customers page 2");
         
         // Should not have overlapping customers
         for customer1 in &customers_page1 {
-            assert!(!customers_page2.iter().any(|c2| c2.customer_id == customer1.customer_id));
+            assert!(!customers_page2.iter().any(|c2| c2.customer_id == customer1.customer_id),
+                "Customer {} appears in both page 1 and page 2", customer1.full_name.as_str());
         }
+
+        // Verify we got the expected number of customers per page
+        assert!(customers_page1.len() <= 3, "Page 1 should have at most 3 customers");
+        assert!(customers_page2.len() <= 3, "Page 2 should have at most 3 customers");
 
         // Test count
         let total_count = repo.count().await
             .expect("Failed to count customers");
         
-        assert!(total_count >= 0);
+        assert!(total_count >= 8, "Should have at least 8 customers (our test data)");
     }
 
     #[tokio::test]
