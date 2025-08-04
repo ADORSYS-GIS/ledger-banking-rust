@@ -1,9 +1,12 @@
 use chrono::{DateTime, Utc};
 use heapless::{String as HeaplessString, Vec as HeaplessVec};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
+use banking_api::domain::{ReasonCategory, ReasonContext, ReasonSeverity};
 
+/// Database model for ReasonAndPurpose table
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct ReasonAndPurpose {
     pub id: Uuid,
     
@@ -11,9 +14,17 @@ pub struct ReasonAndPurpose {
     pub code: HeaplessString<50>,  // e.g., "LOAN_PURPOSE_HOME_PURCHASE"
     
     /// Category to group related reasons
+    #[serde(
+        serialize_with = "serialize_reason_category",
+        deserialize_with = "deserialize_reason_category"
+    )]
     pub category: ReasonCategory,
     
     /// Context where this reason is used
+    #[serde(
+        serialize_with = "serialize_reason_context",
+        deserialize_with = "deserialize_reason_context"
+    )]
     pub context: ReasonContext,
     
     /// Language content - up to 3 languages supported
@@ -33,6 +44,10 @@ pub struct ReasonAndPurpose {
     pub is_active: bool,
     
     /// Severity or importance level
+    #[serde(
+        serialize_with = "serialize_reason_severity_option",
+        deserialize_with = "deserialize_reason_severity_option"
+    )]
     pub severity: Option<ReasonSeverity>,
     
     /// Sort order for UI display
@@ -48,79 +63,62 @@ pub struct ReasonAndPurpose {
     pub updated_by: HeaplessString<100>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum ReasonCategory {
-    // Loan related
-    LoanPurpose,
-    LoanRejection,
-    
-    // Account lifecycle
-    AccountClosure,
-    AccountSuspension,
-    AccountReactivation,
-    StatusChange,
-    
-    // Transaction related
-    TransactionRejection,
-    TransactionReversal,
-    HoldReason,
-    
-    // Compliance
-    ComplianceFlag,
-    AuditFinding,
-    
-    // AML/CTF Categories
-    AmlAlert,
-    AmlInvestigation,
-    SuspiciousActivity,
-    CtfRiskFlag,
-    SanctionsHit,
-    PepFlag,  // Politically Exposed Person
-    HighRiskCountry,
-    UnusualPattern,
-    
-    // KYC Categories
-    KycMissingDocument,
-    KycDocumentRejection,
-    KycVerificationFailure,
-    KycUpdateRequired,
-    IdentityVerificationIssue,
-    AddressVerificationIssue,
-    SourceOfFundsRequired,
-    
-    // Customer service
-    ComplaintReason,
-    ServiceRequest,
-    
-    // System
-    SystemGenerated,
-    MaintenanceReason,
-    
-    // Other
-    Other,
+// Custom serialization functions for database compatibility
+fn serialize_reason_category<S>(category: &ReasonCategory, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&category.to_string())
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ReasonContext {
-    Account,
-    Loan,
-    Transaction,
-    Customer,
-    Compliance,
-    AmlCtf,        // Anti-Money Laundering / Counter-Terrorism Financing
-    Kyc,           // Know Your Customer
-    System,
-    General,
+fn deserialize_reason_category<'de, D>(deserializer: D) -> Result<ReasonCategory, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let category_str = String::deserialize(deserializer)?;
+    category_str.parse().map_err(serde::de::Error::custom)
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ReasonSeverity {
-    Critical,
-    High,
-    Medium,
-    Low,
-    Informational,
+fn serialize_reason_context<S>(context: &ReasonContext, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&context.to_string())
 }
+
+fn deserialize_reason_context<'de, D>(deserializer: D) -> Result<ReasonContext, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let context_str = String::deserialize(deserializer)?;
+    context_str.parse().map_err(serde::de::Error::custom)
+}
+
+fn serialize_reason_severity_option<S>(severity: &Option<ReasonSeverity>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match severity {
+        Some(severity) => serializer.serialize_str(&severity.to_string()),
+        None => serializer.serialize_none(),
+    }
+}
+
+fn deserialize_reason_severity_option<'de, D>(deserializer: D) -> Result<Option<ReasonSeverity>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let option_str: Option<String> = Option::deserialize(deserializer)?;
+    match option_str {
+        Some(severity_str) => {
+            let severity = severity_str.parse().map_err(serde::de::Error::custom)?;
+            Ok(Some(severity))
+        }
+        None => Ok(None),
+    }
+}
+
+// Note: ReasonCategory, ReasonContext, and ReasonSeverity enums are imported from banking_api::domain
 
 /// Compliance-specific metadata for AML/CTF/KYC reasons
 #[derive(Debug, Clone, Serialize, Deserialize)]

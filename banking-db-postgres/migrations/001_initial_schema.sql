@@ -67,7 +67,7 @@ CREATE TYPE document_status AS ENUM ('Uploaded', 'Verified', 'Rejected', 'Expire
 CREATE TYPE account_type AS ENUM ('Savings', 'Current', 'Loan');
 CREATE TYPE account_status AS ENUM ('PendingApproval', 'Active', 'Dormant', 'Frozen', 'PendingClosure', 'Closed', 'PendingReactivation');
 CREATE TYPE signing_condition AS ENUM ('None', 'AnyOwner', 'AllOwners');
-CREATE TYPE disbursement_method AS ENUM ('Transfer', 'CashWithdrawal', 'Check', 'HoldFunds');
+CREATE TYPE disbursement_method AS ENUM ('Transfer', 'CashWithdrawal', 'Check', 'HoldFunds', 'OverdraftFacility', 'StagedRelease');
 CREATE TYPE hold_type AS ENUM ('UnclearedFunds', 'JudicialLien', 'LoanPledge', 'ComplianceHold', 'AdministrativeHold', 'FraudHold', 'PendingAuthorization', 'OverdraftReserve', 'CardAuthorization', 'Other');
 CREATE TYPE hold_status AS ENUM ('Active', 'Released', 'Expired', 'Cancelled', 'PartiallyReleased');
 CREATE TYPE hold_priority AS ENUM ('Critical', 'High', 'Medium', 'Low');
@@ -133,6 +133,15 @@ CREATE TYPE enforcement_method AS ENUM ('DirectSale', 'AuctionHouse', 'OnlinePla
 CREATE TYPE enforcement_status AS ENUM ('Initiated', 'InProgress', 'Completed', 'Suspended', 'Cancelled', 'UnderLegalReview');
 
 -- Reason and workflow related enums
+CREATE TYPE reason_category AS ENUM (
+    'LoanPurpose', 'LoanRejection', 'AccountClosure', 'AccountSuspension', 'AccountReactivation', 'StatusChange',
+    'TransactionRejection', 'TransactionReversal', 'HoldReason', 'ComplianceFlag', 'AuditFinding',
+    'AmlAlert', 'AmlInvestigation', 'SuspiciousActivity', 'CtfRiskFlag', 'SanctionsHit', 'PepFlag', 
+    'HighRiskCountry', 'UnusualPattern', 'KycMissingDocument', 'KycDocumentRejection', 'KycVerificationFailure',
+    'KycUpdateRequired', 'IdentityVerificationIssue', 'AddressVerificationIssue', 'SourceOfFundsRequired',
+    'ComplaintReason', 'ServiceRequest', 'SystemGenerated', 'MaintenanceReason', 'Other'
+);
+CREATE TYPE reason_context AS ENUM ('Account', 'Loan', 'Transaction', 'Customer', 'Compliance', 'AmlCtf', 'Kyc', 'System', 'General');
 CREATE TYPE reason_severity AS ENUM ('Critical', 'High', 'Medium', 'Low', 'Informational');
 CREATE TYPE workflow_type AS ENUM ('AccountOpening', 'AccountClosure', 'LoanApplication', 'LoanDisbursement', 'TransactionApproval', 'ComplianceCheck', 'KycUpdate', 'DocumentVerification', 'CreditDecision', 'CollateralValuation', 'InterestRateChange', 'FeeWaiver', 'LimitChange', 'StatusChange', 'ManualIntervention');
 CREATE TYPE workflow_status AS ENUM ('Pending', 'InProgress', 'Approved', 'Rejected', 'Cancelled', 'OnHold', 'Expired', 'Completed');
@@ -409,8 +418,8 @@ CREATE TABLE customer_audit_trail (
 CREATE TABLE reason_and_purpose (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(50) UNIQUE NOT NULL,
-    category VARCHAR(50) NOT NULL,
-    context VARCHAR(50) NOT NULL,
+    category reason_category NOT NULL,
+    context reason_context NOT NULL,
     
     -- Multilingual content (up to 3 languages)
     l1_content VARCHAR(100),
@@ -438,8 +447,8 @@ CREATE TABLE reason_and_purpose (
     jurisdictions TEXT[], -- Array of country codes
     
     -- Audit fields
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by VARCHAR(100) NOT NULL,
     updated_by VARCHAR(100) NOT NULL
 );

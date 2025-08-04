@@ -1,22 +1,24 @@
 use std::sync::Arc;
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::prelude::ToPrimitive;
 use uuid::Uuid;
 
 use banking_api::{
-    BankingResult, BankingError,
+    BankingResult, BankingError, TransactionType,
     service::CasaService,
     domain::{
+        casa::AuthorizationLevel,
         OverdraftFacility, OverdraftUtilization, OverdraftInterestCalculation,
         CasaAccountSummary, OverdraftProcessingJob, OverdraftLimitAdjustment,
         CasaTransactionValidation, InterestPostingRecord, InterestType,
         CasaValidationResult, CompoundingFrequency, ReviewFrequency, OverdraftStatus,
-        CreateOverdraftFacilityRequest, transaction::TransactionType
+        CreateOverdraftFacilityRequest
     },
 };
-use banking_db::repository::{AccountRepository, HoldRepository};
+use banking_db::repository::AccountRepository;
 use crate::integration::ProductCatalogClient;
 
 /// Production implementation of CasaService
@@ -24,19 +26,16 @@ use crate::integration::ProductCatalogClient;
 /// Integrates overdraft management with transaction validation framework (Section 3.1)
 pub struct CasaServiceImpl {
     account_repository: Arc<dyn AccountRepository>,
-    hold_repository: Arc<dyn HoldRepository>,
     product_catalog: Arc<ProductCatalogClient>,
 }
 
 impl CasaServiceImpl {
     pub fn new(
         account_repository: Arc<dyn AccountRepository>,
-        hold_repository: Arc<dyn HoldRepository>,
         product_catalog: Arc<ProductCatalogClient>,
     ) -> Self {
         Self {
             account_repository,
-            hold_repository,
             product_catalog,
         }
     }
@@ -113,6 +112,7 @@ impl CasaService for CasaServiceImpl {
         Ok(facility)
     }
 
+    #[allow(unused_variables)]
     async fn update_overdraft_facility(
         &self,
         facility_id: Uuid,
@@ -125,6 +125,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft facility update")
     }
 
+    #[allow(unused_variables)]
     async fn update_overdraft_status(
         &self,
         facility_id: Uuid,
@@ -135,6 +136,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft status update")
     }
 
+    #[allow(unused_variables)]
     async fn get_overdraft_facility(
         &self,
         account_id: Uuid,
@@ -142,6 +144,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement get overdraft facility")
     }
 
+    #[allow(unused_variables)]
     async fn request_overdraft_limit_adjustment(
         &self,
         account_id: Uuid,
@@ -153,6 +156,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft limit adjustment request")
     }
 
+    #[allow(unused_variables)]
     async fn process_overdraft_adjustment(
         &self,
         adjustment_id: Uuid,
@@ -173,7 +177,7 @@ impl CasaService for CasaServiceImpl {
         account_id: Uuid,
         transaction_amount: Decimal,
         transaction_type: TransactionType,
-        channel: Option<String>,
+        #[allow(unused_variables)] _channel: Option<String>,
     ) -> BankingResult<CasaTransactionValidation> {
         tracing::debug!("Validating CASA transaction: account={account_id}, amount={transaction_amount}, type={transaction_type:?}");
 
@@ -184,7 +188,7 @@ impl CasaService for CasaServiceImpl {
             .ok_or(BankingError::AccountNotFound(account_id))?;
 
         // Get current available balance (considering holds)
-        let balance_calc = self.hold_repository
+        let balance_calc = self.account_repository
             .calculate_total_holds(account_id, None)
             .await?;
 
@@ -192,12 +196,12 @@ impl CasaService for CasaServiceImpl {
                                account.overdraft_limit.unwrap_or(Decimal::ZERO) - 
                                balance_calc;
 
-        let mut validation_messages = Vec::new();
+        let mut validation_messages: Vec<HeaplessString<200>> = Vec::new();
         let mut requires_authorization = false;
         let mut authorization_level = None;
 
         // Calculate post-transaction balance
-        let post_transaction_balance = if transaction_type == "Debit" {
+        let post_transaction_balance = if transaction_type == TransactionType::Debit {
             account.current_balance - transaction_amount
         } else {
             account.current_balance + transaction_amount
@@ -211,12 +215,14 @@ impl CasaService for CasaServiceImpl {
         };
 
         // Validate transaction
-        let validation_result = if transaction_type == "Debit" {
+        let validation_result = if transaction_type == TransactionType::Debit {
             if transaction_amount > available_balance {
                 CasaValidationResult::Rejected
             } else if overdraft_utilization.is_some() {
                 // Transaction will utilize overdraft
-                validation_messages.push("Transaction will utilize overdraft facility".to_string());
+                if let Ok(msg) = HeaplessString::try_from("Transaction will utilize overdraft facility") {
+                    validation_messages.push(msg);
+                }
                 
                 let overdraft_amount = overdraft_utilization.unwrap();
                 let overdraft_limit = account.overdraft_limit.unwrap_or(Decimal::ZERO);
@@ -227,7 +233,7 @@ impl CasaService for CasaServiceImpl {
                     // Check if authorization is required based on amount or first-time usage
                     if overdraft_amount > Decimal::from(1000) { // $1,000 threshold
                         requires_authorization = true;
-                        authorization_level = Some(banking_api::service::casa_service::AuthorizationLevel::Supervisor);
+                        authorization_level = Some(AuthorizationLevel::Supervisor);
                     }
                     
                     if requires_authorization {
@@ -264,6 +270,7 @@ impl CasaService for CasaServiceImpl {
         Ok(casa_validation)
     }
 
+    #[allow(unused_variables)]
     async fn check_overdraft_impact(
         &self,
         account_id: Uuid,
@@ -296,6 +303,7 @@ impl CasaService for CasaServiceImpl {
         // Calculate estimated daily interest cost
         let estimated_daily_interest_cost = if let Some(amount) = overdraft_amount {
             // Get overdraft rate from Product Catalog
+            #[allow(unused_variables)]
             let product_rules = self.product_catalog.get_product_rules(&account.product_code).await?;
             let daily_rate = Decimal::from_str("0.15").unwrap() / Decimal::from(365); // 15% annual rate
             Some(amount * daily_rate)
@@ -313,12 +321,13 @@ impl CasaService for CasaServiceImpl {
             overdraft_amount,
             available_overdraft_limit,
             estimated_daily_interest_cost,
-            authorization_required: overdraft_amount.map_or(false, |amount| amount > Decimal::from(1000)),
+            authorization_required: overdraft_amount.is_some_and(|amount| amount > Decimal::from(1000)),
         };
 
         Ok(impact_analysis)
     }
 
+    #[allow(unused_variables)]
     async fn preauthorize_overdraft_usage(
         &self,
         account_id: Uuid,
@@ -334,6 +343,7 @@ impl CasaService for CasaServiceImpl {
     // OVERDRAFT INTEREST CALCULATION
     // ============================================================================
     
+    #[allow(unused_variables)]
     async fn calculate_daily_overdraft_interest(
         &self,
         account_id: Uuid,
@@ -391,6 +401,7 @@ impl CasaService for CasaServiceImpl {
     // Remaining method implementations would follow similar patterns...
     // For brevity, providing placeholder implementations
 
+    #[allow(unused_variables)]
     async fn get_overdraft_utilization_history(
         &self,
         account_id: Uuid,
@@ -400,6 +411,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft utilization history")
     }
 
+    #[allow(unused_variables)]
     async fn record_overdraft_utilization(
         &self,
         account_id: Uuid,
@@ -413,7 +425,7 @@ impl CasaService for CasaServiceImpl {
 
     async fn calculate_compound_overdraft_interest(
         &self,
-        account_id: Uuid,
+        _account_id: Uuid,
         principal_amount: Decimal,
         annual_rate: Decimal,
         days: u32,
@@ -437,6 +449,7 @@ impl CasaService for CasaServiceImpl {
         Ok(interest)
     }
 
+    #[allow(unused_variables)]
     async fn post_overdraft_interest(
         &self,
         account_id: Uuid,
@@ -444,11 +457,12 @@ impl CasaService for CasaServiceImpl {
         calculation_period_start: NaiveDate,
         calculation_period_end: NaiveDate,
         posting_date: NaiveDate,
-        posted_by: Uuid, // References Person.person_id
+        posted_by: String,
     ) -> BankingResult<InterestPostingRecord> {
         todo!("Implement overdraft interest posting")
     }
 
+    #[allow(unused_variables)]
     async fn capitalize_overdraft_interest(
         &self,
         account_id: Uuid,
@@ -459,6 +473,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft interest capitalization")
     }
 
+    #[allow(unused_variables)]
     async fn get_interest_posting_history(
         &self,
         account_id: Uuid,
@@ -473,6 +488,7 @@ impl CasaService for CasaServiceImpl {
     // EOD BATCH PROCESSING
     // ============================================================================
     
+    #[allow(unused_variables)]
     async fn execute_daily_overdraft_processing(
         &self,
         processing_date: NaiveDate,
@@ -512,7 +528,7 @@ impl CasaService for CasaServiceImpl {
                     // self.post_overdraft_interest(...).await?;
                 }
                 Err(e) => {
-                    job.errors.push(format!("Account {}: {}", account_id, e));
+                    job.errors.push(format!("Account {account_id}: {e}"));
                     tracing::warn!("Failed to process overdraft interest for account {}: {}", account_id, e);
                 }
             }
@@ -531,6 +547,7 @@ impl CasaService for CasaServiceImpl {
         Ok(job)
     }
 
+    #[allow(unused_variables)]
     async fn get_overdrawn_accounts(
         &self,
         as_of_date: NaiveDate,
@@ -543,6 +560,7 @@ impl CasaService for CasaServiceImpl {
     // All remaining methods would follow similar patterns with proper error handling,
     // logging, and business rule validation
 
+    #[allow(unused_variables)]
     async fn process_interest_capitalization(
         &self,
         processing_date: NaiveDate,
@@ -551,6 +569,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement interest capitalization processing")
     }
 
+    #[allow(unused_variables)]
     async fn generate_overdraft_processing_report(
         &self,
         job_id: Uuid,
@@ -558,6 +577,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft processing report generation")
     }
 
+    #[allow(unused_variables)]
     async fn get_casa_account_summary(
         &self,
         account_id: Uuid,
@@ -565,6 +585,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement CASA account summary")
     }
 
+    #[allow(unused_variables)]
     async fn update_overdraft_utilization(
         &self,
         account_id: Uuid,
@@ -573,6 +594,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft utilization update")
     }
 
+    #[allow(unused_variables)]
     async fn assess_dormancy_risk(
         &self,
         account_id: Uuid,
@@ -581,6 +603,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement dormancy risk assessment")
     }
 
+    #[allow(unused_variables)]
     async fn get_accounts_for_overdraft_review(
         &self,
         review_date: NaiveDate,
@@ -589,6 +612,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement accounts for overdraft review")
     }
 
+    #[allow(unused_variables)]
     async fn generate_overdraft_portfolio_analytics(
         &self,
         as_of_date: NaiveDate,
@@ -597,6 +621,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft portfolio analytics")
     }
 
+    #[allow(unused_variables)]
     async fn get_overdraft_revenue_summary(
         &self,
         from_date: NaiveDate,
@@ -606,6 +631,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft revenue summary")
     }
 
+    #[allow(unused_variables)]
     async fn generate_overdraft_regulatory_report(
         &self,
         reporting_date: NaiveDate,
@@ -614,6 +640,7 @@ impl CasaService for CasaServiceImpl {
         todo!("Implement overdraft regulatory reporting")
     }
 
+    #[allow(unused_variables)]
     async fn get_high_risk_overdraft_accounts(
         &self,
         risk_threshold: Decimal,

@@ -8,6 +8,9 @@ pub mod calendar_service_impl;
 pub mod compliance_service_impl;
 pub mod channel_service_impl;
 pub mod loan_service_impl;
+pub mod casa_service_impl;
+pub mod collateral_service_impl;
+pub mod fee_service_impl;
 
 pub use customer_service_impl::*;
 pub use account_service_impl::*;
@@ -19,3 +22,6 @@ pub use calendar_service_impl::*;
 pub use compliance_service_impl::*;
 pub use channel_service_impl::*;
 pub use loan_service_impl::*;
+pub use casa_service_impl::*;
+pub use collateral_service_impl::*;
+pub use fee_service_impl::*;

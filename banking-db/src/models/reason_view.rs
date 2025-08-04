@@ -5,9 +5,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 use banking_api::domain::{
     AccountType, AccountStatus, HoldType, HoldStatus, TransactionAuditAction, 
-    WorkflowType, WorkflowStatus, RestructuringType, SarStatus
+    WorkflowType, WorkflowStatus, RestructuringType, SarStatus, ReasonSeverity
 };
-use crate::models::ReasonSeverity;
 
 /// Database model for ReasonView
 #[derive(Debug, Clone, Serialize, Deserialize)]

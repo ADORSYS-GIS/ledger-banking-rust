@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use async_trait::async_trait;
-use chrono::Utc;
+use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -8,8 +8,15 @@ use uuid::Uuid;
 use heapless::String as HeaplessString;
 
 use banking_api::{
-    BankingResult, Account, AccountStatus,
-    service::AccountService,
+    BankingResult, BankingError, Account, AccountStatus,
+    service::{
+        AccountService, HoldAuthorizationLevel, HoldAnalytics, 
+        HighHoldAccount, JudicialHoldReport
+    },
+    domain::{
+        AccountHold, HoldType, HoldStatus, HoldPriority, HoldReleaseRequest,
+        BalanceCalculation, HoldSummary, HoldExpiryJob, PlaceHoldRequest
+    },
 };
 use banking_db::repository::AccountRepository;
 use crate::{mappers::AccountMapper, integration::ProductCatalogClient};
@@ -318,6 +325,785 @@ impl AccountService for AccountServiceImpl {
     async fn update_last_activity_date(&self, account_id: Uuid, activity_date: chrono::NaiveDate) -> BankingResult<()> {
         self.account_repository.update_last_activity_date(account_id, activity_date).await
     }
+
+    // ============================================================================
+    // HOLD PLACEMENT AND MANAGEMENT (integrated from HoldServiceImpl)
+    // ============================================================================
+    
+    /// Place a hold on an account with specified amount and type
+    async fn place_hold(
+        &self,
+        request: PlaceHoldRequest,
+    ) -> BankingResult<AccountHold> {
+        tracing::info!("Placing hold of {} on account {} with type {:?}", 
+                      request.amount, request.account_id, request.hold_type);
+
+        // Validate account exists and is operational
+        let account = self.account_repository
+            .find_by_id(request.account_id)
+            .await?
+            .ok_or(BankingError::AccountNotFound(request.account_id))?;
+
+        // Convert database model to domain for validation
+        let account_domain = AccountMapper::from_model(account)?;
+
+        // Validate account can have holds applied
+        self.validate_hold_eligibility(&account_domain)?;
+
+        // Validate hold amount
+        if request.amount <= Decimal::ZERO {
+            return Err(BankingError::ValidationError {
+                field: "amount".to_string(),
+                message: "Hold amount must be positive".to_string(),
+            });
+        }
+
+        // Check if placing hold would exceed available balance constraints
+        self.validate_hold_placement(
+            request.account_id,
+            request.amount,
+            request.priority.clone(),
+        ).await?;
+
+        // Create the hold
+        let hold = AccountHold {
+            hold_id: Uuid::new_v4(),
+            account_id: request.account_id,
+            amount: request.amount,
+            hold_type: request.hold_type,
+            reason_id: request.reason_id,
+            additional_details: request.additional_details,
+            placed_by: request.placed_by,
+            placed_at: Utc::now(),
+            expires_at: request.expires_at,
+            status: HoldStatus::Active,
+            released_at: None,
+            released_by: None,
+            priority: request.priority,
+            source_reference: request.source_reference,
+            automatic_release: request.expires_at.is_some(),
+        };
+
+        // Persist the hold
+        let hold_model = AccountMapper::account_hold_to_model(hold.clone());
+        let created_model = self.account_repository.create_hold(hold_model).await?;
+        
+        tracing::info!("Successfully placed hold {} for amount {} on account {}", 
+                      created_model.hold_id, created_model.amount, created_model.account_id);
+
+        Ok(AccountMapper::account_hold_from_model(created_model))
+    }
+
+    async fn release_hold_with_request(
+        &self,
+        release_request: HoldReleaseRequest,
+    ) -> BankingResult<AccountHold> {
+        tracing::info!("Releasing hold {} by user {}", 
+                      release_request.hold_id, release_request.released_by);
+
+        // Find the hold
+        let hold_model = self.account_repository
+            .get_hold_by_id(release_request.hold_id)
+            .await?
+            .ok_or_else(|| BankingError::ValidationError {
+                field: "hold_id".to_string(),
+                message: "Hold not found".to_string(),
+            })?;
+
+        // Validate hold can be released
+        if hold_model.status != HoldStatus::Active {
+            return Err(BankingError::ValidationError {
+                field: "status".to_string(),
+                message: "Only active holds can be released".to_string(),
+            });
+        }
+
+        // Determine release amount (full release if not specified)
+        let release_amount = release_request.release_amount.unwrap_or(hold_model.amount);
+        
+        if release_amount > hold_model.amount {
+            return Err(BankingError::ValidationError {
+                field: "release_amount".to_string(),
+                message: "Release amount cannot exceed hold amount".to_string(),
+            });
+        }
+
+        // Release the hold using the enhanced repository method
+        let released_model = self.account_repository
+            .release_hold_detailed(
+                release_request.hold_id,
+                Some(release_amount),
+                release_request.release_reason_id,
+                release_request.released_by,
+                Utc::now(),
+            )
+            .await?;
+        
+        tracing::info!("Successfully released hold {} with amount {}", 
+                      released_model.hold_id, release_amount);
+
+        Ok(AccountMapper::account_hold_from_model(released_model))
+    }
+
+    async fn modify_hold(
+        &self,
+        hold_id: Uuid,
+        new_amount: Option<Decimal>,
+        new_expiry: Option<DateTime<Utc>>,
+        new_reason_id: Option<Uuid>,
+        modified_by: Uuid,
+    ) -> BankingResult<AccountHold> {
+        tracing::info!("Modifying hold {} by {}", hold_id, modified_by);
+
+        // Find the hold
+        let mut hold_model = self.account_repository
+            .get_hold_by_id(hold_id)
+            .await?
+            .ok_or_else(|| BankingError::ValidationError {
+                field: "hold_id".to_string(),
+                message: "Hold not found".to_string(),
+            })?;
+
+        // Validate hold can be modified
+        if hold_model.status != HoldStatus::Active {
+            return Err(BankingError::ValidationError {
+                field: "status".to_string(),
+                message: "Only active holds can be modified".to_string(),
+            });
+        }
+
+        // Apply modifications
+        if let Some(amount) = new_amount {
+            if amount <= Decimal::ZERO {
+                return Err(BankingError::ValidationError {
+                    field: "new_amount".to_string(),
+                    message: "Hold amount must be positive".to_string(),
+                });
+            }
+            hold_model.amount = amount;
+        }
+        
+        if let Some(expiry) = new_expiry {
+            hold_model.expires_at = Some(expiry);
+            hold_model.automatic_release = true;
+        }
+
+        if let Some(reason_id) = new_reason_id {
+            hold_model.reason_id = reason_id;
+        }
+
+        // Update the hold
+        let updated_model = self.account_repository.update_hold(hold_model).await?;
+        
+        tracing::info!("Successfully modified hold {}", hold_id);
+
+        Ok(AccountMapper::account_hold_from_model(updated_model))
+    }
+
+    async fn cancel_hold(
+        &self,
+        hold_id: Uuid,
+        cancellation_reason_id: Uuid,
+        cancelled_by: Uuid,
+    ) -> BankingResult<AccountHold> {
+        tracing::info!("Cancelling hold {} by {} for reason ID: {}", 
+                      hold_id, cancelled_by, cancellation_reason_id);
+
+        // Find and validate the hold
+        let mut hold_model = self.account_repository
+            .get_hold_by_id(hold_id)
+            .await?
+            .ok_or_else(|| BankingError::ValidationError {
+                field: "hold_id".to_string(),
+                message: "Hold not found".to_string(),
+            })?;
+
+        // Validate hold can be cancelled
+        if hold_model.status != HoldStatus::Active {
+            return Err(BankingError::ValidationError {
+                field: "status".to_string(),
+                message: "Only active holds can be cancelled".to_string(),
+            });
+        }
+
+        // Cancel the hold by updating status
+        hold_model.status = HoldStatus::Cancelled;
+        hold_model.released_at = Some(Utc::now());
+        hold_model.released_by = Some(cancelled_by);
+        hold_model.reason_id = cancellation_reason_id;
+
+        let cancelled_model = self.account_repository.update_hold(hold_model).await?;
+        
+        tracing::info!("Successfully cancelled hold {}", hold_id);
+
+        Ok(AccountMapper::account_hold_from_model(cancelled_model))
+    }
+
+    // ============================================================================
+    // BALANCE CALCULATION ENGINE (enhanced)
+    // ============================================================================
+
+    async fn calculate_available_balance_detailed(
+        &self,
+        account_id: Uuid,
+    ) -> BankingResult<BalanceCalculation> {
+        tracing::debug!("Calculating available balance for account {}", account_id);
+
+        // Get account details
+        let account = self.account_repository
+            .find_by_id(account_id)
+            .await?
+            .ok_or(BankingError::AccountNotFound(account_id))?;
+
+        // Get active holds
+        let active_holds = self.account_repository
+            .get_active_holds_for_account(account_id, None)
+            .await?;
+
+        // Calculate total holds
+        let total_holds = active_holds.iter()
+            .map(|h| h.amount)
+            .fold(Decimal::ZERO, |acc, amount| acc + amount);
+
+        // Calculate available balance based on account type
+        let available_balance = match account.account_type {
+            banking_api::domain::AccountType::Current => {
+                // Current accounts may have overdraft facilities
+                account.current_balance - total_holds + account.overdraft_limit.unwrap_or(Decimal::ZERO)
+            }
+            banking_api::domain::AccountType::Savings => {
+                // Savings accounts cannot go negative
+                (account.current_balance - total_holds).max(Decimal::ZERO)
+            }
+            banking_api::domain::AccountType::Loan => {
+                // Loan accounts represent debt, available balance is zero
+                Decimal::ZERO
+            }
+        };
+
+        // Create hold breakdown
+        let hold_breakdown = self.create_hold_breakdown(&active_holds);
+
+        Ok(BalanceCalculation {
+            account_id,
+            current_balance: account.current_balance,
+            available_balance,
+            overdraft_limit: account.overdraft_limit,
+            total_holds,
+            active_hold_count: active_holds.len() as u32,
+            calculation_timestamp: Utc::now(),
+            hold_breakdown,
+        })
+    }
+
+    async fn validate_transaction_against_holds(
+        &self,
+        account_id: Uuid,
+        transaction_amount: Decimal,
+        ignore_hold_types: Option<Vec<HoldType>>,
+    ) -> BankingResult<bool> {
+        tracing::debug!("Validating transaction of {} against holds for account {}", 
+                       transaction_amount, account_id);
+
+        // Calculate current available balance
+        let balance_calc = self.calculate_available_balance_detailed(account_id).await?;
+        
+        // Adjust for ignored hold types
+        let effective_available = if let Some(ignore_types) = ignore_hold_types {
+            let ignored_amount = balance_calc.hold_breakdown.iter()
+                .filter(|summary| ignore_types.contains(&summary.hold_type))
+                .map(|summary| summary.total_amount)
+                .fold(Decimal::ZERO, |acc, amount| acc + amount);
+            
+            balance_calc.available_balance + ignored_amount
+        } else {
+            balance_calc.available_balance
+        };
+
+        Ok(effective_available >= transaction_amount)
+    }
+
+    async fn get_hold_amounts_by_priority(
+        &self,
+        account_id: Uuid,
+    ) -> BankingResult<Vec<HoldSummary>> {
+        let active_holds = self.account_repository
+            .get_active_holds_for_account(account_id, None)
+            .await?;
+
+        let summary = self.create_hold_breakdown(&active_holds);
+        Ok(summary)
+    }
+
+    async fn validate_hold_placement(
+        &self,
+        account_id: Uuid,
+        additional_hold_amount: Decimal,
+        hold_priority: HoldPriority,
+    ) -> BankingResult<bool> {
+        // For high-priority holds, allow placement even if it would exceed balance
+        match hold_priority {
+            HoldPriority::Critical => Ok(true),
+            _ => {
+                let balance_calc = self.calculate_available_balance_detailed(account_id).await?;
+                Ok(balance_calc.available_balance >= additional_hold_amount)
+            }
+        }
+    }
+
+    // ============================================================================
+    // HOLD QUERIES AND REPORTING
+    // ============================================================================
+
+    async fn get_active_holds_with_types(
+        &self,
+        account_id: Uuid,
+        hold_types: Option<Vec<HoldType>>,
+    ) -> BankingResult<Vec<AccountHold>> {
+        let holds = self.account_repository
+            .get_active_holds_for_account(account_id, hold_types.map(|types| 
+                types.into_iter().map(|t| t.to_string()).collect()
+            ))
+            .await?;
+
+        Ok(holds.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    async fn get_hold_by_id(
+        &self,
+        hold_id: Uuid,
+    ) -> BankingResult<Option<AccountHold>> {
+        if let Some(hold_model) = self.account_repository
+            .get_hold_by_id(hold_id)
+            .await? {
+            Ok(Some(AccountMapper::account_hold_from_model(hold_model)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn get_holds_by_status(
+        &self,
+        account_id: Option<Uuid>,
+        status: HoldStatus,
+        from_date: Option<NaiveDate>,
+        to_date: Option<NaiveDate>,
+    ) -> BankingResult<Vec<AccountHold>> {
+        let holds = self.account_repository
+            .get_holds_by_status(account_id, status.to_string(), from_date, to_date)
+            .await?;
+
+        Ok(holds.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    async fn get_holds_by_type(
+        &self,
+        hold_type: HoldType,
+        status: Option<HoldStatus>,
+        account_ids: Option<Vec<Uuid>>,
+    ) -> BankingResult<Vec<AccountHold>> {
+        let holds = self.account_repository
+            .get_holds_by_type(
+                hold_type.to_string(),
+                status.map(|s| s.to_string()),
+                account_ids,
+                None,
+            )
+            .await?;
+
+        Ok(holds.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    async fn get_hold_history(
+        &self,
+        account_id: Uuid,
+        from_date: Option<NaiveDate>,
+        to_date: Option<NaiveDate>,
+    ) -> BankingResult<Vec<AccountHold>> {
+        let holds = self.account_repository
+            .get_hold_history(account_id, from_date, to_date, true)
+            .await?;
+
+        Ok(holds.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    // ============================================================================
+    // BATCH PROCESSING AND AUTOMATION
+    // ============================================================================
+
+    async fn process_expired_holds(
+        &self,
+        processing_date: NaiveDate,
+        hold_types: Option<Vec<HoldType>>,
+    ) -> BankingResult<HoldExpiryJob> {
+        tracing::info!("Processing expired holds for date {}", processing_date);
+
+        let job_id = Uuid::new_v4();
+        let expired_holds = self.account_repository
+            .get_expired_holds(
+                processing_date.and_hms_opt(23, 59, 59).unwrap().and_utc(),
+                hold_types.map(|types| types.into_iter().map(|t| t.to_string()).collect()),
+                None,
+            )
+            .await?;
+
+        let total_amount: Decimal = expired_holds.iter().map(|h| h.amount).sum();
+        let processed_count = expired_holds.len() as u32;
+
+        // Process each expired hold
+        for hold in expired_holds {
+            let _ = self.account_repository
+                .release_hold_detailed(
+                    hold.hold_id,
+                    None, // Full release
+                    Uuid::new_v4(), // System reason ID - should be configurable
+                    Uuid::new_v4(), // System user ID - should be configurable
+                    Utc::now(),
+                )
+                .await;
+        }
+
+        Ok(HoldExpiryJob {
+            job_id,
+            processing_date,
+            expired_holds_count: processed_count,
+            total_released_amount: total_amount,
+            processed_at: Utc::now(),
+            errors: Vec::new(), // TODO: Collect actual errors during processing
+        })
+    }
+
+    async fn process_automatic_releases(
+        &self,
+        processing_date: NaiveDate,
+    ) -> BankingResult<Vec<AccountHold>> {
+        tracing::info!("Processing automatic releases for date {}", processing_date);
+
+        let eligible_holds = self.account_repository
+            .get_auto_release_eligible_holds(processing_date, None)
+            .await?;
+
+        let mut released_holds = Vec::new();
+        
+        for hold in eligible_holds {
+            match self.account_repository
+                .release_hold_detailed(
+                    hold.hold_id,
+                    None, // Full release
+                    Uuid::new_v4(), // System reason ID
+                    Uuid::new_v4(), // System user ID
+                    Utc::now(),
+                )
+                .await 
+            {
+                Ok(released_hold) => {
+                    released_holds.push(AccountMapper::account_hold_from_model(released_hold));
+                }
+                Err(e) => {
+                    tracing::error!("Failed to auto-release hold {}: {}", hold.hold_id, e);
+                }
+            }
+        }
+
+        Ok(released_holds)
+    }
+
+    async fn bulk_place_holds(
+        &self,
+        account_ids: Vec<Uuid>,
+        hold_type: HoldType,
+        amount_per_account: Decimal,
+        reason_id: Uuid,
+        placed_by: Uuid,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> BankingResult<Vec<AccountHold>> {
+        tracing::info!("Bulk placing {} holds of type {:?} for {} accounts", 
+                      amount_per_account, hold_type, account_ids.len());
+
+        let mut holds = Vec::new();
+        
+        for account_id in account_ids {
+            let hold = banking_db::models::AccountHoldModel {
+                hold_id: Uuid::new_v4(),
+                account_id,
+                amount: amount_per_account,
+                hold_type: hold_type.clone(),
+                reason_id,
+                additional_details: None,
+                placed_by,
+                placed_at: Utc::now(),
+                expires_at,
+                status: HoldStatus::Active,
+                released_at: None,
+                released_by: None,
+                priority: HoldPriority::Standard,
+                source_reference: None,
+                automatic_release: expires_at.is_some(),
+            };
+            
+            holds.push(hold);
+        }
+
+        let created_models = self.account_repository
+            .bulk_place_holds(holds)
+            .await?;
+
+        Ok(created_models.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    async fn bulk_release_holds(
+        &self,
+        hold_ids: Vec<Uuid>,
+        release_reason_id: Uuid,
+        released_by: Uuid,
+    ) -> BankingResult<Vec<AccountHold>> {
+        tracing::info!("Bulk releasing {} holds", hold_ids.len());
+
+        let released_models = self.account_repository
+            .bulk_release_holds(hold_ids, release_reason_id, released_by)
+            .await?;
+
+        Ok(released_models.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    // ============================================================================
+    // PRIORITY AND AUTHORIZATION MANAGEMENT
+    // ============================================================================
+
+    async fn override_holds_for_transaction(
+        &self,
+        account_id: Uuid,
+        transaction_amount: Decimal,
+        override_priority: HoldPriority,
+        authorized_by: Uuid,
+        override_reason_id: Uuid,
+    ) -> BankingResult<Vec<AccountHold>> {
+        tracing::warn!("Overriding holds for transaction of {} on account {} by {}", 
+                      transaction_amount, account_id, authorized_by);
+
+        let overridden_holds = self.account_repository
+            .get_overrideable_holds(account_id, transaction_amount, override_priority.to_string())
+            .await?;
+
+        let hold_ids: Vec<Uuid> = overridden_holds.iter().map(|h| h.hold_id).collect();
+
+        let _override_record = self.account_repository
+            .create_hold_override(
+                account_id,
+                hold_ids,
+                transaction_amount,
+                authorized_by,
+                override_reason_id,
+            )
+            .await?;
+
+        Ok(overridden_holds.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    async fn reorder_hold_priorities(
+        &self,
+        account_id: Uuid,
+        hold_priority_map: Vec<(Uuid, HoldPriority)>,
+        authorized_by: Uuid,
+    ) -> BankingResult<Vec<AccountHold>> {
+        tracing::info!("Reordering hold priorities for account {} by {}", 
+                      account_id, authorized_by);
+
+        let priority_updates: Vec<(Uuid, String)> = hold_priority_map.into_iter()
+            .map(|(hold_id, priority)| (hold_id, priority.to_string()))
+            .collect();
+
+        let reordered_models = self.account_repository
+            .update_hold_priorities(account_id, priority_updates, authorized_by)
+            .await?;
+
+        Ok(reordered_models.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    async fn get_required_authorization_level(
+        &self,
+        hold_type: HoldType,
+        amount: Decimal,
+    ) -> BankingResult<HoldAuthorizationLevel> {
+        // Business rules for authorization levels
+        match hold_type {
+            HoldType::JudicialLien => Ok(HoldAuthorizationLevel::External),
+            HoldType::ComplianceHold => {
+                if amount > Decimal::from(1000000) { // $1M threshold
+                    Ok(HoldAuthorizationLevel::Executive)
+                } else {
+                    Ok(HoldAuthorizationLevel::Manager)
+                }
+            }
+            HoldType::FraudHold => Ok(HoldAuthorizationLevel::Manager),
+            HoldType::AdministrativeHold => {
+                if amount > Decimal::from(100000) { // $100K threshold
+                    Ok(HoldAuthorizationLevel::Supervisor)
+                } else {
+                    Ok(HoldAuthorizationLevel::Standard)
+                }
+            }
+            _ => Ok(HoldAuthorizationLevel::Standard),
+        }
+    }
+
+    // ============================================================================
+    // INTEGRATION WITH EXTERNAL SYSTEMS
+    // ============================================================================
+
+    async fn sync_judicial_holds(
+        &self,
+        court_reference: String,
+    ) -> BankingResult<Vec<AccountHold>> {
+        tracing::info!("Syncing judicial holds for court reference {}", court_reference);
+
+        let synced_models = self.account_repository
+            .get_judicial_holds_by_reference(court_reference)
+            .await?;
+
+        Ok(synced_models.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    async fn update_loan_pledge_holds(
+        &self,
+        loan_account_id: Uuid,
+        collateral_account_ids: Vec<Uuid>,
+        new_pledge_amount: Decimal,
+    ) -> BankingResult<Vec<AccountHold>> {
+        tracing::info!("Updating loan pledge holds for loan {} with amount {}", 
+                      loan_account_id, new_pledge_amount);
+
+        let updated_models = self.account_repository
+            .update_loan_pledge_holds(
+                loan_account_id,
+                collateral_account_ids,
+                new_pledge_amount,
+                Uuid::new_v4(), // System user ID - should be configurable
+            )
+            .await?;
+
+        Ok(updated_models.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    async fn process_compliance_holds(
+        &self,
+        compliance_alert_id: Uuid,
+        affected_accounts: Vec<Uuid>,
+        _hold_amount_per_account: Decimal,
+    ) -> BankingResult<Vec<AccountHold>> {
+        tracing::warn!("Processing compliance holds for alert {} affecting {} accounts", 
+                      compliance_alert_id, affected_accounts.len());
+
+        let created_models = self.account_repository
+            .get_compliance_holds_by_alert(compliance_alert_id)
+            .await?;
+
+        Ok(created_models.into_iter()
+           .map(AccountMapper::account_hold_from_model)
+           .collect())
+    }
+
+    // ============================================================================
+    // REPORTING AND ANALYTICS
+    // ============================================================================
+
+    async fn get_hold_analytics(
+        &self,
+        from_date: NaiveDate,
+        to_date: NaiveDate,
+        hold_types: Option<Vec<HoldType>>,
+    ) -> BankingResult<HoldAnalytics> {
+        let analytics_data = self.account_repository
+            .get_hold_analytics(
+                from_date,
+                to_date,
+                hold_types.map(|types| types.into_iter().map(|t| t.to_string()).collect()),
+            )
+            .await?;
+
+        // Convert repository analytics to service analytics
+        Ok(HoldAnalytics {
+            total_hold_amount: analytics_data.total_hold_amount,
+            active_hold_count: analytics_data.active_hold_count,
+            expired_hold_count: analytics_data.expired_hold_count,
+            released_hold_count: analytics_data.released_hold_count,
+            average_hold_duration_days: analytics_data.average_hold_duration_days,
+            hold_by_type: std::collections::HashMap::new(), // TODO: Convert from repository format
+            hold_by_priority: std::collections::HashMap::new(), // TODO: Convert from repository format
+            top_hold_accounts: Vec::new(), // TODO: Extract from repository data
+        })
+    }
+
+    async fn get_high_hold_ratio_accounts(
+        &self,
+        minimum_ratio: Decimal,
+        exclude_hold_types: Option<Vec<HoldType>>,
+    ) -> BankingResult<Vec<HighHoldAccount>> {
+        let high_ratio_accounts = self.account_repository
+            .get_high_hold_ratio_accounts(
+                minimum_ratio,
+                exclude_hold_types.map(|types| types.into_iter().map(|t| t.to_string()).collect()),
+                100
+            )
+            .await?;
+
+        // Convert repository models to service models
+        Ok(high_ratio_accounts.into_iter().map(|account| HighHoldAccount {
+            account_id: account.account_id,
+            current_balance: account.current_balance,
+            total_holds: account.total_holds,
+            hold_ratio: account.hold_ratio,
+            active_hold_count: account.active_hold_count,
+            high_priority_holds: account.critical_priority_holds,
+            last_assessment_date: Utc::now(),
+        }).collect())
+    }
+
+    async fn generate_judicial_hold_report(
+        &self,
+        from_date: NaiveDate,
+        to_date: NaiveDate,
+    ) -> BankingResult<JudicialHoldReport> {
+        let judicial_report_data = self.account_repository
+            .generate_judicial_hold_report(from_date, to_date)
+            .await?;
+
+        Ok(JudicialHoldReport {
+            total_judicial_holds: judicial_report_data.total_judicial_holds,
+            total_amount: judicial_report_data.total_amount,
+            active_holds: judicial_report_data.active_holds.into_iter()
+                .map(AccountMapper::account_hold_from_model)
+                .collect(),
+            released_holds: judicial_report_data.released_holds.into_iter()
+                .map(AccountMapper::account_hold_from_model)
+                .collect(),
+            expired_holds: judicial_report_data.expired_holds.into_iter()
+                .map(AccountMapper::account_hold_from_model)
+                .collect(),
+            report_period: (from_date, to_date),
+            generated_at: Utc::now(),
+        })
+    }
 }
 
 impl AccountServiceImpl {
@@ -521,6 +1307,29 @@ impl AccountServiceImpl {
         // In production, this would create a record in the holds repository
         // For now, we'll just return success
         Ok(())
+    }
+
+    /// Create hold breakdown summary by type and priority
+    fn create_hold_breakdown(&self, holds: &[banking_db::models::AccountHoldModel]) -> Vec<HoldSummary> {
+        use std::collections::HashMap;
+
+        let mut breakdown: HashMap<(HoldType, HoldPriority), (u32, Decimal)> = HashMap::new();
+
+        for hold in holds {
+            let key = (hold.hold_type.clone(), hold.priority.clone());
+            let entry = breakdown.entry(key).or_insert((0, Decimal::ZERO));
+            entry.0 += 1;
+            entry.1 += hold.amount;
+        }
+
+        breakdown.into_iter()
+            .map(|((hold_type, priority), (count, amount))| HoldSummary {
+                hold_type,
+                total_amount: amount,
+                hold_count: count,
+                priority,
+            })
+            .collect()
     }
 }
 
@@ -1403,6 +2212,139 @@ mod tests {
 
         async fn update_last_activity_date(&self, _account_id: Uuid, _activity_date: chrono::NaiveDate) -> BankingResult<()> {
             todo!()
+        }
+
+        // Hold methods - Mock implementations
+        async fn update_hold(&self, hold: banking_db::models::AccountHoldModel) -> BankingResult<banking_db::models::AccountHoldModel> {
+            Ok(hold)
+        }
+
+        async fn get_hold_by_id(&self, _hold_id: Uuid) -> BankingResult<Option<banking_db::models::AccountHoldModel>> {
+            Ok(None)
+        }
+
+        async fn get_active_holds_for_account(&self, _account_id: Uuid, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn get_holds_by_status(&self, _account_id: Option<Uuid>, _status: String, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn get_holds_by_type(&self, _hold_type: String, _status: Option<String>, _account_ids: Option<Vec<Uuid>>, _limit: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn get_hold_history(&self, _account_id: Uuid, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>, _include_released: bool) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn calculate_total_holds(&self, _account_id: Uuid, _exclude_hold_types: Option<Vec<String>>) -> BankingResult<rust_decimal::Decimal> {
+            Ok(rust_decimal::Decimal::ZERO)
+        }
+
+        async fn get_hold_amounts_by_priority(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldPrioritySummary>> {
+            Ok(vec![])
+        }
+
+        async fn get_hold_breakdown(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldTypeSummary>> {
+            Ok(vec![])
+        }
+
+        async fn cache_balance_calculation(&self, calculation: banking_db::models::AccountBalanceCalculationModel) -> BankingResult<banking_db::models::AccountBalanceCalculationModel> {
+            Ok(calculation)
+        }
+
+        async fn get_cached_balance_calculation(&self, _account_id: Uuid, _max_age_seconds: u64) -> BankingResult<Option<banking_db::models::AccountBalanceCalculationModel>> {
+            Ok(None)
+        }
+
+        async fn release_hold_detailed(&self, _hold_id: Uuid, _release_amount: Option<rust_decimal::Decimal>, _release_reason_id: Uuid, _released_by: Uuid, _released_at: chrono::DateTime<chrono::Utc>) -> BankingResult<banking_db::models::AccountHoldModel> {
+            todo!()
+        }
+
+        async fn create_hold_release_record(&self, release_record: banking_db::models::HoldReleaseRecordModel) -> BankingResult<banking_db::models::HoldReleaseRecordModel> {
+            Ok(release_record)
+        }
+
+        async fn get_hold_release_records(&self, _hold_id: Uuid) -> BankingResult<Vec<banking_db::models::HoldReleaseRecordModel>> {
+            Ok(vec![])
+        }
+
+        async fn bulk_release_holds(&self, _hold_ids: Vec<Uuid>, _release_reason_id: Uuid, _released_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn get_expired_holds(&self, _cutoff_date: chrono::DateTime<chrono::Utc>, _hold_types: Option<Vec<String>>, _limit: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn get_auto_release_eligible_holds(&self, _processing_date: chrono::NaiveDate, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn create_hold_expiry_job(&self, job: banking_db::models::AccountHoldExpiryJobModel) -> BankingResult<banking_db::models::AccountHoldExpiryJobModel> {
+            Ok(job)
+        }
+
+        async fn update_hold_expiry_job(&self, job: banking_db::models::AccountHoldExpiryJobModel) -> BankingResult<banking_db::models::AccountHoldExpiryJobModel> {
+            Ok(job)
+        }
+
+        async fn bulk_place_holds(&self, holds: Vec<banking_db::models::AccountHoldModel>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(holds)
+        }
+
+        async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn get_overrideable_holds(&self, _account_id: Uuid, _required_amount: rust_decimal::Decimal, _override_priority: String) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn create_hold_override(&self, _account_id: Uuid, _overridden_holds: Vec<Uuid>, _override_amount: rust_decimal::Decimal, _authorized_by: Uuid, _override_reason_id: Uuid) -> BankingResult<banking_db::repository::HoldOverrideRecord> {
+            todo!()
+        }
+
+        async fn get_judicial_holds_by_reference(&self, _court_reference: String) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: rust_decimal::Decimal, _updated_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn get_compliance_holds_by_alert(&self, _alert_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn get_hold_analytics(&self, _from_date: chrono::NaiveDate, _to_date: chrono::NaiveDate, _hold_types: Option<Vec<String>>) -> BankingResult<banking_db::repository::HoldAnalyticsSummary> {
+            todo!()
+        }
+
+        async fn get_high_hold_ratio_accounts(&self, _min_ratio: rust_decimal::Decimal, _exclude_hold_types: Option<Vec<String>>, _limit: i32) -> BankingResult<Vec<banking_db::repository::HighHoldRatioAccount>> {
+            Ok(vec![])
+        }
+
+        async fn generate_judicial_hold_report(&self, _from_date: chrono::NaiveDate, _to_date: chrono::NaiveDate) -> BankingResult<banking_db::repository::JudicialHoldReportData> {
+            todo!()
+        }
+
+        async fn get_hold_aging_report(&self, _hold_types: Option<Vec<String>>, _age_buckets: Vec<i32>) -> BankingResult<Vec<banking_db::repository::HoldAgingBucket>> {
+            Ok(vec![])
+        }
+
+        async fn validate_hold_amounts(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldValidationError>> {
+            Ok(vec![])
+        }
+
+        async fn find_orphaned_holds(&self, _limit: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+            Ok(vec![])
+        }
+
+        async fn cleanup_old_holds(&self, _cutoff_date: chrono::NaiveDate, _hold_statuses: Vec<String>) -> BankingResult<u32> {
+            Ok(0)
         }
     }
 }

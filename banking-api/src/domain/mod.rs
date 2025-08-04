@@ -10,6 +10,7 @@ pub mod fee;
 pub mod casa;
 pub mod loan;
 pub mod reason_view;
+pub mod reason_and_purpose;
 pub mod person;
 pub mod collateral;
 
@@ -32,5 +33,6 @@ pub use fee::*;
 pub use casa::*;
 pub use loan::*;
 pub use reason_view::*;
+pub use reason_and_purpose::*;
 pub use person::*;
 pub use collateral::*;

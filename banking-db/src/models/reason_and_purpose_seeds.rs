@@ -1,4 +1,5 @@
 use super::reason_and_purpose::*;
+use banking_api::domain::{ReasonCategory, ReasonContext, ReasonSeverity};
 use chrono::Utc;
 use heapless::{String as HeaplessString, Vec as HeaplessVec};
 use uuid::Uuid;

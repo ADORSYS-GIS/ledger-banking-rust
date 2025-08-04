@@ -586,6 +586,41 @@ mod tests {
         async fn list(&self, _limit: i64, _offset: i64) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn count(&self) -> BankingResult<i64> { todo!() }
         async fn update_last_activity_date(&self, _account_id: Uuid, _activity_date: chrono::NaiveDate) -> BankingResult<()> { todo!() }
+
+        // Hold-related methods
+        async fn update_hold(&self, _hold: banking_db::models::AccountHoldModel) -> BankingResult<banking_db::models::AccountHoldModel> { todo!() }
+        async fn get_hold_by_id(&self, _hold_id: Uuid) -> BankingResult<Option<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_active_holds_for_account(&self, _account_id: Uuid, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_holds_by_status(&self, _account_id: Option<Uuid>, _status: String, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_holds_by_type(&self, _hold_type: String, _status: Option<String>, _account_ids: Option<Vec<Uuid>>, _limit: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_hold_history(&self, _account_id: Uuid, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>, _include_released: bool) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn calculate_total_holds(&self, _account_id: Uuid, _exclude_types: Option<Vec<String>>) -> BankingResult<rust_decimal::Decimal> { todo!() }
+        async fn get_hold_amounts_by_priority(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldPrioritySummary>> { todo!() }
+        async fn get_hold_breakdown(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldTypeSummary>> { todo!() }
+        async fn cache_balance_calculation(&self, _calculation: banking_db::models::AccountBalanceCalculationModel) -> BankingResult<banking_db::models::AccountBalanceCalculationModel> { todo!() }
+        async fn get_cached_balance_calculation(&self, _account_id: Uuid, _max_age_seconds: u64) -> BankingResult<Option<banking_db::models::AccountBalanceCalculationModel>> { todo!() }
+        async fn release_hold_detailed(&self, _hold_id: Uuid, _release_amount: Option<rust_decimal::Decimal>, _release_reason_id: Uuid, _released_by: Uuid, _released_at: chrono::DateTime<chrono::Utc>) -> BankingResult<banking_db::models::AccountHoldModel> { todo!() }
+        async fn create_hold_release_record(&self, _release_record: banking_db::models::HoldReleaseRecordModel) -> BankingResult<banking_db::models::HoldReleaseRecordModel> { todo!() }
+        async fn get_hold_release_records(&self, _hold_id: Uuid) -> BankingResult<Vec<banking_db::models::HoldReleaseRecordModel>> { todo!() }
+        async fn bulk_release_holds(&self, _hold_ids: Vec<Uuid>, _release_reason_id: Uuid, _released_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_expired_holds(&self, _cutoff_date: chrono::DateTime<chrono::Utc>, _hold_types: Option<Vec<String>>, _limit: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_auto_release_eligible_holds(&self, _processing_date: chrono::NaiveDate, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn create_hold_expiry_job(&self, _expiry_job: banking_db::models::AccountHoldExpiryJobModel) -> BankingResult<banking_db::models::AccountHoldExpiryJobModel> { todo!() }
+        async fn update_hold_expiry_job(&self, _expiry_job: banking_db::models::AccountHoldExpiryJobModel) -> BankingResult<banking_db::models::AccountHoldExpiryJobModel> { todo!() }
+        async fn bulk_place_holds(&self, _holds: Vec<banking_db::models::AccountHoldModel>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn update_hold_priorities(&self, _account_id: Uuid, _priority_updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_overrideable_holds(&self, _account_id: Uuid, _required_amount: rust_decimal::Decimal, _override_reason: String) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn create_hold_override(&self, _account_id: Uuid, _hold_ids: Vec<Uuid>, _override_amount: rust_decimal::Decimal, _authorized_by: Uuid, _override_reason_id: Uuid) -> BankingResult<banking_db::repository::HoldOverrideRecord> { todo!() }
+        async fn get_judicial_holds_by_reference(&self, _source_reference: String) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn update_loan_pledge_holds(&self, _collateral_id: Uuid, _affected_accounts: Vec<Uuid>, _new_pledge_amount: rust_decimal::Decimal, _updated_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_compliance_holds_by_alert(&self, _alert_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn get_hold_analytics(&self, _from_date: chrono::NaiveDate, _to_date: chrono::NaiveDate, _product_codes: Option<Vec<String>>) -> BankingResult<banking_db::repository::HoldAnalyticsSummary> { todo!() }
+        async fn get_high_hold_ratio_accounts(&self, _threshold_percentage: rust_decimal::Decimal, _product_codes: Option<Vec<String>>, _limit: i32) -> BankingResult<Vec<banking_db::repository::HighHoldRatioAccount>> { todo!() }
+        async fn generate_judicial_hold_report(&self, _from_date: chrono::NaiveDate, _to_date: chrono::NaiveDate) -> BankingResult<banking_db::repository::JudicialHoldReportData> { todo!() }
+        async fn get_hold_aging_report(&self, _product_codes: Option<Vec<String>>, _aging_buckets: Vec<i32>) -> BankingResult<Vec<banking_db::repository::HoldAgingBucket>> { todo!() }
+        async fn validate_hold_amounts(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldValidationError>> { todo!() }
+        async fn find_orphaned_holds(&self, _max_age_days: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn cleanup_old_holds(&self, _cutoff_date: chrono::NaiveDate, _statuses_to_clean: Vec<String>) -> BankingResult<u32> { todo!() }
     }
 
     #[async_trait]

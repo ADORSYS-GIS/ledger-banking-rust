@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -9,7 +10,7 @@ use banking_api::{
         Collateral, CollateralAlert, CollateralEnforcement, CollateralPledge, CollateralPortfolioSummary,
         CollateralValuation, ConcentrationAnalysis, RiskDistribution, ValuationStatusSummary,
         ComplianceSummary, CovenantCompliance, AlertSeverity, EnforcementMethod, CollateralType,
-        CollateralRiskRating, CollateralStatus, EnforcementStatus
+        CollateralRiskRating, EnforcementStatus
     },
     service::CollateralService,
 };
@@ -139,8 +140,8 @@ impl CollateralService for CollateralServiceImpl {
         limit: Option<u32>,
         offset: Option<u32>
     ) -> Result<Vec<Collateral>, String> {
-        let type_str = collateral_type.map(|t| format!("{:?}", t));
-        let rating_str = risk_rating.map(|r| format!("{:?}", r));
+        let type_str = collateral_type.map(|t| format!("{t:?}"));
+        let rating_str = risk_rating.map(|r| format!("{r:?}"));
         
         let _models = self.collateral_repository.search_collaterals(
             type_str,
@@ -228,6 +229,7 @@ impl CollateralService for CollateralServiceImpl {
         self.collateral_repository.update_pledge_status(pledge_id, "Released".to_string(), released_by).await
     }
     
+    #[allow(unused_variables)]
     async fn partial_release_pledge(&self, pledge_id: Uuid, release_amount: Decimal, updated_by: Uuid) -> Result<(), String> {
         // Get current pledge
         if let Some(_pledge_model) = self.collateral_repository.find_pledge_by_id(pledge_id).await? {
@@ -250,6 +252,7 @@ impl CollateralService for CollateralServiceImpl {
         Err("Portfolio LTV calculation requires CollateralMapper implementation".to_string())
     }
     
+    #[allow(unused_variables)]
     async fn calculate_collateral_ltv(&self, collateral_id: Uuid, loan_amount: Decimal) -> Result<Decimal, String> {
         if let Some(_collateral) = self.get_collateral(collateral_id).await? {
             // TODO: Would work if get_collateral was implemented
@@ -302,7 +305,7 @@ impl CollateralService for CollateralServiceImpl {
     }
     
     async fn get_alerts_by_severity(&self, severity: AlertSeverity) -> Result<Vec<CollateralAlert>, String> {
-        let severity_str = format!("{:?}", severity);
+        let severity_str = format!("{severity:?}");
         let _models = self.collateral_repository.find_alerts_by_severity(severity_str).await?;
         // TODO: Implement CollateralMapper::alert_model_to_domain for Vec conversion
         Err("CollateralMapper alert_model_to_domain not yet implemented".to_string())
@@ -347,7 +350,7 @@ impl CollateralService for CollateralServiceImpl {
     async fn initiate_enforcement(&self, enforcement: CollateralEnforcement) -> Result<Uuid, String> {
         // TODO: Implement CollateralMapper::enforcement_domain_to_model conversion
         // For now, use JSON serialization approach until mapper is implemented
-        let enforcement_data = serde_json::to_string(&enforcement).unwrap_or_default();
+        let _enforcement_data = serde_json::to_string(&enforcement).unwrap_or_default();
         self.collateral_repository.save_enforcement(&banking_db::models::CollateralEnforcementModel {
             enforcement_id: enforcement.enforcement_id,
             collateral_id: enforcement.collateral_id,
@@ -358,9 +361,9 @@ impl CollateralService for CollateralServiceImpl {
             estimated_recovery: enforcement.estimated_recovery,
             enforcement_method: banking_db::models::EnforcementMethod::DirectSale,
             // TODO: Map remaining fields properly when mapper is complete
-            enforcement_status: banking_db::models::EnforcementStatus::Initiated,
+            status: banking_db::models::EnforcementStatus::Initiated,
             legal_counsel: enforcement.legal_counsel,
-            court_case_reference: enforcement.court_case_reference.map(|s| s.to_string()),
+            court_case_reference: enforcement.court_case_reference.map(|s| HeaplessString::try_from(s.as_str()).unwrap_or_default()),
             expected_completion_date: enforcement.expected_completion_date,
             actual_completion_date: enforcement.actual_completion_date,
             recovery_amount: enforcement.recovery_amount,
@@ -382,7 +385,7 @@ impl CollateralService for CollateralServiceImpl {
     }
     
     async fn update_enforcement_status(&self, enforcement_id: Uuid, status: EnforcementStatus, updated_by: Uuid) -> Result<(), String> {
-        let status_str = format!("{:?}", status);
+        let status_str = format!("{status:?}");
         self.collateral_repository.update_enforcement_status(enforcement_id, status_str, updated_by).await
     }
     

@@ -603,6 +603,7 @@ where
     let priority_str = match priority {
         HoldPriority::Critical => "Critical",
         HoldPriority::High => "High",
+        HoldPriority::Standard => "Standard",
         HoldPriority::Medium => "Medium",
         HoldPriority::Low => "Low",
     };
@@ -617,6 +618,7 @@ where
     match priority_str.as_str() {
         "Critical" => Ok(HoldPriority::Critical),
         "High" => Ok(HoldPriority::High),
+        "Standard" => Ok(HoldPriority::Standard),
         "Medium" => Ok(HoldPriority::Medium),
         "Low" => Ok(HoldPriority::Low),
         _ => Err(serde::de::Error::custom(format!("Invalid hold priority: {priority_str}"))),

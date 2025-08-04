@@ -179,7 +179,7 @@ pub struct AccountHold {
     pub automatic_release: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HoldType {
     /// Funds pending clearance
     UnclearedFunds,
@@ -203,7 +203,7 @@ pub enum HoldType {
     Other,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum HoldStatus {
     Active,
     Released,
@@ -212,12 +212,14 @@ pub enum HoldStatus {
     PartiallyReleased,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HoldPriority {
     /// Must be honored first (judicial, regulatory)
     Critical,
     /// Standard business hold
     High,
+    /// Standard priority hold
+    Standard,
     /// Lower priority administrative hold
     Medium,
     /// Lowest priority, can be overridden
@@ -718,6 +720,7 @@ impl std::fmt::Display for HoldPriority {
         match self {
             HoldPriority::Critical => write!(f, "Critical"),
             HoldPriority::High => write!(f, "High"),
+            HoldPriority::Standard => write!(f, "Standard"),
             HoldPriority::Medium => write!(f, "Medium"),
             HoldPriority::Low => write!(f, "Low"),
         }
