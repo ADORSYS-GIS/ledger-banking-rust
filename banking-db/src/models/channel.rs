@@ -167,6 +167,119 @@ where
     }
 }
 
+// Display and FromStr implementations for Channel enums
+impl std::fmt::Display for ChannelStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChannelStatus::Active => write!(f, "Active"),
+            ChannelStatus::Inactive => write!(f, "Inactive"),
+            ChannelStatus::Maintenance => write!(f, "Maintenance"),
+            ChannelStatus::Suspended => write!(f, "Suspended"),
+        }
+    }
+}
+
+impl std::str::FromStr for ChannelStatus {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(ChannelStatus::Active),
+            "Inactive" => Ok(ChannelStatus::Inactive),
+            "Maintenance" => Ok(ChannelStatus::Maintenance),
+            "Suspended" => Ok(ChannelStatus::Suspended),
+            _ => Err(format!("Unknown channel status: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for ChannelFeeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChannelFeeType::TransactionFee => write!(f, "TransactionFee"),
+            ChannelFeeType::MaintenanceFee => write!(f, "MaintenanceFee"),
+            ChannelFeeType::ServiceFee => write!(f, "ServiceFee"),
+            ChannelFeeType::PenaltyFee => write!(f, "PenaltyFee"),
+            ChannelFeeType::ProcessingFee => write!(f, "ProcessingFee"),
+            ChannelFeeType::ComplianceFee => write!(f, "ComplianceFee"),
+            ChannelFeeType::InterchangeFee => write!(f, "InterchangeFee"),
+            ChannelFeeType::NetworkFee => write!(f, "NetworkFee"),
+        }
+    }
+}
+
+impl std::str::FromStr for ChannelFeeType {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "TransactionFee" => Ok(ChannelFeeType::TransactionFee),
+            "MaintenanceFee" => Ok(ChannelFeeType::MaintenanceFee),
+            "ServiceFee" => Ok(ChannelFeeType::ServiceFee),
+            "PenaltyFee" => Ok(ChannelFeeType::PenaltyFee),
+            "ProcessingFee" => Ok(ChannelFeeType::ProcessingFee),
+            "ComplianceFee" => Ok(ChannelFeeType::ComplianceFee),
+            "InterchangeFee" => Ok(ChannelFeeType::InterchangeFee),
+            "NetworkFee" => Ok(ChannelFeeType::NetworkFee),
+            _ => Err(format!("Unknown channel fee type: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for ChannelFeeCalculationMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChannelFeeCalculationMethod::Fixed => write!(f, "Fixed"),
+            ChannelFeeCalculationMethod::Percentage => write!(f, "Percentage"),
+            ChannelFeeCalculationMethod::Tiered => write!(f, "Tiered"),
+            ChannelFeeCalculationMethod::BalanceBased => write!(f, "BalanceBased"),
+            ChannelFeeCalculationMethod::RuleBased => write!(f, "RuleBased"),
+            ChannelFeeCalculationMethod::Hybrid => write!(f, "Hybrid"),
+        }
+    }
+}
+
+impl std::str::FromStr for ChannelFeeCalculationMethod {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Fixed" => Ok(ChannelFeeCalculationMethod::Fixed),
+            "Percentage" => Ok(ChannelFeeCalculationMethod::Percentage),
+            "Tiered" => Ok(ChannelFeeCalculationMethod::Tiered),
+            "BalanceBased" => Ok(ChannelFeeCalculationMethod::BalanceBased),
+            "RuleBased" => Ok(ChannelFeeCalculationMethod::RuleBased),
+            "Hybrid" => Ok(ChannelFeeCalculationMethod::Hybrid),
+            _ => Err(format!("Unknown channel fee calculation method: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for ReconciliationStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReconciliationStatus::InProgress => write!(f, "InProgress"),
+            ReconciliationStatus::Completed => write!(f, "Completed"),
+            ReconciliationStatus::Failed => write!(f, "Failed"),
+            ReconciliationStatus::RequiresManualReview => write!(f, "RequiresManualReview"),
+        }
+    }
+}
+
+impl std::str::FromStr for ReconciliationStatus {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "InProgress" => Ok(ReconciliationStatus::InProgress),
+            "Completed" => Ok(ReconciliationStatus::Completed),
+            "Failed" => Ok(ReconciliationStatus::Failed),
+            "RequiresManualReview" => Ok(ReconciliationStatus::RequiresManualReview),
+            _ => Err(format!("Unknown reconciliation status: {s}")),
+        }
+    }
+}
+
 /// Database model for channels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelModel {

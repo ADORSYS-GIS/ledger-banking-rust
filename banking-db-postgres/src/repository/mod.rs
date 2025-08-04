@@ -21,6 +21,8 @@ pub mod workflow_repository_impl;
 pub mod fee_repository_impl;
 #[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
 pub mod reason_and_purpose_repository_impl;
+#[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
+pub mod channel_repository_impl;
 
 pub use customer_repository_impl::*;
 #[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
@@ -45,3 +47,5 @@ pub use workflow_repository_impl::*;
 pub use fee_repository_impl::*;
 #[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
 pub use reason_and_purpose_repository_impl::*;
+#[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
+pub use channel_repository_impl::*;
