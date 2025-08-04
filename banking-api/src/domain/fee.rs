@@ -80,7 +80,7 @@ pub enum FeeCalculationMethod {
 }
 
 /// Events that can trigger fee applications
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum FeeTriggerEvent {
     // Transaction-based triggers
     AtmWithdrawal,

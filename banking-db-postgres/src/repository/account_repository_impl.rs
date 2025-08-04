@@ -5,9 +5,18 @@ use banking_api::domain::{
     HoldPriority, OwnershipType, EntityType, RelationshipType, RelationshipStatus, 
     PermissionType, MandateStatus
 };
-use banking_db::models::{AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, AccountHoldModel, StatusChangeModel, AccountFinalSettlementModel};
+use banking_db::models::{
+    AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, 
+    AccountHoldModel, StatusChangeModel, AccountFinalSettlementModel,
+    HoldReleaseRecordModel, AccountBalanceCalculationModel, AccountHoldExpiryJobModel
+};
+use banking_db::repository::{
+    HoldPrioritySummary, HoldTypeSummary, HoldOverrideRecord,
+    HoldAnalyticsSummary, HighHoldRatioAccount, JudicialHoldReportData, 
+    HoldAgingBucket, HoldValidationError
+};
 use banking_db::repository::AccountRepository;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 use rust_decimal::Decimal;
 use chrono::{DateTime, Utc, NaiveDate};
@@ -872,6 +881,371 @@ impl AccountRepository for AccountRepositoryImpl {
         .await?;
 
         Ok(result.rows_affected() as i64)
+    }
+
+    // Additional Hold Methods - Migrated from HoldRepositoryImpl
+    async fn update_hold(&self, hold: AccountHoldModel) -> BankingResult<AccountHoldModel> {
+        let row = sqlx::query(
+            "UPDATE account_holds SET 
+                amount = $2, hold_type = $3::hold_type, reason_id = $4, additional_details = $5,
+                expires_at = $6, status = $7::hold_status, released_at = $8, released_by = $9,
+                priority = $10::hold_priority, source_reference = $11, automatic_release = $12
+            WHERE hold_id = $1 
+            RETURNING hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+                     placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                     priority::text, source_reference, automatic_release"
+        )
+        .bind(hold.hold_id)
+        .bind(hold.amount)
+        .bind(hold.hold_type.to_string())
+        .bind(hold.reason_id)
+        .bind(hold.additional_details.as_ref().map(|s| s.as_str()))
+        .bind(hold.expires_at)
+        .bind(hold.status.to_string())
+        .bind(hold.released_at)
+        .bind(hold.released_by)
+        .bind(hold.priority.to_string())
+        .bind(hold.source_reference.as_ref().map(|s| s.as_str()))
+        .bind(hold.automatic_release)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(BankingError::from)?;
+
+        AccountHoldModel::try_from_row(&row)
+    }
+
+    async fn get_hold_by_id(&self, hold_id: Uuid) -> BankingResult<Option<AccountHoldModel>> {
+        let row = sqlx::query(
+            "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+                    placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                    priority::text, source_reference, automatic_release 
+             FROM account_holds WHERE hold_id = $1"
+        )
+        .bind(hold_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(BankingError::from)?;
+
+        match row {
+            Some(row) => Ok(Some(AccountHoldModel::try_from_row(&row)?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn get_active_holds_for_account(&self, account_id: Uuid, hold_types: Option<Vec<String>>) -> BankingResult<Vec<AccountHoldModel>> {
+        let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+                                placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                                priority::text, source_reference, automatic_release 
+                         FROM account_holds WHERE account_id = $1 AND status = 'Active'".to_string();
+        
+        if let Some(types) = &hold_types {
+            if !types.is_empty() {
+                let type_placeholders: Vec<String> = (2..=types.len() + 1)
+                    .map(|i| format!("${i}"))
+                    .collect();
+                query.push_str(&format!(" AND hold_type::text IN ({})", type_placeholders.join(",")));
+            }
+        }
+        
+        query.push_str(" ORDER BY priority DESC, placed_at ASC");
+        
+        let mut sql_query = sqlx::query(&query).bind(account_id);
+        
+        if let Some(types) = &hold_types {
+            for hold_type in types {
+                sql_query = sql_query.bind(hold_type);
+            }
+        }
+        
+        let rows = sql_query.fetch_all(&self.pool).await.map_err(BankingError::from)?;
+        
+        let mut holds = Vec::new();
+        for row in rows {
+            holds.push(AccountHoldModel::try_from_row(&row)?);
+        }
+        
+        Ok(holds)
+    }
+
+    async fn get_holds_by_status(&self, account_id: Option<Uuid>, status: String, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<AccountHoldModel>> {
+        let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+                                placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                                priority::text, source_reference, automatic_release 
+                         FROM account_holds WHERE status::text = $1".to_string();
+        
+        let mut param_count = 1;
+        
+        if account_id.is_some() {
+            param_count += 1;
+            query.push_str(&format!(" AND account_id = ${param_count}"));
+        }
+        
+        if from_date.is_some() {
+            param_count += 1;
+            query.push_str(&format!(" AND placed_at >= ${param_count}"));
+        }
+        
+        if to_date.is_some() {
+            param_count += 1;
+            query.push_str(&format!(" AND placed_at < ${param_count}"));
+        }
+        
+        query.push_str(" ORDER BY priority DESC, placed_at ASC");
+        
+        let mut sql_query = sqlx::query(&query).bind(status);
+        
+        if let Some(acct_id) = account_id {
+            sql_query = sql_query.bind(acct_id);
+        }
+        
+        if let Some(from) = from_date {
+            sql_query = sql_query.bind(from.and_hms_opt(0, 0, 0).unwrap().and_utc());
+        }
+        
+        if let Some(to) = to_date {
+            sql_query = sql_query.bind(to.and_hms_opt(23, 59, 59).unwrap().and_utc());
+        }
+        
+        let rows = sql_query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(BankingError::from)?;
+
+        let mut holds = Vec::new();
+        for row in rows {
+            holds.push(AccountHoldModel::try_from_row(&row)?);
+        }
+        
+        Ok(holds)
+    }
+
+    async fn get_holds_by_type(&self, hold_type: String, status: Option<String>, account_ids: Option<Vec<Uuid>>, limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
+        let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+                                placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                                priority::text, source_reference, automatic_release 
+                         FROM account_holds WHERE hold_type::text = $1".to_string();
+        
+        let mut param_count = 1;
+        
+        if status.is_some() {
+            param_count += 1;
+            query.push_str(&format!(" AND status::text = ${param_count}"));
+        }
+        
+        if let Some(ref acc_ids) = account_ids {
+            if !acc_ids.is_empty() {
+                param_count += 1;
+                query.push_str(&format!(" AND account_id = ANY(${param_count:?})"));
+            }
+        }
+        
+        query.push_str(" ORDER BY priority DESC, placed_at ASC");
+        
+        if limit.is_some() {
+            param_count += 1;
+            query.push_str(&format!(" LIMIT ${param_count}"));
+        }
+        
+        let mut sql_query = sqlx::query(&query).bind(hold_type);
+        
+        if let Some(stat) = status {
+            sql_query = sql_query.bind(stat);
+        }
+        
+        if let Some(acc_ids) = account_ids {
+            if !acc_ids.is_empty() {
+                sql_query = sql_query.bind(acc_ids);
+            }
+        }
+        
+        if let Some(lim) = limit {
+            sql_query = sql_query.bind(lim);
+        }
+        
+        let rows = sql_query.fetch_all(&self.pool).await.map_err(BankingError::from)?;
+
+        let mut holds = Vec::new();
+        for row in rows {
+            holds.push(AccountHoldModel::try_from_row(&row)?);
+        }
+        
+        Ok(holds)
+    }
+
+    async fn get_hold_history(&self, account_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>, include_released: bool) -> BankingResult<Vec<AccountHoldModel>> {
+        let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+                                placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                                priority::text, source_reference, automatic_release 
+                         FROM account_holds WHERE account_id = $1".to_string();
+        
+        let mut param_count = 1;
+        
+        if from_date.is_some() {
+            param_count += 1;
+            query.push_str(&format!(" AND placed_at >= ${param_count}"));
+        }
+        
+        if to_date.is_some() {
+            param_count += 1;
+            query.push_str(&format!(" AND placed_at < ${param_count}"));
+        }
+        
+        if !include_released {
+            query.push_str(" AND status::text != 'Released'");
+        }
+        
+        query.push_str(" ORDER BY placed_at DESC");
+        
+        let mut sql_query = sqlx::query(&query).bind(account_id);
+        
+        if let Some(from) = from_date {
+            sql_query = sql_query.bind(from.and_hms_opt(0, 0, 0).unwrap().and_utc());
+        }
+        
+        if let Some(to) = to_date {
+            sql_query = sql_query.bind(to.and_hms_opt(23, 59, 59).unwrap().and_utc());
+        }
+        
+        let rows = sql_query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(BankingError::from)?;
+
+        let mut holds = Vec::new();
+        for row in rows {
+            holds.push(AccountHoldModel::try_from_row(&row)?);
+        }
+        
+        Ok(holds)
+    }
+
+    async fn calculate_total_holds(&self, account_id: Uuid, exclude_hold_types: Option<Vec<String>>) -> BankingResult<Decimal> {
+        let mut query = "SELECT COALESCE(SUM(amount), 0) as total FROM account_holds WHERE account_id = $1 AND status = 'Active'".to_string();
+        
+        if let Some(types) = &exclude_hold_types {
+            if !types.is_empty() {
+                let type_placeholders: Vec<String> = (2..=types.len() + 1)
+                    .map(|i| format!("${i}"))
+                    .collect();
+                query.push_str(&format!(" AND hold_type::text NOT IN ({})", type_placeholders.join(",")));
+            }
+        }
+        
+        let mut sql_query = sqlx::query(&query).bind(account_id);
+        
+        if let Some(types) = &exclude_hold_types {
+            for hold_type in types {
+                sql_query = sql_query.bind(hold_type);
+            }
+        }
+        
+        let row = sql_query.fetch_one(&self.pool).await.map_err(BankingError::from)?;
+        Ok(row.get("total"))
+    }
+
+    // Placeholder implementations for remaining methods
+    async fn get_hold_amounts_by_priority(&self, _account_id: Uuid) -> BankingResult<Vec<HoldPrioritySummary>> {
+        Ok(vec![])
+    }
+
+    async fn get_hold_breakdown(&self, _account_id: Uuid) -> BankingResult<Vec<HoldTypeSummary>> {
+        Ok(vec![])
+    }
+
+    async fn cache_balance_calculation(&self, _calculation: AccountBalanceCalculationModel) -> BankingResult<AccountBalanceCalculationModel> {
+        Err(BankingError::NotImplemented("cache_balance_calculation not yet implemented".to_string()))
+    }
+
+    async fn get_cached_balance_calculation(&self, _account_id: Uuid, _max_age_seconds: u64) -> BankingResult<Option<AccountBalanceCalculationModel>> {
+        Ok(None)
+    }
+
+    async fn release_hold_detailed(&self, _hold_id: Uuid, _release_amount: Option<Decimal>, _release_reason_id: Uuid, _released_by: Uuid, _released_at: DateTime<Utc>) -> BankingResult<AccountHoldModel> {
+        Err(BankingError::NotImplemented("release_hold_detailed not yet implemented".to_string()))
+    }
+
+    async fn create_hold_release_record(&self, _release_record: HoldReleaseRecordModel) -> BankingResult<HoldReleaseRecordModel> {
+        Err(BankingError::NotImplemented("create_hold_release_record not yet implemented".to_string()))
+    }
+
+    async fn get_hold_release_records(&self, _hold_id: Uuid) -> BankingResult<Vec<HoldReleaseRecordModel>> {
+        Ok(vec![])
+    }
+
+    async fn bulk_release_holds(&self, _hold_ids: Vec<Uuid>, _release_reason_id: Uuid, _released_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_expired_holds(&self, _cutoff_date: DateTime<Utc>, _hold_types: Option<Vec<String>>, _limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_auto_release_eligible_holds(&self, _processing_date: NaiveDate, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn create_hold_expiry_job(&self, _job: AccountHoldExpiryJobModel) -> BankingResult<AccountHoldExpiryJobModel> {
+        Err(BankingError::NotImplemented("create_hold_expiry_job not yet implemented".to_string()))
+    }
+
+    async fn update_hold_expiry_job(&self, _job: AccountHoldExpiryJobModel) -> BankingResult<AccountHoldExpiryJobModel> {
+        Err(BankingError::NotImplemented("update_hold_expiry_job not yet implemented".to_string()))
+    }
+
+    async fn bulk_place_holds(&self, _holds: Vec<AccountHoldModel>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_overrideable_holds(&self, _account_id: Uuid, _required_amount: Decimal, _override_priority: String) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn create_hold_override(&self, _account_id: Uuid, _overridden_holds: Vec<Uuid>, _override_amount: Decimal, _authorized_by: Uuid, _override_reason_id: Uuid) -> BankingResult<HoldOverrideRecord> {
+        Err(BankingError::NotImplemented("create_hold_override not yet implemented".to_string()))
+    }
+
+    async fn get_judicial_holds_by_reference(&self, _court_reference: String) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: Decimal, _updated_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_compliance_holds_by_alert(&self, _alert_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_hold_analytics(&self, _from_date: NaiveDate, _to_date: NaiveDate, _hold_types: Option<Vec<String>>) -> BankingResult<HoldAnalyticsSummary> {
+        Err(BankingError::NotImplemented("get_hold_analytics not yet implemented".to_string()))
+    }
+
+    async fn get_high_hold_ratio_accounts(&self, _min_ratio: Decimal, _exclude_hold_types: Option<Vec<String>>, _limit: i32) -> BankingResult<Vec<HighHoldRatioAccount>> {
+        Ok(vec![])
+    }
+
+    async fn generate_judicial_hold_report(&self, _from_date: NaiveDate, _to_date: NaiveDate) -> BankingResult<JudicialHoldReportData> {
+        Err(BankingError::NotImplemented("generate_judicial_hold_report not yet implemented".to_string()))
+    }
+
+    async fn get_hold_aging_report(&self, _hold_types: Option<Vec<String>>, _age_buckets: Vec<i32>) -> BankingResult<Vec<HoldAgingBucket>> {
+        Ok(vec![])
+    }
+
+    async fn validate_hold_amounts(&self, _account_id: Uuid) -> BankingResult<Vec<HoldValidationError>> {
+        Ok(vec![])
+    }
+
+    async fn find_orphaned_holds(&self, _limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn cleanup_old_holds(&self, _cutoff_date: NaiveDate, _hold_statuses: Vec<String>) -> BankingResult<u32> {
+        Ok(0)
     }
 
     // Final Settlement Operations

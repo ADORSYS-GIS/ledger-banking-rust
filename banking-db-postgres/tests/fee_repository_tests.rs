@@ -110,11 +110,11 @@ mod fee_repository_tests {
         .await
         .expect("Failed to create test account");
         
-        // Create test reason for fee waivers
+        // Create test reason for fee waivers (using ServiceRequest category since FEE_WAIVER is not in enum)
         let test_reason_id = Uuid::new_v4();
         sqlx::query(
             "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
-             VALUES ($1, 'GOODWILL', 'FEE_WAIVER', 'WAIVER', 'Customer goodwill gesture', $2, $2)
+             VALUES ($1, 'GOODWILL', 'ServiceRequest', 'General', 'Customer goodwill gesture', $2, $2)
              ON CONFLICT (id) DO NOTHING"
         )
         .bind(test_reason_id)
@@ -131,7 +131,7 @@ mod fee_repository_tests {
         let _ = sqlx::query("DELETE FROM fee_waivers").execute(pool).await;
         let _ = sqlx::query("DELETE FROM fee_applications").execute(pool).await;
         let _ = sqlx::query("DELETE FROM accounts WHERE product_code = 'SAV01'").execute(pool).await;
-        let _ = sqlx::query("DELETE FROM reason_and_purpose WHERE category = 'FEE_WAIVER'").execute(pool).await;
+        let _ = sqlx::query("DELETE FROM reason_and_purpose WHERE code = 'GOODWILL'").execute(pool).await;
     }
 
     #[tokio::test]
@@ -205,7 +205,7 @@ mod fee_repository_tests {
         let unique_waiver_code = format!("WAIVER_{}", waiver_reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
             "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
-             VALUES ($1, $2, 'FEE_WAIVER', 'WAIVER', 'Fee update waiver', $3, $3)"
+             VALUES ($1, $2, 'ServiceRequest', 'General', 'Fee update waiver', $3, $3)"
         )
         .bind(waiver_reason_id)
         .bind(unique_waiver_code)
@@ -381,7 +381,7 @@ mod fee_repository_tests {
         let unique_code = format!("GOODWILL_{}", reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
             "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
-             VALUES ($1, $2, 'FEE_WAIVER', 'WAIVER', 'Customer goodwill gesture', $3, $3)"
+             VALUES ($1, $2, 'ServiceRequest', 'General', 'Customer goodwill gesture', $3, $3)"
         )
         .bind(reason_id)
         .bind(unique_code)
@@ -422,7 +422,7 @@ mod fee_repository_tests {
         let unique_code = format!("GOODWILL_{}", reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
             "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
-             VALUES ($1, $2, 'FEE_WAIVER', 'WAIVER', 'Customer goodwill gesture', $3, $3)"
+             VALUES ($1, $2, 'ServiceRequest', 'General', 'Customer goodwill gesture', $3, $3)"
         )
         .bind(reason_id)
         .bind(unique_code)
@@ -491,7 +491,7 @@ mod fee_repository_tests {
         let unique_waiver_code2 = format!("WAIVER2_{}", waiver_reason_id2.to_string()[0..8].to_uppercase());
         sqlx::query(
             "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
-             VALUES ($1, $2, 'FEE_WAIVER', 'WAIVER', 'Revenue test waiver', $3, $3)"
+             VALUES ($1, $2, 'ServiceRequest', 'General', 'Revenue test waiver', $3, $3)"
         )
         .bind(waiver_reason_id2)
         .bind(unique_waiver_code2)
@@ -623,7 +623,7 @@ mod fee_repository_tests {
         let unique_reversal_code = format!("REVERSAL_{}", reversal_reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
             "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
-             VALUES ($1, $2, 'FEE_REVERSAL', 'REVERSAL', 'Fee reversal', $3, $3)"
+             VALUES ($1, $2, 'TransactionReversal', 'Transaction', 'Fee reversal', $3, $3)"
         )
         .bind(reversal_reason_id)
         .bind(unique_reversal_code)
@@ -676,7 +676,7 @@ mod fee_repository_tests {
         let unique_reversal_code = format!("REVERSAL_{}", reversal_reason_id.to_string()[0..8].to_uppercase());
         sqlx::query(
             "INSERT INTO reason_and_purpose (id, code, category, context, l1_content, created_by, updated_by)
-             VALUES ($1, $2, 'FEE_REVERSAL', 'REVERSAL', 'Fee reversal', $3, $3)"
+             VALUES ($1, $2, 'TransactionReversal', 'Transaction', 'Fee reversal', $3, $3)"
         )
         .bind(reversal_reason_id)
         .bind(unique_reversal_code)

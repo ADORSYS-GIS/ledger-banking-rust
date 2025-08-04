@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{NaiveDate, Utc};
+use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -63,7 +64,7 @@ impl FeeService for FeeServiceImpl {
 
         // Get applicable fees from Product Catalog
         let applicable_fees = self.get_applicable_fees(
-            account.product_code.clone(),
+            account.product_code.to_string(),
             trigger_event.clone(),
         ).await?;
 
@@ -113,15 +114,15 @@ impl FeeService for FeeServiceImpl {
                 reversal_deadline: None,
                 waived: false,
                 waived_by: None,
-                waived_reason: None,
-                applied_by: "SYSTEM".to_string(),
+                waived_reason_id: None,
+                applied_by: Uuid::new_v4(), // System user UUID
                 created_at: Utc::now(),
             };
 
             // Store fee application
-            let fee_model = crate::mappers::FeeMapper::to_model(fee_application.clone());
+            let fee_model = crate::mappers::FeeMapper::fee_application_to_model(fee_application.clone());
             let created_model = self.fee_repository.create_fee_application(fee_model).await?;
-            let created_fee = crate::mappers::FeeMapper::from_model(created_model)?;
+            let created_fee = crate::mappers::FeeMapper::fee_application_from_model(created_model)?;
 
             applied_fees.push(created_fee);
 
@@ -146,7 +147,7 @@ impl FeeService for FeeServiceImpl {
 
         // Get applicable fees from Product Catalog
         let applicable_fees = self.get_applicable_fees(
-            account.product_code.clone(),
+            account.product_code.to_string(),
             trigger_event.clone(),
         ).await?;
 
@@ -196,8 +197,8 @@ impl FeeService for FeeServiceImpl {
                 reversal_deadline: None,
                 waived: false,
                 waived_by: None,
-                waived_reason: None,
-                applied_by: "PREVIEW".to_string(),
+                waived_reason_id: None,
+                applied_by: Uuid::new_v4(), // Preview system UUID
                 created_at: Utc::now(),
             };
 
@@ -251,7 +252,7 @@ impl FeeService for FeeServiceImpl {
         let job = FeeProcessingJob {
             job_id: Uuid::new_v4(),
             job_type,
-            job_name: format!("Batch Fee Processing - {:?}", processing_date),
+            job_name: format!("Batch Fee Processing - {processing_date:?}"),
             schedule_expression: "0 2 * * *".to_string(), // 2 AM daily
             target_fee_categories: target_categories,
             target_products,
@@ -265,9 +266,9 @@ impl FeeService for FeeServiceImpl {
             errors: Vec::new(),
         };
 
-        let job_model = crate::mappers::FeeMapper::job_to_model(job.clone());
+        let job_model = crate::mappers::FeeMapper::fee_processing_job_to_model(job.clone());
         let created_model = self.fee_repository.create_fee_processing_job(job_model).await?;
-        let created_job = crate::mappers::FeeMapper::job_from_model(created_model)?;
+        let created_job = crate::mappers::FeeMapper::fee_processing_job_from_model(created_model)?;
 
         tracing::info!("Scheduled batch fee job {} for date {}", created_job.job_id, processing_date);
 
@@ -288,11 +289,11 @@ impl FeeService for FeeServiceImpl {
             })?;
 
         // Update job status to running
-        job_model.status = "Running".to_string();
+        job_model.status = banking_api::domain::FeeJobStatus::Running;
         job_model.started_at = Some(Utc::now());
         let updated_job = self.fee_repository.update_fee_processing_job(job_model.clone()).await?;
 
-        let mut job = crate::mappers::FeeMapper::job_from_model(updated_job)?;
+        let mut job = crate::mappers::FeeMapper::fee_processing_job_from_model(updated_job)?;
 
         tracing::info!("Starting execution of batch fee job {}", job_id);
 
@@ -321,7 +322,7 @@ impl FeeService for FeeServiceImpl {
                     total_amount += applied_fees.iter().map(|f| f.amount).sum::<Decimal>();
                 }
                 Err(e) => {
-                    errors.push(format!("Account {}: {}", account_id, e));
+                    errors.push(format!("Account {account_id}: {e}"));
                     tracing::warn!("Failed to process fees for account {}: {}", account_id, e);
                 }
             }
@@ -339,9 +340,9 @@ impl FeeService for FeeServiceImpl {
         job.total_amount = total_amount;
         job.errors = errors;
 
-        let final_job_model = crate::mappers::FeeMapper::job_to_model(job.clone());
+        let final_job_model = crate::mappers::FeeMapper::fee_processing_job_to_model(job.clone());
         let final_updated = self.fee_repository.update_fee_processing_job(final_job_model).await?;
-        let final_job = crate::mappers::FeeMapper::job_from_model(final_updated)?;
+        let final_job = crate::mappers::FeeMapper::fee_processing_job_from_model(final_updated)?;
 
         tracing::info!("Completed batch fee job {}: processed {} accounts, applied {} fees, total amount {}", 
                       job_id, accounts_processed, fees_applied, total_amount);
@@ -361,7 +362,7 @@ impl FeeService for FeeServiceImpl {
         // This would typically involve complex business logic to determine eligibility
         // For now, returning a placeholder implementation
         let category_strings: Vec<String> = fee_categories.iter()
-            .map(|c| format!("{:?}", c))
+            .map(|c| format!("{c:?}"))
             .collect();
             
         self.fee_repository.get_accounts_eligible_for_fees(
@@ -386,7 +387,7 @@ impl FeeService for FeeServiceImpl {
             .ok_or(BankingError::AccountNotFound(account_id))?;
 
         // Get product fee schedule
-        let fee_schedule = self.get_product_fee_schedule(account.product_code.clone()).await?;
+        let fee_schedule = self.get_product_fee_schedule(account.product_code.as_str().to_string()).await?;
         
         let mut applied_fees = Vec::new();
 
@@ -425,14 +426,14 @@ impl FeeService for FeeServiceImpl {
                         reversal_deadline: None,
                         waived: false,
                         waived_by: None,
-                        waived_reason: None,
-                        applied_by: "BATCH_SYSTEM".to_string(),
+                        waived_reason_id: None,
+                        applied_by: Uuid::new_v4(), // Batch system UUID
                         created_at: Utc::now(),
                     };
 
-                    let fee_model = crate::mappers::FeeMapper::to_model(fee_application.clone());
+                    let fee_model = crate::mappers::FeeMapper::fee_application_to_model(fee_application.clone());
                     let created_model = self.fee_repository.create_fee_application(fee_model).await?;
-                    let created_fee = crate::mappers::FeeMapper::from_model(created_model)?;
+                    let created_fee = crate::mappers::FeeMapper::fee_application_from_model(created_model)?;
 
                     applied_fees.push(created_fee);
                 }
@@ -463,10 +464,13 @@ impl FeeService for FeeServiceImpl {
         
         // Convert to domain object
         Ok(ProductFeeSchedule {
-            product_code: product_code.clone(),
+            product_code: HeaplessString::try_from(product_code.as_str()).map_err(|_| BankingError::ValidationError {
+                field: "product_code".to_string(),
+                message: "Product code too long".to_string(),
+            })?,
             fees: fee_schedule.fees.into_iter().map(|fee| ProductFee {
-                fee_code: fee.fee_type,
-                description: format!("Fee for {}", fee.fee_type),
+                fee_code: HeaplessString::try_from(fee.fee_type.as_str()).unwrap_or_default(),
+                description: HeaplessString::try_from(format!("Fee for {}", fee.fee_type).as_str()).unwrap_or_default(),
                 fee_category: FeeCategory::Transaction, // Map appropriately
                 trigger_event: FeeTriggerEvent::AtmWithdrawal, // Map appropriately
                 calculation_method: FeeCalculationMethod::Fixed,
@@ -474,11 +478,11 @@ impl FeeService for FeeServiceImpl {
                 percentage_rate: None,
                 minimum_amount: None,
                 maximum_amount: None,
-                currency: fee.currency,
+                currency: HeaplessString::try_from(fee.currency.as_str()).unwrap_or_default(),
                 frequency: banking_api::domain::FeeFrequency::PerEvent,
                 tier_schedule: None,
                 conditions: Vec::new(),
-                gl_code: "FEE_INCOME".to_string(),
+                gl_code: HeaplessString::try_from("FEE_INCOME").unwrap_or_default(),
                 waivable: true,
                 active: true,
             }).collect(),

@@ -1,7 +1,15 @@
 use async_trait::async_trait;
 use banking_api::{BankingResult, BankingError};
-use banking_db::models::{AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, AccountHoldModel, StatusChangeModel, AccountFinalSettlementModel};
-use banking_db::repository::AccountRepository;
+use banking_db::models::{
+    AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, 
+    AccountHoldModel, StatusChangeModel, AccountFinalSettlementModel,
+    HoldReleaseRecordModel, AccountBalanceCalculationModel, AccountHoldExpiryJobModel
+};
+use banking_db::repository::{
+    AccountRepository, HoldPrioritySummary, HoldTypeSummary, HoldOverrideRecord,
+    HoldAnalyticsSummary, HighHoldRatioAccount, JudicialHoldReportData, 
+    HoldAgingBucket, HoldValidationError
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 use rust_decimal::Decimal;
@@ -219,6 +227,139 @@ impl AccountRepository for SimpleAccountRepositoryImpl {
 
         Ok(result.count.unwrap_or(0))
     }
+
+    // Hold methods - placeholder implementations for simple repository
+    async fn update_hold(&self, hold: AccountHoldModel) -> BankingResult<AccountHoldModel> {
+        Ok(hold)
+    }
+
+    async fn get_hold_by_id(&self, _hold_id: Uuid) -> BankingResult<Option<AccountHoldModel>> {
+        Ok(None)
+    }
+
+    async fn get_active_holds_for_account(&self, _account_id: Uuid, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_holds_by_status(&self, _account_id: Option<Uuid>, _status: String, _from_date: Option<NaiveDate>, _to_date: Option<NaiveDate>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_holds_by_type(&self, _hold_type: String, _status: Option<String>, _account_ids: Option<Vec<Uuid>>, _limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_hold_history(&self, _account_id: Uuid, _from_date: Option<NaiveDate>, _to_date: Option<NaiveDate>, _include_released: bool) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn calculate_total_holds(&self, _account_id: Uuid, _exclude_hold_types: Option<Vec<String>>) -> BankingResult<Decimal> {
+        Ok(Decimal::ZERO)
+    }
+
+    async fn get_hold_amounts_by_priority(&self, _account_id: Uuid) -> BankingResult<Vec<HoldPrioritySummary>> {
+        Ok(vec![])
+    }
+
+    async fn get_hold_breakdown(&self, _account_id: Uuid) -> BankingResult<Vec<HoldTypeSummary>> {
+        Ok(vec![])
+    }
+
+    async fn cache_balance_calculation(&self, calculation: AccountBalanceCalculationModel) -> BankingResult<AccountBalanceCalculationModel> {
+        Ok(calculation)
+    }
+
+    async fn get_cached_balance_calculation(&self, _account_id: Uuid, _max_age_seconds: u64) -> BankingResult<Option<AccountBalanceCalculationModel>> {
+        Ok(None)
+    }
+
+    async fn release_hold_detailed(&self, _hold_id: Uuid, _release_amount: Option<Decimal>, _release_reason_id: Uuid, _released_by: Uuid, _released_at: DateTime<Utc>) -> BankingResult<AccountHoldModel> {
+        Err(BankingError::NotImplemented("release_hold_detailed not implemented in simple repository".to_string()))
+    }
+
+    async fn create_hold_release_record(&self, release_record: HoldReleaseRecordModel) -> BankingResult<HoldReleaseRecordModel> {
+        Ok(release_record)
+    }
+
+    async fn get_hold_release_records(&self, _hold_id: Uuid) -> BankingResult<Vec<HoldReleaseRecordModel>> {
+        Ok(vec![])
+    }
+
+    async fn bulk_release_holds(&self, _hold_ids: Vec<Uuid>, _release_reason_id: Uuid, _released_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_expired_holds(&self, _cutoff_date: DateTime<Utc>, _hold_types: Option<Vec<String>>, _limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_auto_release_eligible_holds(&self, _processing_date: NaiveDate, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn create_hold_expiry_job(&self, job: AccountHoldExpiryJobModel) -> BankingResult<AccountHoldExpiryJobModel> {
+        Ok(job)
+    }
+
+    async fn update_hold_expiry_job(&self, job: AccountHoldExpiryJobModel) -> BankingResult<AccountHoldExpiryJobModel> {
+        Ok(job)
+    }
+
+    async fn bulk_place_holds(&self, holds: Vec<AccountHoldModel>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(holds)
+    }
+
+    async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_overrideable_holds(&self, _account_id: Uuid, _required_amount: Decimal, _override_priority: String) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn create_hold_override(&self, _account_id: Uuid, _overridden_holds: Vec<Uuid>, _override_amount: Decimal, _authorized_by: Uuid, _override_reason_id: Uuid) -> BankingResult<HoldOverrideRecord> {
+        Err(BankingError::NotImplemented("create_hold_override not implemented in simple repository".to_string()))
+    }
+
+    async fn get_judicial_holds_by_reference(&self, _court_reference: String) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: Decimal, _updated_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_compliance_holds_by_alert(&self, _alert_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn get_hold_analytics(&self, _from_date: NaiveDate, _to_date: NaiveDate, _hold_types: Option<Vec<String>>) -> BankingResult<HoldAnalyticsSummary> {
+        Err(BankingError::NotImplemented("get_hold_analytics not implemented in simple repository".to_string()))
+    }
+
+    async fn get_high_hold_ratio_accounts(&self, _min_ratio: Decimal, _exclude_hold_types: Option<Vec<String>>, _limit: i32) -> BankingResult<Vec<HighHoldRatioAccount>> {
+        Ok(vec![])
+    }
+
+    async fn generate_judicial_hold_report(&self, _from_date: NaiveDate, _to_date: NaiveDate) -> BankingResult<JudicialHoldReportData> {
+        Err(BankingError::NotImplemented("generate_judicial_hold_report not implemented in simple repository".to_string()))
+    }
+
+    async fn get_hold_aging_report(&self, _hold_types: Option<Vec<String>>, _age_buckets: Vec<i32>) -> BankingResult<Vec<HoldAgingBucket>> {
+        Ok(vec![])
+    }
+
+    async fn validate_hold_amounts(&self, _account_id: Uuid) -> BankingResult<Vec<HoldValidationError>> {
+        Ok(vec![])
+    }
+
+    async fn find_orphaned_holds(&self, _limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
+        Ok(vec![])
+    }
+
+    async fn cleanup_old_holds(&self, _cutoff_date: NaiveDate, _hold_statuses: Vec<String>) -> BankingResult<u32> {
+        Ok(0)
+    }
 }
 
 impl SimpleAccountRepositoryImpl {
@@ -264,4 +405,5 @@ impl SimpleAccountRepositoryImpl {
             updated_by: Uuid::new_v4(),
         }
     }
+
 }

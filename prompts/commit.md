@@ -42,7 +42,16 @@ When this prompt is used, the assistant should:
    - Add Claude Code attribution
    - Add Qwen Code attribution
 
-5. **Commit with Proper Signing**:
+5. **Update CLAUDE.md Progress Tracking** (IMPORTANT):
+   - **Always check if the commit includes new repository implementations**
+   - **Update completion percentages** (e.g., 92% → 95%)
+   - **Update test counts** (e.g., 39+ tests → 42+ tests)
+   - **Move completed repositories** from "Remaining" to "Complete" sections
+   - **Update "Next Steps"** to reflect new priority order
+   - **Add achievement documentation** in "Recent Achievements" section
+   - This ensures CLAUDE.md accurately reflects the current implementation state
+
+6. **Commit with Proper Signing**:
    - Use both `-s` (DCO sign-off) and `-S` (GPG signature) flags
    - Verify the commit was properly signed
 

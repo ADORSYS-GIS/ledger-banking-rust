@@ -897,7 +897,7 @@ impl FeeRepository for FeeRepositoryImpl {
                 status = 'Reversed',
                 waived_reason_id = (
                     SELECT id FROM reason_and_purpose 
-                    WHERE category = 'FEE_REVERSAL' 
+                    WHERE category = 'TransactionReversal' 
                     LIMIT 1
                 ),
                 applied_by = $3
@@ -940,7 +940,7 @@ impl FeeRepository for FeeRepositoryImpl {
                     status = 'Reversed',
                     waived_reason_id = (
                         SELECT id FROM reason_and_purpose 
-                        WHERE category = 'FEE_REVERSAL' 
+                        WHERE category = 'TransactionReversal' 
                         LIMIT 1
                     ),
                     applied_by = $4
