@@ -13,12 +13,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 rust_decimal = { workspace = true }
-thiserror = { workspace = true }
-anyhow = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
 heapless = { workspace = true }
-blake3 = { workspace = true }
 
 # Banking crates
 banking-api = { path = "../banking-api" }
@@ -32,10 +29,6 @@ log = { workspace = true }
 rand = { workspace = true }
 
 # Configuration
-config = { workspace = true }
-
-# Optional database implementations
-banking-db-postgres = { path = "../banking-db-postgres", optional = true }
 
 [features]
-postgres_tests = ["banking-db-postgres"]
+postgres_tests = []

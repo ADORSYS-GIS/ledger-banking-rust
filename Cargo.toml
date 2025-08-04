@@ -29,7 +29,7 @@ anyhow = "1.0"
 async-trait = "0.1"
 
 # Database
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "bigdecimal"] }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "bigdecimal", "derive", "macros"], default-features = false }
 diesel = { version = "2.1", features = ["postgres", "uuid", "chrono", "serde_json", "numeric"] }
 diesel_migrations = "2.1"
 
@@ -45,6 +45,8 @@ zen-engine = "0.8"
 # Testing
 tokio-test = "0.4"
 
+# Security and linting tools (dev dependencies)
+
 # Logging and tracing
 tracing = "0.1"
 log = "0.4"
@@ -54,10 +56,10 @@ rand = "0.8"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Configuration
-config = "0.13"
+config = "0.15"
 
 # Validation
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 
 # Collections
 indexmap = { version = "2.0", features = ["serde"] }
