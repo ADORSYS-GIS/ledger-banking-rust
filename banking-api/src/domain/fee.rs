@@ -37,7 +37,7 @@ pub struct FeeApplication {
 }
 
 /// Fee Type Classification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeeType {
     /// Real-time fees applied during transaction processing
     EventBased,
@@ -46,7 +46,7 @@ pub enum FeeType {
 }
 
 /// Fee Categories for business logic
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeeCategory {
     /// Transaction-related fees
     Transaction,
@@ -114,7 +114,7 @@ pub enum FeeTriggerEvent {
 }
 
 /// Status of fee application
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FeeApplicationStatus {
     Applied,
     Pending,
@@ -269,4 +269,225 @@ pub struct FeeWaiver {
     /// References Person.person_id
     pub approved_by: Option<Uuid>,
     pub approved_at: Option<DateTime<Utc>>,
+}
+
+// ============================================================================
+// DISPLAY AND FROMSTR IMPLEMENTATIONS FOR DATABASE COMPATIBILITY
+// ============================================================================
+
+impl std::fmt::Display for FeeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeeType::EventBased => write!(f, "EventBased"),
+            FeeType::Periodic => write!(f, "Periodic"),
+        }
+    }
+}
+
+impl std::str::FromStr for FeeType {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "EventBased" => Ok(FeeType::EventBased),
+            "Periodic" => Ok(FeeType::Periodic),
+            _ => Err(format!("Invalid FeeType: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for FeeCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeeCategory::Transaction => write!(f, "Transaction"),
+            FeeCategory::Maintenance => write!(f, "Maintenance"),
+            FeeCategory::Service => write!(f, "Service"),
+            FeeCategory::Penalty => write!(f, "Penalty"),
+            FeeCategory::Card => write!(f, "Card"),
+            FeeCategory::Loan => write!(f, "Loan"),
+            FeeCategory::Regulatory => write!(f, "Regulatory"),
+        }
+    }
+}
+
+impl std::str::FromStr for FeeCategory {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Transaction" => Ok(FeeCategory::Transaction),
+            "Maintenance" => Ok(FeeCategory::Maintenance),
+            "Service" => Ok(FeeCategory::Service),
+            "Penalty" => Ok(FeeCategory::Penalty),
+            "Card" => Ok(FeeCategory::Card),
+            "Loan" => Ok(FeeCategory::Loan),
+            "Regulatory" => Ok(FeeCategory::Regulatory),
+            _ => Err(format!("Invalid FeeCategory: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for FeeCalculationMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeeCalculationMethod::Fixed => write!(f, "Fixed"),
+            FeeCalculationMethod::Percentage => write!(f, "Percentage"),
+            FeeCalculationMethod::Tiered => write!(f, "Tiered"),
+            FeeCalculationMethod::BalanceBased => write!(f, "BalanceBased"),
+            FeeCalculationMethod::RuleBased => write!(f, "RuleBased"),
+        }
+    }
+}
+
+impl std::str::FromStr for FeeCalculationMethod {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Fixed" => Ok(FeeCalculationMethod::Fixed),
+            "Percentage" => Ok(FeeCalculationMethod::Percentage),
+            "Tiered" => Ok(FeeCalculationMethod::Tiered),
+            "BalanceBased" => Ok(FeeCalculationMethod::BalanceBased),
+            "RuleBased" => Ok(FeeCalculationMethod::RuleBased),
+            _ => Err(format!("Invalid FeeCalculationMethod: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for FeeTriggerEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeeTriggerEvent::AtmWithdrawal => write!(f, "AtmWithdrawal"),
+            FeeTriggerEvent::PosTraction => write!(f, "PosTraction"),
+            FeeTriggerEvent::WireTransfer => write!(f, "WireTransfer"),
+            FeeTriggerEvent::OnlineTransfer => write!(f, "OnlineTransfer"),
+            FeeTriggerEvent::CheckDeposit => write!(f, "CheckDeposit"),
+            FeeTriggerEvent::InsufficientFunds => write!(f, "InsufficientFunds"),
+            FeeTriggerEvent::OverdraftUsage => write!(f, "OverdraftUsage"),
+            FeeTriggerEvent::BelowMinimumBalance => write!(f, "BelowMinimumBalance"),
+            FeeTriggerEvent::AccountOpening => write!(f, "AccountOpening"),
+            FeeTriggerEvent::AccountClosure => write!(f, "AccountClosure"),
+            FeeTriggerEvent::AccountMaintenance => write!(f, "AccountMaintenance"),
+            FeeTriggerEvent::StatementGeneration => write!(f, "StatementGeneration"),
+            FeeTriggerEvent::MonthlyMaintenance => write!(f, "MonthlyMaintenance"),
+            FeeTriggerEvent::QuarterlyMaintenance => write!(f, "QuarterlyMaintenance"),
+            FeeTriggerEvent::AnnualMaintenance => write!(f, "AnnualMaintenance"),
+            FeeTriggerEvent::CardIssuance => write!(f, "CardIssuance"),
+            FeeTriggerEvent::CardReplacement => write!(f, "CardReplacement"),
+            FeeTriggerEvent::CardActivation => write!(f, "CardActivation"),
+            FeeTriggerEvent::Manual => write!(f, "Manual"),
+            FeeTriggerEvent::Regulatory => write!(f, "Regulatory"),
+        }
+    }
+}
+
+impl std::str::FromStr for FeeTriggerEvent {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "AtmWithdrawal" => Ok(FeeTriggerEvent::AtmWithdrawal),
+            "PosTraction" => Ok(FeeTriggerEvent::PosTraction),
+            "WireTransfer" => Ok(FeeTriggerEvent::WireTransfer),
+            "OnlineTransfer" => Ok(FeeTriggerEvent::OnlineTransfer),
+            "CheckDeposit" => Ok(FeeTriggerEvent::CheckDeposit),
+            "InsufficientFunds" => Ok(FeeTriggerEvent::InsufficientFunds),
+            "OverdraftUsage" => Ok(FeeTriggerEvent::OverdraftUsage),
+            "BelowMinimumBalance" => Ok(FeeTriggerEvent::BelowMinimumBalance),
+            "AccountOpening" => Ok(FeeTriggerEvent::AccountOpening),
+            "AccountClosure" => Ok(FeeTriggerEvent::AccountClosure),
+            "AccountMaintenance" => Ok(FeeTriggerEvent::AccountMaintenance),
+            "StatementGeneration" => Ok(FeeTriggerEvent::StatementGeneration),
+            "MonthlyMaintenance" => Ok(FeeTriggerEvent::MonthlyMaintenance),
+            "QuarterlyMaintenance" => Ok(FeeTriggerEvent::QuarterlyMaintenance),
+            "AnnualMaintenance" => Ok(FeeTriggerEvent::AnnualMaintenance),
+            "CardIssuance" => Ok(FeeTriggerEvent::CardIssuance),
+            "CardReplacement" => Ok(FeeTriggerEvent::CardReplacement),
+            "CardActivation" => Ok(FeeTriggerEvent::CardActivation),
+            "Manual" => Ok(FeeTriggerEvent::Manual),
+            "Regulatory" => Ok(FeeTriggerEvent::Regulatory),
+            _ => Err(format!("Invalid FeeTriggerEvent: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for FeeApplicationStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeeApplicationStatus::Applied => write!(f, "Applied"),
+            FeeApplicationStatus::Pending => write!(f, "Pending"),
+            FeeApplicationStatus::Waived => write!(f, "Waived"),
+            FeeApplicationStatus::Reversed => write!(f, "Reversed"),
+            FeeApplicationStatus::Failed => write!(f, "Failed"),
+        }
+    }
+}
+
+impl std::str::FromStr for FeeApplicationStatus {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Applied" => Ok(FeeApplicationStatus::Applied),
+            "Pending" => Ok(FeeApplicationStatus::Pending),
+            "Waived" => Ok(FeeApplicationStatus::Waived),
+            "Reversed" => Ok(FeeApplicationStatus::Reversed),
+            "Failed" => Ok(FeeApplicationStatus::Failed),
+            _ => Err(format!("Invalid FeeApplicationStatus: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for FeeJobType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeeJobType::DailyMaintenance => write!(f, "DailyMaintenance"),
+            FeeJobType::MonthlyMaintenance => write!(f, "MonthlyMaintenance"),
+            FeeJobType::QuarterlyMaintenance => write!(f, "QuarterlyMaintenance"),
+            FeeJobType::AnnualMaintenance => write!(f, "AnnualMaintenance"),
+            FeeJobType::AdHocFeeApplication => write!(f, "AdHocFeeApplication"),
+        }
+    }
+}
+
+impl std::str::FromStr for FeeJobType {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "DailyMaintenance" => Ok(FeeJobType::DailyMaintenance),
+            "MonthlyMaintenance" => Ok(FeeJobType::MonthlyMaintenance),
+            "QuarterlyMaintenance" => Ok(FeeJobType::QuarterlyMaintenance),
+            "AnnualMaintenance" => Ok(FeeJobType::AnnualMaintenance),
+            "AdHocFeeApplication" => Ok(FeeJobType::AdHocFeeApplication),
+            _ => Err(format!("Invalid FeeJobType: {s}")),
+        }
+    }
+}
+
+impl std::fmt::Display for FeeJobStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeeJobStatus::Scheduled => write!(f, "Scheduled"),
+            FeeJobStatus::Running => write!(f, "Running"),
+            FeeJobStatus::Completed => write!(f, "Completed"),
+            FeeJobStatus::Failed => write!(f, "Failed"),
+            FeeJobStatus::Cancelled => write!(f, "Cancelled"),
+        }
+    }
+}
+
+impl std::str::FromStr for FeeJobStatus {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Scheduled" => Ok(FeeJobStatus::Scheduled),
+            "Running" => Ok(FeeJobStatus::Running),
+            "Completed" => Ok(FeeJobStatus::Completed),
+            "Failed" => Ok(FeeJobStatus::Failed),
+            "Cancelled" => Ok(FeeJobStatus::Cancelled),
+            _ => Err(format!("Invalid FeeJobStatus: {s}")),
+        }
+    }
 }

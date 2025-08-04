@@ -17,6 +17,8 @@ pub mod person_repository_impl;
 // pub mod collateral_repository_impl;
 #[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
 pub mod workflow_repository_impl;
+#[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
+pub mod fee_repository_impl;
 
 pub use customer_repository_impl::*;
 #[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
@@ -37,3 +39,5 @@ pub use person_repository_impl::*;
 // pub use collateral_repository_impl::*;
 #[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
 pub use workflow_repository_impl::*;
+#[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
+pub use fee_repository_impl::*;
