@@ -2,6 +2,37 @@
 
 A comprehensive, high-performance Rust library for core banking account management designed to support diverse banking products, extensive agent banking networks, and strict regulatory compliance (COBAC). The system follows API-first, cloud-native, and composable architecture principles.
 
+## Security
+
+This project includes comprehensive static application security testing (SAST) tools and processes to ensure code quality and security:
+
+- Dependency vulnerability scanning with `cargo-audit`
+- License compliance checking with `cargo-deny`
+- Security-focused linting with `clippy`
+- Automated security scanning in CI/CD pipeline
+
+### Running Security Checks
+
+To run all security checks locally:
+
+```bash
+# Run the security check script
+./scripts/security-check.sh
+```
+
+Or run individual tools:
+
+```bash
+# Check for known vulnerabilities in dependencies
+cargo audit
+
+# Check licenses and banned dependencies
+cargo deny check
+
+# Run clippy with security lints
+cargo clippy -- -W clippy::suspicious -W clippy::perf -W clippy::complexity
+```
+
 ## Architecture Overview
 
 The system implements a modular **onion architecture** with clear separation of concerns, mirroring the design patterns of modern financial systems:

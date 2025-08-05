@@ -1,0 +1,15 @@
+# Cargo audit configuration for banking system security
+
+[advisories]
+# RSA timing attack vulnerability in MySQL driver (not used in PostgreSQL-only system)
+# This vulnerability is in sqlx-mysql which is a transitive dependency through SQLx macros
+# but we only use PostgreSQL features. The RSA crate is not directly exposed in our application.
+# Reference: https://rustsec.org/advisories/RUSTSEC-2023-0071
+ignore = [
+    "RUSTSEC-2023-0071"
+]
+
+[database]
+# Fetch advisory database from RustSec
+fetch = true
+stale = false

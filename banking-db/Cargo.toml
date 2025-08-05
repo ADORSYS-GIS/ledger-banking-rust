@@ -17,8 +17,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 rust_decimal = { workspace = true }
-thiserror = { workspace = true }
-anyhow = { workspace = true }
 async-trait = { workspace = true }
 heapless = { version = "0.8", features = ["serde"] }
 blake3 = { version = "1.5", features = ["serde"] }
@@ -28,4 +26,3 @@ banking-api = { path = "../banking-api" }
 
 # Database
 sqlx = { workspace = true }
-diesel = { workspace = true }
