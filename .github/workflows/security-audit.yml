@@ -15,11 +15,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Start PostgreSQL Database
+        run: docker compose up -d postgres
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to start..."
+          until docker compose exec postgres pg_isready -U user -d mydb; do
+            sleep 2
+          done
+          echo "PostgreSQL is ready."
+
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
+          components: clippy
 
       - name: Cache cargo registry
         uses: actions/cache@v3
@@ -29,6 +41,14 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install SQLx CLI
+        run: cd ./banking-db-postgres && cargo install sqlx-cli --no-default-features --features postgres
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/mydb
+        run: sqlx migrate run --source banking-db-postgres/migrations
 
       - name: Install audit tools
         run: |
@@ -42,6 +62,10 @@ jobs:
         run: cargo deny check
 
       - name: Run clippy security checks
-        run: |
-          rustup component add clippy
-          cargo clippy -- -W clippy::suspicious -W clippy::perf -W clippy::complexity
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/mydb
+        run: cargo clippy -- -W clippy::suspicious -W clippy::perf -W clippy::complexity
+
+      - name: Stop Databases
+        if: always()
+        run: docker compose down -v
