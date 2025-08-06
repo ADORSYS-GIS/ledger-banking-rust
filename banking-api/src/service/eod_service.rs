@@ -62,7 +62,7 @@ pub struct EodReport {
     pub warnings: Vec<String>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum EodReportStatus {
     InProgress,
     Completed,

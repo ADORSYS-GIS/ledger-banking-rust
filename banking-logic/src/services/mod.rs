@@ -11,6 +11,7 @@ pub mod loan_service_impl;
 pub mod casa_service_impl;
 pub mod collateral_service_impl;
 pub mod fee_service_impl;
+pub mod eod_service_impl;
 
 pub use customer_service_impl::*;
 pub use account_service_impl::*;
@@ -25,3 +26,4 @@ pub use loan_service_impl::*;
 pub use casa_service_impl::*;
 pub use collateral_service_impl::*;
 pub use fee_service_impl::*;
+pub use eod_service_impl::*;
