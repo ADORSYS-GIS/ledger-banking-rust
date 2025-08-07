@@ -10,6 +10,7 @@ pub mod reason_and_purpose_repository;
 pub mod person_repository;
 pub mod collateral_repository;
 pub mod channel_repository;
+pub mod daily_collection_repository;
 
 pub use customer_repository::*;
 pub use account_repository::*;
@@ -23,3 +24,4 @@ pub use reason_and_purpose_repository::*;
 pub use person_repository::*;
 pub use collateral_repository::*;
 pub use channel_repository::*;
+pub use daily_collection_repository::*;

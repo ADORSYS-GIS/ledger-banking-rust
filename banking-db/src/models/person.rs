@@ -14,6 +14,7 @@ pub enum AddressType {
     Mailing,
     Temporary,
     Branch,
+    Community,
     Other,
 }
 
@@ -260,6 +261,7 @@ where
         AddressType::Mailing => "mailing",
         AddressType::Temporary => "temporary",
         AddressType::Branch => "branch",
+        AddressType::Community => "community",
         AddressType::Other => "other",
     };
     serializer.serialize_str(type_str)
@@ -276,6 +278,7 @@ where
         "mailing" => Ok(AddressType::Mailing),
         "temporary" => Ok(AddressType::Temporary),
         "branch" => Ok(AddressType::Branch),
+        "community" => Ok(AddressType::Community),
         "other" => Ok(AddressType::Other),
         _ => Err(serde::de::Error::custom(format!("Unknown address type: {s}"))),
     }

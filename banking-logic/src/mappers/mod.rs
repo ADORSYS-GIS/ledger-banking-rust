@@ -12,6 +12,7 @@ pub mod channel_mapper;
 pub mod casa_mapper;
 pub mod loan_mapper;
 pub mod reason_and_purpose_mapper;
+pub mod daily_collection_mapper;
 
 pub use customer_mapper::*;
 pub use account_mapper::*;
@@ -27,3 +28,4 @@ pub use channel_mapper::*;
 pub use casa_mapper::*;
 pub use loan_mapper::*;
 pub use reason_and_purpose_mapper::*;
+pub use daily_collection_mapper::*;

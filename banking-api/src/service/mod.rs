@@ -14,6 +14,7 @@ pub mod loan_service;
 pub mod reason_service;
 pub mod reason_and_purpose_service;
 pub mod collateral_service;
+pub mod daily_collection_service;
 
 pub use customer_service::*;
 pub use account_service::*;
@@ -31,3 +32,11 @@ pub use loan_service::*;
 pub use reason_service::*;
 pub use reason_and_purpose_service::*;
 pub use collateral_service::*;
+pub use daily_collection_service::{
+    DailyCollectionService, CollectionStatistics, AgentPerformanceUpdate, 
+    AgentPerformanceReport, CollectionRoute, RouteWaypoint, ScheduledCollection,
+    CollectionPriority, CollectionScheduleUpdate, ProgramPerformanceReport,
+    DailyCollectionSummary, CollectionTrends, TrendGranularity, TrendDataPoint,
+    AgentRanking, RankingCriteria,
+    TrendDirection as DailyCollectionTrendDirection,
+};

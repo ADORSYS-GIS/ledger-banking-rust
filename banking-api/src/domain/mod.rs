@@ -13,6 +13,7 @@ pub mod reason_view;
 pub mod reason_and_purpose;
 pub mod person;
 pub mod collateral;
+pub mod daily_collection;
 
 pub use customer::*;
 pub use account::*;
@@ -36,3 +37,14 @@ pub use reason_view::*;
 pub use reason_and_purpose::*;
 pub use person::*;
 pub use collateral::*;
+pub use daily_collection::{
+    CollectionAgent, Territory, CoverageArea, AgentPerformanceMetrics, DeviceInformation,
+    CollectionProgram, CustomerCollectionProfile, CollectionRecord, CollectionBatch,
+    AgentStatus as DailyCollectionAgentStatus, AreaType as DailyCollectionAreaType,
+    CustomerDensity, TransportMode, DeviceType, ConnectivityStatus,
+    CollectionProgramType, ProgramStatus as DailyCollectionProgramStatus,
+    CollectionFrequency, CollectionStatus as DailyCollectionStatus,
+    HolidayHandling, ReliabilityRating, CollectionMethod,
+    CollectionRecordStatus, BiometricMethod, BatchStatus as DailyCollectionBatchStatus,
+    AlertType as DailyCollectionAlertType, FeeFrequency as DailyCollectionFeeFrequency,
+};
