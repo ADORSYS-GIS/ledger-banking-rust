@@ -17,7 +17,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TYPE person_type AS ENUM ('natural', 'legal', 'system', 'integration', 'unknown');
 
 -- Address type enum
-CREATE TYPE address_type AS ENUM ('residential', 'business', 'mailing', 'temporary', 'branch', 'other');
+CREATE TYPE address_type AS ENUM ('residential', 'business', 'mailing', 'temporary', 'branch', 'community', 'other');
 
 -- Messaging type enum
 CREATE TYPE messaging_type AS ENUM ('email', 'phone', 'sms', 'whatsapp', 'telegram', 'skype', 'teams', 'signal', 'wechat', 'viber', 'messenger', 'linkedin', 'slack', 'discord', 'other');
@@ -162,6 +162,25 @@ CREATE TYPE hold_status AS ENUM ('Active', 'Released', 'Expired', 'Cancelled', '
 -- Update existing sar_status to match API enum
 DROP TYPE IF EXISTS sar_status CASCADE;
 CREATE TYPE sar_status AS ENUM ('Draft', 'Submitted', 'Acknowledged', 'UnderReview', 'Closed');
+
+-- Daily Collection Service related enums
+CREATE TYPE agent_status AS ENUM ('active', 'suspended', 'training', 'onleave', 'terminated');
+CREATE TYPE area_type AS ENUM ('urban', 'suburban', 'rural', 'commercial', 'industrial', 'mixed');
+CREATE TYPE customer_density AS ENUM ('high', 'medium', 'low');
+CREATE TYPE transport_mode AS ENUM ('walking', 'bicycle', 'motorcycle', 'car', 'publictransport', 'mixed');
+CREATE TYPE device_type AS ENUM ('smartphone', 'tablet', 'portableterminal', 'smartwatch');
+CREATE TYPE connectivity_status AS ENUM ('online', 'offline', 'limitedconnectivity', 'syncpending');
+CREATE TYPE collection_program_type AS ENUM ('fixedamount', 'variableamount', 'targetbased', 'durationbased');
+CREATE TYPE program_status AS ENUM ('active', 'suspended', 'closed', 'underreview');
+CREATE TYPE collection_frequency AS ENUM ('daily', 'weekly', 'monthly', 'quarterly', 'yearly');
+CREATE TYPE collection_status AS ENUM ('active', 'suspended', 'defaulted', 'graduated', 'terminated');
+CREATE TYPE holiday_handling AS ENUM ('skip', 'nextbusinessday', 'previousbusinessday', 'collectdouble');
+CREATE TYPE reliability_rating AS ENUM ('excellent', 'good', 'fair', 'poor', 'critical');
+CREATE TYPE collection_method AS ENUM ('cash', 'mobilepayment', 'banktransfer', 'digitalwallet');
+CREATE TYPE collection_record_status AS ENUM ('pending', 'processed', 'failed', 'reversed', 'underreview');
+CREATE TYPE biometric_method AS ENUM ('fingerprint', 'facerecognition', 'voiceprint', 'combined');
+CREATE TYPE batch_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'partiallyprocessed', 'requiresreconciliation');
+CREATE TYPE fee_frequency AS ENUM ('percollection', 'daily', 'weekly', 'monthly', 'onetime');
 
 -- =============================================================================
 -- UTILITY FUNCTIONS

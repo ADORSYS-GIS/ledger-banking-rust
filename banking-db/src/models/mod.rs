@@ -14,6 +14,7 @@ pub mod collateral;
 pub mod casa;
 pub mod loan;
 pub mod reason_view;
+pub mod daily_collection;
 
 pub use customer::*;
 pub use account::*;
@@ -31,3 +32,17 @@ pub use collateral::*;
 pub use casa::*;
 pub use loan::*;
 pub use reason_view::*;
+pub use daily_collection::{
+    CollectionAgentModel, CollectionProgramModel, CustomerCollectionProfileModel,
+    CollectionRecordModel, CollectionBatchModel, CollectionBatchRecordModel, CoverageAreaModel, PerformanceAlertModel,
+    AgentStatus as DbDailyCollectionAgentStatus, AreaType as DbDailyCollectionAreaType,
+    CustomerDensity as DbCustomerDensity, TransportMode as DbTransportMode,
+    DeviceType as DbDeviceType, ConnectivityStatus as DbConnectivityStatus,
+    CollectionProgramType as DbCollectionProgramType, ProgramStatus as DbDailyCollectionProgramStatus,
+    CollectionFrequency as DbCollectionFrequency, CollectionStatus as DbDailyCollectionStatus,
+    HolidayHandling as DbHolidayHandling, ReliabilityRating as DbReliabilityRating,
+    CollectionMethod as DbCollectionMethod, CollectionRecordStatus as DbCollectionRecordStatus,
+    BiometricMethod as DbBiometricMethod, BatchStatus as DbDailyCollectionBatchStatus,
+    AlertType as DbDailyCollectionAlertType, FeeFrequency as DbDailyCollectionFeeFrequency,
+    AlertSeverity as DbDailyCollectionAlertSeverity,
+};

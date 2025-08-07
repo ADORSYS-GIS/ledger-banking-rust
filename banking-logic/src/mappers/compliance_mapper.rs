@@ -1,6 +1,7 @@
 use banking_api::domain::{
     KycResult, KycCheck, CheckResult, ScreeningResult, ScreeningType, SanctionsMatch,
-    RiskLevel, MonitoringResult, ComplianceAlert, AlertType, Severity, AlertStatus,
+    RiskLevel, MonitoringResult, ComplianceAlert, Severity, AlertStatus,
+    compliance::AlertType,
     SarData, SarStatus, UboVerificationResult, UboLink, MonitoringRules
 };
 use banking_db::models::{
@@ -12,7 +13,8 @@ use banking_db::models::{
     KycRecordModel, SanctionsScreeningModel,
     // Enums
     CheckType as DbCheckType, CheckResult as DbCheckResult, ScreeningType as DbScreeningType,
-    RiskLevel as DbRiskLevel, AlertType as DbAlertType, Severity as DbSeverity,
+    RiskLevel as DbRiskLevel, Severity as DbSeverity,
+    compliance::AlertType as DbAlertType,
     AlertStatus as DbAlertStatus, SarStatus as DbSarStatus, KycStatus as DbKycStatus,
     ControlType as DbControlType, VerificationStatus as DbVerificationStatus,
     ComplianceStatus as DbComplianceStatus

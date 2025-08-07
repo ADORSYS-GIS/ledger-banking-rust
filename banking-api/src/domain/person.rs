@@ -319,6 +319,8 @@ pub enum AddressType {
     Temporary,
     /// Branch/agency location
     Branch,
+    /// Community location
+    Community,
     /// Other address types
     Other,
 }
