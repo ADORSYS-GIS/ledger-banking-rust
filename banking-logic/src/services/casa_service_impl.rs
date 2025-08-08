@@ -506,8 +506,13 @@ impl CasaService for CasaServiceImpl {
             status: banking_api::domain::casa::ProcessingJobStatus::Running,
             started_at: Some(Utc::now()),
             completed_at: None,
-            errors: Vec::new(),
+            errors_01: HeaplessString::new(),
+            errors_02: HeaplessString::new(),
+            errors_03: HeaplessString::new(),
+            errors_04: HeaplessString::new(),
+            errors_05: HeaplessString::new(),
         };
+        let mut error_count = 0;
 
         // Get overdrawn accounts
         let overdrawn_accounts = self.get_overdrawn_accounts(processing_date).await?;
@@ -528,13 +533,29 @@ impl CasaService for CasaServiceImpl {
                     // self.post_overdraft_interest(...).await?;
                 }
                 Err(e) => {
-                    job.errors.push(format!("Account {account_id}: {e}"));
+                    error_count += 1;
+                    let error_msg = format!("Account {account_id}: {e}");
+                    let truncated_msg = if error_msg.len() > 200 {
+                        &error_msg[..200]
+                    } else {
+                        &error_msg
+                    };
+                    let error_heapless = HeaplessString::try_from(truncated_msg).unwrap_or_default();
+                    
+                    match error_count {
+                        1 => job.errors_01 = error_heapless,
+                        2 => job.errors_02 = error_heapless,
+                        3 => job.errors_03 = error_heapless,
+                        4 => job.errors_04 = error_heapless,
+                        5 => job.errors_05 = error_heapless,
+                        _ => {} // Skip additional errors beyond 5
+                    }
                     tracing::warn!("Failed to process overdraft interest for account {}: {}", account_id, e);
                 }
             }
         }
 
-        job.status = if job.errors.is_empty() { 
+        job.status = if error_count == 0 { 
             banking_api::domain::casa::ProcessingJobStatus::Completed
         } else { 
             banking_api::domain::casa::ProcessingJobStatus::PartiallyCompleted

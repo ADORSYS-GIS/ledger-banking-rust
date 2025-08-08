@@ -151,7 +151,11 @@ impl CasaMapper {
             status: Self::processing_job_status_to_db(job.status),
             started_at: job.started_at,
             completed_at: job.completed_at,
-            errors: job.errors,
+            errors_01: job.errors_01,
+            errors_02: job.errors_02,
+            errors_03: job.errors_03,
+            errors_04: job.errors_04,
+            errors_05: job.errors_05,
         }
     }
 
@@ -167,7 +171,11 @@ impl CasaMapper {
             status: Self::db_to_processing_job_status(model.status),
             started_at: model.started_at,
             completed_at: model.completed_at,
-            errors: model.errors,
+            errors_01: model.errors_01,
+            errors_02: model.errors_02,
+            errors_03: model.errors_03,
+            errors_04: model.errors_04,
+            errors_05: model.errors_05,
         }
     }
 
@@ -180,7 +188,13 @@ impl CasaMapper {
             requested_limit: adjustment.requested_limit,
             adjustment_reason_id: adjustment.adjustment_reason_id,
             additional_details: adjustment.additional_details,
-            supporting_documents: adjustment.supporting_documents,
+            required_document01_id: adjustment.required_document01_id,
+            required_document02_id: adjustment.required_document02_id,
+            required_document03_id: adjustment.required_document03_id,
+            required_document04_id: adjustment.required_document04_id,
+            required_document05_id: adjustment.required_document05_id,
+            required_document06_id: adjustment.required_document06_id,
+            required_document07_id: adjustment.required_document07_id,
             requested_by_person_id: adjustment.requested_by_person_id,
             requested_at: adjustment.requested_at,
             approval_status: Self::casa_approval_status_to_db(adjustment.approval_status),
@@ -200,7 +214,13 @@ impl CasaMapper {
             requested_limit: model.requested_limit,
             adjustment_reason_id: model.adjustment_reason_id,
             additional_details: model.additional_details,
-            supporting_documents: model.supporting_documents,
+            required_document01_id: model.required_document01_id,
+            required_document02_id: model.required_document02_id,
+            required_document03_id: model.required_document03_id,
+            required_document04_id: model.required_document04_id,
+            required_document05_id: model.required_document05_id,
+            required_document06_id: model.required_document06_id,
+            required_document07_id: model.required_document07_id,
             requested_by_person_id: model.requested_by_person_id,
             requested_at: model.requested_at,
             approval_status: Self::db_to_casa_approval_status(model.approval_status),
@@ -468,7 +488,11 @@ impl CasaMapper {
             kyc_status: Self::kyc_status_to_db(status.kyc_status),
             last_kyc_update: status.last_kyc_update,
             aml_risk_rating: Self::risk_rating_to_db(status.aml_risk_rating),
-            regulatory_alerts: status.regulatory_alerts,
+            regulatory_alerts_01: status.regulatory_alerts_01,
+            regulatory_alerts_02: status.regulatory_alerts_02,
+            regulatory_alerts_03: status.regulatory_alerts_03,
+            regulatory_alerts_04: status.regulatory_alerts_04,
+            regulatory_alerts_05: status.regulatory_alerts_05,
         }
     }
 
@@ -477,7 +501,11 @@ impl CasaMapper {
             kyc_status: Self::kyc_status_from_db(status.kyc_status),
             last_kyc_update: status.last_kyc_update,
             aml_risk_rating: Self::risk_rating_from_db(status.aml_risk_rating),
-            regulatory_alerts: status.regulatory_alerts,
+            regulatory_alerts_01: status.regulatory_alerts_01,
+            regulatory_alerts_02: status.regulatory_alerts_02,
+            regulatory_alerts_03: status.regulatory_alerts_03,
+            regulatory_alerts_04: status.regulatory_alerts_04,
+            regulatory_alerts_05: status.regulatory_alerts_05,
         }
     }
 

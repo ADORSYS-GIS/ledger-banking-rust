@@ -1615,7 +1615,13 @@ CREATE TABLE overdraft_limit_adjustments (
     requested_limit DECIMAL(15,2) NOT NULL,
     adjustment_reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
     additional_details VARCHAR(200),
-    supporting_documents TEXT[], -- Array of document references
+    required_document01_id UUID REFERENCES required_document(id),
+    required_document02_id UUID REFERENCES required_document(id),
+    required_document03_id UUID REFERENCES required_document(id),
+    required_document04_id UUID REFERENCES required_document(id),
+    required_document05_id UUID REFERENCES required_document(id),
+    required_document06_id UUID REFERENCES required_document(id),
+    required_document07_id UUID REFERENCES required_document(id),
     requested_by_person_id UUID NOT NULL REFERENCES persons(id),
     requested_at TIMESTAMP WITH TIME ZONE NOT NULL,
     approval_status VARCHAR(30) NOT NULL DEFAULT 'Pending' CHECK (approval_status IN ('Pending', 'Approved', 'Rejected', 'RequiresAdditionalDocuments', 'UnderReview')),
@@ -1682,7 +1688,11 @@ CREATE TABLE overdraft_processing_jobs (
     status VARCHAR(20) NOT NULL DEFAULT 'Scheduled' CHECK (status IN ('Scheduled', 'Running', 'Completed', 'Failed', 'PartiallyCompleted')),
     started_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
-    errors TEXT[], -- Array of error messages
+    errors_01 VARCHAR(200) DEFAULT '',
+    errors_02 VARCHAR(200) DEFAULT '',
+    errors_03 VARCHAR(200) DEFAULT '',
+    errors_04 VARCHAR(200) DEFAULT '',
+    errors_05 VARCHAR(200) DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_job_timing CHECK (started_at IS NULL OR completed_at IS NULL OR completed_at >= started_at)
@@ -1987,7 +1997,11 @@ CREATE TABLE loan_delinquency_jobs (
     status VARCHAR(20) NOT NULL CHECK (status IN ('Scheduled', 'Running', 'Completed', 'Failed', 'PartiallyCompleted')),
     started_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
-    errors TEXT[],
+    errors_01 VARCHAR(200) DEFAULT '',
+    errors_02 VARCHAR(200) DEFAULT '',
+    errors_03 VARCHAR(200) DEFAULT '',
+    errors_04 VARCHAR(200) DEFAULT '',
+    errors_05 VARCHAR(200) DEFAULT '',
     
     CONSTRAINT ck_job_timing CHECK (
         (status IN ('Completed', 'Failed') AND started_at IS NOT NULL AND completed_at IS NOT NULL) OR

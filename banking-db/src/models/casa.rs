@@ -139,7 +139,11 @@ pub struct CasaComplianceStatus {
     pub last_kyc_update: Option<NaiveDate>,
     #[serde(serialize_with = "serialize_risk_rating", deserialize_with = "deserialize_risk_rating")]
     pub aml_risk_rating: RiskRating,
-    pub regulatory_alerts: Vec<HeaplessString<200>>,
+    pub regulatory_alerts_01: HeaplessString<200>,
+    pub regulatory_alerts_02: HeaplessString<200>,
+    pub regulatory_alerts_03: HeaplessString<200>,
+    pub regulatory_alerts_04: HeaplessString<200>,
+    pub regulatory_alerts_05: HeaplessString<200>,
 }
 
 /// Daily overdraft processing job for EOD
@@ -155,7 +159,11 @@ pub struct OverdraftProcessingJob {
     pub status: ProcessingJobStatus,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
-    pub errors: Vec<String>,
+    pub errors_01: HeaplessString<200>,
+    pub errors_02: HeaplessString<200>,
+    pub errors_03: HeaplessString<200>,
+    pub errors_04: HeaplessString<200>,
+    pub errors_05: HeaplessString<200>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -178,7 +186,13 @@ pub struct OverdraftLimitAdjustment {
     pub adjustment_reason_id: Uuid,
     /// Additional context for adjustment
     pub additional_details: Option<HeaplessString<200>>,
-    pub supporting_documents: Vec<String>,
+    pub required_document01_id: Option<Uuid>,
+    pub required_document02_id: Option<Uuid>,
+    pub required_document03_id: Option<Uuid>,
+    pub required_document04_id: Option<Uuid>,
+    pub required_document05_id: Option<Uuid>,
+    pub required_document06_id: Option<Uuid>,
+    pub required_document07_id: Option<Uuid>,
     pub requested_by_person_id: Uuid, // References Person.person_id
     pub requested_at: DateTime<Utc>,
     #[serde(serialize_with = "serialize_casa_approval_status", deserialize_with = "deserialize_casa_approval_status")]
