@@ -47,6 +47,30 @@ impl AccountMapper {
             status_changed_by_person_id: account.status_changed_by_person_id,
             status_change_reason_id: account.status_change_reason_id,
             status_change_timestamp: account.status_change_timestamp,
+            // Direct reference fields
+            most_significant_account_hold_id: account.most_significant_account_hold_id,
+            account_ownership_id: account.account_ownership_id,
+            access01_account_relationship_id: account.access01_account_relationship_id,
+            access02_account_relationship_id: account.access02_account_relationship_id,
+            access03_account_relationship_id: account.access03_account_relationship_id,
+            access04_account_relationship_id: account.access04_account_relationship_id,
+            access05_account_relationship_id: account.access05_account_relationship_id,
+            access06_account_relationship_id: account.access06_account_relationship_id,
+            access07_account_relationship_id: account.access07_account_relationship_id,
+            access11_account_mandate_id: account.access11_account_mandate_id,
+            access12_account_mandate_id: account.access12_account_mandate_id,
+            access13_account_mandate_id: account.access13_account_mandate_id,
+            access14_account_mandate_id: account.access14_account_mandate_id,
+            access15_account_mandate_id: account.access15_account_mandate_id,
+            access16_account_mandate_id: account.access16_account_mandate_id,
+            access17_account_mandate_id: account.access17_account_mandate_id,
+            interest01_ultimate_beneficiary_id: account.interest01_ultimate_beneficiary_id,
+            interest02_ultimate_beneficiary_id: account.interest02_ultimate_beneficiary_id,
+            interest03_ultimate_beneficiary_id: account.interest03_ultimate_beneficiary_id,
+            interest04_ultimate_beneficiary_id: account.interest04_ultimate_beneficiary_id,
+            interest05_ultimate_beneficiary_id: account.interest05_ultimate_beneficiary_id,
+            interest06_ultimate_beneficiary_id: account.interest06_ultimate_beneficiary_id,
+            interest07_ultimate_beneficiary_id: account.interest07_ultimate_beneficiary_id,
             // Audit fields
             created_at: account.created_at,
             last_updated_at: account.last_updated_at,
@@ -90,6 +114,30 @@ impl AccountMapper {
             status_changed_by_person_id: model.status_changed_by_person_id,
             status_change_reason_id: model.status_change_reason_id,
             status_change_timestamp: model.status_change_timestamp,
+            // Direct reference fields
+            most_significant_account_hold_id: model.most_significant_account_hold_id,
+            account_ownership_id: model.account_ownership_id,
+            access01_account_relationship_id: model.access01_account_relationship_id,
+            access02_account_relationship_id: model.access02_account_relationship_id,
+            access03_account_relationship_id: model.access03_account_relationship_id,
+            access04_account_relationship_id: model.access04_account_relationship_id,
+            access05_account_relationship_id: model.access05_account_relationship_id,
+            access06_account_relationship_id: model.access06_account_relationship_id,
+            access07_account_relationship_id: model.access07_account_relationship_id,
+            access11_account_mandate_id: model.access11_account_mandate_id,
+            access12_account_mandate_id: model.access12_account_mandate_id,
+            access13_account_mandate_id: model.access13_account_mandate_id,
+            access14_account_mandate_id: model.access14_account_mandate_id,
+            access15_account_mandate_id: model.access15_account_mandate_id,
+            access16_account_mandate_id: model.access16_account_mandate_id,
+            access17_account_mandate_id: model.access17_account_mandate_id,
+            interest01_ultimate_beneficiary_id: model.interest01_ultimate_beneficiary_id,
+            interest02_ultimate_beneficiary_id: model.interest02_ultimate_beneficiary_id,
+            interest03_ultimate_beneficiary_id: model.interest03_ultimate_beneficiary_id,
+            interest04_ultimate_beneficiary_id: model.interest04_ultimate_beneficiary_id,
+            interest05_ultimate_beneficiary_id: model.interest05_ultimate_beneficiary_id,
+            interest06_ultimate_beneficiary_id: model.interest06_ultimate_beneficiary_id,
+            interest07_ultimate_beneficiary_id: model.interest07_ultimate_beneficiary_id,
             // Audit fields
             created_at: model.created_at,
             last_updated_at: model.last_updated_at,
@@ -231,7 +279,7 @@ impl AccountMapper {
     pub fn account_hold_to_model(hold: AccountHold) -> AccountHoldModel {
         AccountHoldModel {
             id: hold.id,
-            account_id: hold.id,
+            account_id: hold.account_id,
             amount: hold.amount,
             hold_type: hold.hold_type,
             reason_id: hold.reason_id,
@@ -245,13 +293,15 @@ impl AccountMapper {
             priority: hold.priority,
             source_reference: hold.source_reference,
             automatic_release: hold.automatic_release,
+            created_at: chrono::Utc::now(), // Database audit field
+            updated_at: chrono::Utc::now(), // Database audit field
         }
     }
 
     pub fn account_hold_from_model(model: AccountHoldModel) -> AccountHold {
         AccountHold {
             id: model.id,
-            account_id: model.id,
+            account_id: model.account_id,
             amount: model.amount,
             hold_type: model.hold_type,
             reason_id: model.reason_id,
