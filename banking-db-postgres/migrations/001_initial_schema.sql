@@ -1248,7 +1248,7 @@ CREATE TABLE holiday_import_log (
     holidays_skipped INTEGER NOT NULL DEFAULT 0,
     import_status import_status NOT NULL,
     error_details VARCHAR(1000),
-    imported_by UUID NOT NULL REFERENCES persons(id),
+    imported_by_person_id UUID NOT NULL REFERENCES persons(id),
     imported_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 

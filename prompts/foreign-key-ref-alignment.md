@@ -21,10 +21,15 @@ For fields with compound qualifiers that don't have individual target structs:
 - `transaction_reason_id: Option<Uuid>` → **KEEP AS IS** (target: `ReasonAndPurpose`, no `Reason` struct exists)
 
 ### 4. Person Reference Pattern
-All `*_by` fields reference `Person`:
-- `created_by_person_id: Uuid` → `created_by_person_id: Uuid`
-- `updated_by_person_id: Uuid` → `updated_by_person_id: Uuid`
+All `*_by` fields reference `Person` and should include explicit `_person_id` suffix:
+- `created_by_person_id: Uuid` → **KEEP AS IS** (already follows correct pattern)
+- `updated_by_person_id: Uuid` → **KEEP AS IS** (already follows correct pattern)
 - `approved_by: Option<Uuid>` → `approved_by_person_id: Option<Uuid>`
+
+### 5. Preserve Existing Correct Patterns
+Fields that already follow the explicit entity reference pattern should not be modified:
+- If field already includes target entity name (e.g., `created_by_person_id`, `updated_by_person_id`), keep unchanged
+- Only modify fields that lack explicit entity reference (e.g., `approved_by` → `approved_by_person_id`, `imported_by` → `imported_by_person_id`)
 
 ## Workflow Steps
 

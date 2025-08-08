@@ -12,7 +12,7 @@ pub struct BankHoliday {
     pub holiday_type: HolidayType,
     pub is_recurring: bool,
     pub description: Option<HeaplessString<200>>,
-    /// References Person.person_id
+    /// References Person.id
     pub created_by_person_id: Uuid,
     pub created_at: DateTime<Utc>,
 }
