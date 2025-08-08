@@ -45,12 +45,21 @@ impl AccountRepository for AccountRepositoryImpl {
                 installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                 close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                 pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                status_change_reason_id, status_change_timestamp, updated_by_person_id
+                status_change_reason_id, status_change_timestamp, most_significant_account_hold_id, account_ownership_id,
+                access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                updated_by_person_id
             )
             VALUES (
                 $1, $2, $3::account_type, $4::account_status, $5::signing_condition, $6, $7, $8, $9, $10, $11, $12, $13, $14,
                 $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-                $31, $32, $33
+                $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46,
+                $47, $48, $49, $50, $51, $52, $53, $54, $55, $56
             )
             RETURNING id, product_code, account_type::text as account_type, 
                      account_status::text as account_status, signing_condition::text as signing_condition,
@@ -60,7 +69,15 @@ impl AccountRepository for AccountRepositoryImpl {
                      installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                      close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                      pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                     status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                     status_change_reason_id, status_change_timestamp, most_significant_account_hold_id, account_ownership_id,
+                     access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                     access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                     access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                     access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                     access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                     interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                     interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                     created_at, last_updated_at, updated_by_person_id
             "#,
         )
         .bind(account.id)
@@ -95,6 +112,29 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(account.status_changed_by_person_id)
         .bind(account.status_change_reason_id)
         .bind(account.status_change_timestamp)
+        .bind(account.most_significant_account_hold_id)
+        .bind(account.account_ownership_id)
+        .bind(account.access01_account_relationship_id)
+        .bind(account.access02_account_relationship_id)
+        .bind(account.access03_account_relationship_id)
+        .bind(account.access04_account_relationship_id)
+        .bind(account.access05_account_relationship_id)
+        .bind(account.access06_account_relationship_id)
+        .bind(account.access07_account_relationship_id)
+        .bind(account.access11_account_mandate_id)
+        .bind(account.access12_account_mandate_id)
+        .bind(account.access13_account_mandate_id)
+        .bind(account.access14_account_mandate_id)
+        .bind(account.access15_account_mandate_id)
+        .bind(account.access16_account_mandate_id)
+        .bind(account.access17_account_mandate_id)
+        .bind(account.interest01_ultimate_beneficiary_id)
+        .bind(account.interest02_ultimate_beneficiary_id)
+        .bind(account.interest03_ultimate_beneficiary_id)
+        .bind(account.interest04_ultimate_beneficiary_id)
+        .bind(account.interest05_ultimate_beneficiary_id)
+        .bind(account.interest06_ultimate_beneficiary_id)
+        .bind(account.interest07_ultimate_beneficiary_id)
         .bind(account.updated_by_person_id)
         .fetch_one(&self.pool)
         .await?;
@@ -117,7 +157,15 @@ impl AccountRepository for AccountRepositoryImpl {
                 close_date = $24, last_activity_date = $25, dormancy_threshold_days = $26,
                 reactivation_required = $27, pending_closure_reason_id = $28,
                 last_disbursement_instruction_id = $29, status_changed_by_person_id = $30,
-                status_change_reason_id = $31, status_change_timestamp = $32, updated_by_person_id = $33
+                status_change_reason_id = $31, status_change_timestamp = $32, most_significant_account_hold_id = $33,
+                account_ownership_id = $34, access01_account_relationship_id = $35, access02_account_relationship_id = $36,
+                access03_account_relationship_id = $37, access04_account_relationship_id = $38, access05_account_relationship_id = $39,
+                access06_account_relationship_id = $40, access07_account_relationship_id = $41, access11_account_mandate_id = $42,
+                access12_account_mandate_id = $43, access13_account_mandate_id = $44, access14_account_mandate_id = $45,
+                access15_account_mandate_id = $46, access16_account_mandate_id = $47, access17_account_mandate_id = $48,
+                interest01_ultimate_beneficiary_id = $49, interest02_ultimate_beneficiary_id = $50, interest03_ultimate_beneficiary_id = $51,
+                interest04_ultimate_beneficiary_id = $52, interest05_ultimate_beneficiary_id = $53, interest06_ultimate_beneficiary_id = $54,
+                interest07_ultimate_beneficiary_id = $55, last_updated_at = NOW(), updated_by_person_id = $56
             WHERE id = $1
             RETURNING id, product_code, account_type::text as account_type,
                      account_status::text as account_status, signing_condition::text as signing_condition,
@@ -127,7 +175,15 @@ impl AccountRepository for AccountRepositoryImpl {
                      installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                      close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                      pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                     status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                     status_change_reason_id, status_change_timestamp, most_significant_account_hold_id, account_ownership_id,
+                     access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                     access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                     access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                     access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                     access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                     interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                     interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                     created_at, last_updated_at, updated_by_person_id
             "#,
         )
         .bind(account.id)
@@ -162,6 +218,29 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(account.status_changed_by_person_id)
         .bind(account.status_change_reason_id)
         .bind(account.status_change_timestamp)
+        .bind(account.most_significant_account_hold_id)
+        .bind(account.account_ownership_id)
+        .bind(account.access01_account_relationship_id)
+        .bind(account.access02_account_relationship_id)
+        .bind(account.access03_account_relationship_id)
+        .bind(account.access04_account_relationship_id)
+        .bind(account.access05_account_relationship_id)
+        .bind(account.access06_account_relationship_id)
+        .bind(account.access07_account_relationship_id)
+        .bind(account.access11_account_mandate_id)
+        .bind(account.access12_account_mandate_id)
+        .bind(account.access13_account_mandate_id)
+        .bind(account.access14_account_mandate_id)
+        .bind(account.access15_account_mandate_id)
+        .bind(account.access16_account_mandate_id)
+        .bind(account.access17_account_mandate_id)
+        .bind(account.interest01_ultimate_beneficiary_id)
+        .bind(account.interest02_ultimate_beneficiary_id)
+        .bind(account.interest03_ultimate_beneficiary_id)
+        .bind(account.interest04_ultimate_beneficiary_id)
+        .bind(account.interest05_ultimate_beneficiary_id)
+        .bind(account.interest06_ultimate_beneficiary_id)
+        .bind(account.interest07_ultimate_beneficiary_id)
         .bind(account.updated_by_person_id)
         .fetch_one(&self.pool)
         .await?;
@@ -180,7 +259,16 @@ impl AccountRepository for AccountRepositoryImpl {
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                    pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                   status_change_reason_id, status_change_timestamp,
+                   most_significant_account_hold_id, account_ownership_id,
+                   access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                   access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                   access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                   access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                   access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                   interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                   interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                   created_at, last_updated_at, updated_by_person_id
             FROM accounts WHERE id = $1
             "#,
         )
@@ -197,7 +285,7 @@ impl AccountRepository for AccountRepositoryImpl {
     async fn find_by_customer_id(&self, customer_id: Uuid) -> BankingResult<Vec<AccountModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT a.account_id, a.product_code, a.account_type::text as account_type,
+            SELECT a.id, a.product_code, a.account_type::text as account_type,
                    a.account_status::text as account_status, a.signing_condition::text as signing_condition,
                    a.currency, a.open_date, a.domicile_agency_branch_id, a.current_balance, a.available_balance,
                    a.accrued_interest, a.overdraft_limit, a.original_principal, a.outstanding_principal,
@@ -205,7 +293,16 @@ impl AccountRepository for AccountRepositoryImpl {
                    a.installment_amount, a.next_due_date, a.penalty_rate, a.collateral_id, a.loan_purpose_id,
                    a.close_date, a.last_activity_date, a.dormancy_threshold_days, a.reactivation_required,
                    a.pending_closure_reason_id, a.last_disbursement_instruction_id, a.status_changed_by_person_id,
-                   a.status_change_reason_id, a.status_change_timestamp, a.created_at, a.last_updated_at, a.updated_by_person_id
+                   a.status_change_reason_id, a.status_change_timestamp,
+                   a.most_significant_account_hold_id, a.account_ownership_id,
+                   a.access01_account_relationship_id, a.access02_account_relationship_id, a.access03_account_relationship_id,
+                   a.access04_account_relationship_id, a.access05_account_relationship_id, a.access06_account_relationship_id,
+                   a.access07_account_relationship_id, a.access11_account_mandate_id, a.access12_account_mandate_id,
+                   a.access13_account_mandate_id, a.access14_account_mandate_id, a.access15_account_mandate_id,
+                   a.access16_account_mandate_id, a.access17_account_mandate_id, a.interest01_ultimate_beneficiary_id,
+                   a.interest02_ultimate_beneficiary_id, a.interest03_ultimate_beneficiary_id, a.interest04_ultimate_beneficiary_id,
+                   a.interest05_ultimate_beneficiary_id, a.interest06_ultimate_beneficiary_id, a.interest07_ultimate_beneficiary_id,
+                   a.created_at, a.last_updated_at, a.updated_by_person_id
             FROM accounts a
             INNER JOIN account_ownership ao ON a.id = ao.account_id
             WHERE ao.customer_id = $1
@@ -234,7 +331,16 @@ impl AccountRepository for AccountRepositoryImpl {
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                    pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                   status_change_reason_id, status_change_timestamp,
+                   most_significant_account_hold_id, account_ownership_id,
+                   access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                   access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                   access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                   access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                   access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                   interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                   interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                   created_at, last_updated_at, updated_by_person_id
             FROM accounts WHERE product_code = $1
             ORDER BY created_at DESC
             "#,
@@ -261,7 +367,16 @@ impl AccountRepository for AccountRepositoryImpl {
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                    pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                   status_change_reason_id, status_change_timestamp,
+                   most_significant_account_hold_id, account_ownership_id,
+                   access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                   access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                   access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                   access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                   access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                   interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                   interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                   created_at, last_updated_at, updated_by_person_id
             FROM accounts WHERE account_status::text = $1
             ORDER BY created_at DESC
             "#,
@@ -288,7 +403,16 @@ impl AccountRepository for AccountRepositoryImpl {
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                    pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                   status_change_reason_id, status_change_timestamp,
+                   most_significant_account_hold_id, account_ownership_id,
+                   access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                   access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                   access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                   access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                   access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                   interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                   interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                   created_at, last_updated_at, updated_by_person_id
             FROM accounts 
             WHERE account_status = 'Active'
               AND last_activity_date IS NOT NULL
@@ -319,7 +443,16 @@ impl AccountRepository for AccountRepositoryImpl {
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                    pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                   status_change_reason_id, status_change_timestamp,
+                   most_significant_account_hold_id, account_ownership_id,
+                   access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                   access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                   access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                   access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                   access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                   interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                   interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                   created_at, last_updated_at, updated_by_person_id
             FROM accounts 
             WHERE account_status = 'PendingClosure'
             ORDER BY created_at DESC
@@ -346,7 +479,16 @@ impl AccountRepository for AccountRepositoryImpl {
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                    pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                   status_change_reason_id, status_change_timestamp,
+                   most_significant_account_hold_id, account_ownership_id,
+                   access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                   access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                   access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                   access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                   access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                   interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                   interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                   created_at, last_updated_at, updated_by_person_id
             FROM accounts 
             WHERE account_type = 'Savings' 
                OR (account_type = 'Loan' AND loan_interest_rate > 0)
@@ -788,14 +930,15 @@ impl AccountRepository for AccountRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO account_holds (
-                hold_id, account_id, amount, hold_type, reason_id, additional_details,
+                id, account_id, amount, hold_type, reason_id, additional_details,
                 placed_by_person_id, placed_at, expires_at, status, released_at, released_by_person_id,
                 priority, source_reference, automatic_release
             )
             VALUES ($1, $2, $3, $4::hold_type, $5, $6, $7, $8, $9, $10::hold_status, $11, $12, $13::hold_priority, $14, $15)
-            RETURNING hold_id, account_id, amount, hold_type::text as hold_type, reason_id,
+            RETURNING id, account_id, amount, hold_type::text as hold_type, reason_id,
                      additional_details, placed_by_person_id, placed_at, expires_at, status::text as status,
-                     released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release
+                     released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release,
+                     created_at, updated_at
             "#,
         )
         .bind(hold.id)
@@ -822,9 +965,10 @@ impl AccountRepository for AccountRepositoryImpl {
     async fn find_holds_by_account(&self, account_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT hold_id, account_id, amount, hold_type::text as hold_type, reason_id,
+            SELECT id, account_id, amount, hold_type::text as hold_type, reason_id,
                    additional_details, placed_by_person_id, placed_at, expires_at, status::text as status,
-                   released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release
+                   released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release,
+                   created_at, updated_at
             FROM account_holds 
             WHERE account_id = $1
             ORDER BY placed_at DESC
@@ -844,9 +988,10 @@ impl AccountRepository for AccountRepositoryImpl {
     async fn find_active_holds(&self, account_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT hold_id, account_id, amount, hold_type::text as hold_type, reason_id,
+            SELECT id, account_id, amount, hold_type::text as hold_type, reason_id,
                    additional_details, placed_by_person_id, placed_at, expires_at, status::text as status,
-                   released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release
+                   released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release,
+                   created_at, updated_at
             FROM account_holds 
             WHERE account_id = $1 AND status = 'Active'
               AND (expires_at IS NULL OR expires_at > NOW())
@@ -907,11 +1052,11 @@ impl AccountRepository for AccountRepositoryImpl {
             "UPDATE account_holds SET 
                 amount = $2, hold_type = $3::hold_type, reason_id = $4, additional_details = $5,
                 expires_at = $6, status = $7::hold_status, released_at = $8, released_by_person_id = $9,
-                priority = $10::hold_priority, source_reference = $11, automatic_release = $12
-            WHERE hold_id = $1 
-            RETURNING hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+                priority = $10::hold_priority, source_reference = $11, automatic_release = $12, updated_at = NOW()
+            WHERE id = $1 
+            RETURNING id, account_id, amount, hold_type::text, reason_id, additional_details,
                      placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
-                     priority::text, source_reference, automatic_release"
+                     priority::text, source_reference, automatic_release, created_at, updated_at"
         )
         .bind(hold.id)
         .bind(hold.amount)
@@ -934,10 +1079,10 @@ impl AccountRepository for AccountRepositoryImpl {
 
     async fn get_hold_by_id(&self, hold_id: Uuid) -> BankingResult<Option<AccountHoldModel>> {
         let row = sqlx::query(
-            "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+            "SELECT id, account_id, amount, hold_type::text, reason_id, additional_details,
                     placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
                     priority::text, source_reference, automatic_release 
-             FROM account_holds WHERE hold_id = $1"
+             FROM account_holds WHERE id = $1"
         )
         .bind(hold_id)
         .fetch_optional(&self.pool)
@@ -951,9 +1096,9 @@ impl AccountRepository for AccountRepositoryImpl {
     }
 
     async fn get_active_holds_for_account(&self, account_id: Uuid, hold_types: Option<Vec<String>>) -> BankingResult<Vec<AccountHoldModel>> {
-        let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+        let mut query = "SELECT id, account_id, amount, hold_type::text, reason_id, additional_details,
                                 placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
-                                priority::text, source_reference, automatic_release 
+                                priority::text, source_reference, automatic_release, created_at, updated_at 
                          FROM account_holds WHERE account_id = $1 AND status = 'Active'".to_string();
         
         if let Some(types) = &hold_types {
@@ -986,9 +1131,9 @@ impl AccountRepository for AccountRepositoryImpl {
     }
 
     async fn get_holds_by_status(&self, account_id: Option<Uuid>, status: String, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<AccountHoldModel>> {
-        let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+        let mut query = "SELECT id, account_id, amount, hold_type::text, reason_id, additional_details,
                                 placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
-                                priority::text, source_reference, automatic_release 
+                                priority::text, source_reference, automatic_release, created_at, updated_at 
                          FROM account_holds WHERE status::text = $1".to_string();
         
         let mut param_count = 1;
@@ -1038,9 +1183,9 @@ impl AccountRepository for AccountRepositoryImpl {
     }
 
     async fn get_holds_by_type(&self, hold_type: String, status: Option<String>, account_ids: Option<Vec<Uuid>>, limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
-        let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+        let mut query = "SELECT id, account_id, amount, hold_type::text, reason_id, additional_details,
                                 placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
-                                priority::text, source_reference, automatic_release 
+                                priority::text, source_reference, automatic_release, created_at, updated_at 
                          FROM account_holds WHERE hold_type::text = $1".to_string();
         
         let mut param_count = 1;
@@ -1091,9 +1236,9 @@ impl AccountRepository for AccountRepositoryImpl {
     }
 
     async fn get_hold_history(&self, account_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>, include_released: bool) -> BankingResult<Vec<AccountHoldModel>> {
-        let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
+        let mut query = "SELECT id, account_id, amount, hold_type::text, reason_id, additional_details,
                                 placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
-                                priority::text, source_reference, automatic_release 
+                                priority::text, source_reference, automatic_release, created_at, updated_at 
                          FROM account_holds WHERE account_id = $1".to_string();
         
         let mut param_count = 1;
@@ -1424,7 +1569,16 @@ impl AccountRepository for AccountRepositoryImpl {
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
                    pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
+                   status_change_reason_id, status_change_timestamp,
+                   most_significant_account_hold_id, account_ownership_id,
+                   access01_account_relationship_id, access02_account_relationship_id, access03_account_relationship_id,
+                   access04_account_relationship_id, access05_account_relationship_id, access06_account_relationship_id,
+                   access07_account_relationship_id, access11_account_mandate_id, access12_account_mandate_id,
+                   access13_account_mandate_id, access14_account_mandate_id, access15_account_mandate_id,
+                   access16_account_mandate_id, access17_account_mandate_id, interest01_ultimate_beneficiary_id,
+                   interest02_ultimate_beneficiary_id, interest03_ultimate_beneficiary_id, interest04_ultimate_beneficiary_id,
+                   interest05_ultimate_beneficiary_id, interest06_ultimate_beneficiary_id, interest07_ultimate_beneficiary_id,
+                   created_at, last_updated_at, updated_by_person_id
             FROM accounts 
             ORDER BY created_at DESC, id ASC
             LIMIT $1 OFFSET $2
@@ -1549,6 +1703,30 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountModel {
             status_changed_by_person_id: row.get("status_changed_by_person_id"),
             status_change_reason_id: row.get("status_change_reason_id"),
             status_change_timestamp: row.get("status_change_timestamp"),
+            // Direct reference fields
+            most_significant_account_hold_id: row.get("most_significant_account_hold_id"),
+            account_ownership_id: row.get("account_ownership_id"),
+            access01_account_relationship_id: row.get("access01_account_relationship_id"),
+            access02_account_relationship_id: row.get("access02_account_relationship_id"),
+            access03_account_relationship_id: row.get("access03_account_relationship_id"),
+            access04_account_relationship_id: row.get("access04_account_relationship_id"),
+            access05_account_relationship_id: row.get("access05_account_relationship_id"),
+            access06_account_relationship_id: row.get("access06_account_relationship_id"),
+            access07_account_relationship_id: row.get("access07_account_relationship_id"),
+            access11_account_mandate_id: row.get("access11_account_mandate_id"),
+            access12_account_mandate_id: row.get("access12_account_mandate_id"),
+            access13_account_mandate_id: row.get("access13_account_mandate_id"),
+            access14_account_mandate_id: row.get("access14_account_mandate_id"),
+            access15_account_mandate_id: row.get("access15_account_mandate_id"),
+            access16_account_mandate_id: row.get("access16_account_mandate_id"),
+            access17_account_mandate_id: row.get("access17_account_mandate_id"),
+            interest01_ultimate_beneficiary_id: row.get("interest01_ultimate_beneficiary_id"),
+            interest02_ultimate_beneficiary_id: row.get("interest02_ultimate_beneficiary_id"),
+            interest03_ultimate_beneficiary_id: row.get("interest03_ultimate_beneficiary_id"),
+            interest04_ultimate_beneficiary_id: row.get("interest04_ultimate_beneficiary_id"),
+            interest05_ultimate_beneficiary_id: row.get("interest05_ultimate_beneficiary_id"),
+            interest06_ultimate_beneficiary_id: row.get("interest06_ultimate_beneficiary_id"),
+            interest07_ultimate_beneficiary_id: row.get("interest07_ultimate_beneficiary_id"),
             created_at: row.get("created_at"),
             last_updated_at: row.get("last_updated_at"),
             updated_by_person_id: row.get("updated_by_person_id"),
@@ -1766,6 +1944,8 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountHoldModel {
             priority,
             source_reference: source_reference_heapless,
             automatic_release: row.get("automatic_release"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         })
     }
 }
