@@ -362,7 +362,7 @@ impl CollateralService for CollateralServiceImpl {
             enforcement_method: banking_db::models::EnforcementMethod::DirectSale,
             // TODO: Map remaining fields properly when mapper is complete
             status: banking_db::models::EnforcementStatus::Initiated,
-            legal_counsel: enforcement.legal_counsel,
+            legal_counsel_person_id: enforcement.legal_counsel_person_id,
             court_case_reference: enforcement.court_case_reference.map(|s| HeaplessString::try_from(s.as_str()).unwrap_or_default()),
             expected_completion_date: enforcement.expected_completion_date,
             actual_completion_date: enforcement.actual_completion_date,

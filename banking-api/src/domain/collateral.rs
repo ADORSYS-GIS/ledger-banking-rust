@@ -32,17 +32,17 @@ pub struct Collateral {
     pub custody_location: CustodyLocation,
     /// References Address.address_id for physical location
     pub physical_location: Option<Uuid>,
-    pub custodian_details: Option<CustodianDetails>,
+    pub custodian_details_id: Option<Uuid>,
     
     // Legal and documentation
     /// References Person.person_id for legal title holder
-    pub legal_title_holder: Uuid,
+    pub legal_title_holder_person_id: Uuid,
     pub perfection_status: PerfectionStatus,
     pub perfection_date: Option<NaiveDate>,
     pub perfection_expiry_date: Option<NaiveDate>,
     pub registration_number: Option<HeaplessString<100>>,
     /// References Person.person_id for registration authority
-    pub registration_authority: Option<Uuid>,
+    pub registration_authority_person_id: Option<Uuid>,
     
     // Insurance and risk
     pub insurance_required: bool,
@@ -63,7 +63,7 @@ pub struct Collateral {
     pub created_by_person_id: Uuid,
     /// References Person.person_id
     pub updated_by_person_id: Uuid,
-    pub last_valuation_by: Option<Uuid>,
+    pub last_valuation_by_person_id: Option<Uuid>,
     pub next_review_date: Option<NaiveDate>,
 }
 
@@ -347,10 +347,10 @@ pub struct CollateralAlert {
     pub trigger_date: DateTime<Utc>,
     pub due_date: Option<DateTime<Utc>>,
     pub status: CollateralAlertStatus,
-    pub assigned_to: Option<Uuid>,
+    pub assigned_to_person_id: Option<Uuid>,
     pub resolution_notes: Option<HeaplessString<1000>>,
     pub resolved_at: Option<DateTime<Utc>>,
-    pub resolved_by: Option<Uuid>,
+    pub resolved_by_person_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -397,14 +397,28 @@ pub struct CollateralPortfolioSummary {
     pub total_pledged_value: Decimal,
     pub total_available_value: Decimal,
     pub weighted_average_ltv: Decimal,
-    pub collateral_concentration: Vec<ConcentrationAnalysis>,
-    pub risk_distribution: Vec<RiskDistribution>,
+    pub concentration_analysis_id_01: Option<Uuid>,
+    pub concentration_analysis_id_02: Option<Uuid>,
+    pub concentration_analysis_id_03: Option<Uuid>,
+    pub concentration_analysis_id_04: Option<Uuid>,
+    pub concentration_analysis_id_05: Option<Uuid>,
+    pub concentration_analysis_id_06: Option<Uuid>,
+    pub concentration_analysis_id_07: Option<Uuid>,
+    pub risk_distribution_id_01: Option<Uuid>,
+    pub risk_distribution_id_02: Option<Uuid>,
+    pub risk_distribution_id_03: Option<Uuid>,
+    pub risk_distribution_id_04: Option<Uuid>,
+    pub risk_distribution_id_05: Option<Uuid>,
+    pub risk_distribution_id_06: Option<Uuid>,
+    pub risk_distribution_id_07: Option<Uuid>,
     pub valuation_status: ValuationStatusSummary,
     pub covenant_compliance_summary: ComplianceSummary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConcentrationAnalysis {
+    pub id: Uuid,
+    pub collateral_portfolio_summary_id: Uuid,
     pub category: ConcentrationCategory,
     pub category_value: HeaplessString<100>,
     pub count: u32,
@@ -423,6 +437,8 @@ pub enum ConcentrationCategory {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskDistribution {
+    pub id: Uuid,
+    pub collateral_portfolio_summary_id: Uuid,
     pub risk_rating: CollateralRiskRating,
     pub count: u32,
     pub total_value: Decimal,
@@ -459,7 +475,7 @@ pub struct CollateralEnforcement {
     pub enforcement_method: EnforcementMethod,
     pub status: EnforcementStatus,
     /// References Person.person_id for legal counsel
-    pub legal_counsel: Option<Uuid>,
+    pub legal_counsel_person_id: Option<Uuid>,
     pub court_case_reference: Option<HeaplessString<100>>,
     pub expected_completion_date: Option<NaiveDate>,
     pub actual_completion_date: Option<NaiveDate>,
@@ -569,13 +585,13 @@ mod tests {
             forced_sale_value: Some(Decimal::from(160000)),
             custody_location: CustodyLocation::ClientPremises,
             physical_location: Some(Uuid::new_v4()),
-            custodian_details: None,
-            legal_title_holder: Uuid::new_v4(),
+            custodian_details_id: None,
+            legal_title_holder_person_id: Uuid::new_v4(),
             perfection_status: PerfectionStatus::Perfected,
             perfection_date: Some(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
             perfection_expiry_date: None,
             registration_number: Some(HeaplessString::try_from("REG123").unwrap()),
-            registration_authority: Some(Uuid::new_v4()),
+            registration_authority_person_id: Some(Uuid::new_v4()),
             insurance_required: true,
             insurance_coverage: None,
             risk_rating: CollateralRiskRating::Good,
@@ -588,7 +604,7 @@ mod tests {
             last_updated_at: Utc::now(),
             created_by_person_id: Uuid::new_v4(),
             updated_by_person_id: Uuid::new_v4(),
-            last_valuation_by: None,
+            last_valuation_by_person_id: None,
             next_review_date: None,
         };
         
@@ -619,13 +635,13 @@ mod tests {
             forced_sale_value: None,
             custody_location: CustodyLocation::ClientPremises,
             physical_location: None,
-            custodian_details: None,
-            legal_title_holder: Uuid::new_v4(),
+            custodian_details_id: None,
+            legal_title_holder_person_id: Uuid::new_v4(),
             perfection_status: PerfectionStatus::Perfected,
             perfection_date: None,
             perfection_expiry_date: None,
             registration_number: None,
-            registration_authority: None,
+            registration_authority_person_id: None,
             insurance_required: false,
             insurance_coverage: None,
             risk_rating: CollateralRiskRating::Good,
@@ -638,7 +654,7 @@ mod tests {
             last_updated_at: Utc::now(),
             created_by_person_id: Uuid::new_v4(),
             updated_by_person_id: Uuid::new_v4(),
-            last_valuation_by: None,
+            last_valuation_by_person_id: None,
             next_review_date: None,
         };
         
@@ -669,13 +685,13 @@ mod tests {
             forced_sale_value: None,
             custody_location: CustodyLocation::ClientPremises,
             physical_location: None,
-            custodian_details: None,
-            legal_title_holder: Uuid::new_v4(),
+            custodian_details_id: None,
+            legal_title_holder_person_id: Uuid::new_v4(),
             perfection_status: PerfectionStatus::Perfected,
             perfection_date: None,
             perfection_expiry_date: None,
             registration_number: None,
-            registration_authority: None,
+            registration_authority_person_id: None,
             insurance_required: false,
             insurance_coverage: None,
             risk_rating: CollateralRiskRating::Good,
@@ -688,7 +704,7 @@ mod tests {
             last_updated_at: Utc::now(),
             created_by_person_id: Uuid::new_v4(),
             updated_by_person_id: Uuid::new_v4(),
-            last_valuation_by: None,
+            last_valuation_by_person_id: None,
             next_review_date: None,
         };
         
