@@ -20,8 +20,8 @@ pub trait AccountService: Send + Sync {
     async fn find_account_by_id(&self, account_id: Uuid) -> BankingResult<Option<Account>>;
     
     /// Status updates with immediate enforcement
-    /// @param authorized_by - References Person.person_id
-    async fn update_account_status(&self, account_id: Uuid, status: AccountStatus, authorized_by: Uuid) -> BankingResult<()>;
+    /// @param authorized_by_person_id - References Person.person_id
+    async fn update_account_status(&self, account_id: Uuid, status: AccountStatus, authorized_by_person_id: Uuid) -> BankingResult<()>;
     
     /// Balance operations with product rule integration
     async fn calculate_balance(&self, account_id: Uuid) -> BankingResult<Decimal>;
@@ -46,8 +46,8 @@ pub trait AccountService: Send + Sync {
     async fn find_interest_bearing_accounts(&self) -> BankingResult<Vec<Account>>;
 
     /// Update account balance
-    /// @param updated_by - References Person.person_id
-    async fn update_balance(&self, account_id: Uuid, new_balance: Decimal, updated_by: Uuid) -> BankingResult<()>;
+    /// @param updated_by_person_id - References Person.person_id
+    async fn update_balance(&self, account_id: Uuid, new_balance: Decimal, updated_by_person_id: Uuid) -> BankingResult<()>;
 
     /// Reset accrued interest to zero
     async fn reset_accrued_interest(&self, account_id: Uuid) -> BankingResult<()>;
@@ -62,8 +62,8 @@ pub trait AccountService: Send + Sync {
     async fn get_active_holds(&self, account_id: Uuid) -> BankingResult<Vec<AccountHold>>;
 
     /// Release a hold
-    /// @param released_by - References Person.person_id
-    async fn release_hold(&self, hold_id: Uuid, released_by: Uuid) -> BankingResult<()>;
+    /// @param released_by_person_id - References Person.person_id
+    async fn release_hold(&self, hold_id: Uuid, released_by_person_id: Uuid) -> BankingResult<()>;
 
     /// Find accounts eligible for dormancy check
     async fn find_dormancy_candidates(&self, threshold_days: i32) -> BankingResult<Vec<Account>>;
@@ -95,7 +95,7 @@ pub trait AccountService: Send + Sync {
         new_amount: Option<Decimal>,
         new_expiry: Option<DateTime<Utc>>,
         new_reason_id: Option<Uuid>, // References ReasonAndPurpose.id
-        modified_by: Uuid, // References Person.person_id
+        modified_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<AccountHold>;
     
     /// Cancel a hold (mark as cancelled, not released)
@@ -103,7 +103,7 @@ pub trait AccountService: Send + Sync {
         &self,
         hold_id: Uuid,
         cancellation_reason_id: Uuid, // References ReasonAndPurpose.id
-        cancelled_by: Uuid, // References Person.person_id
+        cancelled_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<AccountHold>;
     
     // ============================================================================
@@ -206,7 +206,7 @@ pub trait AccountService: Send + Sync {
         hold_type: HoldType,
         amount_per_account: Decimal,
         reason_id: Uuid, // References ReasonAndPurpose.id
-        placed_by: Uuid, // References Person.person_id
+        placed_by_person_id: Uuid, // References Person.person_id
         expires_at: Option<DateTime<Utc>>,
     ) -> BankingResult<Vec<AccountHold>>;
     
@@ -215,7 +215,7 @@ pub trait AccountService: Send + Sync {
         &self,
         hold_ids: Vec<Uuid>,
         release_reason_id: Uuid, // References ReasonAndPurpose.id
-        released_by: Uuid, // References Person.person_id
+        released_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<Vec<AccountHold>>;
     
     // ============================================================================
@@ -228,7 +228,7 @@ pub trait AccountService: Send + Sync {
         account_id: Uuid,
         transaction_amount: Decimal,
         override_priority: HoldPriority,
-        authorized_by: Uuid, // References Person.person_id
+        authorized_by_person_id: Uuid, // References Person.person_id
         override_reason_id: Uuid, // References ReasonAndPurpose.id
     ) -> BankingResult<Vec<AccountHold>>;
     
@@ -237,7 +237,7 @@ pub trait AccountService: Send + Sync {
         &self,
         account_id: Uuid,
         hold_priority_map: Vec<(Uuid, HoldPriority)>,
-        authorized_by: Uuid, // References Person.person_id
+        authorized_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<Vec<AccountHold>>;
     
     /// Check authorization level required for hold operations

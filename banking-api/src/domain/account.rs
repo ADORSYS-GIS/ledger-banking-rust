@@ -14,7 +14,7 @@ pub struct Account {
     pub signing_condition: SigningCondition,
     pub currency: HeaplessString<3>,
     pub open_date: NaiveDate,
-    pub domicile_branch_id: Uuid,
+    pub domicile_agency_branch_id: Uuid,
     
     // Balance fields
     pub current_balance: Decimal,
@@ -48,7 +48,7 @@ pub struct Account {
     
     // Enhanced audit trail
     /// References Person.person_id
-    pub status_changed_by: Option<Uuid>,
+    pub status_changed_by_person_id: Option<Uuid>,
     /// References ReasonAndPurpose.id for status change
     pub status_change_reason_id: Option<Uuid>,
     pub status_change_timestamp: Option<DateTime<Utc>>,
@@ -57,7 +57,7 @@ pub struct Account {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -91,11 +91,11 @@ pub struct DisbursementInstructions {
     /// References the account holding the loan (source of funds)
     pub source_account_id: Uuid,
     pub method: DisbursementMethod,
-    pub target_account: Option<Uuid>,
+    pub target_account_id: Option<Uuid>,
     /// References AgencyBranch.branch_id for cash pickup
-    pub cash_pickup_branch_id: Option<Uuid>,
+    pub cash_pickup_agency_branch_id: Option<Uuid>,
     /// References Person.person_id for authorized recipient
-    pub authorized_recipient: Option<Uuid>,
+    pub authorized_recipient_person_id: Option<Uuid>,
     
     // Disbursement tracking and staging
     pub disbursement_amount: Option<Decimal>,
@@ -108,9 +108,9 @@ pub struct DisbursementInstructions {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 impl Default for DisbursementInstructions {
@@ -120,9 +120,9 @@ impl Default for DisbursementInstructions {
             id: Uuid::new_v4(),
             source_account_id: Uuid::nil(),
             method: DisbursementMethod::Transfer,
-            target_account: None,
-            cash_pickup_branch_id: None,
-            authorized_recipient: None,
+            target_account_id: None,
+            cash_pickup_agency_branch_id: None,
+            authorized_recipient_person_id: None,
             disbursement_amount: None,
             disbursement_date: None,
             stage_number: None,
@@ -130,8 +130,8 @@ impl Default for DisbursementInstructions {
             status: DisbursementStatus::Pending,
             created_at: now,
             last_updated_at: now,
-            created_by: Uuid::nil(),
-            updated_by: Uuid::nil(),
+            created_by_person_id: Uuid::nil(),
+            updated_by_person_id: Uuid::nil(),
         }
     }
 }
@@ -167,13 +167,13 @@ pub struct AccountHold {
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub placed_by: Uuid,
+    pub placed_by_person_id: Uuid,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub status: HoldStatus,
     pub released_at: Option<DateTime<Utc>>,
     /// References Person.person_id
-    pub released_by: Option<Uuid>,
+    pub released_by_person_id: Option<Uuid>,
     pub priority: HoldPriority,
     pub source_reference: Option<HeaplessString<100>>, // External reference for judicial holds, etc.
     pub automatic_release: bool,
@@ -258,7 +258,7 @@ pub struct HoldReleaseRequest {
     /// Additional context for release
     pub release_additional_details: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub released_by: Uuid,
+    pub released_by_person_id: Uuid,
     pub override_authorization: bool,
 }
 
@@ -284,7 +284,7 @@ pub struct StatusChangeRecord {
     /// Additional context beyond the standard reason
     pub additional_context: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub changed_by: Uuid,
+    pub changed_by_person_id: Uuid,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
 }
@@ -300,7 +300,7 @@ pub struct PlaceHoldRequest {
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub placed_by: Uuid,
+    pub placed_by_person_id: Uuid,
     pub expires_at: Option<DateTime<Utc>>,
     pub priority: HoldPriority,
     pub source_reference: Option<HeaplessString<100>>,
@@ -359,7 +359,7 @@ mod tests {
             signing_condition: SigningCondition::None,
             currency: HeaplessString::try_from("USD").unwrap(),
             open_date: chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-            domicile_branch_id: uuid::Uuid::new_v4(),
+            domicile_agency_branch_id: uuid::Uuid::new_v4(),
             current_balance: rust_decimal::Decimal::new(10000, 2),
             available_balance: rust_decimal::Decimal::new(10000, 2),
             accrued_interest: rust_decimal::Decimal::ZERO,
@@ -381,12 +381,12 @@ mod tests {
             reactivation_required: false,
             pending_closure_reason_id: None,
             last_disbursement_instruction_id: None,
-            status_changed_by: None,
+            status_changed_by_person_id: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: chrono::Utc::now(),
             last_updated_at: chrono::Utc::now(),
-            updated_by: Uuid::new_v4(), // References Person.person_id
+            updated_by_person_id: Uuid::new_v4(), // References Person.person_id
         };
         
         // Test string access
@@ -462,7 +462,7 @@ mod tests {
             signing_condition: SigningCondition::None,
             currency: HeaplessString::try_from("USD").unwrap(),
             open_date: chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-            domicile_branch_id: uuid::Uuid::new_v4(),
+            domicile_agency_branch_id: uuid::Uuid::new_v4(),
             current_balance: rust_decimal::Decimal::ZERO,
             available_balance: rust_decimal::Decimal::ZERO,
             accrued_interest: rust_decimal::Decimal::ZERO,
@@ -484,12 +484,12 @@ mod tests {
             reactivation_required: false,
             pending_closure_reason_id: None,
             last_disbursement_instruction_id: None,
-            status_changed_by: None,
+            status_changed_by_person_id: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: chrono::Utc::now(),
             last_updated_at: chrono::Utc::now(),
-            updated_by: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         };
         
         // Test initial state
@@ -534,7 +534,7 @@ pub struct AccountOwnership {
 pub struct AccountRelationship {
     pub id: Uuid,
     pub account_id: Uuid,
-    pub entity_id: Uuid,
+    pub person_id: Uuid,
     pub entity_type: EntityType,
     pub relationship_type: RelationshipType,
     pub status: RelationshipStatus,

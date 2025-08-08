@@ -341,9 +341,9 @@ impl CustomerServiceImpl {
         }
 
         // Updated by validation
-        if customer.updated_by.is_nil() {
+        if customer.updated_by_person_id.is_nil() {
             return Err(banking_api::BankingError::ValidationError {
-                field: "updated_by".to_string(),
+                field: "updated_by_person_id".to_string(),
                 message: "Updated by field is required".to_string(),
             });
         }

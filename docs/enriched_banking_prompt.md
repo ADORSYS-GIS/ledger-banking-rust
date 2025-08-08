@@ -38,7 +38,7 @@ pub struct Customer {
     pub status: CustomerStatus, // Controls permissible actions on associated accounts
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: String, // Audit trail for all changes
+    pub updated_by_person_id: String, // Audit trail for all changes
 }
 
 pub enum CustomerType { Individual, Corporate }
@@ -69,7 +69,7 @@ pub struct Account {
     pub signing_condition: SigningCondition, // Security control for joint accounts
     pub currency: String,
     pub open_date: NaiveDate,
-    pub domicile_branch_id: Uuid,
+    pub domicile_agency_branch_id: Uuid,
     
     // Balance fields
     pub current_balance: Decimal,
@@ -93,7 +93,7 @@ pub struct Account {
     // Audit fields
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: String,
+    pub updated_by_person_id: String,
 }
 
 pub enum AccountType { Savings, Current, Loan }

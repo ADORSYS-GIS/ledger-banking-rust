@@ -82,9 +82,9 @@ async fn setup_test_db() -> PgPool {
         r#"
         INSERT INTO accounts (
             id, product_code, account_type, account_status, 
-            signing_condition, currency, open_date, domicile_branch_id,
+            signing_condition, currency, open_date, domicile_agency_branch_id,
             current_balance, available_balance, accrued_interest, 
-            created_at, last_updated_at, updated_by
+            created_at, last_updated_at, updated_by_person_id
         ) VALUES (
             $1, 'TST01', 'Savings', 'Active', 
             'AnyOwner', 'USD', '2024-01-01', $2,
@@ -95,7 +95,7 @@ async fn setup_test_db() -> PgPool {
         "#
     )
     .bind(test_account_id)
-    .bind(Uuid::new_v4()) // domicile_branch_id
+    .bind(Uuid::new_v4()) // domicile_agency_branch_id
     .bind(test_person_id)
     .execute(&pool)
     .await

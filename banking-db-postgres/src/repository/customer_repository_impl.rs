@@ -62,7 +62,7 @@ impl TryFromRow<PgRow> for CustomerModel {
             )?,
             created_at: row.get("created_at"),
             last_updated_at: row.get("last_updated_at"),
-            updated_by: row.get("updated_by"),
+            updated_by_person_id: row.get("updated_by_person_id"),
         })
     }
 }
@@ -153,7 +153,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             r#"
             INSERT INTO customers (
                 id, customer_type, full_name, id_type, id_number,
-                risk_rating, status, created_at, last_updated_at, updated_by
+                risk_rating, status, created_at, last_updated_at, updated_by_person_id 
             )
             VALUES (
                 $1, $2::customer_type, $3, $4::identity_type, $5,
@@ -161,7 +161,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             )
             RETURNING id, customer_type::text as customer_type, full_name,
                      id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                     status::text as status, created_at, last_updated_at, updated_by
+                     status::text as status, created_at, last_updated_at, updated_by_person_id 
             "#
         )
         .bind(customer.id)
@@ -173,7 +173,7 @@ impl CustomerRepository for PostgresCustomerRepository {
         .bind(customer.status.to_string())
         .bind(customer.created_at)
         .bind(customer.last_updated_at)
-        .bind(customer.updated_by)
+        .bind(customer.updated_by_person_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| BankingError::Internal(format!("Failed to create customer: {e}")))?
@@ -188,11 +188,11 @@ impl CustomerRepository for PostgresCustomerRepository {
             UPDATE customers 
             SET customer_type = $2::customer_type, full_name = $3, id_type = $4::identity_type,
                 id_number = $5, risk_rating = $6::risk_rating, status = $7::customer_status,
-                last_updated_at = $8, updated_by = $9
+                last_updated_at = $8, updated_by_person_id = $9
             WHERE id = $1
             RETURNING id, customer_type::text as customer_type, full_name,
                      id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                     status::text as status, created_at, last_updated_at, updated_by
+                     status::text as status, created_at, last_updated_at, updated_by_person_id 
             "#
         )
         .bind(customer.id)
@@ -203,7 +203,7 @@ impl CustomerRepository for PostgresCustomerRepository {
         .bind(customer.risk_rating.to_string())
         .bind(customer.status.to_string())
         .bind(customer.last_updated_at)
-        .bind(customer.updated_by)
+        .bind(customer.updated_by_person_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| BankingError::Internal(format!("Failed to update customer: {e}")))?
@@ -217,7 +217,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             r#"
             SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by
+                   status::text as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             WHERE id = $1
             "#
@@ -239,7 +239,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             r#"
             SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by
+                   status::text as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             WHERE id_type = $1::identity_type AND id_number = $2
             "#
@@ -262,7 +262,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             r#"
             SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by
+                   status::text as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             WHERE risk_rating = $1::risk_rating
             ORDER BY full_name
@@ -286,7 +286,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             r#"
             SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by
+                   status::text as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             WHERE status = 'PendingVerification' OR risk_rating = 'High' OR risk_rating = 'Blacklisted'
                OR last_updated_at < NOW() - INTERVAL '1 year'
@@ -367,7 +367,7 @@ impl CustomerRepository for PostgresCustomerRepository {
 
         // Update risk rating
         sqlx::query(
-            "UPDATE customers SET risk_rating = $1::risk_rating, last_updated_at = NOW(), updated_by = $2 WHERE id = $3"
+            "UPDATE customers SET risk_rating = $1::risk_rating, last_updated_at = NOW(), updated_by_person_id = $2 WHERE id = $3"
         )
         .bind(risk_rating)
         .bind(authorized_by)
@@ -584,7 +584,7 @@ impl CustomerRepository for PostgresCustomerRepository {
 
         // Soft delete by updating status
         sqlx::query(
-            "UPDATE customers SET status = 'Deceased'::customer_status, last_updated_at = NOW(), updated_by = $1 WHERE id = $2"
+            "UPDATE customers SET status = 'Deceased'::customer_status, last_updated_at = NOW(), updated_by_person_id = $1 WHERE id = $2"
         )
         .bind(deleted_by)
         .bind(customer_id)
@@ -615,7 +615,7 @@ impl CustomerRepository for PostgresCustomerRepository {
             r#"
             SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by
+                   status::text as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             ORDER BY full_name
             LIMIT $1 OFFSET $2

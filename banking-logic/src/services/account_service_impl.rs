@@ -283,11 +283,11 @@ impl AccountService for AccountServiceImpl {
     }
 
     /// Update account balance
-    async fn update_balance(&self, account_id: Uuid, new_balance: Decimal, updated_by: Uuid) -> BankingResult<()> {
+    async fn update_balance(&self, account_id: Uuid, new_balance: Decimal, updated_by_person_id: Uuid) -> BankingResult<()> {
         // In a real implementation, we'd calculate available balance based on holds
         self.account_repository.update_balance(account_id, new_balance, new_balance).await?;
         
-        tracing::info!("Account {} balance updated to {} by {}", account_id, new_balance, updated_by);
+        tracing::info!("Account {} balance updated to {} by {}", account_id, new_balance, updated_by_person_id);
         Ok(())
     }
 
@@ -373,12 +373,12 @@ impl AccountService for AccountServiceImpl {
             hold_type: request.hold_type,
             reason_id: request.reason_id,
             additional_details: request.additional_details,
-            placed_by: request.placed_by,
+            placed_by_person_id: request.placed_by_person_id,
             placed_at: Utc::now(),
             expires_at: request.expires_at,
             status: HoldStatus::Active,
             released_at: None,
-            released_by: None,
+            released_by_person_id: None,
             priority: request.priority,
             source_reference: request.source_reference,
             automatic_release: request.expires_at.is_some(),
@@ -399,7 +399,7 @@ impl AccountService for AccountServiceImpl {
         release_request: HoldReleaseRequest,
     ) -> BankingResult<AccountHold> {
         tracing::info!("Releasing hold {} by user {}", 
-                      release_request.hold_id, release_request.released_by);
+                      release_request.hold_id, release_request.released_by_person_id);
 
         // Find the hold
         let hold_model = self.account_repository
@@ -434,7 +434,7 @@ impl AccountService for AccountServiceImpl {
                 release_request.hold_id,
                 Some(release_amount),
                 release_request.release_reason_id,
-                release_request.released_by,
+                release_request.released_by_person_id,
                 Utc::now(),
             )
             .await?;
@@ -529,7 +529,7 @@ impl AccountService for AccountServiceImpl {
         // Cancel the hold by updating status
         hold_model.status = HoldStatus::Cancelled;
         hold_model.released_at = Some(Utc::now());
-        hold_model.released_by = Some(cancelled_by);
+        hold_model.released_by_person_id = Some(cancelled_by);
         hold_model.reason_id = cancellation_reason_id;
 
         let cancelled_model = self.account_repository.update_hold(hold_model).await?;
@@ -822,7 +822,7 @@ impl AccountService for AccountServiceImpl {
         hold_type: HoldType,
         amount_per_account: Decimal,
         reason_id: Uuid,
-        placed_by: Uuid,
+        placed_by_person_id: Uuid,
         expires_at: Option<DateTime<Utc>>,
     ) -> BankingResult<Vec<AccountHold>> {
         tracing::info!("Bulk placing {} holds of type {:?} for {} accounts", 
@@ -838,12 +838,12 @@ impl AccountService for AccountServiceImpl {
                 hold_type: hold_type.clone(),
                 reason_id,
                 additional_details: None,
-                placed_by,
+                placed_by_person_id,
                 placed_at: Utc::now(),
                 expires_at,
                 status: HoldStatus::Active,
                 released_at: None,
-                released_by: None,
+                released_by_person_id: None,
                 priority: HoldPriority::Standard,
                 source_reference: None,
                 automatic_release: expires_at.is_some(),
@@ -865,12 +865,12 @@ impl AccountService for AccountServiceImpl {
         &self,
         hold_ids: Vec<Uuid>,
         release_reason_id: Uuid,
-        released_by: Uuid,
+        released_by_person_id: Uuid,
     ) -> BankingResult<Vec<AccountHold>> {
         tracing::info!("Bulk releasing {} holds", hold_ids.len());
 
         let released_models = self.account_repository
-            .bulk_release_holds(hold_ids, release_reason_id, released_by)
+            .bulk_release_holds(hold_ids, release_reason_id, released_by_person_id)
             .await?;
 
         Ok(released_models.into_iter()
@@ -1689,7 +1689,7 @@ mod tests {
             signing_condition: SigningCondition::None,
             currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-            domicile_branch_id: Uuid::new_v4(),
+            domicile_agency_branch_id: Uuid::new_v4(),
             current_balance: Decimal::new(1000, 2),
             available_balance: Decimal::new(1000, 2),
             accrued_interest: Decimal::ZERO,
@@ -1711,12 +1711,12 @@ mod tests {
             reactivation_required: false,
             pending_closure_reason_id: None,
             last_disbursement_instruction_id: None,
-            status_changed_by: None,
+            status_changed_by_person_id: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(), // Changed to UUID for Person.person_id
+            updated_by_person_id: Uuid::new_v4(), // Changed to UUID for Person.person_id
         }
     }
 
@@ -1938,7 +1938,7 @@ mod tests {
             signing_condition: SigningCondition::None,
             currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-            domicile_branch_id: Uuid::new_v4(),
+            domicile_agency_branch_id: Uuid::new_v4(),
             current_balance,
             available_balance: current_balance,
             accrued_interest: Decimal::ZERO,
@@ -1960,12 +1960,12 @@ mod tests {
             reactivation_required: false,
             pending_closure_reason_id: None,
             last_disbursement_instruction_id: None,
-            status_changed_by: None,
+            status_changed_by_person_id: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(), // Changed to UUID for Person.person_id
+            updated_by_person_id: Uuid::new_v4(), // Changed to UUID for Person.person_id
         }
     }
 
@@ -1978,7 +1978,7 @@ mod tests {
             signing_condition: SigningCondition::None,
             currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-            domicile_branch_id: Uuid::new_v4(),
+            domicile_agency_branch_id: Uuid::new_v4(),
             current_balance,
             available_balance: Decimal::ZERO,
             accrued_interest: Decimal::ZERO,
@@ -2000,12 +2000,12 @@ mod tests {
             reactivation_required: false,
             pending_closure_reason_id: None,
             last_disbursement_instruction_id: None,
-            status_changed_by: None,
+            status_changed_by_person_id: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(), // Changed to UUID for Person.person_id
+            updated_by_person_id: Uuid::new_v4(), // Changed to UUID for Person.person_id
         }
     }
 
@@ -2295,7 +2295,7 @@ mod tests {
             Ok(holds)
         }
 
-        async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+        async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by_person_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
             Ok(vec![])
         }
 
@@ -2311,7 +2311,7 @@ mod tests {
             Ok(vec![])
         }
 
-        async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: rust_decimal::Decimal, _updated_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
+        async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: rust_decimal::Decimal, _updated_by_person_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> {
             Ok(vec![])
         }
 

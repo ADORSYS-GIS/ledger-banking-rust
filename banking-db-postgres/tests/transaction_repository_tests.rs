@@ -52,8 +52,8 @@ fn create_test_transaction(account_id: Uuid) -> TransactionModel {
 /// Test helper to create a sample account for transaction testing
 fn create_test_account() -> AccountModel {
     let account_id = Uuid::new_v4();
-    let updated_by = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
-    let domicile_branch_id = Uuid::new_v4();
+    let updated_by_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let domicile_agency_branch_id = Uuid::new_v4();
     
     AccountModel {
         id: account_id,
@@ -63,7 +63,7 @@ fn create_test_account() -> AccountModel {
         signing_condition: SigningCondition::AnyOwner,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
-        domicile_branch_id,
+        domicile_agency_branch_id: domicile_agency_branch_id,
         current_balance: Decimal::from_str("1000.00").unwrap(),
         available_balance: Decimal::from_str("950.00").unwrap(),
         accrued_interest: Decimal::from_str("12.50").unwrap(),
@@ -85,12 +85,12 @@ fn create_test_account() -> AccountModel {
         reactivation_required: false,
         pending_closure_reason_id: None,
         last_disbursement_instruction_id: None,
-        status_changed_by: None,
+        status_changed_by_person_id: None,
         status_change_reason_id: None,
         status_change_timestamp: None,
         created_at: Utc::now(),
         last_updated_at: Utc::now(),
-        updated_by,
+        updated_by_person_id: updated_by_person_id,
     }
 }
 
@@ -135,8 +135,8 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
         r#"
         INSERT INTO accounts (
             id, product_code, account_type, account_status, signing_condition,
-            currency, open_date, domicile_branch_id, current_balance, available_balance,
-            accrued_interest, updated_by
+            currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
+            accrued_interest, updated_by_person_id
         )
         VALUES (
             $1, $2, $3::account_type, $4::account_status, $5::signing_condition,
@@ -152,11 +152,11 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
     .bind(account.signing_condition.to_string())
     .bind(account.currency.as_str())
     .bind(account.open_date)
-    .bind(account.domicile_branch_id)
+    .bind(account.domicile_agency_branch_id)
     .bind(account.current_balance)
     .bind(account.available_balance)
     .bind(account.accrued_interest)
-    .bind(account.updated_by)
+    .bind(account.updated_by_person_id)
     .execute(pool)
     .await
     .expect("Failed to create test account");

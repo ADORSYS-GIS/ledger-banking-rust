@@ -15,7 +15,7 @@ pub struct Customer {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -240,7 +240,7 @@ pub struct CustomerBuilder {
     id_number: String,
     risk_rating: RiskRating,
     status: CustomerStatus,
-    updated_by: Uuid,
+    updated_by_person_id: Uuid,
 }
 
 impl CustomerBuilder {
@@ -253,7 +253,7 @@ impl CustomerBuilder {
             id_number: String::new(),
             risk_rating: RiskRating::Low,
             status: CustomerStatus::Active,
-            updated_by: Uuid::nil(),
+            updated_by_person_id: Uuid::nil(),
         }
     }
     
@@ -278,8 +278,8 @@ impl CustomerBuilder {
         self
     }
     
-    pub fn updated_by(mut self, updated_by: Uuid) -> Self {
-        self.updated_by = updated_by;
+    pub fn updated_by(mut self, updated_by_person_id: Uuid) -> Self {
+        self.updated_by_person_id = updated_by_person_id;
         self
     }
     
@@ -300,7 +300,7 @@ impl CustomerBuilder {
             status: self.status,
             created_at: now,
             last_updated_at: now,
-            updated_by: self.updated_by,
+            updated_by_person_id: self.updated_by_person_id,
         })
     }
 }
@@ -320,8 +320,8 @@ impl Customer {
             errors.push("ID number cannot be empty".to_string());
         }
         
-        // Validate updated_by (should not be nil UUID)
-        if self.updated_by.is_nil() {
+        // Validate updated_by_person_id (should not be nil UUID)
+        if self.updated_by_person_id.is_nil() {
             errors.push("Updated by cannot be nil UUID".to_string());
         }
         
@@ -351,14 +351,14 @@ impl Customer {
         id_number: &str,
         risk_rating: RiskRating,
         status: CustomerStatus,
-        updated_by: Uuid,
+        updated_by_person_id: Uuid,
     ) -> Result<Self, &'static str> {
         CustomerBuilder::new(customer_id, customer_type)
             .full_name(full_name)
             .identity(id_type, id_number)
             .risk_rating(risk_rating)
             .status(status)
-            .updated_by(updated_by)
+            .updated_by(updated_by_person_id)
             .build()
     }
 }
@@ -410,7 +410,7 @@ mod tests {
         // Test that helper methods work
         assert_eq!(customer.full_name.as_str(), "John Smith");
         assert_eq!(customer.id_number.as_str(), "12345");
-        assert!(!customer.updated_by.is_nil());
+        assert!(!customer.updated_by_person_id.is_nil());
     }
 
     #[test]
@@ -431,7 +431,7 @@ mod tests {
         assert_eq!(customer.id_number.as_str(), "REG987654321");
         assert_eq!(customer.risk_rating, RiskRating::Medium);
         assert_eq!(customer.status, CustomerStatus::Active);
-        assert!(!customer.updated_by.is_nil());
+        assert!(!customer.updated_by_person_id.is_nil());
 
         // Should pass validation
         assert!(customer.validate().is_ok());

@@ -1,3 +1,20 @@
+# Foreign Key Naming Convention Rules
+# =====================================
+# Applied consistently across all domain models for improved readability
+# and explicit entity relationships in foreign key references:
+#
+# 1. Explicit Entity Reference: Include target entity name before '_id'
+#    e.g., domicile_branch_id → domicile_agency_branch_id (target: AgencyBranch)
+#
+# 2. Keep Clear Names: Retain when field name clearly indicates target entity
+#    e.g., customer_id → KEEP AS IS (target: Customer)
+#
+# 3. Person Reference Pattern: All '*_by' fields reference Person domain
+#    e.g., updated_by → updated_by_person_id (target: Person)
+#
+# 4. Compound Names: Keep existing for fields targeting ReasonAndPurpose
+#    e.g., loan_purpose_id → KEEP AS IS (target: ReasonAndPurpose, no Purpose struct)
+
 [workspace]
 members = [
     "banking-api",

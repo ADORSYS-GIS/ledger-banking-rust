@@ -608,11 +608,11 @@ mod tests {
         async fn create_hold_expiry_job(&self, _expiry_job: banking_db::models::AccountHoldExpiryJobModel) -> BankingResult<banking_db::models::AccountHoldExpiryJobModel> { todo!() }
         async fn update_hold_expiry_job(&self, _expiry_job: banking_db::models::AccountHoldExpiryJobModel) -> BankingResult<banking_db::models::AccountHoldExpiryJobModel> { todo!() }
         async fn bulk_place_holds(&self, _holds: Vec<banking_db::models::AccountHoldModel>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn update_hold_priorities(&self, _account_id: Uuid, _priority_updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn update_hold_priorities(&self, _account_id: Uuid, _priority_updates: Vec<(Uuid, String)>, _updated_by_person_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
         async fn get_overrideable_holds(&self, _account_id: Uuid, _required_amount: rust_decimal::Decimal, _override_reason: String) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
         async fn create_hold_override(&self, _account_id: Uuid, _hold_ids: Vec<Uuid>, _override_amount: rust_decimal::Decimal, _authorized_by: Uuid, _override_reason_id: Uuid) -> BankingResult<banking_db::repository::HoldOverrideRecord> { todo!() }
         async fn get_judicial_holds_by_reference(&self, _source_reference: String) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn update_loan_pledge_holds(&self, _collateral_id: Uuid, _affected_accounts: Vec<Uuid>, _new_pledge_amount: rust_decimal::Decimal, _updated_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
+        async fn update_loan_pledge_holds(&self, _collateral_id: Uuid, _affected_accounts: Vec<Uuid>, _new_pledge_amount: rust_decimal::Decimal, _updated_by_person_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
         async fn get_compliance_holds_by_alert(&self, _alert_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
         async fn get_hold_analytics(&self, _from_date: chrono::NaiveDate, _to_date: chrono::NaiveDate, _product_codes: Option<Vec<String>>) -> BankingResult<banking_db::repository::HoldAnalyticsSummary> { todo!() }
         async fn get_high_hold_ratio_accounts(&self, _threshold_percentage: rust_decimal::Decimal, _product_codes: Option<Vec<String>>, _limit: i32) -> BankingResult<Vec<banking_db::repository::HighHoldRatioAccount>> { todo!() }

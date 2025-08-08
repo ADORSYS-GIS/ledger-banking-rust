@@ -22,9 +22,9 @@ pub struct Country {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// State/Province structure with multilingual support
@@ -45,9 +45,9 @@ pub struct StateProvince {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// City structure with multilingual support
@@ -70,9 +70,9 @@ pub struct City {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Address structure for geographical locations
@@ -104,9 +104,9 @@ pub struct Address {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 impl Address {
@@ -114,7 +114,7 @@ impl Address {
     pub fn new(
         id: Uuid,
         address_type: AddressType,
-        created_by: Uuid,
+        created_by_person_id: Uuid,
     ) -> Self {
         Self {
             id,
@@ -131,8 +131,8 @@ impl Address {
             is_active: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by,
-            updated_by: created_by,
+            created_by_person_id,
+            updated_by_person_id: created_by_person_id,
         }
     }
     
@@ -140,9 +140,9 @@ impl Address {
     pub fn builder(
         id: Uuid,
         address_type: AddressType,
-        created_by: Uuid,
+        created_by_person_id: Uuid,
     ) -> AddressBuilder {
-        AddressBuilder::new(id, address_type, created_by)
+        AddressBuilder::new(id, address_type, created_by_person_id)
     }
     
     /// Set geographical coordinates
@@ -180,14 +180,14 @@ pub struct AddressBuilder {
     accuracy_meters: Option<f32>,
     address_type: AddressType,
     is_active: bool,
-    created_by: Uuid,
+    created_by_person_id: Uuid,
 }
 
 impl AddressBuilder {
     pub fn new(
         id: Uuid,
         address_type: AddressType,
-        created_by: Uuid,
+        created_by_person_id: Uuid,
     ) -> Self {
         Self {
             id,
@@ -202,7 +202,7 @@ impl AddressBuilder {
             accuracy_meters: None,
             address_type,
             is_active: true,
-            created_by,
+            created_by_person_id,
         }
     }
     
@@ -300,8 +300,8 @@ impl AddressBuilder {
             is_active: self.is_active,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by: self.created_by,
-            updated_by: self.created_by,
+            created_by_person_id: self.created_by_person_id,
+            updated_by_person_id: self.created_by_person_id,
         })
     }
 }
@@ -504,9 +504,9 @@ pub struct EntityReference {
     /// When this reference was last updated
     pub updated_at: DateTime<Utc>,
     /// Who created this reference
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// Who last updated this reference
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 impl EntityReference {
@@ -515,7 +515,7 @@ impl EntityReference {
         person_id: Uuid,
         entity_role: RelationshipRole,
         reference_external_id: Option<HeaplessString<50>>,
-        created_by: Uuid,
+        created_by_person_id: Uuid,
     ) -> Self {
         let now = Utc::now();
         Self {
@@ -529,8 +529,8 @@ impl EntityReference {
             is_active: true,
             created_at: now,
             updated_at: now,
-            created_by,
-            updated_by: created_by,
+            created_by_person_id,
+            updated_by_person_id: created_by_person_id,
         }
     }
 
@@ -540,27 +540,27 @@ impl EntityReference {
         details_l1: Option<HeaplessString<50>>,
         details_l2: Option<HeaplessString<50>>,
         details_l3: Option<HeaplessString<50>>,
-        updated_by: Uuid,
+        updated_by_person_id: Uuid,
     ) {
         self.reference_details_l1 = details_l1;
         self.reference_details_l2 = details_l2;
         self.reference_details_l3 = details_l3;
         self.updated_at = Utc::now();
-        self.updated_by = updated_by;
+        self.updated_by_person_id = updated_by_person_id;
     }
 
     /// Deactivate this entity reference
-    pub fn deactivate(&mut self, updated_by: Uuid) {
+    pub fn deactivate(&mut self, updated_by_person_id: Uuid) {
         self.is_active = false;
         self.updated_at = Utc::now();
-        self.updated_by = updated_by;
+        self.updated_by_person_id = updated_by_person_id;
     }
 
     /// Reactivate this entity reference
-    pub fn reactivate(&mut self, updated_by: Uuid) {
+    pub fn reactivate(&mut self, updated_by_person_id: Uuid) {
         self.is_active = true;
         self.updated_at = Utc::now();
-        self.updated_by = updated_by;
+        self.updated_by_person_id = updated_by_person_id;
     }
 }
 

@@ -270,7 +270,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         }
 
         // Update account status
-        let updated_by = if system_triggered {
+        let updated_by_person_id = if system_triggered {
             SYSTEM_PERSON_ID
         } else {
             // TODO: Should be passed as parameter for manual triggers
@@ -278,7 +278,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         };
 
         self.account_repository
-            .update_status(account_id, "Dormant", "Account marked dormant due to inactivity", updated_by)
+            .update_status(account_id, "Dormant", "Account marked dormant due to inactivity", updated_by_person_id)
             .await?;
 
         tracing::info!(

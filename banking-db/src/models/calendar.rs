@@ -50,7 +50,7 @@ pub struct BankHolidayModel {
     pub holiday_type: HolidayType, // Use enum instead of HeaplessString
     pub is_recurring: bool,   // Annual recurrence flag
     pub description: Option<HeaplessString<200>>, // Updated to match API domain
-    pub created_by: Uuid, // References Person.person_id
+    pub created_by_person_id: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
 
@@ -65,9 +65,9 @@ pub struct WeekendConfigurationModel {
     pub is_active: bool,
     pub notes: Option<HeaplessString<256>>,
     pub created_at: DateTime<Utc>,
-    pub created_by: Uuid, // References Person.person_id
+    pub created_by_person_id: Uuid, // References Person.person_id
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: Uuid, // References Person.person_id
+    pub updated_by_person_id: Uuid, // References Person.person_id
 }
 
 /// Date Calculation Rules database model
@@ -86,9 +86,9 @@ pub struct DateCalculationRulesModel {
     pub effective_date: NaiveDate,
     pub expiry_date: Option<NaiveDate>,
     pub created_at: DateTime<Utc>,
-    pub created_by: Uuid, // References Person.person_id
+    pub created_by_person_id: Uuid, // References Person.person_id
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: Uuid, // References Person.person_id
+    pub updated_by_person_id: Uuid, // References Person.person_id
 }
 
 /// Holiday Import Log database model (for audit trail of holiday imports)

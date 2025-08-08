@@ -93,7 +93,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
             r#"
             INSERT INTO weekend_configuration (
                 id, jurisdiction, weekend_days, effective_date, 
-                is_active, created_at, created_by, last_updated_at, updated_by
+                is_active, created_at, created_by_person_id, last_updated_at, updated_by_person_id
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (jurisdiction) 
             DO UPDATE SET
@@ -101,7 +101,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
                 effective_date = EXCLUDED.effective_date,
                 is_active = EXCLUDED.is_active,
                 last_updated_at = EXCLUDED.last_updated_at,
-                updated_by = EXCLUDED.updated_by
+                updated_by_person_id = EXCLUDED.updated_by_person_id
             "#,
             config_id,
             jurisdiction,
@@ -130,7 +130,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
             r#"
             SELECT id, jurisdiction, holiday_date, holiday_name, 
                    holiday_type as "holiday_type: HolidayType", is_recurring, description, 
-                   created_at, created_by
+                   created_at, created_by_person_id
             FROM bank_holidays
             WHERE jurisdiction = $1 
               AND holiday_date >= $2 
@@ -160,7 +160,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
                 is_recurring: row.is_recurring,
                 description: row.description.map(|d| HeaplessString::try_from(d.as_str()).unwrap_or_else(|_| HeaplessString::new())),
                 created_at: row.created_at,
-                created_by: row.created_by,
+                created_by_person_id: row.created_by_person_id,
             }
         }).collect();
 
@@ -175,11 +175,11 @@ impl CalendarRepository for CalendarRepositoryImpl {
             r#"
             INSERT INTO bank_holidays (
                 id, jurisdiction, holiday_date, holiday_name,
-                holiday_type, is_recurring, description, created_at, created_by
+                holiday_type, is_recurring, description, created_at, created_by_person_id
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id, jurisdiction, holiday_date, holiday_name, 
                       holiday_type as "holiday_type: HolidayType", is_recurring, description, 
-                      created_at, created_by
+                      created_at, created_by_person_id
             "#,
             holiday.id,
             holiday.jurisdiction.as_str(),
@@ -189,7 +189,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
             holiday.is_recurring,
             description_str,
             holiday.created_at,
-            holiday.created_by
+            holiday.created_by_person_id
         )
         .fetch_one(&self.pool)
         .await?;
@@ -208,7 +208,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
             is_recurring: row.is_recurring,
             description: row.description.map(|d| HeaplessString::try_from(d.as_str()).unwrap_or_else(|_| HeaplessString::new())),
             created_at: row.created_at,
-            created_by: row.created_by,
+            created_by_person_id: row.created_by_person_id,
         })
     }
 
@@ -234,7 +234,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
             r#"
             SELECT id, jurisdiction, holiday_date, holiday_name, 
                    holiday_type as "holiday_type: HolidayType", is_recurring, description, 
-                   created_at, created_by
+                   created_at, created_by_person_id
             FROM bank_holidays
             WHERE jurisdiction = $1 
               AND EXTRACT(YEAR FROM holiday_date) = $2
@@ -262,7 +262,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
                 is_recurring: row.is_recurring,
                 description: row.description.map(|d| HeaplessString::try_from(d.as_str()).unwrap_or_else(|_| HeaplessString::new())),
                 created_at: row.created_at,
-                created_by: row.created_by,
+                created_by_person_id: row.created_by_person_id,
             }
         }).collect();
 

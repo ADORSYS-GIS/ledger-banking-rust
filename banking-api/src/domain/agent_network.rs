@@ -83,7 +83,7 @@ pub struct AgencyBranch {
     
     // Metadata
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -226,8 +226,8 @@ pub struct BranchCapabilities {
     pub language_spoken3: Option<HeaplessString<3>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -262,8 +262,8 @@ pub struct SecurityAccess {
     pub required_document20: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -283,8 +283,8 @@ pub struct OperatingHours {
     pub timezone: HeaplessString<50>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -303,8 +303,8 @@ pub struct HollidayPlan {
     pub name_l3: HeaplessString<100>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -334,8 +334,8 @@ pub struct TemporaryClosure {
     pub alternative_branch_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -569,7 +569,7 @@ impl AgencyBranch {
             last_audit_date: None,
             last_compliance_certification_id: None,
             last_updated_at: created_at,
-            updated_by: Uuid::nil(), // Default to nil UUID for system-generated records
+            updated_by_person_id: Uuid::nil(), // Default to nil UUID for system-generated records
         }
     }
 }

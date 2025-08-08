@@ -44,7 +44,7 @@ pub trait EnhancedAccountService: Send + Sync {
         new_status: AccountStatus,
         reason_id: Uuid,
         additional_context: Option<&str>,
-        updated_by: Uuid, // References Person.person_id
+        updated_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<()>;
 }
 
@@ -67,7 +67,7 @@ pub trait EnhancedTransactionService: Send + Sync {
         status: TransactionStatus,
         reason_id: Uuid,
         additional_context: Option<&str>,
-        updated_by: Uuid, // References Person.person_id
+        updated_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<()>;
 }
 

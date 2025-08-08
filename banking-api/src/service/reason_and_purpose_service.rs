@@ -153,7 +153,7 @@ pub trait ReasonAndPurposeService: Send + Sync {
         &self,
         category: ReasonCategory,
         reason_order_map: Vec<(Uuid, i32)>,
-        updated_by: &str,
+        updated_by_person_id: &str,
     ) -> BankingResult<()>;
     
     // ============================================================================
@@ -166,7 +166,7 @@ pub trait ReasonAndPurposeService: Send + Sync {
         reason_id: Uuid,
         language_code: [u8; 3],
         content: &str,
-        updated_by: &str,
+        updated_by_person_id: &str,
     ) -> BankingResult<()>;
     
     /// Get reasons with localized content for specific language
@@ -182,7 +182,7 @@ pub trait ReasonAndPurposeService: Send + Sync {
         &self,
         reason_id: Uuid,
         language_code: [u8; 3],
-        updated_by: &str,
+        updated_by_person_id: &str,
     ) -> BankingResult<()>;
 }
 

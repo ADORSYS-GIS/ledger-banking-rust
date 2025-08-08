@@ -69,7 +69,7 @@ pub trait ComplianceRepository: Send + Sync {
     async fn find_sar_by_id(&self, sar_id: Uuid) -> BankingResult<Option<SarDataModel>>;
     async fn find_sar_by_customer(&self, customer_id: Uuid) -> BankingResult<Vec<SarDataModel>>;
     async fn find_sar_by_status(&self, status: &str) -> BankingResult<Vec<SarDataModel>>;
-    async fn update_sar_status(&self, sar_id: Uuid, status: &str, updated_by: &str) -> BankingResult<()>;
+    async fn update_sar_status(&self, sar_id: Uuid, status: &str, updated_by_person_id: &str) -> BankingResult<()>;
     async fn find_pending_sar_filings(&self) -> BankingResult<Vec<SarDataModel>>;
     
     /// Transaction Monitoring Operations

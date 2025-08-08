@@ -1,0 +1,173 @@
+# Foreign Key Reference Alignment Workflow
+
+## Objective
+Refactor foreign key field names in domain structs to consistently include the target entity name before `_id`, improving code readability and making entity relationships explicit.
+
+## Naming Convention Rules
+
+### 1. Explicit Entity Reference Required
+When the field name doesn't clearly indicate the target entity, include the target struct name:
+- `domicile_branch_id: Uuid` → `domicile_agency_branch_id: Uuid` (target: `AgencyBranch`)
+- `updated_by_person_id: Uuid` → `updated_by_person_id: Uuid` (target: `Person`)
+
+### 2. Keep Existing When Clear
+When the field name already matches or clearly indicates the target entity:
+- `collateral_id: Option<Uuid>` → **KEEP AS IS** (target: `Collateral`)
+- `customer_id: Uuid` → **KEEP AS IS** (target: `Customer`)
+
+### 3. Compound Names Exception
+For fields with compound qualifiers that don't have individual target structs:
+- `loan_purpose_id: Option<Uuid>` → **KEEP AS IS** (target: `ReasonAndPurpose`, no `Purpose` struct exists)
+- `transaction_reason_id: Option<Uuid>` → **KEEP AS IS** (target: `ReasonAndPurpose`, no `Reason` struct exists)
+
+### 4. Person Reference Pattern
+All `*_by` fields reference `Person`:
+- `created_by_person_id: Uuid` → `created_by_person_id: Uuid`
+- `updated_by_person_id: Uuid` → `updated_by_person_id: Uuid`
+- `approved_by: Option<Uuid>` → `approved_by_person_id: Option<Uuid>`
+
+## Workflow Steps
+
+### Step 1: Analysis Phase
+```
+Analyze the domain struct file: banking-api/src/domain/{entity}.rs
+
+1. Identify all fields ending with `_id: Uuid` or `_id: Option<Uuid>`
+2. Identify all fields ending with `_by: Uuid` or `_by: Option<Uuid>`
+3. For each field, determine:
+   - Current field name
+   - Target struct name and location
+   - Whether renaming is needed based on rules above
+   - Proposed new field name (if applicable)
+```
+
+### Step 2: Proposal Generation
+```
+Create/update workbook.md with:
+
+# Foreign Key Reference Analysis: {EntityName}
+
+## Fields Requiring Changes
+| Current Field | Target Struct | Target Location | Proposed Field | Reason |
+|---------------|---------------|-----------------|----------------|---------|
+| field_name | TargetStruct | path/to/struct.rs | new_field_name | Rule explanation |
+
+## Fields Keeping Current Names
+| Current Field | Target Struct | Target Location | Reason to Keep |
+|---------------|---------------|-----------------|----------------|
+| field_name | TargetStruct | path/to/struct.rs | Explanation |
+
+## Summary
+- Total fields analyzed: X
+- Fields requiring changes: Y
+- Fields keeping current names: Z
+```
+
+### Step 3: Review and Approval
+```
+1. Open workbook.md in editor for user review
+2. Wait for user confirmation/corrections
+3. Proceed only after explicit approval
+```
+
+### Step 4: Implementation Phase
+For each approved field change, update in this order:
+
+#### 4.1 Domain Model Update
+- File: `banking-api/src/domain/{entity}.rs`
+- Update field declarations in struct
+- Update builder method parameters (if applicable)
+- Update any struct methods referencing the field
+
+#### 4.2 Service Trait Updates
+- Files: `banking-api/src/service/*.rs`
+- Update method signatures that reference the field
+- Update trait documentation if field is mentioned
+
+#### 4.3 Database Model Updates
+- Files: `banking-db/src/models/{entity}.rs`
+- Update corresponding model struct fields
+- Update any model-specific methods
+
+#### 4.4 Repository Trait Updates
+- Files: `banking-db/src/repository/{entity}_repository.rs`
+- Update method signatures and parameters
+- Update trait documentation
+
+#### 4.5 Mapper Updates
+- Files: `banking-logic/src/mappers/{entity}_mapper.rs`
+- Update domain-to-model and model-to-domain mappings
+- Ensure field mappings are correct
+
+#### 4.6 Service Implementation Updates
+- Files: `banking-logic/src/services/{entity}_service_impl.rs`
+- Update method implementations
+- Update field references in business logic
+
+#### 4.7 PostgreSQL Repository Updates
+- Files: `banking-db-postgres/src/repository/{entity}_repository_impl.rs`
+- Update SQL queries with new column names
+- Update result mapping code
+- Update any database-specific logic
+
+#### 4.8 Database Schema Updates
+- File: `banking-db-postgres/migrations/001_initial_schema.sql`
+- Update column names in CREATE TABLE statements
+- Update foreign key constraint names
+- Update index definitions if they reference the columns
+
+#### 4.9 Test Updates
+- Update all test files that reference the changed fields:
+  - `banking-logic/src/services/tests/*.rs`
+  - `banking-db-postgres/tests/*.rs`
+  - Any integration tests
+- Update test data creation
+- Update assertions and validations
+
+### Step 5: Validation
+```
+After all changes:
+1. Run cargo check to ensure compilation
+2. Run cargo clippy to check for warnings
+3. Run tests: cargo test --features postgres_tests -- --test-threads=1
+4. Verify database schema is consistent
+5. Check that all foreign key relationships are preserved
+```
+
+## Usage Example
+
+To use this workflow for the `Account` struct:
+
+```
+Please help me refactor foreign key references in the Account domain struct using the foreign key reference alignment workflow. Start with analyzing banking-api/src/domain/account.rs and create the proposal workbook.
+```
+
+## Important Notes
+
+1. **Preserve Relationships**: Ensure all foreign key relationships remain intact after renaming
+2. **Database Consistency**: Column renames must be reflected in both schema and queries
+3. **Test Coverage**: All tests must pass after changes to ensure functionality is preserved
+4. **Incremental Approach**: Process one entity at a time to minimize complexity
+5. **Backup Strategy**: Consider creating a branch before starting major refactoring
+6. **Documentation**: Update any documentation that references the old field names
+
+## Files That May Require Updates
+
+### Core Files (Always check)
+- `banking-api/src/domain/*.rs` - Domain structs
+- `banking-db/src/models/*.rs` - Database models  
+- `banking-logic/src/mappers/*.rs` - Model mappers
+- `banking-db-postgres/migrations/001_initial_schema.sql` - Schema
+
+### Implementation Files (Check if entity has implementations)
+- `banking-api/src/service/*.rs` - Service traits
+- `banking-logic/src/services/*_service_impl.rs` - Service implementations
+- `banking-db/src/repository/*_repository.rs` - Repository traits
+- `banking-db-postgres/src/repository/*_repository_impl.rs` - Repository implementations
+
+### Test Files (Always update)
+- `banking-logic/src/services/tests/*.rs`
+- `banking-db-postgres/tests/*.rs`
+- Any files in `tests/` directory
+
+This workflow ensures systematic and thorough refactoring of foreign key references while maintaining code integrity and database consistency.

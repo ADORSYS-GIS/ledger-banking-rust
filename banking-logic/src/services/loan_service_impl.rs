@@ -223,7 +223,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
         _new_status: InstallmentStatus,
         _paid_date: Option<NaiveDate>,
         _paid_amount: Option<Decimal>,
-        _updated_by: Uuid,
+        _updated_by_person_id: Uuid,
     ) -> BankingResult<AmortizationEntry> {
         // TODO: Add get_amortization_entry_by_id method to AccountRepository
         Err(BankingError::NotImplemented("get_amortization_entry_by_id not implemented".to_string()))
@@ -574,7 +574,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
         loan_account_id: Uuid,
         delinquency_stage: DelinquencyStage,
         _status_change_reason: String,
-        _updated_by: Uuid,
+        _updated_by_person_id: Uuid,
     ) -> BankingResult<()> {
         // Update delinquency record with new stage
         if let Some(mut delinquency) = self.get_loan_delinquency(loan_account_id).await? {
@@ -693,7 +693,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
             follow_up_date: None,
             action_status: banking_api::domain::ActionStatus::Planned,
             assigned_to: request.assigned_to,
-            created_by: request.created_by,
+            created_by_person_id: request.created_by_person_id,
             created_at: Utc::now(),
         };
 
@@ -712,7 +712,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
         _response_details: Option<String>,
         _follow_up_required: bool,
         _follow_up_date: Option<NaiveDate>,
-        _updated_by: Uuid,
+        _updated_by_person_id: Uuid,
     ) -> BankingResult<CollectionAction> {
         // Implementation would update the collection action
         Err(BankingError::NotImplemented("Collection action update not yet implemented".to_string()))
@@ -853,7 +853,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
         _loan_account_id: Uuid,
         _new_status: LoanAccountStatus,
         _reason: String,
-        _updated_by: Uuid,
+        _updated_by_person_id: Uuid,
     ) -> BankingResult<()> {
         Err(BankingError::NotImplemented("Loan account status update not yet implemented".to_string()))
     }

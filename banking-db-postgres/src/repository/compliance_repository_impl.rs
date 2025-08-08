@@ -85,11 +85,11 @@ impl TryFromRow<sqlx::postgres::PgRow> for KycRecordModel {
             },
             created_at: row.get("created_at"),
             last_updated_at: row.get("last_updated_at"),
-            updated_by: HeaplessString::try_from(
-                row.get::<String, _>("updated_by").as_str()
+            updated_by_person_id: HeaplessString::try_from(
+                row.get::<String, _>("updated_by_person_id").as_str()
             ).map_err(|_| {
                 BankingError::ValidationError {
-                    field: "updated_by".to_string(),
+                    field: "updated_by_person_id".to_string(),
                     message: "Updated by field too long".to_string(),
                 }
             })?,
@@ -188,7 +188,7 @@ impl ComplianceRepository for ComplianceRepositoryImpl {
         .bind(kyc_record.verification_notes.as_ref().map(|s| s.as_str()))
         .bind(kyc_record.created_at)
         .bind(kyc_record.last_updated_at)
-        .bind(kyc_record.updated_by.as_str())
+        .bind(kyc_record.updated_by_person_id.as_str())
         .fetch_one(&self.pool)
         .await?;
 
@@ -208,7 +208,7 @@ impl ComplianceRepository for ComplianceRepositoryImpl {
                 reviewed_by = $8,
                 verification_notes = $9,
                 last_updated_at = $10,
-                updated_by = $11
+                updated_by_person_id = $11
             WHERE kyc_id = $1
             RETURNING kyc_id, customer_id, status, risk_assessment, verification_level, documents_verified,
                      last_review_date, next_review_date, reviewed_by, verification_notes, created_at, last_updated_at, updated_by
@@ -224,7 +224,7 @@ impl ComplianceRepository for ComplianceRepositoryImpl {
         .bind(kyc_record.reviewed_by.as_ref().map(|s| s.as_str()))
         .bind(kyc_record.verification_notes.as_ref().map(|s| s.as_str()))
         .bind(kyc_record.last_updated_at)
-        .bind(kyc_record.updated_by.as_str())
+        .bind(kyc_record.updated_by_person_id.as_str())
         .fetch_one(&self.pool)
         .await?;
 
@@ -687,7 +687,7 @@ impl ComplianceRepository for ComplianceRepositoryImpl {
         Ok(Vec::new())
     }
 
-    async fn update_sar_status(&self, _sar_id: Uuid, _status: &str, _updated_by: &str) -> BankingResult<()> {
+    async fn update_sar_status(&self, _sar_id: Uuid, _status: &str, _updated_by_person_id: &str) -> BankingResult<()> {
         Ok(())
     }
 
@@ -838,7 +838,7 @@ mod tests {
             verification_notes: Some(HeaplessString::try_from("Test KYC notes").unwrap()),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: HeaplessString::try_from("test_system").unwrap(),
+            updated_by_person_id: HeaplessString::try_from("test_system").unwrap(),
         }
     }
 

@@ -60,8 +60,8 @@ impl CollateralMapper {
             maturity_date: collateral.maturity_date,
             created_at: collateral.created_at,
             last_updated_at: collateral.last_updated_at,
-            created_by: collateral.created_by,
-            updated_by: collateral.updated_by,
+            created_by_person_id: collateral.created_by_person_id,
+            updated_by_person_id: collateral.updated_by_person_id,
             last_valuation_by: collateral.last_valuation_by,
             next_review_date: collateral.next_review_date,
         }
@@ -106,8 +106,8 @@ impl CollateralMapper {
             maturity_date: model.maturity_date,
             created_at: model.created_at,
             last_updated_at: model.last_updated_at,
-            created_by: model.created_by,
-            updated_by: model.updated_by,
+            created_by_person_id: model.created_by_person_id,
+            updated_by_person_id: model.updated_by_person_id,
             last_valuation_by: model.last_valuation_by,
             next_review_date: model.next_review_date,
         })
@@ -129,7 +129,7 @@ impl CollateralMapper {
             next_valuation_due: valuation.next_valuation_due,
             valuation_notes: valuation.valuation_notes,
             created_at: valuation.created_at,
-            created_by: valuation.created_by,
+            created_by_person_id: valuation.created_by_person_id,
         }
     }
 
@@ -149,7 +149,7 @@ impl CollateralMapper {
             next_valuation_due: model.next_valuation_due,
             valuation_notes: model.valuation_notes,
             created_at: model.created_at,
-            created_by: model.created_by,
+            created_by_person_id: model.created_by_person_id,
         })
     }
 
@@ -172,8 +172,8 @@ impl CollateralMapper {
             covenant_compliance: serde_json::to_value(pledge.covenant_compliance).unwrap_or_default(),
             created_at: pledge.created_at,
             last_updated_at: pledge.last_updated_at,
-            created_by: pledge.created_by,
-            updated_by: pledge.updated_by,
+            created_by_person_id: pledge.created_by_person_id,
+            updated_by_person_id: pledge.updated_by_person_id,
         }
     }
 
@@ -196,8 +196,8 @@ impl CollateralMapper {
             covenant_compliance: serde_json::from_value(model.covenant_compliance).unwrap_or_default(),
             created_at: model.created_at,
             last_updated_at: model.last_updated_at,
-            created_by: model.created_by,
-            updated_by: model.updated_by,
+            created_by_person_id: model.created_by_person_id,
+            updated_by_person_id: model.updated_by_person_id,
         })
     }
 
@@ -258,8 +258,8 @@ impl CollateralMapper {
             net_recovery: enforcement.net_recovery,
             created_at: enforcement.created_at,
             last_updated_at: enforcement.last_updated_at,
-            created_by: enforcement.created_by,
-            updated_by: enforcement.updated_by,
+            created_by_person_id: enforcement.created_by_person_id,
+            updated_by_person_id: enforcement.updated_by_person_id,
         }
     }
 
@@ -284,8 +284,8 @@ impl CollateralMapper {
             net_recovery: model.net_recovery,
             created_at: model.created_at,
             last_updated_at: model.last_updated_at,
-            created_by: model.created_by,
-            updated_by: model.updated_by,
+            created_by_person_id: model.created_by_person_id,
+            updated_by_person_id: model.updated_by_person_id,
         })
     }
 

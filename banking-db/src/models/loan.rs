@@ -111,7 +111,7 @@ pub struct CollectionAction {
     #[serde(serialize_with = "serialize_action_status", deserialize_with = "deserialize_action_status")]
     pub action_status: ActionStatus,
     pub assigned_to: Uuid, // References Person.person_id
-    pub created_by: Uuid, // References Person.person_id
+    pub created_by_person_id: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
 
@@ -276,7 +276,7 @@ pub struct LoanRestructuring {
     pub approved_by: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<DateTime<Utc>>,
     pub conditions: Vec<HeaplessString<500>>,
-    pub created_by: Uuid, // References Person.person_id
+    pub created_by_person_id: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
 

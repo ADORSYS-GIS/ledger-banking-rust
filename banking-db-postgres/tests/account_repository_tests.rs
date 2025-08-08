@@ -13,8 +13,8 @@ use uuid::Uuid;
 fn create_test_account() -> AccountModel {
     let account_id = Uuid::new_v4();
     // Use a fixed UUID that we'll insert into persons table in setup
-    let updated_by = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
-    let domicile_branch_id = Uuid::new_v4();
+    let updated_by_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let domicile_agency_branch_id = Uuid::new_v4();
     
     AccountModel {
         id: account_id,
@@ -24,7 +24,7 @@ fn create_test_account() -> AccountModel {
         signing_condition: SigningCondition::AnyOwner,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
-        domicile_branch_id,
+        domicile_agency_branch_id: domicile_agency_branch_id,
         current_balance: Decimal::from_str("1000.00").unwrap(),
         available_balance: Decimal::from_str("950.00").unwrap(),
         accrued_interest: Decimal::from_str("12.50").unwrap(),
@@ -46,12 +46,12 @@ fn create_test_account() -> AccountModel {
         reactivation_required: false,
         pending_closure_reason_id: None,
         last_disbursement_instruction_id: None,
-        status_changed_by: None,
+        status_changed_by_person_id: None,
         status_change_reason_id: None,
         status_change_timestamp: None,
         created_at: Utc::now(),
         last_updated_at: Utc::now(),
-        updated_by,
+        updated_by_person_id: updated_by_person_id,
     }
 }
 
@@ -59,8 +59,8 @@ fn create_test_account() -> AccountModel {
 fn create_test_loan_account() -> AccountModel {
     let account_id = Uuid::new_v4();
     // Use the same fixed UUID as the test person
-    let updated_by = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
-    let domicile_branch_id = Uuid::new_v4();
+    let updated_by_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let domicile_agency_branch_id = Uuid::new_v4();
     
     AccountModel {
         id: account_id,
@@ -70,7 +70,7 @@ fn create_test_loan_account() -> AccountModel {
         signing_condition: SigningCondition::None,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
-        domicile_branch_id,
+        domicile_agency_branch_id: domicile_agency_branch_id,
         current_balance: Decimal::from_str("5000.00").unwrap(), // Positive balance representing outstanding amount
         available_balance: Decimal::from_str("0.00").unwrap(), // Available is 0 for loans (can't withdraw)
         accrued_interest: Decimal::from_str("25.00").unwrap(),
@@ -92,12 +92,12 @@ fn create_test_loan_account() -> AccountModel {
         reactivation_required: false,
         pending_closure_reason_id: None,
         last_disbursement_instruction_id: None,
-        status_changed_by: None,
+        status_changed_by_person_id: None,
         status_change_reason_id: None,
         status_change_timestamp: None,
         created_at: Utc::now(),
         last_updated_at: Utc::now(),
-        updated_by,
+        updated_by_person_id: updated_by_person_id,
     }
 }
 
@@ -254,7 +254,7 @@ async fn test_account_status_operations() {
         .expect("Failed to find account")
         .expect("Account not found");
     assert_eq!(updated_account.account_status, AccountStatus::Frozen);
-    assert_eq!(updated_account.status_changed_by, Some(changed_by));
+    assert_eq!(updated_account.status_changed_by_person_id, Some(changed_by));
     assert!(updated_account.status_change_timestamp.is_some());
 }
 

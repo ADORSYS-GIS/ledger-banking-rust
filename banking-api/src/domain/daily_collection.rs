@@ -409,7 +409,7 @@ pub struct CollectionProgram {
     pub interest_rate: Option<Decimal>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     pub reason_id: Option<Uuid>,
 }
 
@@ -1105,12 +1105,12 @@ pub struct CollectionProgramBuilder {
     graduation_criteria_id: Option<Uuid>,
     fee_structure_id: Option<Uuid>,
     interest_rate: Option<Decimal>,
-    created_by: Uuid,
+    created_by_person_id: Uuid,
     reason_id: Option<Uuid>,
 }
 
 impl CollectionProgram {
-    pub fn builder(id: Uuid, program_type: CollectionProgramType, created_by: Uuid) -> CollectionProgramBuilder {
+    pub fn builder(id: Uuid, program_type: CollectionProgramType, created_by_person_id: Uuid) -> CollectionProgramBuilder {
         CollectionProgramBuilder {
             id,
             name: None,
@@ -1128,7 +1128,7 @@ impl CollectionProgram {
             graduation_criteria_id: None,
             fee_structure_id: None,
             interest_rate: None,
-            created_by,
+            created_by_person_id,
             reason_id: None,
         }
     }
@@ -1230,7 +1230,7 @@ impl CollectionProgramBuilder {
             interest_rate: self.interest_rate,
             created_at: now,
             updated_at: now,
-            created_by: self.created_by,
+            created_by_person_id: self.created_by_person_id,
             reason_id: self.reason_id,
         })
     }

@@ -106,7 +106,7 @@ pub struct CollectionAction {
     pub follow_up_date: Option<NaiveDate>,
     pub action_status: ActionStatus,
     pub assigned_to: Uuid, // References Person.person_id
-    pub created_by: Uuid, // References Person.person_id
+    pub created_by_person_id: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
 
@@ -265,7 +265,7 @@ pub struct LoanRestructuring {
     pub approved_by: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<DateTime<Utc>>,
     pub conditions: Vec<HeaplessString<500>>,
-    pub created_by: Uuid, // References Person.person_id
+    pub created_by_person_id: Uuid, // References Person.person_id
     pub created_at: DateTime<Utc>,
 }
 
@@ -404,5 +404,5 @@ pub struct CreateCollectionActionRequest {
     pub amount_demanded: Option<Decimal>,
     pub due_date: Option<NaiveDate>,
     pub assigned_to: Uuid, // References Person.person_id
-    pub created_by: Uuid, // References Person.person_id
+    pub created_by_person_id: Uuid, // References Person.person_id
 }

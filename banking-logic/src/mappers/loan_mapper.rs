@@ -169,7 +169,7 @@ impl LoanMapper {
             follow_up_date: action.follow_up_date,
             action_status: Self::action_status_to_db(action.action_status),
             assigned_to: action.assigned_to,
-            created_by: action.created_by,
+            created_by_person_id: action.created_by_person_id,
             created_at: action.created_at,
         }
     }
@@ -192,7 +192,7 @@ impl LoanMapper {
             follow_up_date: model.follow_up_date,
             action_status: Self::db_to_action_status(model.action_status),
             assigned_to: model.assigned_to,
-            created_by: model.created_by,
+            created_by_person_id: model.created_by_person_id,
             created_at: model.created_at,
         }
     }
@@ -347,7 +347,7 @@ impl LoanMapper {
             approved_by: restructuring.approved_by,
             approved_at: restructuring.approved_at,
             conditions: restructuring.conditions,
-            created_by: restructuring.created_by,
+            created_by_person_id: restructuring.created_by_person_id,
             created_at: restructuring.created_at,
         }
     }
@@ -378,7 +378,7 @@ impl LoanMapper {
             approved_by: model.approved_by,
             approved_at: model.approved_at,
             conditions: model.conditions,
-            created_by: model.created_by,
+            created_by_person_id: model.created_by_person_id,
             created_at: model.created_at,
         }
     }

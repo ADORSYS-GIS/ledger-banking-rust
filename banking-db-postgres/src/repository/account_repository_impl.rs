@@ -39,13 +39,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             INSERT INTO accounts (
                 id, product_code, account_type, account_status, signing_condition,
-                currency, open_date, domicile_branch_id, current_balance, available_balance,
+                currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                 accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                 loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                 installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                 close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                status_change_reason_id, status_change_timestamp, updated_by
+                pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                status_change_reason_id, status_change_timestamp, updated_by_person_id
             )
             VALUES (
                 $1, $2, $3::account_type, $4::account_status, $5::signing_condition, $6, $7, $8, $9, $10, $11, $12, $13, $14,
@@ -54,13 +54,13 @@ impl AccountRepository for AccountRepositoryImpl {
             )
             RETURNING id, product_code, account_type::text as account_type, 
                      account_status::text as account_status, signing_condition::text as signing_condition,
-                     currency, open_date, domicile_branch_id, current_balance, available_balance,
+                     currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                      accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                      loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                      installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                      close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                     pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                     status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                     pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                     status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             "#,
         )
         .bind(account.id)
@@ -70,7 +70,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(account.signing_condition.to_string())
         .bind(account.currency.as_str())
         .bind(account.open_date)
-        .bind(account.domicile_branch_id)
+        .bind(account.domicile_agency_branch_id)
         .bind(account.current_balance)
         .bind(account.available_balance)
         .bind(account.accrued_interest)
@@ -92,10 +92,10 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(account.reactivation_required)
         .bind(account.pending_closure_reason_id)
         .bind(account.last_disbursement_instruction_id)
-        .bind(account.status_changed_by)
+        .bind(account.status_changed_by_person_id)
         .bind(account.status_change_reason_id)
         .bind(account.status_change_timestamp)
-        .bind(account.updated_by)
+        .bind(account.updated_by_person_id)
         .fetch_one(&self.pool)
         .await?;
 
@@ -109,25 +109,25 @@ impl AccountRepository for AccountRepositoryImpl {
             UPDATE accounts SET
                 product_code = $2, account_type = $3::account_type, account_status = $4::account_status,
                 signing_condition = $5::signing_condition, currency = $6, open_date = $7,
-                domicile_branch_id = $8, current_balance = $9, available_balance = $10,
+                domicile_agency_branch_id = $8, current_balance = $9, available_balance = $10,
                 accrued_interest = $11, overdraft_limit = $12, original_principal = $13,
                 outstanding_principal = $14, loan_interest_rate = $15, loan_term_months = $16,
                 disbursement_date = $17, maturity_date = $18, installment_amount = $19,
                 next_due_date = $20, penalty_rate = $21, collateral_id = $22, loan_purpose_id = $23,
                 close_date = $24, last_activity_date = $25, dormancy_threshold_days = $26,
                 reactivation_required = $27, pending_closure_reason_id = $28,
-                last_disbursement_instruction_id = $29, status_changed_by = $30,
-                status_change_reason_id = $31, status_change_timestamp = $32, updated_by = $33
+                last_disbursement_instruction_id = $29, status_changed_by_person_id = $30,
+                status_change_reason_id = $31, status_change_timestamp = $32, updated_by_person_id = $33
             WHERE id = $1
             RETURNING id, product_code, account_type::text as account_type,
                      account_status::text as account_status, signing_condition::text as signing_condition,
-                     currency, open_date, domicile_branch_id, current_balance, available_balance,
+                     currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                      accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                      loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                      installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                      close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                     pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                     status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                     pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                     status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             "#,
         )
         .bind(account.id)
@@ -137,7 +137,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(account.signing_condition.to_string())
         .bind(account.currency.as_str())
         .bind(account.open_date)
-        .bind(account.domicile_branch_id)
+        .bind(account.domicile_agency_branch_id)
         .bind(account.current_balance)
         .bind(account.available_balance)
         .bind(account.accrued_interest)
@@ -159,10 +159,10 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(account.reactivation_required)
         .bind(account.pending_closure_reason_id)
         .bind(account.last_disbursement_instruction_id)
-        .bind(account.status_changed_by)
+        .bind(account.status_changed_by_person_id)
         .bind(account.status_change_reason_id)
         .bind(account.status_change_timestamp)
-        .bind(account.updated_by)
+        .bind(account.updated_by_person_id)
         .fetch_one(&self.pool)
         .await?;
 
@@ -174,13 +174,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT id, product_code, account_type::text as account_type,
                    account_status::text as account_status, signing_condition::text as signing_condition,
-                   currency, open_date, domicile_branch_id, current_balance, available_balance,
+                   currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                    accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                    loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             FROM accounts WHERE id = $1
             "#,
         )
@@ -199,13 +199,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT a.account_id, a.product_code, a.account_type::text as account_type,
                    a.account_status::text as account_status, a.signing_condition::text as signing_condition,
-                   a.currency, a.open_date, a.domicile_branch_id, a.current_balance, a.available_balance,
+                   a.currency, a.open_date, a.domicile_agency_branch_id, a.current_balance, a.available_balance,
                    a.accrued_interest, a.overdraft_limit, a.original_principal, a.outstanding_principal,
                    a.loan_interest_rate, a.loan_term_months, a.disbursement_date, a.maturity_date,
                    a.installment_amount, a.next_due_date, a.penalty_rate, a.collateral_id, a.loan_purpose_id,
                    a.close_date, a.last_activity_date, a.dormancy_threshold_days, a.reactivation_required,
-                   a.pending_closure_reason_id, a.last_disbursement_instruction_id, a.status_changed_by,
-                   a.status_change_reason_id, a.status_change_timestamp, a.created_at, a.last_updated_at, a.updated_by
+                   a.pending_closure_reason_id, a.last_disbursement_instruction_id, a.status_changed_by_person_id,
+                   a.status_change_reason_id, a.status_change_timestamp, a.created_at, a.last_updated_at, a.updated_by_person_id
             FROM accounts a
             INNER JOIN account_ownership ao ON a.id = ao.account_id
             WHERE ao.customer_id = $1
@@ -228,13 +228,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT id, product_code, account_type::text as account_type,
                    account_status::text as account_status, signing_condition::text as signing_condition,
-                   currency, open_date, domicile_branch_id, current_balance, available_balance,
+                   currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                    accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                    loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             FROM accounts WHERE product_code = $1
             ORDER BY created_at DESC
             "#,
@@ -255,13 +255,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT id, product_code, account_type::text as account_type,
                    account_status::text as account_status, signing_condition::text as signing_condition,
-                   currency, open_date, domicile_branch_id, current_balance, available_balance,
+                   currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                    accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                    loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             FROM accounts WHERE account_status::text = $1
             ORDER BY created_at DESC
             "#,
@@ -282,13 +282,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT id, product_code, account_type::text as account_type,
                    account_status::text as account_status, signing_condition::text as signing_condition,
-                   currency, open_date, domicile_branch_id, current_balance, available_balance,
+                   currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                    accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                    loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             FROM accounts 
             WHERE account_status = 'Active'
               AND last_activity_date IS NOT NULL
@@ -313,13 +313,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT id, product_code, account_type::text as account_type,
                    account_status::text as account_status, signing_condition::text as signing_condition,
-                   currency, open_date, domicile_branch_id, current_balance, available_balance,
+                   currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                    accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                    loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             FROM accounts 
             WHERE account_status = 'PendingClosure'
             ORDER BY created_at DESC
@@ -340,13 +340,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT id, product_code, account_type::text as account_type,
                    account_status::text as account_status, signing_condition::text as signing_condition,
-                   currency, open_date, domicile_branch_id, current_balance, available_balance,
+                   currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                    accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                    loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             FROM accounts 
             WHERE account_type = 'Savings' 
                OR (account_type = 'Loan' AND loan_interest_rate > 0)
@@ -363,19 +363,19 @@ impl AccountRepository for AccountRepositoryImpl {
         Ok(accounts)
     }
 
-    async fn update_status(&self, account_id: Uuid, status: &str, reason: &str, changed_by: Uuid) -> BankingResult<()> {
+    async fn update_status(&self, account_id: Uuid, status: &str, reason: &str, changed_by_person_id: Uuid) -> BankingResult<()> {
         sqlx::query(
             r#"
             UPDATE accounts 
             SET account_status = $2::account_status,
-                status_changed_by = $3,
+                status_changed_by_person_id = $3,
                 status_change_timestamp = NOW()
             WHERE id = $1
             "#,
         )
         .bind(account_id)
         .bind(status)
-        .bind(changed_by)
+        .bind(changed_by_person_id)
         .execute(&self.pool)
         .await?;
 
@@ -384,7 +384,7 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             INSERT INTO account_status_history (
                 id, account_id, old_status, new_status, change_reason_id,
-                additional_context, changed_by, changed_at, system_triggered
+                additional_context, changed_by_person_id, changed_at, system_triggered
             )
             VALUES (uuid_generate_v4(), $1, 
                     (SELECT account_status FROM accounts WHERE id = $1),
@@ -394,7 +394,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(account_id)
         .bind(status)
         .bind(reason)
-        .bind(changed_by)
+        .bind(changed_by_person_id)
         .execute(&self.pool)
         .await?;
 
@@ -551,18 +551,18 @@ impl AccountRepository for AccountRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO account_relationships (
-                relationship_id, account_id, entity_id, entity_type, relationship_type,
+                relationship_id, account_id, person_id, entity_type, relationship_type,
                 status, start_date, end_date
             )
             VALUES ($1, $2, $3, $4::entity_type, $5::relationship_type, $6::relationship_status, $7, $8)
-            RETURNING relationship_id, account_id, entity_id, entity_type::text as entity_type,
+            RETURNING relationship_id, account_id, person_id, entity_type::text as entity_type,
                      relationship_type::text as relationship_type, status::text as status,
                      start_date, end_date
             "#,
         )
         .bind(relationship.id)
         .bind(relationship.account_id)
-        .bind(relationship.entity_id)
+        .bind(relationship.person_id)
         .bind(relationship.entity_type.to_string())
         .bind(relationship.relationship_type.to_string())
         .bind(relationship.status.to_string())
@@ -577,7 +577,7 @@ impl AccountRepository for AccountRepositoryImpl {
     async fn find_relationships_by_account(&self, account_id: Uuid) -> BankingResult<Vec<AccountRelationshipModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT relationship_id, account_id, entity_id, entity_type::text as entity_type,
+            SELECT relationship_id, account_id, person_id, entity_type::text as entity_type,
                    relationship_type::text as relationship_type, status::text as status,
                    start_date, end_date
             FROM account_relationships 
@@ -596,18 +596,18 @@ impl AccountRepository for AccountRepositoryImpl {
         Ok(relationships)
     }
 
-    async fn find_relationships_by_entity(&self, entity_id: Uuid, entity_type: &str) -> BankingResult<Vec<AccountRelationshipModel>> {
+    async fn find_relationships_by_entity(&self, person_id: Uuid, entity_type: &str) -> BankingResult<Vec<AccountRelationshipModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT relationship_id, account_id, entity_id, entity_type::text as entity_type,
+            SELECT relationship_id, account_id, person_id, entity_type::text as entity_type,
                    relationship_type::text as relationship_type, status::text as status,
                    start_date, end_date
             FROM account_relationships 
-            WHERE entity_id = $1 AND entity_type::text = $2
+            WHERE person_id = $1 AND entity_type::text = $2
             ORDER BY start_date DESC
             "#,
         )
-        .bind(entity_id)
+        .bind(person_id)
         .bind(entity_type)
         .fetch_all(&self.pool)
         .await?;
@@ -623,17 +623,17 @@ impl AccountRepository for AccountRepositoryImpl {
         let result = sqlx::query(
             r#"
             UPDATE account_relationships 
-            SET entity_id = $3, entity_type = $4::entity_type, relationship_type = $5::relationship_type,
+            SET person_id = $3, entity_type = $4::entity_type, relationship_type = $5::relationship_type,
                 status = $6::relationship_status, start_date = $7, end_date = $8
             WHERE relationship_id = $1
-            RETURNING relationship_id, account_id, entity_id, entity_type::text as entity_type,
+            RETURNING relationship_id, account_id, person_id, entity_type::text as entity_type,
                      relationship_type::text as relationship_type, status::text as status,
                      start_date, end_date
             "#,
         )
         .bind(relationship.id)
         .bind(relationship.account_id)
-        .bind(relationship.entity_id)
+        .bind(relationship.person_id)
         .bind(relationship.entity_type.to_string())
         .bind(relationship.relationship_type.to_string())
         .bind(relationship.status.to_string())
@@ -771,13 +771,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             INSERT INTO account_holds (
                 hold_id, account_id, amount, hold_type, reason_id, additional_details,
-                placed_by, placed_at, expires_at, status, released_at, released_by,
+                placed_by_person_id, placed_at, expires_at, status, released_at, released_by_person_id,
                 priority, source_reference, automatic_release
             )
             VALUES ($1, $2, $3, $4::hold_type, $5, $6, $7, $8, $9, $10::hold_status, $11, $12, $13::hold_priority, $14, $15)
             RETURNING hold_id, account_id, amount, hold_type::text as hold_type, reason_id,
-                     additional_details, placed_by, placed_at, expires_at, status::text as status,
-                     released_at, released_by, priority::text as priority, source_reference, automatic_release
+                     additional_details, placed_by_person_id, placed_at, expires_at, status::text as status,
+                     released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release
             "#,
         )
         .bind(hold.id)
@@ -786,12 +786,12 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(hold.hold_type.to_string())
         .bind(hold.reason_id)
         .bind(hold.additional_details.as_ref().map(|s| s.as_str()))
-        .bind(hold.placed_by)
+        .bind(hold.placed_by_person_id)
         .bind(hold.placed_at)
         .bind(hold.expires_at)
         .bind(hold.status.to_string())
         .bind(hold.released_at)
-        .bind(hold.released_by)
+        .bind(hold.released_by_person_id)
         .bind(hold.priority.to_string())
         .bind(hold.source_reference.as_ref().map(|s| s.as_str()))
         .bind(hold.automatic_release)
@@ -805,8 +805,8 @@ impl AccountRepository for AccountRepositoryImpl {
         let rows = sqlx::query(
             r#"
             SELECT hold_id, account_id, amount, hold_type::text as hold_type, reason_id,
-                   additional_details, placed_by, placed_at, expires_at, status::text as status,
-                   released_at, released_by, priority::text as priority, source_reference, automatic_release
+                   additional_details, placed_by_person_id, placed_at, expires_at, status::text as status,
+                   released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release
             FROM account_holds 
             WHERE account_id = $1
             ORDER BY placed_at DESC
@@ -827,8 +827,8 @@ impl AccountRepository for AccountRepositoryImpl {
         let rows = sqlx::query(
             r#"
             SELECT hold_id, account_id, amount, hold_type::text as hold_type, reason_id,
-                   additional_details, placed_by, placed_at, expires_at, status::text as status,
-                   released_at, released_by, priority::text as priority, source_reference, automatic_release
+                   additional_details, placed_by_person_id, placed_at, expires_at, status::text as status,
+                   released_at, released_by_person_id, priority::text as priority, source_reference, automatic_release
             FROM account_holds 
             WHERE account_id = $1 AND status = 'Active'
               AND (expires_at IS NULL OR expires_at > NOW())
@@ -846,18 +846,18 @@ impl AccountRepository for AccountRepositoryImpl {
         Ok(holds)
     }
 
-    async fn release_hold(&self, hold_id: Uuid, released_by: Uuid) -> BankingResult<()> {
+    async fn release_hold(&self, hold_id: Uuid, released_by_person_id: Uuid) -> BankingResult<()> {
         sqlx::query(
             r#"
             UPDATE account_holds 
             SET status = 'Released',
                 released_at = NOW(),
-                released_by = $2
+                released_by_person_id = $2
             WHERE hold_id = $1
             "#,
         )
         .bind(hold_id)
-        .bind(released_by)
+        .bind(released_by_person_id)
         .execute(&self.pool)
         .await?;
 
@@ -888,11 +888,11 @@ impl AccountRepository for AccountRepositoryImpl {
         let row = sqlx::query(
             "UPDATE account_holds SET 
                 amount = $2, hold_type = $3::hold_type, reason_id = $4, additional_details = $5,
-                expires_at = $6, status = $7::hold_status, released_at = $8, released_by = $9,
+                expires_at = $6, status = $7::hold_status, released_at = $8, released_by_person_id = $9,
                 priority = $10::hold_priority, source_reference = $11, automatic_release = $12
             WHERE hold_id = $1 
             RETURNING hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
-                     placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                     placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
                      priority::text, source_reference, automatic_release"
         )
         .bind(hold.id)
@@ -903,7 +903,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(hold.expires_at)
         .bind(hold.status.to_string())
         .bind(hold.released_at)
-        .bind(hold.released_by)
+        .bind(hold.released_by_person_id)
         .bind(hold.priority.to_string())
         .bind(hold.source_reference.as_ref().map(|s| s.as_str()))
         .bind(hold.automatic_release)
@@ -917,7 +917,7 @@ impl AccountRepository for AccountRepositoryImpl {
     async fn get_hold_by_id(&self, hold_id: Uuid) -> BankingResult<Option<AccountHoldModel>> {
         let row = sqlx::query(
             "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
-                    placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                    placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
                     priority::text, source_reference, automatic_release 
              FROM account_holds WHERE hold_id = $1"
         )
@@ -934,7 +934,7 @@ impl AccountRepository for AccountRepositoryImpl {
 
     async fn get_active_holds_for_account(&self, account_id: Uuid, hold_types: Option<Vec<String>>) -> BankingResult<Vec<AccountHoldModel>> {
         let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
-                                placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                                placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
                                 priority::text, source_reference, automatic_release 
                          FROM account_holds WHERE account_id = $1 AND status = 'Active'".to_string();
         
@@ -969,7 +969,7 @@ impl AccountRepository for AccountRepositoryImpl {
 
     async fn get_holds_by_status(&self, account_id: Option<Uuid>, status: String, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<AccountHoldModel>> {
         let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
-                                placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                                placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
                                 priority::text, source_reference, automatic_release 
                          FROM account_holds WHERE status::text = $1".to_string();
         
@@ -1021,7 +1021,7 @@ impl AccountRepository for AccountRepositoryImpl {
 
     async fn get_holds_by_type(&self, hold_type: String, status: Option<String>, account_ids: Option<Vec<Uuid>>, limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
         let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
-                                placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                                placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
                                 priority::text, source_reference, automatic_release 
                          FROM account_holds WHERE hold_type::text = $1".to_string();
         
@@ -1074,7 +1074,7 @@ impl AccountRepository for AccountRepositoryImpl {
 
     async fn get_hold_history(&self, account_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>, include_released: bool) -> BankingResult<Vec<AccountHoldModel>> {
         let mut query = "SELECT hold_id, account_id, amount, hold_type::text, reason_id, additional_details,
-                                placed_by, placed_at, expires_at, status::text, released_at, released_by,
+                                placed_by_person_id, placed_at, expires_at, status::text, released_at, released_by_person_id,
                                 priority::text, source_reference, automatic_release 
                          FROM account_holds WHERE account_id = $1".to_string();
         
@@ -1160,7 +1160,7 @@ impl AccountRepository for AccountRepositoryImpl {
         Ok(None)
     }
 
-    async fn release_hold_detailed(&self, _hold_id: Uuid, _release_amount: Option<Decimal>, _release_reason_id: Uuid, _released_by: Uuid, _released_at: DateTime<Utc>) -> BankingResult<AccountHoldModel> {
+    async fn release_hold_detailed(&self, _hold_id: Uuid, _release_amount: Option<Decimal>, _release_reason_id: Uuid, _released_by_person_id: Uuid, _released_at: DateTime<Utc>) -> BankingResult<AccountHoldModel> {
         Err(BankingError::NotImplemented("release_hold_detailed not yet implemented".to_string()))
     }
 
@@ -1172,7 +1172,7 @@ impl AccountRepository for AccountRepositoryImpl {
         Ok(vec![])
     }
 
-    async fn bulk_release_holds(&self, _hold_ids: Vec<Uuid>, _release_reason_id: Uuid, _released_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+    async fn bulk_release_holds(&self, _hold_ids: Vec<Uuid>, _release_reason_id: Uuid, _released_by_person_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         Ok(vec![])
     }
 
@@ -1196,7 +1196,7 @@ impl AccountRepository for AccountRepositoryImpl {
         Ok(vec![])
     }
 
-    async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+    async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by_person_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         Ok(vec![])
     }
 
@@ -1212,7 +1212,7 @@ impl AccountRepository for AccountRepositoryImpl {
         Ok(vec![])
     }
 
-    async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: Decimal, _updated_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+    async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: Decimal, _updated_by_person_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         Ok(vec![])
     }
 
@@ -1254,12 +1254,12 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             INSERT INTO final_settlements (
                 settlement_id, account_id, settlement_date, current_balance, accrued_interest,
-                closure_fees, final_amount, disbursement_method, disbursement_reference, processed_by
+                closure_fees, final_amount, disbursement_method, disbursement_reference, processed_by_person_id
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8::disbursement_method, $9, $10)
             RETURNING settlement_id, account_id, settlement_date, current_balance, accrued_interest,
                      closure_fees, final_amount, disbursement_method::text as disbursement_method,
-                     disbursement_reference, processed_by, created_at
+                     disbursement_reference, processed_by_person_id, created_at
             "#,
         )
         .bind(settlement.id)
@@ -1271,7 +1271,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(settlement.final_amount)
         .bind(settlement.disbursement_method.to_string())
         .bind(settlement.disbursement_reference.as_ref().map(|s| s.as_str()))
-        .bind(settlement.processed_by)
+        .bind(settlement.processed_by_person_id)
         .fetch_one(&self.pool)
         .await?;
 
@@ -1283,7 +1283,7 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT settlement_id, account_id, settlement_date, current_balance, accrued_interest,
                    closure_fees, final_amount, disbursement_method::text as disbursement_method,
-                   disbursement_reference, processed_by, created_at
+                   disbursement_reference, processed_by_person_id, created_at
             FROM final_settlements
             WHERE account_id = $1
             "#,
@@ -1309,7 +1309,7 @@ impl AccountRepository for AccountRepositoryImpl {
         let rows = sqlx::query(
             r#"
             SELECT history_id, account_id, old_status::text as old_status, new_status::text as new_status,
-                   change_reason_id, additional_context, changed_by, changed_at, system_triggered, created_at
+                   change_reason_id, additional_context, changed_by_person_id, changed_at, system_triggered, created_at
             FROM account_status_history 
             WHERE account_id = $1
             ORDER BY changed_at DESC
@@ -1331,11 +1331,11 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             INSERT INTO account_status_history (
                 id, account_id, old_status, new_status, change_reason_id,
-                additional_context, changed_by, changed_at, system_triggered
+                additional_context, changed_by_person_id, changed_at, system_triggered
             )
             VALUES ($1, $2, $3::account_status, $4::account_status, $5, $6, $7, $8, $9)
             RETURNING history_id, account_id, old_status::text as old_status, new_status::text as new_status,
-                     change_reason_id, additional_context, changed_by, changed_at, system_triggered, created_at
+                     change_reason_id, additional_context, changed_by_person_id, changed_at, system_triggered, created_at
             "#,
         )
         .bind(status_change.id)
@@ -1344,7 +1344,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(status_change.new_status.to_string())
         .bind(status_change.change_reason_id)
         .bind(status_change.additional_context.as_ref().map(|s| s.as_str()))
-        .bind(status_change.changed_by)
+        .bind(status_change.changed_by_person_id)
         .bind(status_change.changed_at)
         .bind(status_change.system_triggered)
         .fetch_one(&self.pool)
@@ -1400,13 +1400,13 @@ impl AccountRepository for AccountRepositoryImpl {
             r#"
             SELECT id, product_code, account_type::text as account_type,
                    account_status::text as account_status, signing_condition::text as signing_condition,
-                   currency, open_date, domicile_branch_id, current_balance, available_balance,
+                   currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                    accrued_interest, overdraft_limit, original_principal, outstanding_principal,
                    loan_interest_rate, loan_term_months, disbursement_date, maturity_date,
                    installment_amount, next_due_date, penalty_rate, collateral_id, loan_purpose_id,
                    close_date, last_activity_date, dormancy_threshold_days, reactivation_required,
-                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by,
-                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by
+                   pending_closure_reason_id, last_disbursement_instruction_id, status_changed_by_person_id,
+                   status_change_reason_id, status_change_timestamp, created_at, last_updated_at, updated_by_person_id
             FROM accounts 
             ORDER BY created_at DESC, id ASC
             LIMIT $1 OFFSET $2
@@ -1506,7 +1506,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountModel {
             signing_condition,
             currency,
             open_date: row.get("open_date"),
-            domicile_branch_id: row.get("domicile_branch_id"),
+            domicile_agency_branch_id: row.get("domicile_agency_branch_id"),
             current_balance: row.get("current_balance"),
             available_balance: row.get("available_balance"),
             accrued_interest: row.get("accrued_interest"),
@@ -1528,12 +1528,12 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountModel {
             reactivation_required: row.get("reactivation_required"),
             pending_closure_reason_id: row.get("pending_closure_reason_id"),
             last_disbursement_instruction_id: row.get("last_disbursement_instruction_id"),
-            status_changed_by: row.get("status_changed_by"),
+            status_changed_by_person_id: row.get("status_changed_by_person_id"),
             status_change_reason_id: row.get("status_change_reason_id"),
             status_change_timestamp: row.get("status_change_timestamp"),
             created_at: row.get("created_at"),
             last_updated_at: row.get("last_updated_at"),
-            updated_by: row.get("updated_by"),
+            updated_by_person_id: row.get("updated_by_person_id"),
         })
     }
 }
@@ -1607,7 +1607,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountRelationshipModel {
         Ok(AccountRelationshipModel {
             id: row.get("id"),
             account_id: row.get("account_id"),
-            entity_id: row.get("entity_id"),
+            person_id: row.get("person_id"),
             entity_type,
             relationship_type,
             status,
@@ -1731,12 +1731,12 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountHoldModel {
             hold_type,
             reason_id: row.get("reason_id"),
             additional_details: additional_details_heapless,
-            placed_by: row.get("placed_by"),
+            placed_by_person_id: row.get("placed_by_person_id"),
             placed_at: row.get("placed_at"),
             expires_at: row.get("expires_at"),
             status,
             released_at: row.get("released_at"),
-            released_by: row.get("released_by"),
+            released_by_person_id: row.get("released_by_person_id"),
             priority,
             source_reference: source_reference_heapless,
             automatic_release: row.get("automatic_release"),
@@ -1781,7 +1781,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountFinalSettlementModel {
             final_amount: row.get("final_amount"),
             disbursement_method,
             disbursement_reference: disbursement_reference_heapless,
-            processed_by: row.get("processed_by"),
+            processed_by_person_id: row.get("processed_by_person_id"),
             created_at: row.get("created_at"),
         })
     }
@@ -1839,7 +1839,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for StatusChangeModel {
             new_status,
             change_reason_id: row.get("change_reason_id"),
             additional_context: additional_context_heapless,
-            changed_by: row.get("changed_by"),
+            changed_by_person_id: row.get("changed_by_person_id"),
             changed_at: row.get("changed_at"),
             system_triggered: row.get("system_triggered"),
             created_at: row.get("created_at"),

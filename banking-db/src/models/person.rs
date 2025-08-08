@@ -91,8 +91,8 @@ pub struct CountryModel {
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Database model for StateProvince
@@ -106,8 +106,8 @@ pub struct StateProvinceModel {
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Database model for City
@@ -122,8 +122,8 @@ pub struct CityModel {
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Database model for Address
@@ -144,8 +144,8 @@ pub struct AddressModel {
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Database model for Messaging
@@ -176,8 +176,8 @@ pub struct EntityReferenceModel {
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Database model for person

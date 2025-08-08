@@ -187,7 +187,7 @@ pub trait ReasonAndPurposeRepository: Send + Sync {
         &self,
         category: ReasonCategory,
         order_updates: Vec<(Uuid, i32)>,
-        updated_by: &str,
+        updated_by_person_id: &str,
     ) -> BankingResult<()>;
     
     /// Bulk activate/deactivate reasons
@@ -195,7 +195,7 @@ pub trait ReasonAndPurposeRepository: Send + Sync {
         &self,
         reason_ids: Vec<Uuid>,
         is_active: bool,
-        updated_by: &str,
+        updated_by_person_id: &str,
     ) -> BankingResult<BulkOperationResult>;
     
     // ============================================================================
@@ -208,7 +208,7 @@ pub trait ReasonAndPurposeRepository: Send + Sync {
         reason_id: Uuid,
         language_code: [u8; 3],
         content: &str,
-        updated_by: &str,
+        updated_by_person_id: &str,
     ) -> BankingResult<()>;
     
     /// Remove localized content for a language
@@ -216,7 +216,7 @@ pub trait ReasonAndPurposeRepository: Send + Sync {
         &self,
         reason_id: Uuid,
         language_code: [u8; 3],
-        updated_by: &str,
+        updated_by_person_id: &str,
     ) -> BankingResult<()>;
     
     /// Get reasons with content in specific languages

@@ -32,7 +32,7 @@ pub struct AccountModel {
     pub signing_condition: SigningCondition,
     pub currency: HeaplessString<3>,
     pub open_date: NaiveDate,
-    pub domicile_branch_id: Uuid,
+    pub domicile_agency_branch_id: Uuid,
     
     // Balance fields
     pub current_balance: Decimal,
@@ -66,7 +66,7 @@ pub struct AccountModel {
     
     // Enhanced audit trail
     /// References Person.person_id
-    pub status_changed_by: Option<Uuid>,
+    pub status_changed_by_person_id: Option<Uuid>,
     /// References ReasonAndPurpose.id for status change
     pub status_change_reason_id: Option<Uuid>,
     pub status_change_timestamp: Option<DateTime<Utc>>,
@@ -75,7 +75,7 @@ pub struct AccountModel {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Database model for Account Ownership
@@ -100,7 +100,7 @@ pub struct AccountOwnershipModel {
 pub struct AccountRelationshipModel {
     pub id: Uuid,
     pub account_id: Uuid,
-    pub entity_id: Uuid,
+    pub person_id: Uuid,
     #[serde(
         serialize_with = "serialize_entity_type",
         deserialize_with = "deserialize_entity_type"
@@ -160,7 +160,7 @@ pub struct AccountHoldModel {
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub placed_by: Uuid,
+    pub placed_by_person_id: Uuid,
     pub placed_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     #[serde(
@@ -170,7 +170,7 @@ pub struct AccountHoldModel {
     pub status: HoldStatus,
     pub released_at: Option<DateTime<Utc>>,
     /// References Person.person_id
-    pub released_by: Option<Uuid>,
+    pub released_by_person_id: Option<Uuid>,
     #[serde(
         serialize_with = "serialize_hold_priority",
         deserialize_with = "deserialize_hold_priority"
@@ -201,7 +201,7 @@ pub struct AccountStatusHistoryModel {
     /// Additional context for status change
     pub additional_context: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub changed_by: Uuid,
+    pub changed_by_person_id: Uuid,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
     pub created_at: DateTime<Utc>,
@@ -225,7 +225,7 @@ pub struct AccountFinalSettlementModel {
     pub disbursement_method: DisbursementMethod,
     pub disbursement_reference: Option<HeaplessString<100>>,
     /// References Person.person_id
-    pub processed_by: Uuid,
+    pub processed_by_person_id: Uuid,
     pub created_at: DateTime<Utc>,
 }
 
@@ -247,11 +247,11 @@ pub struct DisbursementInstructionsModel {
         deserialize_with = "deserialize_disbursement_method"
     )]
     pub method: DisbursementMethod,
-    pub target_account: Option<Uuid>,
+    pub target_account_id: Option<Uuid>,
     /// References AgencyBranch.branch_id for cash pickup
-    pub cash_pickup_branch_id: Option<Uuid>,
+    pub cash_pickup_agency_branch_id: Option<Uuid>,
     /// References Person.person_id for authorized recipient
-    pub authorized_recipient: Option<Uuid>,
+    pub authorized_recipient_person_id: Option<Uuid>,
     
     // Disbursement tracking and staging
     pub disbursement_amount: Option<Decimal>,
@@ -268,9 +268,9 @@ pub struct DisbursementInstructionsModel {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 // Note: DisbursementStatus is now imported from banking_api::domain
@@ -344,7 +344,7 @@ pub struct HoldReleaseRequestModel {
     /// Additional context for release
     pub release_additional_details: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub released_by: Uuid,
+    pub released_by_person_id: Uuid,
     pub override_authorization: bool,
 }
 
@@ -401,7 +401,7 @@ pub struct PlaceHoldRequestModel {
     /// Additional context beyond the standard reason
     pub additional_details: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub placed_by: Uuid,
+    pub placed_by_person_id: Uuid,
     pub expires_at: Option<DateTime<Utc>>,
     #[serde(
         serialize_with = "serialize_hold_priority",

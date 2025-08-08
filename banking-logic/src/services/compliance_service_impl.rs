@@ -229,7 +229,7 @@ impl ComplianceService for ComplianceServiceImpl {
     }
 
     /// Update compliance alert status
-    async fn update_alert_status(&self, alert_id: Uuid, status: AlertStatus, updated_by: Uuid) -> BankingResult<()> {
+    async fn update_alert_status(&self, alert_id: Uuid, status: AlertStatus, updated_by_person_id: Uuid) -> BankingResult<()> {
         let status_str = match status {
             AlertStatus::New => "New",
             AlertStatus::InReview => "InReview",
@@ -239,7 +239,7 @@ impl ComplianceService for ComplianceServiceImpl {
         };
 
         // Convert UUID to string for repository call
-        let updated_by_str = updated_by.to_string();
+        let updated_by_str = updated_by_person_id.to_string();
         
         self.compliance_repository
             .update_alert_status(alert_id, status_str, Some(&updated_by_str))
