@@ -27,7 +27,7 @@ impl AgentNetworkMapper {
             network_name: network.network_name,
             network_type: Self::network_type_to_db(network.network_type),
             status: Self::network_status_to_db(network.status),
-            contract_id: network.contract_id,
+            contract_external_id: network.contract_external_id,
             aggregate_daily_limit: network.aggregate_daily_limit,
             current_daily_volume: network.current_daily_volume,
             settlement_gl_code: network.settlement_gl_code,
@@ -44,7 +44,7 @@ impl AgentNetworkMapper {
             network_name: model.network_name,
             network_type: Self::network_type_from_db(model.network_type),
             status: Self::network_status_from_db(model.status),
-            contract_id: model.contract_id,
+            contract_external_id: model.contract_external_id,
             aggregate_daily_limit: model.aggregate_daily_limit,
             current_daily_volume: model.current_daily_volume,
             settlement_gl_code: model.settlement_gl_code,
@@ -56,8 +56,8 @@ impl AgentNetworkMapper {
     pub fn branch_to_model(branch: AgencyBranch) -> AgencyBranchModel {
         AgencyBranchModel {
             id: branch.id,
-            network_id: branch.network_id,
-            parent_branch_id: branch.parent_branch_id,
+            agent_network_id: branch.agent_network_id,
+            parent_agency_branch_id: branch.parent_agency_branch_id,
             branch_name: branch.branch_name,
             branch_code: branch.branch_code,
             branch_level: branch.branch_level,
@@ -71,12 +71,12 @@ impl AgentNetworkMapper {
             created_at: branch.created_at,
             
             // Location fields - normalized to UUID references
-            address: branch.address, // UUID reference to address
+            address_id: branch.address_id,
             landmark_description: branch.landmark_description,
             
             // Operational details - normalized to UUID references
-            operating_hours: branch.operating_hours, // UUID reference to operating hours
-            holiday_plan: branch.holiday_plan, // UUID reference to holiday plan
+            operating_hours_id: branch.operating_hours_id,
+            holiday_plan_id: branch.holiday_plan_id,
             temporary_closure_id: branch.temporary_closure_id, // UUID reference to temporary closure
             
             // Contact information - individual messaging fields
@@ -90,14 +90,14 @@ impl AgentNetworkMapper {
             messaging4_type: branch.messaging4_type.map(Self::messaging_type_to_db),
             messaging5_id: branch.messaging5_id,
             messaging5_type: branch.messaging5_type.map(Self::messaging_type_to_db),
-            branch_manager_id: branch.branch_manager_id,
+            branch_manager_person_id: branch.branch_manager_person_id,
             
             // Services and capabilities - normalized to UUID reference
             branch_type: Self::branch_type_to_db(branch.branch_type),
-            branch_capabilities: branch.branch_capabilities, // UUID reference to capabilities
+            branch_capabilities_id: branch.branch_capabilities_id,
             
             // Security and access - normalized to UUID reference
-            security_access: branch.security_access, // UUID reference to security access
+            security_access_id: branch.security_access_id,
             
             // Customer capacity
             max_daily_customers: branch.max_daily_customers,
@@ -122,8 +122,8 @@ impl AgentNetworkMapper {
     pub fn branch_from_model(model: AgencyBranchModel) -> AgencyBranch {
         AgencyBranch {
             id: model.id,
-            network_id: model.network_id,
-            parent_branch_id: model.parent_branch_id,
+            agent_network_id: model.agent_network_id,
+            parent_agency_branch_id: model.parent_agency_branch_id,
             branch_name: model.branch_name,
             branch_code: model.branch_code,
             branch_level: model.branch_level,
@@ -137,12 +137,12 @@ impl AgentNetworkMapper {
             created_at: model.created_at,
             
             // Location fields
-            address: model.address,
+            address_id: model.address_id,
             landmark_description: model.landmark_description,
             
             // Operational details
-            operating_hours: model.operating_hours,
-            holiday_plan: model.holiday_plan,
+            operating_hours_id: model.operating_hours_id,
+            holiday_plan_id: model.holiday_plan_id,
             temporary_closure_id: model.temporary_closure_id,
             
             // Contact information - individual messaging fields
@@ -156,14 +156,14 @@ impl AgentNetworkMapper {
             messaging4_type: model.messaging4_type.map(Self::messaging_type_from_db),
             messaging5_id: model.messaging5_id,
             messaging5_type: model.messaging5_type.map(Self::messaging_type_from_db),
-            branch_manager_id: model.branch_manager_id,
+            branch_manager_person_id: model.branch_manager_person_id,
             
             // Services and capabilities
             branch_type: Self::branch_type_from_db(model.branch_type),
-            branch_capabilities: model.branch_capabilities,
+            branch_capabilities_id: model.branch_capabilities_id,
             
             // Security and access
-            security_access: model.security_access,
+            security_access_id: model.security_access_id,
             
             // Customer capacity
             max_daily_customers: model.max_daily_customers,
@@ -188,8 +188,8 @@ impl AgentNetworkMapper {
     pub fn terminal_to_model(terminal: AgentTerminal) -> AgentTerminalModel {
         AgentTerminalModel {
             id: terminal.id,
-            branch_id: terminal.branch_id,
-            agent_user_id: terminal.agent_user_id,
+            agency_branch_id: terminal.agency_branch_id,
+            agent_person_id: terminal.agent_person_id,
             terminal_type: Self::terminal_type_to_db(terminal.terminal_type),
             terminal_name: terminal.terminal_name,
             daily_transaction_limit: terminal.daily_transaction_limit,
@@ -209,8 +209,8 @@ impl AgentNetworkMapper {
     pub fn terminal_from_model(model: AgentTerminalModel) -> AgentTerminal {
         AgentTerminal {
             id: model.id,
-            branch_id: model.branch_id,
-            agent_user_id: model.agent_user_id,
+            agency_branch_id: model.agency_branch_id,
+            agent_person_id: model.agent_person_id,
             terminal_type: Self::terminal_type_from_db(model.terminal_type),
             terminal_name: model.terminal_name,
             daily_transaction_limit: model.daily_transaction_limit,

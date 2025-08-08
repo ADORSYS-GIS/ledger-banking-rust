@@ -54,7 +54,7 @@ impl BranchSummary {
             branch_name: branch.branch_name.to_string(),
             branch_code: branch.branch_code.to_string(),
             branch_type: branch.branch_type,
-            address: format!("Address ID: {}", branch.address), // Simplified - would need to fetch actual address
+            address: format!("Address ID: {}", branch.address_id), // Simplified - would need to fetch actual address
             is_open_now: branch.is_cash_pickup_enabled_basic(), // Simplified check
             services_available: Vec::new(), // Would need to fetch from branch_capabilities
             wait_time_minutes: branch.average_wait_time_minutes,
@@ -180,14 +180,14 @@ impl BranchDetailView {
 
         Self {
             branch_id: branch.id,
-            network_id: branch.network_id,
-            parent_branch_id: branch.parent_branch_id,
+            network_id: branch.agent_network_id,
+            parent_branch_id: branch.parent_agency_branch_id,
             branch_name: branch.branch_name.to_string(),
             branch_code: branch.branch_code.to_string(),
             branch_type: branch.branch_type,
             status: format!("{:?}", branch.status),
             address: AddressView {
-                street_line1: format!("Address ID: {}", branch.address), // Simplified - would need to fetch actual address
+                street_line1: format!("Address ID: {}", branch.address_id), // Simplified - would need to fetch actual address
                 street_line2: None,
                 city: "Unknown City".to_string(), // Would need to fetch from address reference
                 state_province: "Unknown State".to_string(),

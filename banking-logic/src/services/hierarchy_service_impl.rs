@@ -37,7 +37,7 @@ impl HierarchyServiceImpl {
             .await?
             .ok_or_else(|| BankingError::Internal(format!("Branch {branch_id} not found")))?;
 
-        if branch.network_id != network_id {
+        if branch.agent_network_id != network_id {
             return Err(BankingError::ValidationFailed(
                 format!("Branch {branch_id} does not belong to network {network_id}")
             ));
@@ -118,12 +118,12 @@ impl HierarchyService for HierarchyServiceImpl {
 
         // Get branch and validate it's active
         let branch_model = self.agent_network_repository
-            .find_branch_by_id(terminal_model.branch_id)
+            .find_branch_by_id(terminal_model.agency_branch_id)
             .await?
-            .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal_model.branch_id)))?;
+            .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal_model.agency_branch_id)))?;
 
         if branch_model.status != DbBranchStatus::Active {
-            return Ok(ValidationResult::failure(vec![ format!("Branch {} is not active", terminal_model.branch_id)
+            return Ok(ValidationResult::failure(vec![ format!("Branch {} is not active", terminal_model.agency_branch_id)
             ]));
         }
 
@@ -137,12 +137,12 @@ impl HierarchyService for HierarchyServiceImpl {
 
         // Get network and validate it's active
         let network_model = self.agent_network_repository
-            .find_network_by_id(branch_model.network_id)
+            .find_network_by_id(branch_model.agent_network_id)
             .await?
-            .ok_or_else(|| BankingError::Internal(format!("Network {} not found", branch_model.network_id)))?;
+            .ok_or_else(|| BankingError::Internal(format!("Network {} not found", branch_model.agent_network_id)))?;
 
         if network_model.status != DbNetworkStatus::Active {
-            return Ok(ValidationResult::failure(vec![ format!("Network {} is not active", branch_model.network_id)
+            return Ok(ValidationResult::failure(vec![ format!("Network {} is not active", branch_model.agent_network_id)
             ]));
         }
 
@@ -174,14 +174,14 @@ impl HierarchyService for HierarchyServiceImpl {
             .ok_or_else(|| BankingError::Internal(format!("Terminal {terminal_id} not found")))?;
 
         let branch_model = self.agent_network_repository
-            .find_branch_by_id(terminal_model.branch_id)
+            .find_branch_by_id(terminal_model.agency_branch_id)
             .await?
-            .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal_model.branch_id)))?;
+            .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal_model.agency_branch_id)))?;
 
         // Update volumes at all levels
         self.agent_network_repository.update_terminal_daily_volume(terminal_id, amount).await?;
-        self.agent_network_repository.update_branch_daily_volume(terminal_model.branch_id, amount).await?;
-        self.agent_network_repository.update_network_daily_volume(branch_model.network_id, amount).await?;
+        self.agent_network_repository.update_branch_daily_volume(terminal_model.agency_branch_id, amount).await?;
+        self.agent_network_repository.update_network_daily_volume(branch_model.agent_network_id, amount).await?;
 
         Ok(())
     }
@@ -254,13 +254,13 @@ impl HierarchyService for HierarchyServiceImpl {
 
         // Validate network exists and is active
         let network_model = self.agent_network_repository
-            .find_network_by_id(branch.network_id)
+            .find_network_by_id(branch.agent_network_id)
             .await?
-            .ok_or_else(|| BankingError::Internal(format!("Network {} not found", branch.network_id)))?;
+            .ok_or_else(|| BankingError::Internal(format!("Network {} not found", branch.agent_network_id)))?;
 
         if network_model.status != DbNetworkStatus::Active {
             return Err(BankingError::ValidationFailed(
-                format!("Cannot create branch under inactive network {}", branch.network_id)
+                format!("Cannot create branch under inactive network {}", branch.agent_network_id)
             ));
         }
 
@@ -277,8 +277,8 @@ impl HierarchyService for HierarchyServiceImpl {
         }
 
         // Validate parent branch if specified
-        if let Some(parent_id) = branch.parent_branch_id {
-            self.validate_branch_network_relationship(parent_id, branch.network_id).await?;
+        if let Some(parent_id) = branch.parent_agency_branch_id {
+            self.validate_branch_network_relationship(parent_id, branch.agent_network_id).await?;
             
             // Set branch level based on parent
             let parent_model = self.agent_network_repository
@@ -313,13 +313,13 @@ impl HierarchyService for HierarchyServiceImpl {
 
         // Validate branch exists and is active
         let branch_model = self.agent_network_repository
-            .find_branch_by_id(terminal.branch_id)
+            .find_branch_by_id(terminal.agency_branch_id)
             .await?
-            .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal.branch_id)))?;
+            .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal.agency_branch_id)))?;
 
         if branch_model.status != DbBranchStatus::Active {
             return Err(BankingError::ValidationFailed(
-                format!("Cannot create terminal under inactive branch {}", terminal.branch_id)
+                format!("Cannot create terminal under inactive branch {}", terminal.agency_branch_id)
             ));
         }
 

@@ -29,15 +29,15 @@ impl AgentNetworkRepositoryImpl {
             FROM agent_networks 
             WHERE id = $1
             "#,
-            branch.network_id
+            branch.agent_network_id
         )
         .fetch_optional(&self.pool)
         .await?;
 
         let network = network.ok_or_else(|| {
             banking_api::error::BankingError::ValidationError {
-                field: "network_id".to_string(),
-                message: format!("Parent network {} not found", branch.network_id),
+                field: "agent_network_id".to_string(),
+                message: format!("Parent network {} not found", branch.agent_network_id),
             }
         })?;
 
@@ -79,15 +79,15 @@ impl AgentNetworkRepositoryImpl {
             FROM agent_branches 
             WHERE id = $1
             "#,
-            terminal.branch_id
+            terminal.agency_branch_id
         )
         .fetch_optional(&self.pool)
         .await?;
 
         let branch = branch.ok_or_else(|| {
             banking_api::error::BankingError::ValidationError {
-                field: "branch_id".to_string(),
-                message: format!("Parent branch {} not found", terminal.branch_id),
+                field: "agency_branch_id".to_string(),
+                message: format!("Parent branch {} not found", terminal.agency_branch_id),
             }
         })?;
 
@@ -223,8 +223,8 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
                 n.aggregate_daily_limit as network_daily_limit,
                 n.status::text as network_status
             FROM agent_terminals t
-            JOIN agent_branches b ON t.branch_id = b.id
-            JOIN agent_networks n ON b.network_id = n.id
+            JOIN agent_branches b ON t.agency_branch_id = b.id
+            JOIN agent_networks n ON b.agent_network_id = n.id
             WHERE t.id = $1
             "#,
             terminal_id
