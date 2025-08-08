@@ -1724,7 +1724,9 @@ CREATE TABLE channels (
     status channel_status NOT NULL DEFAULT 'Active',
     daily_limit DECIMAL(15,2),
     per_transaction_limit DECIMAL(15,2),
-    supported_currencies VARCHAR(3)[] NOT NULL DEFAULT ARRAY['USD'], -- Array of 3-character currency codes
+    supported_currency01 VARCHAR(3),
+    supported_currency02 VARCHAR(3),
+    supported_currency03 VARCHAR(3),
     requires_additional_auth BOOLEAN NOT NULL DEFAULT FALSE,
     fee_schedule_id UUID,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1741,6 +1743,11 @@ CREATE TABLE fee_schedules (
     effective_date DATE NOT NULL,
     expiry_date DATE,
     currency VARCHAR(3) NOT NULL,
+    fee01_fee_item_id UUID,
+    fee02_fee_item_id UUID,
+    fee03_fee_item_id UUID,
+    fee04_fee_item_id UUID,
+    fee05_fee_item_id UUID,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1761,7 +1768,28 @@ CREATE TABLE fee_items (
     fee_percentage DECIMAL(8,6),
     minimum_fee DECIMAL(15,2),
     maximum_fee DECIMAL(15,2),
-    applies_to_transaction_types VARCHAR(20)[] DEFAULT ARRAY[]::VARCHAR[], -- Array of transaction type codes
+    tier01_channel_fee_tier_id UUID,
+    tier02_channel_fee_tier_id UUID,
+    tier03_channel_fee_tier_id UUID,
+    tier04_channel_fee_tier_id UUID,
+    tier05_channel_fee_tier_id UUID,
+    tier06_channel_fee_tier_id UUID,
+    tier07_channel_fee_tier_id UUID,
+    tier08_channel_fee_tier_id UUID,
+    tier09_channel_fee_tier_id UUID,
+    tier10_channel_fee_tier_id UUID,
+    tier11_channel_fee_tier_id UUID,
+    applies_to_transaction_type_01 VARCHAR(20),
+    applies_to_transaction_type_02 VARCHAR(20),
+    applies_to_transaction_type_03 VARCHAR(20),
+    applies_to_transaction_type_04 VARCHAR(20),
+    applies_to_transaction_type_05 VARCHAR(20),
+    applies_to_transaction_type_06 VARCHAR(20),
+    applies_to_transaction_type_07 VARCHAR(20),
+    applies_to_transaction_type_08 VARCHAR(20),
+    applies_to_transaction_type_09 VARCHAR(20),
+    applies_to_transaction_type_10 VARCHAR(20),
+    applies_to_transaction_type_11 VARCHAR(20),
     is_waivable BOOLEAN NOT NULL DEFAULT FALSE,
     requires_approval_for_waiver BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1819,6 +1847,16 @@ CREATE TABLE reconciliation_discrepancies (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_discrepancy_difference CHECK (difference = expected_amount - actual_amount)
+);
+
+-- Reconciliation report discrepancies junction table
+CREATE TABLE reconciliation_report_discrepancies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    reconciliation_report_id UUID NOT NULL REFERENCES channel_reconciliation_reports(id) ON DELETE CASCADE,
+    discrepancy_id UUID NOT NULL REFERENCES reconciliation_discrepancies(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    UNIQUE(reconciliation_report_id, discrepancy_id)
 );
 
 -- Channel fees table

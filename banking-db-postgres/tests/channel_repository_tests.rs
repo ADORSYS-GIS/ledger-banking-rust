@@ -40,10 +40,9 @@ mod channel_repository_tests {
             status: ChannelStatus::Active,
             daily_limit: Some(Decimal::from_str("10000.00").unwrap()),
             per_transaction_limit: Some(Decimal::from_str("5000.00").unwrap()),
-            supported_currencies: vec![
-                HeaplessString::try_from("USD").unwrap(),
-                HeaplessString::try_from("EUR").unwrap(),
-            ],
+            supported_currency01: Some(HeaplessString::try_from("USD").unwrap()),
+            supported_currency02: Some(HeaplessString::try_from("EUR").unwrap()),
+            supported_currency03: None,
             requires_additional_auth: false,
             fee_schedule_id: None,
             created_at: now,
@@ -65,7 +64,9 @@ mod channel_repository_tests {
             status: ChannelStatus::Active,
             daily_limit: Some(Decimal::from_str("20000.00").unwrap()),
             per_transaction_limit: Some(Decimal::from_str("1000.00").unwrap()),
-            supported_currencies: vec![HeaplessString::try_from("USD").unwrap()],
+            supported_currency01: Some(HeaplessString::try_from("USD").unwrap()),
+            supported_currency02: None,
+            supported_currency03: None,
             requires_additional_auth: true,
             fee_schedule_id: None,
             created_at: now,
@@ -91,7 +92,9 @@ mod channel_repository_tests {
         assert!(matches!(created.status, ChannelStatus::Active));
         assert_eq!(created.daily_limit, Some(Decimal::from_str("10000.00").unwrap()));
         assert_eq!(created.per_transaction_limit, Some(Decimal::from_str("5000.00").unwrap()));
-        assert_eq!(created.supported_currencies.len(), 2);
+        assert_eq!(created.supported_currency01.as_ref().unwrap().as_str(), "USD");
+        assert_eq!(created.supported_currency02.as_ref().unwrap().as_str(), "EUR");
+        assert!(created.supported_currency03.is_none());
         assert!(!created.requires_additional_auth);
         
         cleanup_database(&repo.get_pool()).await;
@@ -254,24 +257,29 @@ mod channel_repository_tests {
         let repo = ChannelRepositoryImpl::new(pool);
         
         let mut channel1 = create_unique_test_channel("001");
-        channel1.supported_currencies = vec![
-            HeaplessString::try_from("USD").unwrap(),
-            HeaplessString::try_from("EUR").unwrap(),
-        ];
+        channel1.supported_currency01 = Some(HeaplessString::try_from("USD").unwrap());
+        channel1.supported_currency02 = Some(HeaplessString::try_from("EUR").unwrap());
+        channel1.supported_currency03 = None;
         
         let mut channel2 = create_unique_test_channel("002");
-        channel2.supported_currencies = vec![HeaplessString::try_from("GBP").unwrap()];
+        channel2.supported_currency01 = Some(HeaplessString::try_from("GBP").unwrap());
+        channel2.supported_currency02 = None;
+        channel2.supported_currency03 = None;
         
         let _created1 = repo.create(channel1).await.expect("Failed to create channel 1");
         let _created2 = repo.create(channel2).await.expect("Failed to create channel 2");
         
         let usd_channels = repo.find_by_currency("USD").await.expect("Failed to find USD channels");
         assert_eq!(usd_channels.len(), 1);
-        assert!(usd_channels[0].supported_currencies.iter().any(|c| c.as_str() == "USD"));
+        assert!(usd_channels[0].supported_currency01.as_ref().map_or(false, |c| c.as_str() == "USD") || 
+                usd_channels[0].supported_currency02.as_ref().map_or(false, |c| c.as_str() == "USD") || 
+                usd_channels[0].supported_currency03.as_ref().map_or(false, |c| c.as_str() == "USD"));
         
         let gbp_channels = repo.find_by_currency("GBP").await.expect("Failed to find GBP channels");
         assert_eq!(gbp_channels.len(), 1);
-        assert!(gbp_channels[0].supported_currencies.iter().any(|c| c.as_str() == "GBP"));
+        assert!(gbp_channels[0].supported_currency01.as_ref().map_or(false, |c| c.as_str() == "GBP") || 
+                gbp_channels[0].supported_currency02.as_ref().map_or(false, |c| c.as_str() == "GBP") || 
+                gbp_channels[0].supported_currency03.as_ref().map_or(false, |c| c.as_str() == "GBP"));
         
         cleanup_database(&repo.get_pool()).await;
     }
