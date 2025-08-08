@@ -661,12 +661,16 @@ impl AccountRepository for AccountRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO account_mandates (
-                mandate_id, account_id, grantee_customer_id, permission_type,
-                transaction_limit, approval_group_id, status, start_date, end_date
+                id, account_id, grantee_customer_id, permission_type,
+                transaction_limit, approver01_person_id, approver02_person_id, approver03_person_id,
+                approver04_person_id, approver05_person_id, approver06_person_id, approver07_person_id,
+                required_signers_count, conditional_mandate_id, status, start_date, end_date
             )
-            VALUES ($1, $2, $3, $4::permission_type, $5, $6, $7::mandate_status, $8, $9)
-            RETURNING mandate_id, account_id, grantee_customer_id, permission_type::text as permission_type,
-                     transaction_limit, approval_group_id, status::text as status, start_date, end_date
+            VALUES ($1, $2, $3, $4::permission_type, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::mandate_status, $16, $17)
+            RETURNING id, account_id, grantee_customer_id, permission_type::text as permission_type,
+                     transaction_limit, approver01_person_id, approver02_person_id, approver03_person_id,
+                     approver04_person_id, approver05_person_id, approver06_person_id, approver07_person_id,
+                     required_signers_count, conditional_mandate_id, status::text as status, start_date, end_date
             "#,
         )
         .bind(mandate.id)
@@ -674,7 +678,15 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(mandate.grantee_customer_id)
         .bind(mandate.permission_type.to_string())
         .bind(mandate.transaction_limit)
-        .bind(mandate.approval_group_id)
+        .bind(mandate.approver01_person_id)
+        .bind(mandate.approver02_person_id)
+        .bind(mandate.approver03_person_id)
+        .bind(mandate.approver04_person_id)
+        .bind(mandate.approver05_person_id)
+        .bind(mandate.approver06_person_id)
+        .bind(mandate.approver07_person_id)
+        .bind(mandate.required_signers_count as i16)
+        .bind(mandate.conditional_mandate_id)
         .bind(mandate.status.to_string())
         .bind(mandate.start_date)
         .bind(mandate.end_date)
@@ -687,8 +699,10 @@ impl AccountRepository for AccountRepositoryImpl {
     async fn find_mandates_by_account(&self, account_id: Uuid) -> BankingResult<Vec<AccountMandateModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT mandate_id, account_id, grantee_customer_id, permission_type::text as permission_type,
-                   transaction_limit, approval_group_id, status::text as status, start_date, end_date
+            SELECT id, account_id, grantee_customer_id, permission_type::text as permission_type,
+                   transaction_limit, approver01_person_id, approver02_person_id, approver03_person_id,
+                   approver04_person_id, approver05_person_id, approver06_person_id, approver07_person_id,
+                   required_signers_count, conditional_mandate_id, status::text as status, start_date, end_date
             FROM account_mandates 
             WHERE account_id = $1
             ORDER BY start_date DESC
@@ -708,8 +722,10 @@ impl AccountRepository for AccountRepositoryImpl {
     async fn find_mandates_by_grantee(&self, grantee_customer_id: Uuid) -> BankingResult<Vec<AccountMandateModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT mandate_id, account_id, grantee_customer_id, permission_type::text as permission_type,
-                   transaction_limit, approval_group_id, status::text as status, start_date, end_date
+            SELECT id, account_id, grantee_customer_id, permission_type::text as permission_type,
+                   transaction_limit, approver01_person_id, approver02_person_id, approver03_person_id,
+                   approver04_person_id, approver05_person_id, approver06_person_id, approver07_person_id,
+                   required_signers_count, conditional_mandate_id, status::text as status, start_date, end_date
             FROM account_mandates 
             WHERE grantee_customer_id = $1
             ORDER BY start_date DESC
@@ -745,8 +761,10 @@ impl AccountRepository for AccountRepositoryImpl {
     async fn find_active_mandates(&self, account_id: Uuid) -> BankingResult<Vec<AccountMandateModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT mandate_id, account_id, grantee_customer_id, permission_type::text as permission_type,
-                   transaction_limit, approval_group_id, status::text as status, start_date, end_date
+            SELECT id, account_id, grantee_customer_id, permission_type::text as permission_type,
+                   transaction_limit, approver01_person_id, approver02_person_id, approver03_person_id,
+                   approver04_person_id, approver05_person_id, approver06_person_id, approver07_person_id,
+                   required_signers_count, conditional_mandate_id, status::text as status, start_date, end_date
             FROM account_mandates 
             WHERE account_id = $1 AND status = 'Active'
               AND start_date <= CURRENT_DATE 
@@ -1651,7 +1669,15 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountMandateModel {
             grantee_customer_id: row.get("grantee_customer_id"),
             permission_type,
             transaction_limit: row.get("transaction_limit"),
-            approval_group_id: row.get("approval_group_id"),
+            approver01_person_id: row.get("approver01_person_id"),
+            approver02_person_id: row.get("approver02_person_id"),
+            approver03_person_id: row.get("approver03_person_id"),
+            approver04_person_id: row.get("approver04_person_id"),
+            approver05_person_id: row.get("approver05_person_id"),
+            approver06_person_id: row.get("approver06_person_id"),
+            approver07_person_id: row.get("approver07_person_id"),
+            required_signers_count: row.get::<i16, _>("required_signers_count") as u8,
+            conditional_mandate_id: row.get("conditional_mandate_id"),
             status,
             start_date: row.get("start_date"),
             end_date: row.get("end_date"),
