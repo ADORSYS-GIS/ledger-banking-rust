@@ -4,7 +4,7 @@
 
 Enterprise-grade core banking system built with Rust supporting multi-product banking (savings, current accounts, loans), agent networks, compliance, and workflow management.
 
-**Current Status**: Strong architectural foundation with 87% service implementations complete. PostgreSQL repository implementations now **100% complete** (13 of 13 repositories implemented, including comprehensive testing and production-ready functionality). **Major milestone**: All PostgreSQL test infrastructure issues resolved with 298+ tests passing. **Latest Feature**: Daily Collection Service for agent-mediated banking operations.
+**Current Status**: Strong architectural foundation with 87% service implementations complete. PostgreSQL repository implementations now **100% complete** (13 of 13 repositories implemented, including comprehensive testing and production-ready functionality). **Major milestone**: All PostgreSQL test infrastructure issues resolved with 298+ tests passing. **Latest Achievement**: Completed comprehensive identifier normalization across entire codebase (83+ files) ensuring consistent `id` field naming throughout all domain models and database schema.
 
 ## Architecture & Stack
 
@@ -105,6 +105,57 @@ Full interfaces with CRUD operations, banking-specific extensions, and batch pro
 - **Native UUIDs**: PostgreSQL UUID type for all primary keys
 - **25+ Tables**: Complete schema with foreign keys, constraints, indexes
 - **Audit Triggers**: Automatic timestamp updates
+
+### Identifier Normalization (January 2025)
+
+**🎯 Major Architectural Improvement**: Completed comprehensive identifier normalization across the entire system.
+
+**✅ Normalization Achievement:**
+- **Consistent Naming**: All struct identifiers now use uniform `id` field naming
+- **Database Schema Alignment**: PostgreSQL tables use `id` as primary key columns throughout
+- **Code Consistency**: Eliminated legacy `*_id` naming patterns across 83+ files
+- **Test Infrastructure**: Updated all test fixtures and SQL queries to match normalized schema
+
+**Before Normalization:**
+```rust
+// Inconsistent identifier naming
+struct Customer {
+    customer_id: Uuid,  // Different field names
+    // ...
+}
+struct Account {
+    account_id: Uuid,   // across different models
+    // ...
+}
+
+// Inconsistent database queries
+"SELECT customer_id FROM customers"
+"SELECT account_id FROM accounts" 
+```
+
+**After Normalization:**
+```rust
+// Uniform identifier naming
+struct Customer {
+    id: Uuid,           // Consistent 'id' field
+    // ...
+}
+struct Account {
+    id: Uuid,           // across all models
+    // ...
+}
+
+// Consistent database queries
+"SELECT id FROM customers"
+"SELECT id FROM accounts"
+```
+
+**✅ Technical Benefits:**
+- **Developer Experience**: Predictable field naming across all domain models
+- **Code Maintainability**: Reduced cognitive load with consistent patterns
+- **Database Integrity**: Proper foreign key relationships with normalized references
+- **Test Reliability**: Eliminated schema misalignment issues causing test failures
+- **Query Consistency**: Uniform column references in all SQL operations
 
 ## Code Quality & Patterns
 
@@ -321,9 +372,9 @@ async fn setup_test_db() -> PgPool {
     // Create test person for foreign key references
     let test_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     sqlx::query(
-        "INSERT INTO persons (person_id, person_type, display_name, external_identifier)
+        "INSERT INTO persons (id, person_type, display_name, external_identifier)
          VALUES ($1, 'system', 'Test User', 'test-user')
-         ON CONFLICT (person_id) DO NOTHING"
+         ON CONFLICT (id) DO NOTHING"
     )
     .bind(test_person_id)
     .execute(&pool)
@@ -383,7 +434,7 @@ let loan_account = AccountModel {
 impl TryFromRow<PgRow> for AccountModel {
     fn try_from_row(row: &PgRow) -> BankingResult<Self> {
         Ok(AccountModel {
-            account_id: row.get("account_id"),
+            id: row.get("id"),
             product_code: HeaplessString::try_from(
                 row.get::<String, _>("product_code").as_str()
             ).map_err(|_| BankingError::ValidationError {
@@ -499,7 +550,7 @@ async fn test_workflow_crud_operations() {
     let created = repo.create_workflow(&workflow).await?;
     
     // READ - by ID with proper error handling
-    let found = repo.find_workflow_by_id(workflow.workflow_id).await?;
+    let found = repo.find_workflow_by_id(workflow.id).await?;
     
     // UPDATE - with status transitions
     repo.complete_workflow(workflow_id, "Success").await?;
