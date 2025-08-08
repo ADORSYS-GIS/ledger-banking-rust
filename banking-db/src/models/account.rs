@@ -3,7 +3,7 @@ use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
-use banking_api::domain::{
+pub use banking_api::domain::{
     AccountType, AccountStatus, SigningCondition, DisbursementMethod, DisbursementStatus, HoldType, HoldStatus, 
     HoldPriority, OwnershipType, EntityType, RelationshipType, RelationshipStatus, 
     PermissionType, MandateStatus, ControlType, VerificationStatus, UboStatus
@@ -13,7 +13,7 @@ use banking_api::domain::{
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountModel {
-    pub account_id: Uuid,
+    pub id: Uuid,
     pub product_code: HeaplessString<12>,
     #[serde(
         serialize_with = "serialize_account_type",
@@ -82,7 +82,7 @@ pub struct AccountModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountOwnershipModel {
-    pub ownership_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub customer_id: Uuid,
     #[serde(
@@ -98,7 +98,7 @@ pub struct AccountOwnershipModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountRelationshipModel {
-    pub relationship_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub entity_id: Uuid,
     #[serde(
@@ -124,7 +124,7 @@ pub struct AccountRelationshipModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountMandateModel {
-    pub mandate_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub grantee_customer_id: Uuid,
     #[serde(
@@ -147,7 +147,7 @@ pub struct AccountMandateModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountHoldModel {
-    pub hold_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub amount: Decimal,
     #[serde(
@@ -184,7 +184,7 @@ pub struct AccountHoldModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountStatusHistoryModel {
-    pub history_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     #[serde(
         serialize_with = "serialize_account_status_option",
@@ -211,7 +211,7 @@ pub struct AccountStatusHistoryModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountFinalSettlementModel {
-    pub settlement_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub settlement_date: NaiveDate,
     pub current_balance: Decimal,
@@ -239,7 +239,7 @@ pub type StatusChangeModel = AccountStatusHistoryModel;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct DisbursementInstructionsModel {
-    pub disbursement_id: Uuid,
+    pub id: Uuid,
     /// References the account holding the loan (source of funds)
     pub source_account_id: Uuid,
     #[serde(
@@ -279,7 +279,7 @@ pub struct DisbursementInstructionsModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct UltimateBeneficiaryModel {
-    pub ubo_link_id: Uuid,
+    pub id: Uuid,
     pub corporate_customer_id: Uuid,
     pub beneficiary_customer_id: Uuid,
     pub ownership_percentage: Option<Decimal>,
@@ -337,7 +337,7 @@ pub struct AccountHoldSummaryModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct HoldReleaseRequestModel {
-    pub hold_id: Uuid,
+    pub id: Uuid,
     pub release_amount: Option<Decimal>, // For partial releases
     /// References ReasonAndPurpose.id for release
     pub release_reason_id: Uuid,
@@ -352,7 +352,7 @@ pub struct HoldReleaseRequestModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountHoldExpiryJobModel {
-    pub job_id: Uuid,
+    pub id: Uuid,
     pub processing_date: NaiveDate,
     pub expired_holds_count: u32,
     pub total_released_amount: Decimal,
@@ -364,7 +364,7 @@ pub struct AccountHoldExpiryJobModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct StatusChangeRecordModel {
-    pub change_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     #[serde(
         serialize_with = "serialize_account_status_option",

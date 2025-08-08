@@ -83,7 +83,7 @@ pub enum RelationshipRole {
 /// Database model for Country
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CountryModel {
-    pub country_id: Uuid,
+    pub id: Uuid,
     pub iso2: HeaplessString<2>,
     pub name_l1: HeaplessString<100>,
     pub name_l2: Option<HeaplessString<100>>,
@@ -98,7 +98,7 @@ pub struct CountryModel {
 /// Database model for StateProvince
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct StateProvinceModel {
-    pub state_id: Uuid,
+    pub id: Uuid,
     pub country_id: Uuid,
     pub name_l1: HeaplessString<100>,
     pub name_l2: Option<HeaplessString<100>>,
@@ -113,7 +113,7 @@ pub struct StateProvinceModel {
 /// Database model for City
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CityModel {
-    pub city_id: Uuid,
+    pub id: Uuid,
     pub country_id: Uuid,
     pub state_id: Option<Uuid>,
     pub name_l1: HeaplessString<100>,
@@ -129,7 +129,7 @@ pub struct CityModel {
 /// Database model for Address
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AddressModel {
-    pub address_id: Uuid,
+    pub id: Uuid,
     pub street_line1: HeaplessString<50>,
     pub street_line2: HeaplessString<50>,
     pub street_line3: HeaplessString<50>,
@@ -151,7 +151,7 @@ pub struct AddressModel {
 /// Database model for Messaging
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct MessagingModel {
-    pub messaging_id: Uuid,
+    pub id: Uuid,
     #[serde(serialize_with = "serialize_messaging_type", deserialize_with = "deserialize_messaging_type")]
     pub messaging_type: MessagingType,
     pub value: HeaplessString<100>,
@@ -183,7 +183,7 @@ pub struct EntityReferenceModel {
 /// Database model for person
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PersonModel {
-    pub person_id: Uuid,
+    pub id: Uuid,
     
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
     pub person_type: PersonType,

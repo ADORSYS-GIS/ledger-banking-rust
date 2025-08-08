@@ -4,113 +4,17 @@ use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
+pub use banking_api::domain::{
+    TransactionType, TransactionStatus, TransactionApprovalStatus, TransactionWorkflowStatus, 
+    TransactionAuditAction, ChannelType, PermittedOperation
+};
 
-// ============================================================================
-// ENUMS - Database layer enums matching API domain
-// ============================================================================
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum TransactionType { 
-    Credit, 
-    Debit 
-}
-
-impl std::fmt::Display for TransactionType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TransactionType::Credit => write!(f, "Credit"),
-            TransactionType::Debit => write!(f, "Debit"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum TransactionStatus { 
-    Pending, 
-    Posted, 
-    Reversed, 
-    Failed,
-    AwaitingApproval,
-    ApprovalRejected,
-}
-
-impl std::fmt::Display for TransactionStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TransactionStatus::Pending => write!(f, "Pending"),
-            TransactionStatus::Posted => write!(f, "Posted"),
-            TransactionStatus::Reversed => write!(f, "Reversed"),
-            TransactionStatus::Failed => write!(f, "Failed"),
-            TransactionStatus::AwaitingApproval => write!(f, "AwaitingApproval"),
-            TransactionStatus::ApprovalRejected => write!(f, "ApprovalRejected"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum TransactionApprovalStatus { 
-    Pending, 
-    Approved, 
-    Rejected, 
-    PartiallyApproved 
-}
-
-impl std::fmt::Display for TransactionApprovalStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TransactionApprovalStatus::Pending => write!(f, "Pending"),
-            TransactionApprovalStatus::Approved => write!(f, "Approved"),
-            TransactionApprovalStatus::Rejected => write!(f, "Rejected"),
-            TransactionApprovalStatus::PartiallyApproved => write!(f, "PartiallyApproved"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum TransactionWorkflowStatus { 
-    Pending, 
-    Approved, 
-    Rejected, 
-    TimedOut 
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum TransactionAuditAction {
-    Created,
-    StatusChanged,
-    Posted,
-    Reversed,
-    Failed,
-    Approved,
-    Rejected,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum ChannelType {
-    MobileApp,
-    AgentTerminal,
-    ATM,
-    InternetBanking,
-    BranchTeller,
-    USSD,
-    ApiGateway,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum PermittedOperation {
-    Credit,
-    Debit,
-    InterestPosting,
-    FeeApplication,
-    ClosureSettlement,
-    None,
-}
 
 /// Database model for Transaction table
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct TransactionModel {
-    pub transaction_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub transaction_code: HeaplessString<8>,
     #[serde(
@@ -148,7 +52,7 @@ pub struct TransactionModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct TransactionApprovalModel {
-    pub approval_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     pub approver_id: Uuid,
     #[serde(
@@ -164,7 +68,7 @@ pub struct TransactionApprovalModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct TransactionApprovalWorkflowModel {
-    pub workflow_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     pub required_approvers: String, // JSON array
     #[serde(
@@ -181,7 +85,7 @@ pub struct TransactionApprovalWorkflowModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct GlEntryModel {
-    pub entry_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     pub account_code: Uuid,
     pub debit_amount: Option<Decimal>,
@@ -198,7 +102,7 @@ pub struct GlEntryModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct TransactionAuditModel {
-    pub audit_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     #[serde(
         serialize_with = "serialize_transaction_audit_action",
@@ -232,7 +136,7 @@ pub struct TransactionAuditModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct TransactionRequestModel {
-    pub request_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     #[serde(
         serialize_with = "serialize_transaction_type",
@@ -258,7 +162,7 @@ pub struct TransactionRequestModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct TransactionResultModel {
-    pub result_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     pub reference_number: HeaplessString<200>,
     pub timestamp: DateTime<Utc>,
@@ -269,7 +173,7 @@ pub struct TransactionResultModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct ValidationResultModel {
-    pub validation_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Option<Uuid>,
     pub is_valid: bool,
     pub errors: String, // JSON array
@@ -281,7 +185,7 @@ pub struct ValidationResultModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct ApprovalModel {
-    pub approval_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     pub approver_id: Uuid,
     pub approved_at: DateTime<Utc>,

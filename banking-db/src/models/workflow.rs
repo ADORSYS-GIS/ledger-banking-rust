@@ -165,7 +165,7 @@ pub enum ClosureReasonModel {
 /// Account Workflow database model
 #[derive(Debug, Clone)]
 pub struct AccountWorkflowModel {
-    pub workflow_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub workflow_type: WorkflowTypeModel,
     pub current_step: WorkflowStepModel,
@@ -244,7 +244,7 @@ pub struct DocumentReferenceModel {
 /// Workflow Transaction Approval Model (for database operations)
 #[derive(Debug, Clone)]
 pub struct WorkflowTransactionApprovalModel {
-    pub approval_id: Uuid,
+    pub id: Uuid,
     pub workflow_id: Uuid,
     pub transaction_id: Uuid,
     pub approver_id: Uuid,
@@ -259,7 +259,7 @@ pub struct WorkflowTransactionApprovalModel {
 /// Approval Workflow Model (for multi-party approvals)
 #[derive(Debug, Clone)]
 pub struct ApprovalWorkflowModel {
-    pub workflow_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Option<Uuid>,
     pub account_id: Option<Uuid>,
     pub approval_type: HeaplessString<50>, // TransactionApproval, AccountOpening, AccountClosure

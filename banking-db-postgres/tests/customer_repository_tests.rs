@@ -23,9 +23,9 @@ mod tests {
         let test_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
         sqlx::query(
             r#"
-            INSERT INTO persons (person_id, person_type, display_name, external_identifier)
+            INSERT INTO persons (id, person_type, display_name, external_identifier)
             VALUES ($1, 'system', 'Test User', 'test-user')
-            ON CONFLICT (person_id) DO NOTHING
+            ON CONFLICT (id) DO NOTHING
             "#
         )
         .bind(test_person_id)
@@ -40,7 +40,7 @@ mod tests {
         let test_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
         
         CustomerModel {
-            customer_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             customer_type: CustomerType::Individual,
             full_name: HeaplessString::try_from("John Doe").unwrap(),
             id_type: IdentityType::NationalId,
@@ -70,16 +70,16 @@ mod tests {
         let created_customer = repo.create(customer.clone()).await
             .expect("Failed to create customer");
 
-        assert_eq!(created_customer.customer_id, customer.customer_id);
+        assert_eq!(created_customer.id, customer.id);
         assert_eq!(created_customer.full_name, customer.full_name);
         assert_eq!(created_customer.customer_type, customer.customer_type);
 
         // Test READ by ID
-        let found_customer = repo.find_by_id(customer.customer_id).await
+        let found_customer = repo.find_by_id(customer.id).await
             .expect("Failed to find customer")
             .expect("Customer not found");
 
-        assert_eq!(found_customer.customer_id, customer.customer_id);
+        assert_eq!(found_customer.id, customer.id);
         assert_eq!(found_customer.full_name, customer.full_name);
 
         // Test READ by identity
@@ -90,7 +90,7 @@ mod tests {
             .expect("Failed to find customer by identity")
             .expect("Customer not found by identity");
 
-        assert_eq!(found_by_identity.customer_id, customer.customer_id);
+        assert_eq!(found_by_identity.id, customer.id);
 
         // Test UPDATE
         let mut updated_customer = found_customer;
@@ -103,16 +103,16 @@ mod tests {
         assert_eq!(result.risk_rating, RiskRating::Medium);
 
         // Test EXISTS
-        let exists = repo.exists(customer.customer_id).await
+        let exists = repo.exists(customer.id).await
             .expect("Failed to check customer existence");
         assert!(exists);
 
         // Test soft DELETE
-        repo.delete(customer.customer_id, customer.updated_by).await
+        repo.delete(customer.id, customer.updated_by).await
             .expect("Failed to delete customer");
 
         // Verify soft delete (status should be Deceased)
-        let deleted_customer = repo.find_by_id(customer.customer_id).await
+        let deleted_customer = repo.find_by_id(customer.id).await
             .expect("Failed to find deleted customer");
         
         // Customer should still exist but with Deceased status
@@ -132,14 +132,14 @@ mod tests {
         let unique_id1 = Uuid::new_v4();
         let unique_id2 = Uuid::new_v4();
         
-        customer1.customer_id = unique_id1;
+        customer1.id = unique_id1;
         let id1_str = format!("HIGH{}", &unique_id1.to_string()[0..6]);
         let name1_str = format!("High Risk Customer {}", &unique_id1.to_string()[0..6]);
         customer1.id_number = HeaplessString::try_from(id1_str.as_str()).unwrap();
         customer1.full_name = HeaplessString::try_from(name1_str.as_str()).unwrap();
         customer1.risk_rating = RiskRating::High;
         
-        customer2.customer_id = unique_id2;
+        customer2.id = unique_id2;
         let id2_str = format!("MED{}", &unique_id2.to_string()[0..6]);
         let name2_str = format!("Medium Risk Customer {}", &unique_id2.to_string()[0..6]);
         customer2.id_number = HeaplessString::try_from(id2_str.as_str()).unwrap();
@@ -154,13 +154,13 @@ mod tests {
             .expect("Failed to find high risk customers");
         
         assert!(!high_risk_customers.is_empty());
-        assert!(high_risk_customers.iter().any(|c| c.customer_id == customer1.customer_id));
+        assert!(high_risk_customers.iter().any(|c| c.id == customer1.id));
 
         let medium_risk_customers = repo.find_by_risk_rating("Medium").await
             .expect("Failed to find medium risk customers");
         
         assert!(!medium_risk_customers.is_empty());
-        assert!(medium_risk_customers.iter().any(|c| c.customer_id == customer2.customer_id));
+        assert!(medium_risk_customers.iter().any(|c| c.id == customer2.id));
     }
 
     #[tokio::test]
@@ -179,18 +179,18 @@ mod tests {
         repo.create(customer.clone()).await.expect("Failed to create customer");
 
         // Update risk rating
-        repo.update_risk_rating(customer.customer_id, "High", customer.updated_by).await
+        repo.update_risk_rating(customer.id, "High", customer.updated_by).await
             .expect("Failed to update risk rating");
 
         // Verify risk rating was updated
-        let updated_customer = repo.find_by_id(customer.customer_id).await
+        let updated_customer = repo.find_by_id(customer.id).await
             .expect("Failed to find customer")
             .expect("Customer not found");
         
         assert_eq!(updated_customer.risk_rating, RiskRating::High);
 
         // Verify audit trail
-        let audit_trail = repo.get_audit_trail(customer.customer_id).await
+        let audit_trail = repo.get_audit_trail(customer.id).await
             .expect("Failed to get audit trail");
         
         assert!(!audit_trail.is_empty());
@@ -216,8 +216,8 @@ mod tests {
 
         // Create a document
         let document = CustomerDocumentModel {
-            document_id: Uuid::new_v4(),
-            customer_id: customer.customer_id,
+            id: Uuid::new_v4(),
+            customer_id: customer.id,
             document_type: HeaplessString::try_from("passport").unwrap(),
             document_path: Some(HeaplessString::try_from("/documents/passport.pdf").unwrap()),
             status: DocumentStatus::Uploaded,
@@ -231,15 +231,15 @@ mod tests {
         let added_document = repo.add_document(document.clone()).await
             .expect("Failed to add document");
         
-        assert_eq!(added_document.document_id, document.document_id);
+        assert_eq!(added_document.id, document.id);
         assert_eq!(added_document.status, DocumentStatus::Uploaded);
 
         // Get documents
-        let documents = repo.get_documents(customer.customer_id).await
+        let documents = repo.get_documents(customer.id).await
             .expect("Failed to get documents");
         
         assert!(!documents.is_empty());
-        assert!(documents.iter().any(|d| d.document_id == document.document_id));
+        assert!(documents.iter().any(|d| d.id == document.id));
     }
 
     #[tokio::test]
@@ -250,7 +250,7 @@ mod tests {
         // Create customer requiring review (pending verification)
         let mut customer = create_test_customer();
         let unique_id = Uuid::new_v4();
-        customer.customer_id = unique_id;
+        customer.id = unique_id;
         let rev_id_str = format!("REV{}", &unique_id.to_string()[0..6]);
         let rev_name_str = format!("Review Customer {}", &unique_id.to_string()[0..6]);
         customer.id_number = HeaplessString::try_from(rev_id_str.as_str()).unwrap();
@@ -264,7 +264,7 @@ mod tests {
             .expect("Failed to find customers requiring review");
         
         assert!(!customers_requiring_review.is_empty());
-        assert!(customers_requiring_review.iter().any(|c| c.customer_id == customer.customer_id));
+        assert!(customers_requiring_review.iter().any(|c| c.id == customer.id));
     }
 
     #[tokio::test]
@@ -274,7 +274,7 @@ mod tests {
         let mut customer = create_test_customer();
         
         let unique_id = Uuid::new_v4();
-        customer.customer_id = unique_id;
+        customer.id = unique_id;
         let port_id_str = format!("PORT{}", &unique_id.to_string()[0..6]);
         let port_name_str = format!("Portfolio Customer {}", &unique_id.to_string()[0..6]);
         customer.id_number = HeaplessString::try_from(port_id_str.as_str()).unwrap();
@@ -283,11 +283,11 @@ mod tests {
         repo.create(customer.clone()).await.expect("Failed to create customer");
 
         // Get portfolio (should exist with default values)
-        let portfolio = repo.get_portfolio(customer.customer_id).await
+        let portfolio = repo.get_portfolio(customer.id).await
             .expect("Failed to get portfolio")
             .expect("Portfolio not found");
         
-        assert_eq!(portfolio.customer_id, customer.customer_id);
+        assert_eq!(portfolio.customer_id, customer.id);
         assert_eq!(portfolio.total_accounts, 0);
     }
 
@@ -301,7 +301,7 @@ mod tests {
         let unique_suffix = Uuid::new_v4().to_string()[0..8].to_string(); // Use UUID for uniqueness
         for i in 1..=8 {
             let mut customer = create_test_customer();
-            customer.customer_id = Uuid::new_v4(); // Ensure unique ID
+            customer.id = Uuid::new_v4(); // Ensure unique ID
             customer.full_name = HeaplessString::try_from(format!("PaginatedCust{:02}_{}", i, unique_suffix).as_str()).unwrap();
             customer.id_number = HeaplessString::try_from(format!("PAG{}{:02}", unique_suffix, i).as_str()).unwrap();
             
@@ -319,7 +319,7 @@ mod tests {
         
         // Should not have overlapping customers
         for customer1 in &customers_page1 {
-            assert!(!customers_page2.iter().any(|c2| c2.customer_id == customer1.customer_id),
+            assert!(!customers_page2.iter().any(|c2| c2.id == customer1.id),
                 "Customer {} appears in both page 1 and page 2", customer1.full_name.as_str());
         }
 
@@ -350,8 +350,8 @@ mod tests {
 
         // Add manual audit entry
         let audit_entry = CustomerAuditModel {
-            audit_id: Uuid::new_v4(),
-            customer_id: customer.customer_id,
+            id: Uuid::new_v4(),
+            customer_id: customer.id,
             field_name: HeaplessString::try_from("notes").unwrap(),
             old_value: None,
             new_value: Some(HeaplessString::try_from("Test note added").unwrap()),
@@ -363,13 +363,13 @@ mod tests {
         let added_audit = repo.add_audit_entry(audit_entry.clone()).await
             .expect("Failed to add audit entry");
         
-        assert_eq!(added_audit.audit_id, audit_entry.audit_id);
+        assert_eq!(added_audit.id, audit_entry.id);
 
         // Get audit trail
-        let audit_trail = repo.get_audit_trail(customer.customer_id).await
+        let audit_trail = repo.get_audit_trail(customer.id).await
             .expect("Failed to get audit trail");
         
         assert!(!audit_trail.is_empty());
-        assert!(audit_trail.iter().any(|entry| entry.audit_id == audit_entry.audit_id));
+        assert!(audit_trail.iter().any(|entry| entry.id == audit_entry.id));
     }
 }

@@ -42,7 +42,7 @@ trait TryFromRow<R> {
 impl TryFromRow<sqlx::postgres::PgRow> for PersonModel {
     fn try_from_row(row: &sqlx::postgres::PgRow) -> BankingResult<Self> {
         Ok(PersonModel {
-            person_id: row.get("person_id"),
+            id: row.get("id"),
             person_type: parse_person_type(&row.get::<String, _>("person_type"))?,
             display_name: HeaplessString::try_from(
                 row.get::<String, _>("display_name").as_str()
@@ -94,7 +94,7 @@ impl PersonRepository for PersonRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO persons (
-                person_id, person_type, display_name, external_identifier, organization,
+                id, person_type, display_name, external_identifier, organization,
                 messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                 messaging4_id, messaging4_type, messaging5_id, messaging5_type,
                 department, location, duplicate_of, is_active, created_at, updated_at
@@ -102,13 +102,13 @@ impl PersonRepository for PersonRepositoryImpl {
             VALUES (
                 $1, $2::person_type, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
             )
-            RETURNING person_id, person_type::text as person_type, display_name, external_identifier, organization,
+            RETURNING id, person_type::text as person_type, display_name, external_identifier, organization,
                      messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                      messaging4_id, messaging4_type, messaging5_id, messaging5_type,
                      department, location, duplicate_of, is_active, created_at, updated_at
             "#
         )
-        .bind(person.person_id)
+        .bind(person.id)
         .bind(person.person_type.to_string())
         .bind(person.display_name.as_str())
         .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
@@ -135,18 +135,18 @@ impl PersonRepository for PersonRepositoryImpl {
         PersonModel::try_from_row(&result).map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
     }
 
-    async fn get_by_id(&self, person_id: Uuid) -> Result<Option<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_by_id(&self, id: Uuid) -> Result<Option<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
         let result = sqlx::query(
             r#"
-            SELECT person_id, person_type::text as person_type, display_name, external_identifier, organization,
+            SELECT id, person_type::text as person_type, display_name, external_identifier, organization,
                    messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
                    department, location, duplicate_of, is_active, created_at, updated_at
             FROM persons 
-            WHERE person_id = $1
+            WHERE id = $1
             "#
         )
-        .bind(person_id)
+        .bind(id)
         .fetch_optional(&self.pool)
         .await?;
 
@@ -162,7 +162,7 @@ impl PersonRepository for PersonRepositoryImpl {
     async fn get_by_external_identifier(&self, identifier: &str) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
         let results = sqlx::query(
             r#"
-            SELECT person_id, person_type::text as person_type, display_name, external_identifier, organization,
+            SELECT id, person_type::text as person_type, display_name, external_identifier, organization,
                    messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
                    department, location, duplicate_of, is_active, created_at, updated_at
@@ -186,12 +186,12 @@ impl PersonRepository for PersonRepositoryImpl {
     async fn get_by_entity_reference(&self, entity_id: Uuid, entity_type: &str) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
         let results = sqlx::query(
             r#"
-            SELECT p.person_id, p.person_type::text as person_type, p.display_name, p.external_identifier, p.organization,
+            SELECT p.id, p.person_type::text as person_type, p.display_name, p.external_identifier, p.organization,
                    p.messaging1_id, p.messaging1_type, p.messaging2_id, p.messaging2_type, p.messaging3_id, p.messaging3_type,
                    p.messaging4_id, p.messaging4_type, p.messaging5_id, p.messaging5_type,
                    p.department, p.location, p.duplicate_of, p.is_active, p.created_at, p.updated_at
             FROM persons p
-            INNER JOIN entity_references er ON p.person_id = er.person_id
+            INNER JOIN entity_references er ON p.id = er.person_id
             WHERE er.reference_external_id = $1 AND er.entity_role = $2 AND er.is_active = true AND p.is_active = true
             ORDER BY p.created_at DESC
             "#
@@ -220,7 +220,7 @@ impl PersonRepository for PersonRepositoryImpl {
 
         // If not found, create new person
         let new_person = PersonModel {
-            person_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             person_type,
             display_name: HeaplessString::try_from(display_name).map_err(|_| {
                 BankingError::ValidationError {
@@ -281,14 +281,14 @@ impl PersonRepository for PersonRepositoryImpl {
                 duplicate_of = $18,
                 is_active = $19,
                 updated_at = $20
-            WHERE person_id = $1
-            RETURNING person_id, person_type::text as person_type, display_name, external_identifier, organization,
+            WHERE id = $1
+            RETURNING id, person_type::text as person_type, display_name, external_identifier, organization,
                      messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                      messaging4_id, messaging4_type, messaging5_id, messaging5_type,
                      department, location, duplicate_of, is_active, created_at, updated_at
             "#
         )
-        .bind(person.person_id)
+        .bind(person.id)
         .bind(person.person_type.to_string())
         .bind(person.display_name.as_str())
         .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
@@ -314,17 +314,17 @@ impl PersonRepository for PersonRepositoryImpl {
         PersonModel::try_from_row(&result).map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
     }
 
-    async fn mark_as_duplicate(&self, person_id: Uuid, duplicate_of: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn mark_as_duplicate(&self, id: Uuid, duplicate_of: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         sqlx::query(
             r#"
             UPDATE persons SET
                 duplicate_of = $2,
                 is_active = false,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE person_id = $1
+            WHERE id = $1
             "#
         )
-        .bind(person_id)
+        .bind(id)
         .bind(duplicate_of)
         .execute(&self.pool)
         .await?;
@@ -335,7 +335,7 @@ impl PersonRepository for PersonRepositoryImpl {
     async fn get_all_active(&self) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
         let results = sqlx::query(
             r#"
-            SELECT person_id, person_type::text as person_type, display_name, external_identifier, organization,
+            SELECT id, person_type::text as person_type, display_name, external_identifier, organization,
                    messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
                    department, location, duplicate_of, is_active, created_at, updated_at
@@ -359,7 +359,7 @@ impl PersonRepository for PersonRepositoryImpl {
         let search_pattern = format!("%{query}%");
         let results = sqlx::query(
             r#"
-            SELECT person_id, person_type::text as person_type, display_name, external_identifier, organization,
+            SELECT id, person_type::text as person_type, display_name, external_identifier, organization,
                    messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
                    department, location, duplicate_of, is_active, created_at, updated_at
@@ -408,7 +408,7 @@ mod tests {
 
     fn create_test_person() -> PersonModel {
         PersonModel {
-            person_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             person_type: PersonType::Natural,
             display_name: HeaplessString::try_from("John Doe").unwrap(),
             external_identifier: Some(HeaplessString::try_from("EXT001").unwrap()),
@@ -442,7 +442,7 @@ mod tests {
         assert!(result.is_ok());
         
         let created = result.unwrap();
-        assert_eq!(created.person_id, test_person.person_id);
+        assert_eq!(created.id, test_person.id);
         assert_eq!(created.display_name, test_person.display_name);
         assert_eq!(created.person_type, test_person.person_type);
     }
@@ -457,13 +457,13 @@ mod tests {
         let created = repo.create(test_person.clone()).await.expect("Failed to create person");
         
         // Retrieve by ID
-        let result = repo.get_by_id(created.person_id).await;
+        let result = repo.get_by_id(created.id).await;
         assert!(result.is_ok());
         
         let retrieved = result.unwrap();
         assert!(retrieved.is_some());
         let person = retrieved.unwrap();
-        assert_eq!(person.person_id, created.person_id);
+        assert_eq!(person.id, created.id);
         assert_eq!(person.display_name, created.display_name);
     }
 
@@ -507,7 +507,7 @@ mod tests {
         assert!(result.is_ok());
         
         let found = result.unwrap();
-        assert_eq!(found.person_id, created.person_id);
+        assert_eq!(found.id, created.id);
     }
 
     #[tokio::test]
@@ -560,19 +560,19 @@ mod tests {
         let created1 = repo.create(person1).await.expect("Failed to create person1");
         
         let mut person2 = create_test_person();
-        person2.person_id = Uuid::new_v4();
+        person2.id = Uuid::new_v4();
         person2.external_identifier = Some(HeaplessString::try_from("EXT002").unwrap());
         let created2 = repo.create(person2).await.expect("Failed to create person2");
         
         // Mark person2 as duplicate of person1
-        let result = repo.mark_as_duplicate(created2.person_id, created1.person_id).await;
+        let result = repo.mark_as_duplicate(created2.id, created1.id).await;
         assert!(result.is_ok());
         
         // Verify person2 is marked as duplicate
-        let retrieved = repo.get_by_id(created2.person_id).await.expect("Failed to get person");
+        let retrieved = repo.get_by_id(created2.id).await.expect("Failed to get person");
         assert!(retrieved.is_some());
         let person = retrieved.unwrap();
-        assert_eq!(person.duplicate_of, Some(created1.person_id));
+        assert_eq!(person.duplicate_of, Some(created1.id));
         assert!(!person.is_active);
     }
 
@@ -595,7 +595,7 @@ mod tests {
         
         let persons = result.unwrap();
         assert!(!persons.is_empty());
-        let found = persons.iter().find(|p| p.person_id == created.person_id);
+        let found = persons.iter().find(|p| p.id == created.id);
         assert!(found.is_some());
     }
 
@@ -622,7 +622,7 @@ mod tests {
         
         let person1 = create_test_person();
         let mut person2 = create_test_person();
-        person2.person_id = Uuid::new_v4();
+        person2.id = Uuid::new_v4();
         person2.display_name = HeaplessString::try_from("Jane Doe").unwrap();
         person2.external_identifier = Some(HeaplessString::try_from("EXT003").unwrap());
         
@@ -632,7 +632,7 @@ mod tests {
         
         let _created = result.unwrap();
         assert_eq!(_created.len(), 2);
-        assert_eq!(_created[0].person_id, persons[0].person_id);
-        assert_eq!(_created[1].person_id, persons[1].person_id);
+        assert_eq!(_created[0].id, persons[0].id);
+        assert_eq!(_created[1].id, persons[1].id);
     }
 }

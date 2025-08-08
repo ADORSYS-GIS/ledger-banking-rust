@@ -34,7 +34,7 @@ impl TransactionRepository for SimpleTransactionRepositoryImpl {
     async fn find_by_id(&self, transaction_id: Uuid) -> BankingResult<Option<TransactionModel>> {
         // Use basic query without enum handling
         let result = sqlx::query!(
-            "SELECT transaction_id FROM transactions WHERE transaction_id = $1",
+            "SELECT id FROM transactions WHERE id = $1",
             transaction_id
         )
         .fetch_optional(&self.pool)
@@ -49,14 +49,14 @@ impl TransactionRepository for SimpleTransactionRepositoryImpl {
     /// Find transactions by account ID
     async fn find_by_account_id(&self, account_id: Uuid, _from_date: Option<NaiveDate>, _to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>> {
         let result = sqlx::query!(
-            "SELECT transaction_id FROM transactions WHERE account_id = $1 LIMIT 10",
+            "SELECT id FROM transactions WHERE account_id = $1 LIMIT 10",
             account_id
         )
         .fetch_all(&self.pool)
         .await?;
 
         let transactions = result.into_iter()
-            .map(|row| self.create_dummy_transaction(row.transaction_id))
+            .map(|row| self.create_dummy_transaction(row.id))
             .collect();
 
         Ok(transactions)
@@ -70,14 +70,14 @@ impl TransactionRepository for SimpleTransactionRepositoryImpl {
     /// Find transactions by reference number
     async fn find_by_reference(&self, reference_number: &str) -> BankingResult<Option<TransactionModel>> {
         let result = sqlx::query!(
-            "SELECT transaction_id FROM transactions WHERE reference_number = $1",
+            "SELECT id FROM transactions WHERE reference_number = $1",
             reference_number
         )
         .fetch_optional(&self.pool)
         .await?;
 
         match result {
-            Some(row) => Ok(Some(self.create_dummy_transaction(row.transaction_id))),
+            Some(row) => Ok(Some(self.create_dummy_transaction(row.id))),
             None => Ok(None),
         }
     }
@@ -95,13 +95,13 @@ impl TransactionRepository for SimpleTransactionRepositoryImpl {
     /// Find transactions requiring approval
     async fn find_requiring_approval(&self) -> BankingResult<Vec<TransactionModel>> {
         let result = sqlx::query!(
-            "SELECT transaction_id FROM transactions WHERE requires_approval = true LIMIT 10"
+            "SELECT id FROM transactions WHERE requires_approval = true LIMIT 10"
         )
         .fetch_all(&self.pool)
         .await?;
 
         let transactions = result.into_iter()
-            .map(|row| self.create_dummy_transaction(row.transaction_id))
+            .map(|row| self.create_dummy_transaction(row.id))
             .collect();
 
         Ok(transactions)
@@ -210,7 +210,7 @@ impl TransactionRepository for SimpleTransactionRepositoryImpl {
     /// Utility Operations
     async fn exists(&self, transaction_id: Uuid) -> BankingResult<bool> {
         let result = sqlx::query!(
-            "SELECT EXISTS(SELECT 1 FROM transactions WHERE transaction_id = $1)",
+            "SELECT EXISTS(SELECT 1 FROM transactions WHERE id = $1)",
             transaction_id
         )
         .fetch_one(&self.pool)
@@ -249,7 +249,7 @@ impl SimpleTransactionRepositoryImpl {
         use heapless::String as HeaplessString;
         
         TransactionModel {
-            transaction_id,
+            id: transaction_id,
             account_id: Uuid::new_v4(),
             transaction_code: HeaplessString::try_from("TXN001").unwrap(),
             transaction_type: TransactionType::Credit,

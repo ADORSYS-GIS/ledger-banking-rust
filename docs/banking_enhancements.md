@@ -307,7 +307,7 @@ CREATE TABLE workflow_step_records (
 
 -- Account status history (immutable audit trail)
 CREATE TABLE account_status_history (
-    history_id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY,
     account_id UUID NOT NULL REFERENCES accounts(account_id),
     old_status VARCHAR(20),
     new_status VARCHAR(20) NOT NULL,

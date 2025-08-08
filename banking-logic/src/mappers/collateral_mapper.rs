@@ -24,7 +24,7 @@ impl CollateralMapper {
     /// Map from domain Collateral to database CollateralModel
     pub fn to_model(collateral: Collateral) -> CollateralModel {
         CollateralModel {
-            collateral_id: collateral.collateral_id,
+            id: collateral.id,
             collateral_type: Self::collateral_type_to_db(collateral.collateral_type),
             collateral_category: Self::collateral_category_to_db(collateral.collateral_category),
             description: collateral.description,
@@ -70,7 +70,7 @@ impl CollateralMapper {
     /// Map from database CollateralModel to domain Collateral
     pub fn from_model(model: CollateralModel) -> banking_api::BankingResult<Collateral> {
         Ok(Collateral {
-            collateral_id: model.collateral_id,
+            id: model.id,
             collateral_type: Self::db_to_collateral_type(model.collateral_type),
             collateral_category: Self::db_to_collateral_category(model.collateral_category),
             description: model.description,
@@ -116,7 +116,7 @@ impl CollateralMapper {
     /// Map from domain CollateralValuation to database CollateralValuationModel
     pub fn valuation_to_model(valuation: CollateralValuation) -> CollateralValuationModel {
         CollateralValuationModel {
-            valuation_id: valuation.valuation_id,
+            id: valuation.id,
             collateral_id: valuation.collateral_id,
             valuation_date: valuation.valuation_date,
             valuation_method: Self::valuation_method_to_db(valuation.valuation_method),
@@ -136,7 +136,7 @@ impl CollateralMapper {
     /// Map from database CollateralValuationModel to domain CollateralValuation
     pub fn valuation_from_model(model: CollateralValuationModel) -> banking_api::BankingResult<CollateralValuation> {
         Ok(CollateralValuation {
-            valuation_id: model.valuation_id,
+            id: model.id,
             collateral_id: model.collateral_id,
             valuation_date: model.valuation_date,
             valuation_method: Self::db_to_valuation_method(model.valuation_method),
@@ -156,7 +156,7 @@ impl CollateralMapper {
     /// Map from domain CollateralPledge to database CollateralPledgeModel
     pub fn pledge_to_model(pledge: CollateralPledge) -> CollateralPledgeModel {
         CollateralPledgeModel {
-            pledge_id: pledge.pledge_id,
+            id: pledge.id,
             collateral_id: pledge.collateral_id,
             loan_account_id: pledge.loan_account_id,
             pledged_amount: pledge.pledged_amount,
@@ -180,7 +180,7 @@ impl CollateralMapper {
     /// Map from database CollateralPledgeModel to domain CollateralPledge
     pub fn pledge_from_model(model: CollateralPledgeModel) -> banking_api::BankingResult<CollateralPledge> {
         Ok(CollateralPledge {
-            pledge_id: model.pledge_id,
+            id: model.id,
             collateral_id: model.collateral_id,
             loan_account_id: model.loan_account_id,
             pledged_amount: model.pledged_amount,
@@ -204,7 +204,7 @@ impl CollateralMapper {
     /// Map from domain CollateralAlert to database CollateralAlertModel
     pub fn alert_to_model(alert: CollateralAlert) -> CollateralAlertModel {
         CollateralAlertModel {
-            alert_id: alert.alert_id,
+            id: alert.id,
             collateral_id: alert.collateral_id,
             alert_type: Self::collateral_alert_type_to_db(alert.alert_type),
             severity: Self::alert_severity_to_db(alert.severity),
@@ -222,7 +222,7 @@ impl CollateralMapper {
     /// Map from database CollateralAlertModel to domain CollateralAlert
     pub fn alert_from_model(model: CollateralAlertModel) -> banking_api::BankingResult<CollateralAlert> {
         Ok(CollateralAlert {
-            alert_id: model.alert_id,
+            id: model.id,
             collateral_id: model.collateral_id,
             alert_type: Self::db_to_collateral_alert_type(model.alert_type),
             severity: Self::db_to_alert_severity(model.severity),
@@ -240,7 +240,7 @@ impl CollateralMapper {
     /// Map from domain CollateralEnforcement to database CollateralEnforcementModel
     pub fn enforcement_to_model(enforcement: CollateralEnforcement) -> CollateralEnforcementModel {
         CollateralEnforcementModel {
-            enforcement_id: enforcement.enforcement_id,
+            id: enforcement.id,
             collateral_id: enforcement.collateral_id,
             loan_account_id: enforcement.loan_account_id,
             enforcement_type: Self::enforcement_type_to_db(enforcement.enforcement_type),
@@ -266,7 +266,7 @@ impl CollateralMapper {
     /// Map from database CollateralEnforcementModel to domain CollateralEnforcement
     pub fn enforcement_from_model(model: CollateralEnforcementModel) -> banking_api::BankingResult<CollateralEnforcement> {
         Ok(CollateralEnforcement {
-            enforcement_id: model.enforcement_id,
+            id: model.id,
             collateral_id: model.collateral_id,
             loan_account_id: model.loan_account_id,
             enforcement_type: Self::db_to_enforcement_type(model.enforcement_type),

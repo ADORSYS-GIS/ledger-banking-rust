@@ -15,7 +15,7 @@ fn create_test_workflow() -> AccountWorkflowModel {
     let initiated_by = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     
     AccountWorkflowModel {
-        workflow_id,
+        id: workflow_id,
         account_id,
         workflow_type: WorkflowTypeModel::AccountOpening,
         current_step: WorkflowStepModel::InitiateRequest,
@@ -33,7 +33,7 @@ fn create_test_workflow() -> AccountWorkflowModel {
 /// Test helper to create a workflow in different states with unique data
 fn create_test_workflow_with_status(status: WorkflowStatusModel, workflow_type: WorkflowTypeModel) -> AccountWorkflowModel {
     let mut workflow = create_test_workflow();
-    workflow.workflow_id = Uuid::new_v4();
+    workflow.id = Uuid::new_v4();
     // Use the same test account to avoid foreign key issues
     workflow.account_id = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
     workflow.status = status;
@@ -66,9 +66,9 @@ async fn setup_test_db() -> PgPool {
     let test_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     sqlx::query(
         r#"
-        INSERT INTO persons (person_id, person_type, display_name, external_identifier)
+        INSERT INTO persons (id, person_type, display_name, external_identifier)
         VALUES ($1, 'system', 'Test User', 'test-user')
-        ON CONFLICT (person_id) DO NOTHING
+        ON CONFLICT (id) DO NOTHING
         "#
     )
     .bind(test_person_id)
@@ -81,7 +81,7 @@ async fn setup_test_db() -> PgPool {
     sqlx::query(
         r#"
         INSERT INTO accounts (
-            account_id, product_code, account_type, account_status, 
+            id, product_code, account_type, account_status, 
             signing_condition, currency, open_date, domicile_branch_id,
             current_balance, available_balance, accrued_interest, 
             created_at, last_updated_at, updated_by
@@ -91,7 +91,7 @@ async fn setup_test_db() -> PgPool {
             0.00, 0.00, 0.00,
             NOW(), NOW(), $3
         )
-        ON CONFLICT (account_id) DO NOTHING
+        ON CONFLICT (id) DO NOTHING
         "#
     )
     .bind(test_account_id)
@@ -114,15 +114,15 @@ async fn test_workflow_crud_operations() {
     // Test CREATE
     let created_workflow = repo.create_workflow(&workflow).await
         .expect("Failed to create workflow");
-    assert_eq!(created_workflow.workflow_id, workflow.workflow_id);
+    assert_eq!(created_workflow.id, workflow.id);
     assert_eq!(created_workflow.workflow_type, workflow.workflow_type);
     assert_eq!(created_workflow.status, workflow.status);
     
     // Test READ
-    let found_workflow = repo.find_workflow_by_id(workflow.workflow_id).await
+    let found_workflow = repo.find_workflow_by_id(workflow.id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
-    assert_eq!(found_workflow.workflow_id, workflow.workflow_id);
+    assert_eq!(found_workflow.id, workflow.id);
     assert_eq!(found_workflow.account_id, workflow.account_id);
     
     // Test UPDATE
@@ -147,7 +147,7 @@ async fn test_find_workflows_by_account() {
     let mut workflow1 = create_test_workflow();
     workflow1.account_id = account_id;
     let mut workflow2 = create_test_workflow();
-    workflow2.workflow_id = Uuid::new_v4();
+    workflow2.id = Uuid::new_v4();
     workflow2.account_id = account_id;
     workflow2.workflow_type = WorkflowTypeModel::AccountClosure;
     
@@ -162,8 +162,8 @@ async fn test_find_workflows_by_account() {
     assert!(workflows.len() >= 2, "Should have at least 2 workflows for account, found {}", workflows.len());
     
     // Verify our specific workflows are in the results
-    let our_workflow_ids = vec![workflow1.workflow_id, workflow2.workflow_id];
-    let found_workflows_ids: Vec<_> = workflows.iter().map(|w| w.workflow_id).collect();
+    let our_workflow_ids = vec![workflow1.id, workflow2.id];
+    let found_workflows_ids: Vec<_> = workflows.iter().map(|w| w.id).collect();
     
     for our_id in our_workflow_ids {
         assert!(found_workflows_ids.contains(&our_id), "Our test workflow {} not found in account results", our_id);
@@ -183,7 +183,7 @@ async fn test_find_active_workflow() {
     
     let account_id = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
     let mut workflow = create_test_workflow();
-    workflow.workflow_id = Uuid::new_v4();
+    workflow.id = Uuid::new_v4();
     workflow.account_id = account_id;
     workflow.status = WorkflowStatusModel::InProgress;
     
@@ -207,13 +207,13 @@ async fn test_find_workflows_by_type() {
     
     // Create workflows of different types with unique identifiers
     let mut workflow1 = create_test_workflow_with_status(WorkflowStatusModel::InProgress, WorkflowTypeModel::AccountOpening);
-    workflow1.workflow_id = Uuid::new_v4();
+    workflow1.id = Uuid::new_v4();
     
     let mut workflow2 = create_test_workflow_with_status(WorkflowStatusModel::Completed, WorkflowTypeModel::AccountOpening);
-    workflow2.workflow_id = Uuid::new_v4();
+    workflow2.id = Uuid::new_v4();
     
     let mut workflow3 = create_test_workflow_with_status(WorkflowStatusModel::InProgress, WorkflowTypeModel::AccountClosure);
-    workflow3.workflow_id = Uuid::new_v4();
+    workflow3.id = Uuid::new_v4();
     
     repo.create_workflow(&workflow1).await.expect("Failed to create workflow1");
     repo.create_workflow(&workflow2).await.expect("Failed to create workflow2");
@@ -227,8 +227,8 @@ async fn test_find_workflows_by_type() {
     assert!(opening_workflows.len() >= 2, "Should have at least 2 AccountOpening workflows, found {}", opening_workflows.len());
     
     // Verify our specific workflows are in the results
-    let our_workflow_ids = vec![workflow1.workflow_id, workflow2.workflow_id];
-    let found_workflow_ids: Vec<_> = opening_workflows.iter().map(|w| w.workflow_id).collect();
+    let our_workflow_ids = vec![workflow1.id, workflow2.id];
+    let found_workflow_ids: Vec<_> = opening_workflows.iter().map(|w| w.id).collect();
     
     for our_id in our_workflow_ids {
         assert!(found_workflow_ids.contains(&our_id), "Our test workflow {} not found in results", our_id);
@@ -243,13 +243,13 @@ async fn test_find_workflows_by_status() {
     
     // Create workflows with different statuses and unique identifiers
     let mut workflow1 = create_test_workflow_with_status(WorkflowStatusModel::InProgress, WorkflowTypeModel::AccountOpening);
-    workflow1.workflow_id = Uuid::new_v4();
+    workflow1.id = Uuid::new_v4();
     
     let mut workflow2 = create_test_workflow_with_status(WorkflowStatusModel::PendingAction, WorkflowTypeModel::AccountOpening);
-    workflow2.workflow_id = Uuid::new_v4();
+    workflow2.id = Uuid::new_v4();
     
     let mut workflow3 = create_test_workflow_with_status(WorkflowStatusModel::Completed, WorkflowTypeModel::AccountOpening);
-    workflow3.workflow_id = Uuid::new_v4();
+    workflow3.id = Uuid::new_v4();
     
     repo.create_workflow(&workflow1).await.expect("Failed to create workflow1");
     repo.create_workflow(&workflow2).await.expect("Failed to create workflow2");
@@ -263,7 +263,7 @@ async fn test_find_workflows_by_status() {
     assert!(pending_workflows.len() >= 1, "Should have at least 1 PendingAction workflow, found {}", pending_workflows.len());
     
     // Verify our specific workflow is in the results
-    let found_our_workflow = pending_workflows.iter().any(|w| w.workflow_id == workflow2.workflow_id);
+    let found_our_workflow = pending_workflows.iter().any(|w| w.id == workflow2.id);
     assert!(found_our_workflow, "Our test workflow not found in PendingAction results");
 }
 
@@ -277,10 +277,10 @@ async fn test_workflow_status_management() {
     repo.create_workflow(&workflow).await.expect("Failed to create workflow");
     
     // Test updating workflow status
-    repo.update_workflow_status(workflow.workflow_id, "PendingAction", "Waiting for documents").await
+    repo.update_workflow_status(workflow.id, "PendingAction", "Waiting for documents").await
         .expect("Failed to update workflow status");
     
-    let updated_workflow = repo.find_workflow_by_id(workflow.workflow_id).await
+    let updated_workflow = repo.find_workflow_by_id(workflow.id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
     
@@ -298,10 +298,10 @@ async fn test_workflow_step_management() {
     repo.create_workflow(&workflow).await.expect("Failed to create workflow");
     
     // Test updating workflow step
-    repo.update_workflow_step(workflow.workflow_id, "ComplianceCheck").await
+    repo.update_workflow_step(workflow.id, "ComplianceCheck").await
         .expect("Failed to update workflow step");
     
-    let updated_workflow = repo.find_workflow_by_id(workflow.workflow_id).await
+    let updated_workflow = repo.find_workflow_by_id(workflow.id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
     
@@ -318,10 +318,10 @@ async fn test_complete_workflow() {
     repo.create_workflow(&workflow).await.expect("Failed to create workflow");
     
     // Test completing workflow
-    repo.complete_workflow(workflow.workflow_id, "Account opened successfully").await
+    repo.complete_workflow(workflow.id, "Account opened successfully").await
         .expect("Failed to complete workflow");
     
-    let completed_workflow = repo.find_workflow_by_id(workflow.workflow_id).await
+    let completed_workflow = repo.find_workflow_by_id(workflow.id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
     
@@ -339,10 +339,10 @@ async fn test_fail_workflow() {
     repo.create_workflow(&workflow).await.expect("Failed to create workflow");
     
     // Test failing workflow
-    repo.fail_workflow(workflow.workflow_id, "KYC verification failed").await
+    repo.fail_workflow(workflow.id, "KYC verification failed").await
         .expect("Failed to fail workflow");
     
-    let failed_workflow = repo.find_workflow_by_id(workflow.workflow_id).await
+    let failed_workflow = repo.find_workflow_by_id(workflow.id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
     
@@ -360,10 +360,10 @@ async fn test_cancel_workflow() {
     repo.create_workflow(&workflow).await.expect("Failed to create workflow");
     
     // Test cancelling workflow
-    repo.cancel_workflow(workflow.workflow_id, "Customer request").await
+    repo.cancel_workflow(workflow.id, "Customer request").await
         .expect("Failed to cancel workflow");
     
-    let cancelled_workflow = repo.find_workflow_by_id(workflow.workflow_id).await
+    let cancelled_workflow = repo.find_workflow_by_id(workflow.id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
     
@@ -379,13 +379,13 @@ async fn test_find_pending_workflows() {
     
     // Create workflows with different statuses and unique identifiers
     let mut workflow1 = create_test_workflow_with_status(WorkflowStatusModel::PendingAction, WorkflowTypeModel::AccountOpening);
-    workflow1.workflow_id = Uuid::new_v4();
+    workflow1.id = Uuid::new_v4();
     
     let mut workflow2 = create_test_workflow_with_status(WorkflowStatusModel::InProgress, WorkflowTypeModel::AccountOpening);
-    workflow2.workflow_id = Uuid::new_v4();
+    workflow2.id = Uuid::new_v4();
     
     let mut workflow3 = create_test_workflow_with_status(WorkflowStatusModel::PendingAction, WorkflowTypeModel::AccountClosure);
-    workflow3.workflow_id = Uuid::new_v4();
+    workflow3.id = Uuid::new_v4();
     
     repo.create_workflow(&workflow1).await.expect("Failed to create workflow1");
     repo.create_workflow(&workflow2).await.expect("Failed to create workflow2");
@@ -399,8 +399,8 @@ async fn test_find_pending_workflows() {
     assert!(pending_workflows.len() >= 2, "Should have at least 2 pending workflows, found {}", pending_workflows.len());
     
     // Verify our specific workflows are in the results
-    let our_pending_ids = vec![workflow1.workflow_id, workflow3.workflow_id];
-    let found_workflow_ids: Vec<_> = pending_workflows.iter().map(|w| w.workflow_id).collect();
+    let our_pending_ids = vec![workflow1.id, workflow3.id];
+    let found_workflow_ids: Vec<_> = pending_workflows.iter().map(|w| w.id).collect();
     
     for our_id in our_pending_ids {
         assert!(found_workflow_ids.contains(&our_id), "Our test workflow {} not found in pending results", our_id);
@@ -415,13 +415,13 @@ async fn test_find_in_progress_workflows() {
     
     // Create workflows with different statuses and unique identifiers
     let mut workflow1 = create_test_workflow_with_status(WorkflowStatusModel::InProgress, WorkflowTypeModel::AccountOpening);
-    workflow1.workflow_id = Uuid::new_v4();
+    workflow1.id = Uuid::new_v4();
     
     let mut workflow2 = create_test_workflow_with_status(WorkflowStatusModel::PendingAction, WorkflowTypeModel::AccountOpening);
-    workflow2.workflow_id = Uuid::new_v4();
+    workflow2.id = Uuid::new_v4();
     
     let mut workflow3 = create_test_workflow_with_status(WorkflowStatusModel::InProgress, WorkflowTypeModel::AccountClosure);
-    workflow3.workflow_id = Uuid::new_v4();
+    workflow3.id = Uuid::new_v4();
     
     repo.create_workflow(&workflow1).await.expect("Failed to create workflow1");
     repo.create_workflow(&workflow2).await.expect("Failed to create workflow2");
@@ -435,8 +435,8 @@ async fn test_find_in_progress_workflows() {
     assert!(in_progress_workflows.len() >= 2, "Should have at least 2 in-progress workflows, found {}", in_progress_workflows.len());
     
     // Verify our specific workflows are in the results
-    let our_in_progress_ids = vec![workflow1.workflow_id, workflow3.workflow_id];
-    let found_workflow_ids: Vec<_> = in_progress_workflows.iter().map(|w| w.workflow_id).collect();
+    let our_in_progress_ids = vec![workflow1.id, workflow3.id];
+    let found_workflow_ids: Vec<_> = in_progress_workflows.iter().map(|w| w.id).collect();
     
     for our_id in our_in_progress_ids {
         assert!(found_workflow_ids.contains(&our_id), "Our test workflow {} not found in in-progress results", our_id);
@@ -456,7 +456,7 @@ async fn test_find_expired_workflows() {
     
     // Create workflow with timeout in the past with unique identifier
     let mut workflow = create_test_workflow();
-    workflow.workflow_id = Uuid::new_v4();
+    workflow.id = Uuid::new_v4();
     workflow.timeout_at = Some(Utc::now() - chrono::Duration::hours(1)); // Expired 1 hour ago
     workflow.status = WorkflowStatusModel::InProgress;
     
@@ -470,7 +470,7 @@ async fn test_find_expired_workflows() {
     assert!(expired_workflows.len() >= 1, "Should have at least 1 expired workflow, found {}", expired_workflows.len());
     
     // Verify our specific workflow is in the results
-    let found_our_workflow = expired_workflows.iter().any(|w| w.workflow_id == workflow.workflow_id);
+    let found_our_workflow = expired_workflows.iter().any(|w| w.id == workflow.id);
     assert!(found_our_workflow, "Our test workflow not found in expired workflows results");
 }
 
@@ -482,13 +482,13 @@ async fn test_find_account_opening_workflows() {
     
     // Create workflows of different types with unique identifiers
     let mut workflow1 = create_test_workflow_with_status(WorkflowStatusModel::InProgress, WorkflowTypeModel::AccountOpening);
-    workflow1.workflow_id = Uuid::new_v4();
+    workflow1.id = Uuid::new_v4();
     
     let mut workflow2 = create_test_workflow_with_status(WorkflowStatusModel::Completed, WorkflowTypeModel::AccountOpening);
-    workflow2.workflow_id = Uuid::new_v4();
+    workflow2.id = Uuid::new_v4();
     
     let mut workflow3 = create_test_workflow_with_status(WorkflowStatusModel::InProgress, WorkflowTypeModel::AccountClosure);
-    workflow3.workflow_id = Uuid::new_v4();
+    workflow3.id = Uuid::new_v4();
     
     repo.create_workflow(&workflow1).await.expect("Failed to create workflow1");
     repo.create_workflow(&workflow2).await.expect("Failed to create workflow2");
@@ -502,8 +502,8 @@ async fn test_find_account_opening_workflows() {
     assert!(all_opening_workflows.len() >= 2, "Should have at least 2 account opening workflows, found {}", all_opening_workflows.len());
     
     // Verify our specific workflows are in the results
-    let our_opening_ids = vec![workflow1.workflow_id, workflow2.workflow_id];
-    let found_opening_ids: Vec<_> = all_opening_workflows.iter().map(|w| w.workflow_id).collect();
+    let our_opening_ids = vec![workflow1.id, workflow2.id];
+    let found_opening_ids: Vec<_> = all_opening_workflows.iter().map(|w| w.id).collect();
     
     for our_id in our_opening_ids {
         assert!(found_opening_ids.contains(&our_id), "Our test workflow {} not found in account opening results", our_id);
@@ -517,7 +517,7 @@ async fn test_find_account_opening_workflows() {
     assert!(in_progress_opening.len() >= 1, "Should have at least 1 in-progress account opening workflow, found {}", in_progress_opening.len());
     
     // Verify our specific workflow is in the results
-    let found_our_workflow = in_progress_opening.iter().any(|w| w.workflow_id == workflow1.workflow_id);
+    let found_our_workflow = in_progress_opening.iter().any(|w| w.id == workflow1.id);
     assert!(found_our_workflow, "Our test workflow not found in in-progress account opening results");
     
     // Verify all returned workflows have the correct status
@@ -534,7 +534,7 @@ async fn test_find_pending_kyc_workflows() {
     
     // Create a compliance verification workflow in KYC step with unique identifier
     let mut workflow = create_test_workflow();
-    workflow.workflow_id = Uuid::new_v4();
+    workflow.id = Uuid::new_v4();
     workflow.workflow_type = WorkflowTypeModel::ComplianceCheck;
     workflow.current_step = WorkflowStepModel::ComplianceCheck;
     workflow.status = WorkflowStatusModel::PendingAction;
@@ -549,11 +549,11 @@ async fn test_find_pending_kyc_workflows() {
     assert!(kyc_workflows.len() >= 1, "Should have at least 1 pending KYC workflow, found {}", kyc_workflows.len());
     
     // Verify our specific workflow is in the results
-    let found_our_workflow = kyc_workflows.iter().any(|w| w.workflow_id == workflow.workflow_id);
+    let found_our_workflow = kyc_workflows.iter().any(|w| w.id == workflow.id);
     assert!(found_our_workflow, "Our test workflow not found in pending KYC results");
     
     // Find our specific workflow and verify its properties
-    let our_workflow = kyc_workflows.iter().find(|w| w.workflow_id == workflow.workflow_id).unwrap();
+    let our_workflow = kyc_workflows.iter().find(|w| w.id == workflow.id).unwrap();
     assert_eq!(our_workflow.workflow_type, WorkflowTypeModel::ComplianceCheck);
     assert_eq!(our_workflow.current_step, WorkflowStepModel::ComplianceCheck);
 }
@@ -566,7 +566,7 @@ async fn test_find_pending_document_verification() {
     
     // Create a workflow in document verification step with unique identifier
     let mut workflow = create_test_workflow();
-    workflow.workflow_id = Uuid::new_v4();
+    workflow.id = Uuid::new_v4();
     workflow.current_step = WorkflowStepModel::DocumentVerification;
     workflow.status = WorkflowStatusModel::PendingAction;
     
@@ -580,11 +580,11 @@ async fn test_find_pending_document_verification() {
     assert!(doc_workflows.len() >= 1, "Should have at least 1 pending document verification workflow, found {}", doc_workflows.len());
     
     // Verify our specific workflow is in the results
-    let found_our_workflow = doc_workflows.iter().any(|w| w.workflow_id == workflow.workflow_id);
+    let found_our_workflow = doc_workflows.iter().any(|w| w.id == workflow.id);
     assert!(found_our_workflow, "Our test workflow not found in pending document verification results");
     
     // Find our specific workflow and verify its properties
-    let our_workflow = doc_workflows.iter().find(|w| w.workflow_id == workflow.workflow_id).unwrap();
+    let our_workflow = doc_workflows.iter().find(|w| w.id == workflow.id).unwrap();
     assert_eq!(our_workflow.current_step, WorkflowStepModel::DocumentVerification);
     assert_eq!(our_workflow.status, WorkflowStatusModel::PendingAction);
 }
@@ -597,7 +597,7 @@ async fn test_utility_operations() {
     let workflow = create_test_workflow();
     
     // Test workflow existence before creation
-    let exists_before = repo.workflow_exists(workflow.workflow_id).await
+    let exists_before = repo.workflow_exists(workflow.id).await
         .expect("Failed to check workflow existence");
     assert!(!exists_before);
     
@@ -605,7 +605,7 @@ async fn test_utility_operations() {
     repo.create_workflow(&workflow).await.expect("Failed to create workflow");
     
     // Test workflow existence after creation
-    let exists_after = repo.workflow_exists(workflow.workflow_id).await
+    let exists_after = repo.workflow_exists(workflow.id).await
         .expect("Failed to check workflow existence");
     assert!(exists_after);
     
@@ -635,13 +635,13 @@ async fn test_list_workflows_pagination() {
     
     for i in 0..6 { // Create 6 workflows to test pagination properly
         let mut workflow = create_test_workflow();
-        workflow.workflow_id = Uuid::new_v4();
+        workflow.id = Uuid::new_v4();
         workflow.account_id = test_account_id;
         // Add a small delay and unique next_action to ensure different created_at times
         workflow.next_action_required = Some(HeaplessString::try_from(format!("Test action {}", i).as_str()).unwrap());
         
         repo.create_workflow(&workflow).await.expect("Failed to create workflow");
-        created_workflow_ids.push(workflow.workflow_id);
+        created_workflow_ids.push(workflow.id);
         
         // Small delay to ensure different timestamps
         tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
@@ -662,9 +662,9 @@ async fn test_list_workflows_pagination() {
     
     // Collect all IDs from all pages
     let mut all_page_ids = Vec::new();
-    all_page_ids.extend(first_page.iter().map(|w| w.workflow_id));
-    all_page_ids.extend(second_page.iter().map(|w| w.workflow_id));
-    all_page_ids.extend(third_page.iter().map(|w| w.workflow_id));
+    all_page_ids.extend(first_page.iter().map(|w| w.id));
+    all_page_ids.extend(second_page.iter().map(|w| w.id));
+    all_page_ids.extend(third_page.iter().map(|w| w.id));
     
     // Check that there are no duplicates across pages
     let unique_ids: HashSet<_> = all_page_ids.iter().collect();
@@ -686,12 +686,12 @@ async fn test_bulk_operations() {
     let test_account_id = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
     for _i in 0..3 {
         let mut workflow = create_test_workflow();
-        workflow.workflow_id = Uuid::new_v4();
+        workflow.id = Uuid::new_v4();
         workflow.account_id = test_account_id;
         workflow.status = WorkflowStatusModel::InProgress;
         
         repo.create_workflow(&workflow).await.expect("Failed to create workflow");
-        workflow_ids.push(workflow.workflow_id);
+        workflow_ids.push(workflow.id);
     }
     
     // Test bulk status update
@@ -719,7 +719,7 @@ async fn test_bulk_timeout_expired_workflows() {
     let test_account_id = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
     for _i in 0..2 {
         let mut workflow = create_test_workflow();
-        workflow.workflow_id = Uuid::new_v4();
+        workflow.id = Uuid::new_v4();
         workflow.account_id = test_account_id;
         workflow.timeout_at = Some(past_time);
         workflow.status = WorkflowStatusModel::InProgress;

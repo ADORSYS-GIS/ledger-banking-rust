@@ -7,7 +7,7 @@ use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Channel {
-    pub channel_id: Uuid,
+    pub id: Uuid,
     pub channel_code: HeaplessString<50>,
     pub channel_name: HeaplessString<100>,
     pub channel_type: super::transaction::ChannelType,
@@ -29,7 +29,7 @@ pub enum ChannelStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelFee {
-    pub fee_id: Uuid,
+    pub id: Uuid,
     pub fee_type: ChannelFeeType,
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
@@ -40,7 +40,7 @@ pub struct ChannelFee {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReconciliationReport {
-    pub report_id: Uuid,
+    pub id: Uuid,
     pub channel_id: Uuid,
     pub reconciliation_date: NaiveDate,
     pub total_transactions: i64,
@@ -70,7 +70,7 @@ pub enum ReconciliationStatus {
 /// Fee Schedule structure for comprehensive channel fee management
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeSchedule {
-    pub schedule_id: Uuid,
+    pub id: Uuid,
     pub schedule_name: HeaplessString<100>,
     pub channel_id: Uuid,
     pub effective_date: chrono::NaiveDate,
@@ -85,7 +85,7 @@ pub struct FeeSchedule {
 /// Individual fee item within a fee schedule
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeItem {
-    pub fee_item_id: Uuid,
+    pub id: Uuid,
     pub fee_code: HeaplessString<20>,
     pub fee_name: HeaplessString<100>,
     pub fee_type: ChannelFeeType,
@@ -127,7 +127,7 @@ pub enum ChannelFeeType {
 /// Channel fee tier for tiered pricing structures
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelFeeTier {
-    pub tier_id: Uuid,
+    pub id: Uuid,
     pub tier_name: HeaplessString<50>,
     pub min_amount: Decimal,
     pub max_amount: Option<Decimal>,

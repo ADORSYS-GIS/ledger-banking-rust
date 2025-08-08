@@ -16,8 +16,8 @@ impl WorkflowMapper {
     /// Map from domain AccountWorkflow to database AccountWorkflowModel
     pub fn to_model(workflow: AccountWorkflow) -> AccountWorkflowModel {
         AccountWorkflowModel {
-            workflow_id: workflow.workflow_id,
-            account_id: workflow.account_id,
+            id: workflow.id,
+            account_id: workflow.id,
             workflow_type: Self::workflow_type_to_db(workflow.workflow_type),
             current_step: Self::workflow_step_to_db(workflow.current_step),
             status: Self::workflow_status_to_db(workflow.status),
@@ -34,8 +34,8 @@ impl WorkflowMapper {
     /// Map from database AccountWorkflowModel to domain AccountWorkflow
     pub fn from_model(model: AccountWorkflowModel) -> banking_api::BankingResult<AccountWorkflow> {
         Ok(AccountWorkflow {
-            workflow_id: model.workflow_id,
-            account_id: model.account_id,
+            id: model.id,
+            account_id: model.id,
             workflow_type: Self::db_to_workflow_type(model.workflow_type),
             current_step: Self::db_to_workflow_step(model.current_step),
             status: Self::db_to_workflow_status(model.status),

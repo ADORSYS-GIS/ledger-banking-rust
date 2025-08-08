@@ -84,7 +84,7 @@ impl CasaService for CasaServiceImpl {
 
         // Create overdraft facility
         let facility = OverdraftFacility {
-            facility_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             account_id: request.account_id,
             approved_limit: request.approved_limit,
             current_utilized: Decimal::ZERO,
@@ -107,7 +107,7 @@ impl CasaService for CasaServiceImpl {
         updated_account.overdraft_limit = Some(request.approved_limit);
         self.account_repository.update(updated_account).await?;
 
-        tracing::info!("Created overdraft facility {} for account {}", facility.facility_id, request.account_id);
+        tracing::info!("Created overdraft facility {} for account {}", facility.id, request.account_id);
 
         Ok(facility)
     }
@@ -379,7 +379,7 @@ impl CasaService for CasaServiceImpl {
         let interest_amount = overdrawn_amount * daily_rate;
 
         let calculation = OverdraftInterestCalculation {
-            calculation_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             account_id,
             calculation_period_start: calculation_date,
             calculation_period_end: calculation_date,
@@ -497,7 +497,7 @@ impl CasaService for CasaServiceImpl {
         tracing::info!("Starting daily overdraft processing for date {}", processing_date);
 
         let mut job = OverdraftProcessingJob {
-            job_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             processing_date,
             accounts_processed: 0,
             total_interest_accrued: Decimal::ZERO,

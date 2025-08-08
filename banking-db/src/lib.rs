@@ -5,8 +5,21 @@ pub mod utils;
 // Re-export only specific items to avoid naming conflicts
 pub use models::{
     customer::*, account::*, transaction::*, 
-    agent_network::*, compliance::*, workflow::*,
+    agent_network::*, workflow::*,
     calendar::*, person::*
+};
+// Import compliance models with aliases to avoid conflicts
+pub use models::{
+    KycResultModel, KycCheckModel, KycRecordModel,
+    ScreeningResultModel, SanctionsMatchModel, SanctionsScreeningModel,
+    ComplianceAlertModel, ExtendedComplianceAlertModel, UboVerificationResultModel,
+    UboLinkModel, ComplianceResultModel, ComplianceRiskScoreModel,
+    SarDataModel, ExtendedSarDataModel, ComplianceDocumentModel,
+    ComplianceCustomerAuditModel, MonitoringResultModel, MonitoringRulesModel,
+    ComplianceCustomerPortfolioModel,
+    ComplianceControlType, ComplianceVerificationStatus,
+    CheckResult, ScreeningType, RiskLevel, AlertType, Severity,
+    AlertStatus, SarStatus, ComplianceStatus, CheckType
 };
 pub use repository::{
     CustomerRepository, AccountRepository, TransactionRepository,

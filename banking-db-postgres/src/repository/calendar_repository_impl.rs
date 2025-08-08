@@ -92,7 +92,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
         sqlx::query!(
             r#"
             INSERT INTO weekend_configuration (
-                config_id, jurisdiction, weekend_days, effective_date, 
+                id, jurisdiction, weekend_days, effective_date, 
                 is_active, created_at, created_by, last_updated_at, updated_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (jurisdiction) 
@@ -128,7 +128,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
     ) -> BankingResult<Vec<BankHolidayModel>> {
         let rows = sqlx::query!(
             r#"
-            SELECT holiday_id, jurisdiction, holiday_date, holiday_name, 
+            SELECT id, jurisdiction, holiday_date, holiday_name, 
                    holiday_type as "holiday_type: HolidayType", is_recurring, description, 
                    created_at, created_by
             FROM bank_holidays
@@ -152,7 +152,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
                 .unwrap_or_else(|_| HeaplessString::new());
             
             BankHolidayModel {
-                holiday_id: row.holiday_id,
+                id: row.id,
                 jurisdiction: jurisdiction_str,
                 holiday_date: row.holiday_date,
                 holiday_name: holiday_name_str,
@@ -174,14 +174,14 @@ impl CalendarRepository for CalendarRepositoryImpl {
         let row = sqlx::query!(
             r#"
             INSERT INTO bank_holidays (
-                holiday_id, jurisdiction, holiday_date, holiday_name,
+                id, jurisdiction, holiday_date, holiday_name,
                 holiday_type, is_recurring, description, created_at, created_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING holiday_id, jurisdiction, holiday_date, holiday_name, 
+            RETURNING id, jurisdiction, holiday_date, holiday_name, 
                       holiday_type as "holiday_type: HolidayType", is_recurring, description, 
                       created_at, created_by
             "#,
-            holiday.holiday_id,
+            holiday.id,
             holiday.jurisdiction.as_str(),
             holiday.holiday_date,
             holiday.holiday_name.as_str(),
@@ -200,7 +200,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
             .unwrap_or_else(|_| HeaplessString::new());
 
         Ok(BankHolidayModel {
-            holiday_id: row.holiday_id,
+            id: row.id,
             jurisdiction: jurisdiction_str,
             holiday_date: row.holiday_date,
             holiday_name: holiday_name_str,
@@ -213,10 +213,10 @@ impl CalendarRepository for CalendarRepositoryImpl {
     }
 
     /// Delete holiday
-    async fn delete_holiday(&self, holiday_id: Uuid) -> BankingResult<()> {
+    async fn delete_holiday(&self, id: Uuid) -> BankingResult<()> {
         sqlx::query!(
-            "DELETE FROM bank_holidays WHERE holiday_id = $1",
-            holiday_id
+            "DELETE FROM bank_holidays WHERE id = $1",
+            id
         )
         .execute(&self.pool)
         .await?;
@@ -232,7 +232,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
     ) -> BankingResult<Vec<BankHolidayModel>> {
         let rows = sqlx::query!(
             r#"
-            SELECT holiday_id, jurisdiction, holiday_date, holiday_name, 
+            SELECT id, jurisdiction, holiday_date, holiday_name, 
                    holiday_type as "holiday_type: HolidayType", is_recurring, description, 
                    created_at, created_by
             FROM bank_holidays
@@ -254,7 +254,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
                 .unwrap_or_else(|_| HeaplessString::new());
                 
             BankHolidayModel {
-                holiday_id: row.holiday_id,
+                id: row.id,
                 jurisdiction: jurisdiction_str,
                 holiday_date: row.holiday_date,
                 holiday_name: holiday_name_str,
@@ -289,7 +289,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
         Ok(holiday)
     }
 
-    async fn find_holiday_by_id(&self, _holiday_id: Uuid) -> BankingResult<Option<BankHolidayModel>> {
+    async fn find_holiday_by_id(&self, _id: Uuid) -> BankingResult<Option<BankHolidayModel>> {
         // TODO: Implement holiday lookup by ID
         Ok(None)
     }

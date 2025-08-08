@@ -9,7 +9,7 @@ use super::person::MessagingType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentNetwork {
-    pub network_id: Uuid,
+    pub id: Uuid,
     pub network_name: HeaplessString<100>,
     pub network_type: NetworkType,
     pub status: NetworkStatus,
@@ -23,7 +23,7 @@ pub struct AgentNetwork {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgencyBranch {
 
-    pub branch_id: Uuid,
+    pub id: Uuid,
     pub network_id: Uuid,
     pub parent_branch_id: Option<Uuid>,
     pub branch_name: HeaplessString<100>,
@@ -88,7 +88,7 @@ pub struct AgencyBranch {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentTerminal {
-    pub terminal_id: Uuid,
+    pub id: Uuid,
     pub branch_id: Uuid,
     pub agent_user_id: Uuid,
     pub terminal_type: TerminalType,
@@ -506,7 +506,7 @@ impl AgencyBranch {
     /// This provides default values for all new fields
     #[allow(clippy::too_many_arguments)]
     pub fn create_minimal(
-        branch_id: Uuid,
+        id: Uuid,
         network_id: Uuid,
         parent_branch_id: Option<Uuid>,
         branch_name: HeaplessString<100>,
@@ -526,7 +526,7 @@ impl AgencyBranch {
         default_security_access_id: Uuid,
     ) -> Self {
         AgencyBranch {
-            branch_id,
+            id,
             network_id,
             parent_branch_id,
             branch_name,

@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
-    pub transaction_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub transaction_code: HeaplessString<8>,
     pub transaction_type: TransactionType,
@@ -52,6 +52,199 @@ pub enum TransactionApprovalStatus {
     Approved, 
     Rejected, 
     PartiallyApproved 
+}
+
+// Display implementations for database compatibility
+impl std::fmt::Display for TransactionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionType::Credit => write!(f, "Credit"),
+            TransactionType::Debit => write!(f, "Debit"),
+        }
+    }
+}
+
+impl std::fmt::Display for TransactionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionStatus::Pending => write!(f, "Pending"),
+            TransactionStatus::Posted => write!(f, "Posted"),
+            TransactionStatus::Reversed => write!(f, "Reversed"),
+            TransactionStatus::Failed => write!(f, "Failed"),
+            TransactionStatus::AwaitingApproval => write!(f, "AwaitingApproval"),
+            TransactionStatus::ApprovalRejected => write!(f, "ApprovalRejected"),
+        }
+    }
+}
+
+impl std::fmt::Display for TransactionApprovalStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionApprovalStatus::Pending => write!(f, "Pending"),
+            TransactionApprovalStatus::Approved => write!(f, "Approved"),
+            TransactionApprovalStatus::Rejected => write!(f, "Rejected"),
+            TransactionApprovalStatus::PartiallyApproved => write!(f, "PartiallyApproved"),
+        }
+    }
+}
+
+impl std::fmt::Display for TransactionWorkflowStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionWorkflowStatus::Pending => write!(f, "Pending"),
+            TransactionWorkflowStatus::Approved => write!(f, "Approved"),
+            TransactionWorkflowStatus::Rejected => write!(f, "Rejected"),
+            TransactionWorkflowStatus::TimedOut => write!(f, "TimedOut"),
+        }
+    }
+}
+
+impl std::fmt::Display for TransactionAuditAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionAuditAction::Created => write!(f, "Created"),
+            TransactionAuditAction::StatusChanged => write!(f, "StatusChanged"),
+            TransactionAuditAction::Posted => write!(f, "Posted"),
+            TransactionAuditAction::Reversed => write!(f, "Reversed"),
+            TransactionAuditAction::Failed => write!(f, "Failed"),
+            TransactionAuditAction::Approved => write!(f, "Approved"),
+            TransactionAuditAction::Rejected => write!(f, "Rejected"),
+        }
+    }
+}
+
+impl std::fmt::Display for ChannelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChannelType::MobileApp => write!(f, "MobileApp"),
+            ChannelType::AgentTerminal => write!(f, "AgentTerminal"),
+            ChannelType::ATM => write!(f, "ATM"),
+            ChannelType::InternetBanking => write!(f, "InternetBanking"),
+            ChannelType::BranchTeller => write!(f, "BranchTeller"),
+            ChannelType::USSD => write!(f, "USSD"),
+            ChannelType::ApiGateway => write!(f, "ApiGateway"),
+        }
+    }
+}
+
+impl std::fmt::Display for PermittedOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PermittedOperation::Credit => write!(f, "Credit"),
+            PermittedOperation::Debit => write!(f, "Debit"),
+            PermittedOperation::InterestPosting => write!(f, "InterestPosting"),
+            PermittedOperation::FeeApplication => write!(f, "FeeApplication"),
+            PermittedOperation::ClosureSettlement => write!(f, "ClosureSettlement"),
+            PermittedOperation::None => write!(f, "None"),
+        }
+    }
+}
+
+// FromStr implementations for database compatibility
+impl std::str::FromStr for TransactionType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Credit" => Ok(TransactionType::Credit),
+            "Debit" => Ok(TransactionType::Debit),
+            _ => Err(format!("Invalid TransactionType: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for TransactionStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Pending" => Ok(TransactionStatus::Pending),
+            "Posted" => Ok(TransactionStatus::Posted),
+            "Reversed" => Ok(TransactionStatus::Reversed),
+            "Failed" => Ok(TransactionStatus::Failed),
+            "AwaitingApproval" => Ok(TransactionStatus::AwaitingApproval),
+            "ApprovalRejected" => Ok(TransactionStatus::ApprovalRejected),
+            _ => Err(format!("Invalid TransactionStatus: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for TransactionApprovalStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Pending" => Ok(TransactionApprovalStatus::Pending),
+            "Approved" => Ok(TransactionApprovalStatus::Approved),
+            "Rejected" => Ok(TransactionApprovalStatus::Rejected),
+            "PartiallyApproved" => Ok(TransactionApprovalStatus::PartiallyApproved),
+            _ => Err(format!("Invalid TransactionApprovalStatus: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for TransactionWorkflowStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Pending" => Ok(TransactionWorkflowStatus::Pending),
+            "Approved" => Ok(TransactionWorkflowStatus::Approved),
+            "Rejected" => Ok(TransactionWorkflowStatus::Rejected),
+            "TimedOut" => Ok(TransactionWorkflowStatus::TimedOut),
+            _ => Err(format!("Invalid TransactionWorkflowStatus: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for TransactionAuditAction {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Created" => Ok(TransactionAuditAction::Created),
+            "StatusChanged" => Ok(TransactionAuditAction::StatusChanged),
+            "Posted" => Ok(TransactionAuditAction::Posted),
+            "Reversed" => Ok(TransactionAuditAction::Reversed),
+            "Failed" => Ok(TransactionAuditAction::Failed),
+            "Approved" => Ok(TransactionAuditAction::Approved),
+            "Rejected" => Ok(TransactionAuditAction::Rejected),
+            _ => Err(format!("Invalid TransactionAuditAction: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for ChannelType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "MobileApp" => Ok(ChannelType::MobileApp),
+            "AgentTerminal" => Ok(ChannelType::AgentTerminal),
+            "ATM" => Ok(ChannelType::ATM),
+            "InternetBanking" => Ok(ChannelType::InternetBanking),
+            "BranchTeller" => Ok(ChannelType::BranchTeller),
+            "USSD" => Ok(ChannelType::USSD),
+            "ApiGateway" => Ok(ChannelType::ApiGateway),
+            _ => Err(format!("Invalid ChannelType: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for PermittedOperation {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Credit" => Ok(PermittedOperation::Credit),
+            "Debit" => Ok(PermittedOperation::Debit),
+            "InterestPosting" => Ok(PermittedOperation::InterestPosting),
+            "FeeApplication" => Ok(PermittedOperation::FeeApplication),
+            "ClosureSettlement" => Ok(PermittedOperation::ClosureSettlement),
+            "None" => Ok(PermittedOperation::None),
+            _ => Err(format!("Invalid PermittedOperation: {s}")),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,7 +315,7 @@ impl ValidationResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlEntry {
-    pub entry_id: Uuid,
+    pub id: Uuid,
     pub account_code: Uuid,
     pub debit_amount: Option<Decimal>,
     pub credit_amount: Option<Decimal>,
@@ -136,7 +329,7 @@ pub struct GlEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApprovalWorkflow {
-    pub workflow_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     pub required_approvers: Vec<Uuid>,
     pub received_approvals: Vec<Approval>,
@@ -146,7 +339,7 @@ pub struct ApprovalWorkflow {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Approval {
-    pub approval_id: Uuid,
+    pub id: Uuid,
     pub approver_id: Uuid,
     pub approved_at: DateTime<Utc>,
     pub notes: Option<String>,
@@ -194,7 +387,7 @@ pub enum PermittedOperation {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionAudit {
-    pub audit_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     pub action_type: TransactionAuditAction,
     /// References Person.person_id
@@ -219,7 +412,7 @@ impl TransactionAudit {
         details_content: Option<&str>,
     ) -> Self {
         Self {
-            audit_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             transaction_id,
             action_type,
             performed_by,

@@ -178,9 +178,9 @@ pub async fn create_test_person(pool: &PgPool) -> uuid::Uuid {
     
     sqlx::query(
         r#"
-        INSERT INTO persons (person_id, person_type, display_name, external_identifier)
+        INSERT INTO persons (id, person_type, display_name, external_identifier)
         VALUES ($1, 'system', 'Test User', 'test-user')
-        ON CONFLICT (person_id) DO NOTHING
+        ON CONFLICT (id) DO NOTHING
         "#
     )
     .bind(test_person_id)
@@ -201,7 +201,7 @@ pub async fn create_test_account(pool: &PgPool, created_by: uuid::Uuid) -> uuid:
     sqlx::query(
         r#"
         INSERT INTO accounts (
-            account_id, product_code, account_type, account_status, 
+            id, product_code, account_type, account_status, 
             signing_condition, currency, open_date, domicile_branch_id,
             current_balance, available_balance, accrued_interest, 
             created_at, last_updated_at, updated_by
@@ -211,7 +211,7 @@ pub async fn create_test_account(pool: &PgPool, created_by: uuid::Uuid) -> uuid:
             0.00, 0.00, 0.00,
             NOW(), NOW(), $3
         )
-        ON CONFLICT (account_id) DO NOTHING
+        ON CONFLICT (id) DO NOTHING
         "#
     )
     .bind(test_account_id)
@@ -272,7 +272,7 @@ mod tests {
         
         // Verify test person exists
         let person_count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM persons WHERE person_id = $1"
+            "SELECT COUNT(*) FROM persons WHERE id = $1"
         )
         .bind(person_id)
         .fetch_one(&pool)
@@ -283,7 +283,7 @@ mod tests {
         
         // Verify test account exists
         let account_count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM accounts WHERE account_id = $1"
+            "SELECT COUNT(*) FROM accounts WHERE id = $1"
         )
         .bind(account_id)
         .fetch_one(&pool)

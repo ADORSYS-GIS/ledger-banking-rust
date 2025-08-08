@@ -179,7 +179,7 @@ impl EodService for EodServiceImpl {
                 vec![], // No specific category filter
             ).await {
                 Ok(_) => successful += 1,
-                Err(e) => errors.push(format!("Account {}: {e}", account.account_id)),
+                Err(e) => errors.push(format!("Account {}: {e}", account.id)),
             }
         }
 
@@ -217,13 +217,13 @@ impl EodService for EodServiceImpl {
             if account.current_balance > rust_decimal::Decimal::ZERO {
                 // Update account status if overdue
                 match self.account_repository.update_status(
-                    account.account_id,
+                    account.id,
                     "Delinquent",
                     "EOD delinquency check",
                     account.updated_by,
                 ).await {
                     Ok(_) => successful += 1,
-                    Err(e) => errors.push(format!("Account {}: {e}", account.account_id)),
+                    Err(e) => errors.push(format!("Account {}: {e}", account.id)),
                 }
             } else {
                 successful += 1; // No action needed
@@ -368,7 +368,7 @@ impl EodService for EodServiceImpl {
         
         for account in &dormancy_candidates {
             match self.account_repository.update_status(
-                account.account_id,
+                account.id,
                 "Dormant",
                 "EOD dormancy processing",
                 account.updated_by,
@@ -378,7 +378,7 @@ impl EodService for EodServiceImpl {
                     let product_code = account.product_code.as_str().to_string();
                     *accounts_by_product.entry(product_code).or_insert(0) += 1;
                 }
-                Err(e) => errors.push(format!("Account {}: {e}", account.account_id)),
+                Err(e) => errors.push(format!("Account {}: {e}", account.id)),
             }
         }
 
@@ -402,9 +402,9 @@ impl EodService for EodServiceImpl {
         for account in &pending_closures {
             // Process closure through lifecycle service
             // Process final closure through lifecycle service
-            match self.lifecycle_service.finalize_closure(account.account_id).await {
+            match self.lifecycle_service.finalize_closure(account.id).await {
                 Ok(_) => closures_completed += 1,
-                Err(e) => errors.push(format!("Account {}: {e}", account.account_id)),
+                Err(e) => errors.push(format!("Account {}: {e}", account.id)),
             }
         }
 

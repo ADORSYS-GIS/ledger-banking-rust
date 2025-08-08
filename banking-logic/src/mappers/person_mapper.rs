@@ -34,7 +34,7 @@ impl PersonMapper {
     /// Convert domain Person to database PersonModel
     pub fn to_model(person: domain::Person) -> PersonModel {
         PersonModel {
-            person_id: person.person_id,
+            id: person.id,
             person_type: Self::person_type_to_model(person.person_type),
             display_name: person.display_name,
             external_identifier: person.external_identifier,
@@ -63,7 +63,7 @@ impl PersonMapper {
     /// Convert database PersonModel to domain Person
     pub fn from_model(model: PersonModel) -> domain::Person {
         domain::Person {
-            person_id: model.person_id,
+            id: model.id,
             person_type: Self::person_type_from_model(model.person_type),
             display_name: model.display_name,
             external_identifier: model.external_identifier,
@@ -247,7 +247,7 @@ mod tests {
         let now = Utc::now();
         
         let domain_person = domain::Person {
-            person_id,
+            id: person_id,
             person_type: domain::PersonType::Natural,
             display_name: HeaplessString::try_from("John Doe").unwrap(),
             external_identifier: Some(HeaplessString::try_from("EMP001").unwrap()),
@@ -275,7 +275,7 @@ mod tests {
         let model = PersonMapper::to_model(domain_person.clone());
         let back_to_domain = PersonMapper::from_model(model);
 
-        assert_eq!(domain_person.person_id, back_to_domain.person_id);
+        assert_eq!(domain_person.id, back_to_domain.id);
         assert_eq!(domain_person.person_type, back_to_domain.person_type);
         assert_eq!(domain_person.display_name, back_to_domain.display_name);
         assert_eq!(domain_person.external_identifier, back_to_domain.external_identifier);

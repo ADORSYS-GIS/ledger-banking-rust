@@ -25,15 +25,15 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO account_workflows (
-                workflow_id, account_id, workflow_type, current_step, status, 
+                id, account_id, workflow_type, current_step, status, 
                 initiated_by, initiated_at, completed_at, next_action_required, timeout_at
             ) VALUES ($1, $2, $3::workflow_type, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING workflow_id, account_id, workflow_type::text, current_step, status, 
+            RETURNING id, account_id, workflow_type::text, current_step, status, 
                      initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                      created_at, last_updated_at
             "#
         )
-        .bind(workflow.workflow_id)
+        .bind(workflow.id)
         .bind(workflow.account_id)
         .bind(workflow.workflow_type.to_string())
         .bind(workflow.current_step.to_string())
@@ -48,7 +48,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         .map_err(|e| BankingError::Internal(format!("Failed to create workflow: {e}")))?;
 
         Ok(AccountWorkflowModel {
-            workflow_id: result.get("workflow_id"),
+            id: result.get("id"),
             account_id: result.get("account_id"),
             workflow_type: WorkflowTypeModel::from_str(&result.get::<String, _>("workflow_type"))
                 .map_err(|e| BankingError::ValidationError {
@@ -88,13 +88,13 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
             SET workflow_type = $2::workflow_type, current_step = $3, status = $4, 
                 completed_at = $5, next_action_required = $6, timeout_at = $7,
                 last_updated_at = NOW()
-            WHERE workflow_id = $1
-            RETURNING workflow_id, account_id, workflow_type::text, current_step, status, 
+            WHERE id = $1
+            RETURNING id, account_id, workflow_type::text, current_step, status, 
                      initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                      created_at, last_updated_at
             "#
         )
-        .bind(workflow.workflow_id)
+        .bind(workflow.id)
         .bind(workflow.workflow_type.to_string())
         .bind(workflow.current_step.to_string())
         .bind(workflow.status.to_string())
@@ -107,7 +107,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         ))?;
 
         Ok(AccountWorkflowModel {
-            workflow_id: result.get("workflow_id"),
+            id: result.get("id"),
             account_id: result.get("account_id"),
             workflow_type: WorkflowTypeModel::from_str(&result.get::<String, _>("workflow_type"))
                 .map_err(|e| BankingError::ValidationError {
@@ -140,17 +140,17 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         })
     }
 
-    async fn find_workflow_by_id(&self, workflow_id: Uuid) -> BankingResult<Option<AccountWorkflowModel>> {
+    async fn find_workflow_by_id(&self, id: Uuid) -> BankingResult<Option<AccountWorkflowModel>> {
         let result = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
-            WHERE workflow_id = $1
+            WHERE id = $1
             "#
         )
-        .bind(workflow_id)
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| BankingError::Internal(format!("Failed to find workflow by ID: {e}"),
@@ -158,7 +158,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
 
         match result {
             Some(row) => Ok(Some(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -196,7 +196,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_workflows_by_account(&self, account_id: Uuid) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -213,7 +213,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -251,7 +251,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_active_workflow(&self, account_id: Uuid, workflow_type: &str) -> BankingResult<Option<AccountWorkflowModel>> {
         let result = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -270,7 +270,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
 
         match result {
             Some(row) => Ok(Some(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -308,7 +308,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_workflows_by_type(&self, workflow_type: &str) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -325,7 +325,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -363,7 +363,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_workflows_by_status(&self, status: &str) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -380,7 +380,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -424,7 +424,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
 
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -441,7 +441,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -477,15 +477,15 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     }
 
     /// Workflow Status Management
-    async fn update_workflow_status(&self, workflow_id: Uuid, status: &str, notes: &str) -> BankingResult<()> {
+    async fn update_workflow_status(&self, id: Uuid, status: &str, notes: &str) -> BankingResult<()> {
         sqlx::query(
             r#"
             UPDATE account_workflows 
             SET status = $2, next_action_required = $3, last_updated_at = NOW()
-            WHERE workflow_id = $1
+            WHERE id = $1
             "#
         )
-        .bind(workflow_id)
+        .bind(id)
         .bind(status)
         .bind(if notes.is_empty() { None } else { Some(notes) })
         .execute(&self.pool)
@@ -496,15 +496,15 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         Ok(())
     }
 
-    async fn update_workflow_step(&self, workflow_id: Uuid, current_step: &str) -> BankingResult<()> {
+    async fn update_workflow_step(&self, id: Uuid, current_step: &str) -> BankingResult<()> {
         sqlx::query(
             r#"
             UPDATE account_workflows 
             SET current_step = $2, last_updated_at = NOW()
-            WHERE workflow_id = $1
+            WHERE id = $1
             "#
         )
-        .bind(workflow_id)
+        .bind(id)
         .bind(current_step)
         .execute(&self.pool)
         .await
@@ -514,9 +514,9 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         Ok(())
     }
 
-    async fn advance_workflow_step(&self, workflow_id: Uuid, step: &str, notes: &str) -> BankingResult<()> {
+    async fn advance_workflow_step(&self, id: Uuid, step: &str, notes: &str) -> BankingResult<()> {
         // First update the workflow current step
-        self.update_workflow_step(workflow_id, step).await?;
+        self.update_workflow_step(id, step).await?;
 
         // Add a step record
         let step_record = WorkflowStepRecordModel {
@@ -541,15 +541,15 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         Ok(())
     }
 
-    async fn complete_workflow(&self, workflow_id: Uuid, completion_notes: &str) -> BankingResult<()> {
+    async fn complete_workflow(&self, id: Uuid, completion_notes: &str) -> BankingResult<()> {
         sqlx::query(
             r#"
             UPDATE account_workflows 
             SET status = 'Completed', completed_at = NOW(), next_action_required = $2, last_updated_at = NOW()
-            WHERE workflow_id = $1
+            WHERE id = $1
             "#
         )
-        .bind(workflow_id)
+        .bind(id)
         .bind(if completion_notes.is_empty() { None } else { Some(completion_notes) })
         .execute(&self.pool)
         .await
@@ -559,15 +559,15 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         Ok(())
     }
 
-    async fn fail_workflow(&self, workflow_id: Uuid, failure_reason: &str) -> BankingResult<()> {
+    async fn fail_workflow(&self, id: Uuid, failure_reason: &str) -> BankingResult<()> {
         sqlx::query(
             r#"
             UPDATE account_workflows 
             SET status = 'Failed', next_action_required = $2, last_updated_at = NOW()
-            WHERE workflow_id = $1
+            WHERE id = $1
             "#
         )
-        .bind(workflow_id)
+        .bind(id)
         .bind(if failure_reason.is_empty() { None } else { Some(failure_reason) })
         .execute(&self.pool)
         .await
@@ -577,15 +577,15 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         Ok(())
     }
 
-    async fn cancel_workflow(&self, workflow_id: Uuid, reason: &str) -> BankingResult<()> {
+    async fn cancel_workflow(&self, id: Uuid, reason: &str) -> BankingResult<()> {
         sqlx::query(
             r#"
             UPDATE account_workflows 
             SET status = 'Cancelled', next_action_required = $2, last_updated_at = NOW()
-            WHERE workflow_id = $1
+            WHERE id = $1
             "#
         )
-        .bind(workflow_id)
+        .bind(id)
         .bind(if reason.is_empty() { None } else { Some(reason) })
         .execute(&self.pool)
         .await
@@ -690,7 +690,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_expired_workflows(&self, reference_time: DateTime<Utc>) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -707,7 +707,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -760,7 +760,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_pending_kyc_workflows(&self) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -776,7 +776,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -814,7 +814,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_pending_document_verification(&self) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -830,7 +830,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -879,7 +879,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_pending_final_settlement(&self) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -895,7 +895,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -948,7 +948,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_pending_mini_kyc(&self) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -964,7 +964,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -1106,7 +1106,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn find_stale_workflows(&self, stale_threshold_hours: i32) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -1124,7 +1124,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {
@@ -1165,7 +1165,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
             r#"
             UPDATE account_workflows 
             SET status = $2, last_updated_at = NOW()
-            WHERE workflow_id = ANY($1)
+            WHERE id = ANY($1)
             "#
         )
         .bind(&workflow_ids)
@@ -1198,7 +1198,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     // Utility operations
     async fn workflow_exists(&self, workflow_id: Uuid) -> BankingResult<bool> {
         let result = sqlx::query(
-            "SELECT COUNT(*) as count FROM account_workflows WHERE workflow_id = $1"
+            "SELECT COUNT(*) as count FROM account_workflows WHERE id = $1"
         )
         .bind(workflow_id)
         .fetch_one(&self.pool)
@@ -1242,7 +1242,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
     async fn list_workflows(&self, offset: i64, limit: i64) -> BankingResult<Vec<AccountWorkflowModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT workflow_id, account_id, workflow_type::text, current_step, status, 
+            SELECT id, account_id, workflow_type::text, current_step, status, 
                    initiated_by, initiated_at, completed_at, next_action_required, timeout_at,
                    created_at, last_updated_at
             FROM account_workflows 
@@ -1260,7 +1260,7 @@ impl WorkflowRepository for WorkflowRepositoryImpl {
         let mut workflows = Vec::new();
         for row in rows {
             workflows.push(AccountWorkflowModel {
-                workflow_id: row.get("workflow_id"),
+                id: row.get("id"),
                 account_id: row.get("account_id"),
                 workflow_type: WorkflowTypeModel::from_str(&row.get::<String, _>("workflow_type"))
                     .map_err(|e| BankingError::ValidationError {

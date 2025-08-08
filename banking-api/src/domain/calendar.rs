@@ -5,7 +5,7 @@ use heapless::String as HeaplessString;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BankHoliday {
-    pub holiday_id: Uuid,
+    pub id: Uuid,
     pub jurisdiction: HeaplessString<10>,
     pub holiday_date: NaiveDate,
     pub holiday_name: HeaplessString<50>,
@@ -19,15 +19,15 @@ pub struct BankHoliday {
 
 impl BankHoliday {
     /// Builder for BankHoliday construction - preferred approach
-    pub fn builder(holiday_id: Uuid, holiday_type: HolidayType) -> BankHolidayBuilder {
-        BankHolidayBuilder::new(holiday_id, holiday_type)
+    pub fn builder(id: Uuid, holiday_type: HolidayType) -> BankHolidayBuilder {
+        BankHolidayBuilder::new(id, holiday_type)
     }
 
     /// Legacy constructor - deprecated in favor of builder pattern
     #[deprecated(since = "0.1.0", note = "Use BankHoliday::builder() instead")]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        holiday_id: Uuid,
+        id: Uuid,
         jurisdiction: &str,
         holiday_date: NaiveDate,
         holiday_name: &str,
@@ -55,7 +55,7 @@ impl BankHoliday {
         };
 
         Ok(BankHoliday {
-            holiday_id,
+            id,
             jurisdiction,
             holiday_date,
             holiday_name,
@@ -80,7 +80,7 @@ impl BankHoliday {
 
 /// Builder for BankHoliday construction
 pub struct BankHolidayBuilder {
-    holiday_id: Uuid,
+    id: Uuid,
     holiday_type: HolidayType,
     jurisdiction: Option<String>,
     holiday_date: Option<NaiveDate>,
@@ -92,9 +92,9 @@ pub struct BankHolidayBuilder {
 }
 
 impl BankHolidayBuilder {
-    pub fn new(holiday_id: Uuid, holiday_type: HolidayType) -> Self {
+    pub fn new(id: Uuid, holiday_type: HolidayType) -> Self {
         Self {
-            holiday_id,
+            id,
             holiday_type,
             jurisdiction: None,
             holiday_date: None,
@@ -166,7 +166,7 @@ impl BankHolidayBuilder {
         };
 
         Ok(BankHoliday {
-            holiday_id: self.holiday_id,
+            id: self.id,
             jurisdiction,
             holiday_date,
             holiday_name,
@@ -289,7 +289,7 @@ mod tests {
             .build()
             .expect("Should build successfully");
 
-        assert_eq!(holiday.holiday_id, holiday_id);
+        assert_eq!(holiday.id, holiday_id);
         assert_eq!(holiday.holiday_type, HolidayType::National);
         assert_eq!(holiday.jurisdiction.as_str(), "US");
         assert_eq!(holiday.holiday_date, holiday_date);

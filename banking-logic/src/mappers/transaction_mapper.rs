@@ -18,8 +18,8 @@ impl TransactionMapper {
     /// Map from domain Transaction to database TransactionModel
     pub fn to_model(transaction: Transaction) -> TransactionModel {
         TransactionModel {
-            transaction_id: transaction.transaction_id,
-            account_id: transaction.account_id,
+            id: transaction.id,
+            account_id: transaction.id,
             transaction_code: transaction.transaction_code,
             transaction_type: Self::transaction_type_to_db(transaction.transaction_type),
             amount: transaction.amount,
@@ -44,8 +44,8 @@ impl TransactionMapper {
     /// Map from database TransactionModel to domain Transaction
     pub fn from_model(model: TransactionModel) -> banking_api::BankingResult<Transaction> {
         Ok(Transaction {
-            transaction_id: model.transaction_id,
-            account_id: model.account_id,
+            id: model.id,
+            account_id: model.id,
             transaction_code: model.transaction_code,
             transaction_type: Self::db_to_transaction_type(model.transaction_type),
             amount: model.amount,
@@ -129,8 +129,8 @@ impl TransactionAuditMapper {
     /// Map from domain TransactionAudit to database TransactionAuditModel
     pub fn to_model(audit: TransactionAudit) -> TransactionAuditModel {
         TransactionAuditModel {
-            audit_id: audit.audit_id,
-            transaction_id: audit.transaction_id,
+            id: audit.id,
+            transaction_id: audit.id,
             action_type: Self::audit_action_to_db(audit.action_type),
             performed_by: audit.performed_by,
             performed_at: audit.performed_at,
@@ -144,8 +144,8 @@ impl TransactionAuditMapper {
     /// Map from database TransactionAuditModel to domain TransactionAudit  
     pub fn from_model(model: TransactionAuditModel) -> banking_api::BankingResult<TransactionAudit> {
         Ok(TransactionAudit {
-            audit_id: model.audit_id,
-            transaction_id: model.transaction_id,
+            id: model.id,
+            transaction_id: model.id,
             action_type: Self::db_to_audit_action(model.action_type),
             performed_by: model.performed_by,
             performed_at: model.performed_at,
@@ -187,8 +187,8 @@ impl GlEntryMapper {
     /// Map from domain GlEntry to database GlEntryModel
     pub fn to_model(entry: GlEntry) -> GlEntryModel {
         GlEntryModel {
-            entry_id: entry.entry_id,
-            transaction_id: entry.transaction_id,
+            id: entry.id,
+            transaction_id: entry.id,
             account_code: entry.account_code,
             debit_amount: entry.debit_amount,
             credit_amount: entry.credit_amount,
@@ -204,14 +204,14 @@ impl GlEntryMapper {
     /// Map from database GlEntryModel to domain GlEntry
     pub fn from_model(model: GlEntryModel) -> banking_api::BankingResult<GlEntry> {
         Ok(GlEntry {
-            entry_id: model.entry_id,
+            id: model.id,
             account_code: model.account_code,
             debit_amount: model.debit_amount,
             credit_amount: model.credit_amount,
             currency: model.currency,
             description: model.description,
             reference_number: model.reference_number,
-            transaction_id: model.transaction_id,
+            transaction_id: model.id,
             value_date: model.value_date,
             posting_date: model.posting_date,
         })
@@ -227,7 +227,7 @@ impl TransactionRequestMapper {
             .unwrap_or_else(|_| "{}".to_string());
             
         TransactionRequestModel {
-            request_id: uuid::Uuid::new_v4(),
+            id: uuid::Uuid::new_v4(),
             account_id: request.account_id,
             transaction_type: TransactionMapper::transaction_type_to_db(request.transaction_type),
             amount: request.amount,
@@ -248,7 +248,7 @@ impl TransactionRequestMapper {
             .unwrap_or_else(|_| HashMap::new());
             
         Ok(TransactionRequest {
-            account_id: model.account_id,
+            account_id: model.id,
             transaction_type: TransactionMapper::db_to_transaction_type(model.transaction_type),
             amount: model.amount,
             currency: model.currency,
@@ -292,7 +292,7 @@ impl TransactionResultMapper {
     /// Map from domain TransactionResult to database TransactionResultModel
     pub fn to_model(result: TransactionResult) -> TransactionResultModel {
         TransactionResultModel {
-            result_id: uuid::Uuid::new_v4(),
+            id: uuid::Uuid::new_v4(),
             transaction_id: result.transaction_id,
             reference_number: result.reference_number,
             timestamp: result.timestamp,
@@ -303,7 +303,7 @@ impl TransactionResultMapper {
     /// Map from database TransactionResultModel to domain TransactionResult
     pub fn from_model(model: TransactionResultModel) -> banking_api::BankingResult<TransactionResult> {
         Ok(TransactionResult {
-            transaction_id: model.transaction_id,
+            transaction_id: model.id,
             reference_number: model.reference_number,
             gl_entries: vec![], // GL entries would be loaded separately
             timestamp: model.timestamp,
@@ -322,7 +322,7 @@ impl ValidationResultMapper {
             .unwrap_or_else(|_| "[]".to_string());
             
         ValidationResultModel {
-            validation_id: uuid::Uuid::new_v4(),
+            id: uuid::Uuid::new_v4(),
             transaction_id,
             is_valid: validation.is_valid,
             errors: errors_json,
@@ -348,7 +348,7 @@ impl ApprovalMapper {
     /// Map from domain Approval to database ApprovalModel
     pub fn to_model(approval: Approval, transaction_id: uuid::Uuid) -> ApprovalModel {
         ApprovalModel {
-            approval_id: approval.approval_id,
+            id: approval.id,
             transaction_id,
             approver_id: approval.approver_id,
             approved_at: approval.approved_at,
@@ -360,7 +360,7 @@ impl ApprovalMapper {
     /// Map from database ApprovalModel to domain Approval
     pub fn from_model(model: ApprovalModel) -> banking_api::BankingResult<Approval> {
         Ok(Approval {
-            approval_id: model.approval_id,
+            id: model.id,
             approver_id: model.approver_id,
             approved_at: model.approved_at,
             notes: model.notes,

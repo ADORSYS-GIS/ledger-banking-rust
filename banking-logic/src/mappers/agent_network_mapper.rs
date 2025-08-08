@@ -23,7 +23,7 @@ impl AgentNetworkMapper {
     /// Map from domain AgentNetwork to database AgentNetworkModel
     pub fn network_to_model(network: AgentNetwork) -> AgentNetworkModel {
         AgentNetworkModel {
-            network_id: network.network_id,
+            id: network.id,
             network_name: network.network_name,
             network_type: Self::network_type_to_db(network.network_type),
             status: Self::network_status_to_db(network.status),
@@ -40,7 +40,7 @@ impl AgentNetworkMapper {
     /// Map from database AgentNetworkModel to domain AgentNetwork
     pub fn network_from_model(model: AgentNetworkModel) -> AgentNetwork {
         AgentNetwork {
-            network_id: model.network_id,
+            id: model.id,
             network_name: model.network_name,
             network_type: Self::network_type_from_db(model.network_type),
             status: Self::network_status_from_db(model.status),
@@ -55,7 +55,7 @@ impl AgentNetworkMapper {
     /// Map from domain AgencyBranch to database AgencyBranchModel
     pub fn branch_to_model(branch: AgencyBranch) -> AgencyBranchModel {
         AgencyBranchModel {
-            branch_id: branch.branch_id,
+            id: branch.id,
             network_id: branch.network_id,
             parent_branch_id: branch.parent_branch_id,
             branch_name: branch.branch_name,
@@ -121,7 +121,7 @@ impl AgentNetworkMapper {
     /// Map from database AgencyBranchModel to domain AgencyBranch
     pub fn branch_from_model(model: AgencyBranchModel) -> AgencyBranch {
         AgencyBranch {
-            branch_id: model.branch_id,
+            id: model.id,
             network_id: model.network_id,
             parent_branch_id: model.parent_branch_id,
             branch_name: model.branch_name,
@@ -187,7 +187,7 @@ impl AgentNetworkMapper {
     /// Map from domain AgentTerminal to database AgentTerminalModel
     pub fn terminal_to_model(terminal: AgentTerminal) -> AgentTerminalModel {
         AgentTerminalModel {
-            terminal_id: terminal.terminal_id,
+            id: terminal.id,
             branch_id: terminal.branch_id,
             agent_user_id: terminal.agent_user_id,
             terminal_type: Self::terminal_type_to_db(terminal.terminal_type),
@@ -208,7 +208,7 @@ impl AgentNetworkMapper {
     /// Map from database AgentTerminalModel to domain AgentTerminal
     pub fn terminal_from_model(model: AgentTerminalModel) -> AgentTerminal {
         AgentTerminal {
-            terminal_id: model.terminal_id,
+            id: model.id,
             branch_id: model.branch_id,
             agent_user_id: model.agent_user_id,
             terminal_type: Self::terminal_type_from_db(model.terminal_type),

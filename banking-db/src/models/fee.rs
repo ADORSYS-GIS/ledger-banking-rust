@@ -4,8 +4,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
-// Import enums from domain layer
-use banking_api::domain::fee::{
+// Re-export enums from domain layer for backward compatibility in mappers
+pub use banking_api::domain::fee::{
     FeeType, FeeCategory, FeeCalculationMethod, FeeTriggerEvent, 
     FeeApplicationStatus, FeeJobType, FeeJobStatus
 };
@@ -13,7 +13,7 @@ use banking_api::domain::fee::{
 /// Database model for fee applications
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeApplicationModel {
-    pub fee_application_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub transaction_id: Option<Uuid>,
     #[serde(serialize_with = "serialize_fee_type", deserialize_with = "deserialize_fee_type")]
@@ -47,7 +47,7 @@ pub struct FeeApplicationModel {
 /// Database model for fee waivers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeWaiverModel {
-    pub waiver_id: Uuid,
+    pub id: Uuid,
     pub fee_application_id: Uuid,
     pub account_id: Uuid,
     pub waived_amount: Decimal,
@@ -65,7 +65,7 @@ pub struct FeeWaiverModel {
 /// Database model for fee processing jobs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeProcessingJobModel {
-    pub job_id: Uuid,
+    pub id: Uuid,
     #[serde(serialize_with = "serialize_job_type", deserialize_with = "deserialize_job_type")]
     pub job_type: FeeJobType,
     pub job_name: String,
@@ -87,7 +87,7 @@ pub struct FeeProcessingJobModel {
 /// Database model for enhanced account holds
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeAccountHoldModel {
-    pub hold_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub amount: Decimal,
     pub hold_type: String, // UnclearedFunds, JudicialLien, LoanPledge, etc.
@@ -111,7 +111,7 @@ pub struct FeeAccountHoldModel {
 /// Database model for hold release records
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HoldReleaseRecordModel {
-    pub release_record_id: Uuid,
+    pub id: Uuid,
     pub hold_id: Uuid,
     pub release_amount: Decimal,
     /// References ReasonAndPurpose.id for release reason
@@ -127,7 +127,7 @@ pub struct HoldReleaseRecordModel {
 /// Database model for hold expiry jobs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HoldExpiryJobModel {
-    pub job_id: Uuid,
+    pub id: Uuid,
     pub processing_date: NaiveDate,
     pub expired_holds_count: i32,
     pub total_released_amount: Decimal,
@@ -138,7 +138,7 @@ pub struct HoldExpiryJobModel {
 /// Database model for balance calculations (for caching/audit)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BalanceCalculationModel {
-    pub calculation_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub current_balance: Decimal,
     pub available_balance: Decimal,
@@ -152,7 +152,7 @@ pub struct BalanceCalculationModel {
 /// Database model for product fee schedules (cached from Product Catalog)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductFeeScheduleModel {
-    pub schedule_id: Uuid,
+    pub id: Uuid,
     pub product_code: HeaplessString<12>,
     pub fee_schedule_data: String, // JSON serialized fee schedule
     pub effective_from: NaiveDate,
@@ -164,7 +164,7 @@ pub struct ProductFeeScheduleModel {
 /// Database model for fee calculation cache
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeCalculationCacheModel {
-    pub cache_id: Uuid,
+    pub id: Uuid,
     pub product_code: HeaplessString<12>,
     pub fee_code: HeaplessString<12>,
     pub calculation_key: String, // Hash of calculation parameters

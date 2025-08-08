@@ -34,7 +34,7 @@ impl ComplianceRepository for SimpleComplianceRepositoryImpl {
     async fn find_kyc_by_id(&self, kyc_id: Uuid) -> BankingResult<Option<KycRecordModel>> {
         // Use basic query without enum handling
         let result = sqlx::query!(
-            "SELECT kyc_id FROM kyc_results WHERE kyc_id = $1",
+            "SELECT id FROM kyc_results WHERE id = $1",
             kyc_id
         )
         .fetch_optional(&self.pool)
@@ -48,14 +48,14 @@ impl ComplianceRepository for SimpleComplianceRepositoryImpl {
     
     async fn find_kyc_by_customer(&self, customer_id: Uuid) -> BankingResult<Option<KycRecordModel>> {
         let result = sqlx::query!(
-            "SELECT kyc_id FROM kyc_results WHERE customer_id = $1 LIMIT 1",
+            "SELECT id FROM kyc_results WHERE customer_id = $1 LIMIT 1",
             customer_id
         )
         .fetch_optional(&self.pool)
         .await?;
 
         match result {
-            Some(row) => Ok(Some(self.create_dummy_kyc_record(row.kyc_id))),
+            Some(row) => Ok(Some(self.create_dummy_kyc_record(row.id))),
             None => Ok(None),
         }
     }
@@ -84,7 +84,7 @@ impl ComplianceRepository for SimpleComplianceRepositoryImpl {
     
     async fn find_screening_by_id(&self, screening_id: Uuid) -> BankingResult<Option<SanctionsScreeningModel>> {
         let result = sqlx::query!(
-            "SELECT screening_id FROM sanctions_screening WHERE screening_id = $1",
+            "SELECT id FROM sanctions_screening WHERE id = $1",
             screening_id
         )
         .fetch_optional(&self.pool)
@@ -98,14 +98,14 @@ impl ComplianceRepository for SimpleComplianceRepositoryImpl {
     
     async fn find_screening_by_customer(&self, customer_id: Uuid) -> BankingResult<Vec<SanctionsScreeningModel>> {
         let result = sqlx::query!(
-            "SELECT screening_id FROM sanctions_screening WHERE customer_id = $1 LIMIT 10",
+            "SELECT id FROM sanctions_screening WHERE customer_id = $1 LIMIT 10",
             customer_id
         )
         .fetch_all(&self.pool)
         .await?;
 
         let screenings = result.into_iter()
-            .map(|row| self.create_dummy_sanctions_screening(row.screening_id))
+            .map(|row| self.create_dummy_sanctions_screening(row.id))
             .collect();
 
         Ok(screenings)
@@ -113,14 +113,14 @@ impl ComplianceRepository for SimpleComplianceRepositoryImpl {
     
     async fn find_latest_screening(&self, customer_id: Uuid) -> BankingResult<Option<SanctionsScreeningModel>> {
         let result = sqlx::query!(
-            "SELECT screening_id FROM sanctions_screening WHERE customer_id = $1 ORDER BY screened_at DESC LIMIT 1",
+            "SELECT id FROM sanctions_screening WHERE customer_id = $1 ORDER BY screened_at DESC LIMIT 1",
             customer_id
         )
         .fetch_optional(&self.pool)
         .await?;
 
         match result {
-            Some(row) => Ok(Some(self.create_dummy_sanctions_screening(row.screening_id))),
+            Some(row) => Ok(Some(self.create_dummy_sanctions_screening(row.id))),
             None => Ok(None),
         }
     }
@@ -149,7 +149,7 @@ impl ComplianceRepository for SimpleComplianceRepositoryImpl {
     
     async fn find_alert_by_id(&self, alert_id: Uuid) -> BankingResult<Option<ComplianceAlertModel>> {
         let result = sqlx::query!(
-            "SELECT alert_id FROM compliance_alerts WHERE alert_id = $1",
+            "SELECT id FROM compliance_alerts WHERE id = $1",
             alert_id
         )
         .fetch_optional(&self.pool)
@@ -179,13 +179,13 @@ impl ComplianceRepository for SimpleComplianceRepositoryImpl {
     
     async fn find_open_alerts(&self) -> BankingResult<Vec<ComplianceAlertModel>> {
         let result = sqlx::query!(
-            "SELECT alert_id FROM compliance_alerts WHERE status = 'New' OR status = 'InReview' LIMIT 10"
+            "SELECT id FROM compliance_alerts WHERE status = 'New' OR status = 'InReview' LIMIT 10"
         )
         .fetch_all(&self.pool)
         .await?;
 
         let alerts = result.into_iter()
-            .map(|row| self.create_dummy_compliance_alert(row.alert_id))
+            .map(|row| self.create_dummy_compliance_alert(row.id))
             .collect();
 
         Ok(alerts)
@@ -427,7 +427,7 @@ impl SimpleComplianceRepositoryImpl {
         use heapless::String as HeaplessString;
         
         KycRecordModel {
-            kyc_id,
+            id: kyc_id,
             customer_id: Uuid::new_v4(),
             status: KycStatus::Complete,
             risk_assessment: HeaplessString::try_from("Medium").unwrap(),
@@ -447,7 +447,7 @@ impl SimpleComplianceRepositoryImpl {
         use heapless::String as HeaplessString;
         
         SanctionsScreeningModel {
-            screening_id,
+            id: screening_id,
             customer_id: Uuid::new_v4(),
             screening_date: Utc::now(),
             screening_result: HeaplessString::try_from("Clear").unwrap(),
@@ -467,7 +467,7 @@ impl SimpleComplianceRepositoryImpl {
         use heapless::String as HeaplessString;
         
         ComplianceAlertModel {
-            alert_id,
+            id: alert_id,
             alert_type: AlertType::SuspiciousPattern,
             description: HeaplessString::try_from("Unusual transaction pattern detected").unwrap(),
             severity: Severity::Medium,

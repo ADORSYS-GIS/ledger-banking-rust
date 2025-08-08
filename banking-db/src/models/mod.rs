@@ -20,7 +20,19 @@ pub use customer::*;
 pub use account::*;
 pub use transaction::*;
 pub use agent_network::*;
-pub use compliance::*;
+pub use compliance::{
+    KycResultModel, KycCheckModel, KycRecordModel, 
+    ScreeningResultModel, SanctionsMatchModel, SanctionsScreeningModel,
+    ComplianceAlertModel, ExtendedComplianceAlertModel, UboVerificationResultModel,
+    UboLinkModel, ComplianceResultModel, ComplianceRiskScoreModel,
+    SarDataModel, ExtendedSarDataModel, ComplianceDocumentModel,
+    ComplianceCustomerAuditModel, MonitoringResultModel, MonitoringRulesModel,
+    ComplianceCustomerPortfolioModel,
+    ControlType as ComplianceControlType,
+    VerificationStatus as ComplianceVerificationStatus,
+    CheckResult, ScreeningType, RiskLevel, AlertType, Severity,
+    AlertStatus, SarStatus, ComplianceStatus, CheckType
+};
 pub use workflow::*;
 pub use calendar::*;
 pub use fee::*;

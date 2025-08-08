@@ -98,7 +98,7 @@ pub struct MonitoringResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceAlert {
-    pub alert_id: Uuid,
+    pub id: Uuid,
     pub alert_type: AlertType,
     pub description: HeaplessString<500>,
     pub severity: Severity,
@@ -135,7 +135,7 @@ pub enum AlertStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarData {
-    pub sar_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     /// References ReasonAndPurpose.id for SAR reason
     pub reason_id: Uuid,
@@ -163,7 +163,7 @@ pub struct UboVerificationResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UboLink {
-    pub ubo_id: Uuid,
+    pub id: Uuid,
     pub beneficiary_customer_id: Uuid,
     pub ownership_percentage: Option<Decimal>,
     pub control_type: super::account::ControlType,
@@ -182,7 +182,7 @@ pub struct MonitoringRules {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceResult {
-    pub result_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub check_type: CheckType,
     pub status: ComplianceStatus,

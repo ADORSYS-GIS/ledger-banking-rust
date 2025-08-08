@@ -7,7 +7,7 @@ use uuid::Uuid;
 /// Country structure with ISO 3166-1 alpha-2 code
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Country {
-    pub country_id: Uuid,
+    pub id: Uuid,
     /// ISO 3166-1 alpha-2 country code (e.g., "CM", "US", "GB")
     pub iso2: HeaplessString<2>,
     /// Country name in primary language
@@ -30,7 +30,7 @@ pub struct Country {
 /// State/Province structure with multilingual support
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StateProvince {
-    pub state_id: Uuid,
+    pub id: Uuid,
     /// References Country.country_id
     pub country_id: Uuid,
     /// State/province name in primary language
@@ -53,7 +53,7 @@ pub struct StateProvince {
 /// City structure with multilingual support
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct City {
-    pub city_id: Uuid,
+    pub id: Uuid,
     /// References Country.country_id
     pub country_id: Uuid,
     /// References StateProvince.state_id (optional for countries without states/provinces)
@@ -78,7 +78,7 @@ pub struct City {
 /// Address structure for geographical locations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Address {
-    pub address_id: Uuid,
+    pub id: Uuid,
     /// Structured address components - 4 street lines
     pub street_line1: HeaplessString<50>,
     pub street_line2: HeaplessString<50>,
@@ -112,12 +112,12 @@ pub struct Address {
 impl Address {
     /// Create a new address
     pub fn new(
-        address_id: Uuid,
+        id: Uuid,
         address_type: AddressType,
         created_by: Uuid,
     ) -> Self {
         Self {
-            address_id,
+            id,
             street_line1: HeaplessString::new(),
             street_line2: HeaplessString::new(),
             street_line3: HeaplessString::new(),
@@ -138,11 +138,11 @@ impl Address {
     
     /// Builder for creating an Address with optional fields
     pub fn builder(
-        address_id: Uuid,
+        id: Uuid,
         address_type: AddressType,
         created_by: Uuid,
     ) -> AddressBuilder {
-        AddressBuilder::new(address_id, address_type, created_by)
+        AddressBuilder::new(id, address_type, created_by)
     }
     
     /// Set geographical coordinates
@@ -168,7 +168,7 @@ impl Address {
 
 /// Builder for Address
 pub struct AddressBuilder {
-    address_id: Uuid,
+    id: Uuid,
     street_line1: Option<String>,
     street_line2: Option<String>,
     street_line3: Option<String>,
@@ -185,12 +185,12 @@ pub struct AddressBuilder {
 
 impl AddressBuilder {
     pub fn new(
-        address_id: Uuid,
+        id: Uuid,
         address_type: AddressType,
         created_by: Uuid,
     ) -> Self {
         Self {
-            address_id,
+            id,
             street_line1: None,
             street_line2: None,
             street_line3: None,
@@ -286,7 +286,7 @@ impl AddressBuilder {
             .map_err(|_| "Postal code exceeds maximum length")?;
             
         Ok(Address {
-            address_id: self.address_id,
+            id: self.id,
             street_line1,
             street_line2,
             street_line3,
@@ -364,7 +364,7 @@ pub enum MessagingType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Messaging {
     /// Unique identifier for this messaging record
-    pub messaging_id: Uuid,
+    pub id: Uuid,
     /// Type of messaging/communication method
     pub messaging_type: MessagingType,
     /// The actual messaging identifier/address (email, phone, username, etc.)
@@ -390,7 +390,7 @@ impl Messaging {
             .map_err(|_| "Messaging value exceeds maximum length")?;
             
         Ok(Self {
-            messaging_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             messaging_type,
             value,
             other_type: None,
@@ -412,7 +412,7 @@ impl Messaging {
             .map_err(|_| "Other type description exceeds maximum length")?;
             
         Ok(Self {
-            messaging_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             messaging_type: MessagingType::Other,
             value,
             other_type: Some(other_type),
@@ -568,7 +568,7 @@ impl EntityReference {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Person {
     /// Unique identifier for this person reference
-    pub person_id: Uuid,
+    pub id: Uuid,
     
     /// Type of person (natural, legal, system, etc.)
     pub person_type: PersonType,
@@ -617,7 +617,7 @@ pub struct Person {
 impl Person {
     /// Creates a new Person
     pub fn new(
-        person_id: Uuid,
+        id: Uuid,
         person_type: PersonType,
         display_name: impl AsRef<str>,
     ) -> Result<Self, &'static str> {
@@ -625,7 +625,7 @@ impl Person {
             .map_err(|_| "Display name exceeds maximum length")?;
             
         Ok(Self {
-            person_id,
+            id,
             person_type,
             display_name,
             external_identifier: None,
@@ -652,7 +652,7 @@ impl Person {
     /// Creates a system user reference
     pub fn system() -> Self {
         Self {
-            person_id: Uuid::nil(), // Use nil UUID for system
+            id: Uuid::nil(), // Use nil UUID for system
             person_type: PersonType::System,
             display_name: HeaplessString::try_from("SYSTEM").unwrap(),
             external_identifier: None,
@@ -677,8 +677,8 @@ impl Person {
     }
     
     /// Builder for creating a Person with optional fields
-    pub fn builder(person_id: Uuid, person_type: PersonType, display_name: impl AsRef<str>) -> PersonBuilder {
-        PersonBuilder::new(person_id, person_type, display_name)
+    pub fn builder(id: Uuid, person_type: PersonType, display_name: impl AsRef<str>) -> PersonBuilder {
+        PersonBuilder::new(id, person_type, display_name)
     }
     
     /// Add a messaging method reference to the person
@@ -763,7 +763,7 @@ impl Person {
 
 /// Builder for Person
 pub struct PersonBuilder {
-    person_id: Uuid,
+    id: Uuid,
     person_type: PersonType,
     display_name: String,
     external_identifier: Option<String>,
@@ -776,9 +776,9 @@ pub struct PersonBuilder {
 }
 
 impl PersonBuilder {
-    pub fn new(person_id: Uuid, person_type: PersonType, display_name: impl AsRef<str>) -> Self {
+    pub fn new(id: Uuid, person_type: PersonType, display_name: impl AsRef<str>) -> Self {
         Self {
-            person_id,
+            id,
             person_type,
             display_name: display_name.as_ref().to_string(),
             external_identifier: None,
@@ -851,7 +851,7 @@ impl PersonBuilder {
         );
             
         Ok(Person {
-            person_id: self.person_id,
+            id: self.id,
             person_type: self.person_type,
             display_name,
             external_identifier,

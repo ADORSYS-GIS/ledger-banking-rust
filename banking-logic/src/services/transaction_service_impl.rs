@@ -88,12 +88,12 @@ impl TransactionService for TransactionServiceImpl {
 
         // Stage 6: Update account activity timestamp
         if transaction.status == TransactionStatus::Posted {
-            self.update_account_activity(transaction.account_id).await?;
+            self.update_account_activity(transaction.id).await?;
         }
 
         tracing::info!(
             "Transaction {} processed with status {:?} for account {}",
-            transaction.transaction_id, transaction.status, transaction.account_id
+            transaction.id, transaction.status, transaction.id
         );
 
         TransactionMapper::from_model(created_model)
@@ -149,8 +149,8 @@ impl TransactionService for TransactionServiceImpl {
 
         // Create reversal transaction
         let reversal_transaction = Transaction {
-            transaction_id: Uuid::new_v4(),
-            account_id: original.account_id,
+            id: Uuid::new_v4(),
+            account_id: original.id,
             transaction_code: {
                 let rev_code = format!("REV_{}", original.transaction_code.as_str());
                 HeaplessString::try_from(rev_code.as_str()).map_err(|_| BankingError::ValidationError {
@@ -259,9 +259,9 @@ impl TransactionService for TransactionServiceImpl {
     async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<ApprovalWorkflow> {
         // Get account information to determine required approvers
         let account = self.account_repository
-            .find_by_id(transaction.account_id)
+            .find_by_id(transaction.id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
 
         let account_domain = AccountMapper::from_model(account)?;
 
@@ -270,8 +270,8 @@ impl TransactionService for TransactionServiceImpl {
 
         // Create workflow
         let workflow = ApprovalWorkflow {
-            workflow_id: Uuid::new_v4(),
-            transaction_id: transaction.transaction_id,
+            id: Uuid::new_v4(),
+            transaction_id: transaction.id,
             required_approvers: required_approvers.clone(),
             received_approvals: Vec::new(),
             status: banking_api::domain::TransactionWorkflowStatus::Pending,
@@ -281,7 +281,7 @@ impl TransactionService for TransactionServiceImpl {
         // Persist workflow (this would typically involve a workflow repository)
         tracing::info!(
             "Approval workflow {} initiated for transaction {} with {} required approvers",
-            workflow.workflow_id, transaction.transaction_id, required_approvers.len()
+            workflow.id, transaction.id, required_approvers.len()
         );
 
         Ok(workflow)
@@ -399,14 +399,14 @@ impl TransactionServiceImpl {
         }
 
         // Account existence check (cached)
-        let account_exists = if let Some(cached) = self.validation_cache.get_account_status(transaction.account_id) {
+        let account_exists = if let Some(cached) = self.validation_cache.get_account_status(transaction.id) {
             cached != AccountStatus::Closed
         } else {
-            self.account_repository.exists(transaction.account_id).await?
+            self.account_repository.exists(transaction.id).await?
         };
 
         if !account_exists {
-            return Err(banking_api::BankingError::AccountNotFound(transaction.account_id));
+            return Err(banking_api::BankingError::AccountNotFound(transaction.id));
         }
 
         Ok(())
@@ -418,9 +418,9 @@ impl TransactionServiceImpl {
 
         // Get account details
         let account = self.account_repository
-            .find_by_id(transaction.account_id)
+            .find_by_id(transaction.id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
 
         let account_domain = AccountMapper::from_model(account)?;
 
@@ -463,9 +463,9 @@ impl TransactionServiceImpl {
 
         // Get account to determine product code
         let account = self.account_repository
-            .find_by_id(transaction.account_id)
+            .find_by_id(transaction.id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
 
         // Get product rules from catalog
         match self.product_catalog_client.get_product_rules(account.product_code.as_str()).await {
@@ -524,9 +524,9 @@ impl TransactionServiceImpl {
     async fn requires_approval(&self, transaction: &Transaction) -> BankingResult<bool> {
         // Get account information
         let account = self.account_repository
-            .find_by_id(transaction.account_id)
+            .find_by_id(transaction.id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
 
         let account_domain = AccountMapper::from_model(account)?;
 
@@ -550,9 +550,9 @@ impl TransactionServiceImpl {
     /// Execute the financial posting (balance updates)
     async fn execute_financial_posting(&self, transaction: &mut Transaction) -> BankingResult<()> {
         let account = self.account_repository
-            .find_by_id(transaction.account_id)
+            .find_by_id(transaction.id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
 
         // Calculate new balances based on transaction type
         let new_balance = match transaction.transaction_type {
@@ -562,7 +562,7 @@ impl TransactionServiceImpl {
 
         // Update account balance
         self.account_repository
-            .update_balance(transaction.account_id, new_balance, new_balance)
+            .update_balance(transaction.id, new_balance, new_balance)
             .await?;
 
         // Set GL code if not provided
@@ -578,7 +578,7 @@ impl TransactionServiceImpl {
 
         tracing::debug!(
             "Financial posting executed: Account {} balance updated to {}",
-            transaction.account_id, new_balance
+            transaction.id, new_balance
         );
 
         Ok(())

@@ -27,7 +27,7 @@ impl AgentNetworkRepositoryImpl {
             r#"
             SELECT aggregate_daily_limit, status::text
             FROM agent_networks 
-            WHERE network_id = $1
+            WHERE id = $1
             "#,
             branch.network_id
         )
@@ -77,7 +77,7 @@ impl AgentNetworkRepositoryImpl {
             r#"
             SELECT daily_transaction_limit, status::text
             FROM agent_branches 
-            WHERE branch_id = $1
+            WHERE id = $1
             "#,
             terminal.branch_id
         )
@@ -223,9 +223,9 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
                 n.aggregate_daily_limit as network_daily_limit,
                 n.status::text as network_status
             FROM agent_terminals t
-            JOIN agent_branches b ON t.branch_id = b.branch_id
-            JOIN agent_networks n ON b.network_id = n.network_id
-            WHERE t.terminal_id = $1
+            JOIN agent_branches b ON t.branch_id = b.id
+            JOIN agent_networks n ON b.network_id = n.id
+            WHERE t.id = $1
             "#,
             terminal_id
         )
@@ -348,7 +348,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
 
     async fn update_terminal_sync(&self, terminal_id: Uuid, sync_time: DateTime<Utc>) -> BankingResult<()> {
         sqlx::query!(
-            "UPDATE agent_terminals SET last_sync_at = $1 WHERE terminal_id = $2",
+            "UPDATE agent_terminals SET last_sync_at = $1 WHERE id = $2",
             sync_time,
             terminal_id
         )
@@ -373,7 +373,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
             r#"
             SELECT daily_transaction_limit, status::text
             FROM agent_terminals 
-            WHERE terminal_id = $1
+            WHERE id = $1
             "#,
             terminal_id
         )
@@ -392,7 +392,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
             r#"
             SELECT daily_transaction_limit, status::text
             FROM agent_branches 
-            WHERE branch_id = $1
+            WHERE id = $1
             "#,
             branch_id
         )
@@ -411,7 +411,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
             r#"
             SELECT aggregate_daily_limit, status::text
             FROM agent_networks 
-            WHERE network_id = $1
+            WHERE id = $1
             "#,
             network_id
         )
@@ -486,7 +486,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
 
     async fn network_exists(&self, network_id: Uuid) -> BankingResult<bool> {
         let exists = sqlx::query!(
-            "SELECT 1 as exists FROM agent_networks WHERE network_id = $1",
+            "SELECT 1 as exists FROM agent_networks WHERE id = $1",
             network_id
         )
         .fetch_optional(&self.pool)
@@ -498,7 +498,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
 
     async fn branch_exists(&self, branch_id: Uuid) -> BankingResult<bool> {
         let exists = sqlx::query!(
-            "SELECT 1 as exists FROM agent_branches WHERE branch_id = $1",
+            "SELECT 1 as exists FROM agent_branches WHERE id = $1",
             branch_id
         )
         .fetch_optional(&self.pool)
@@ -510,7 +510,7 @@ impl AgentNetworkRepository for AgentNetworkRepositoryImpl {
 
     async fn terminal_exists(&self, terminal_id: Uuid) -> BankingResult<bool> {
         let exists = sqlx::query!(
-            "SELECT 1 as exists FROM agent_terminals WHERE terminal_id = $1",
+            "SELECT 1 as exists FROM agent_terminals WHERE id = $1",
             terminal_id
         )
         .fetch_optional(&self.pool)

@@ -56,7 +56,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         // Create workflow
         let workflow = AccountWorkflow {
-            workflow_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             account_id: Uuid::new_v4(), // This will be the future account ID
             workflow_type: WorkflowType::AccountOpening,
             current_step: WorkflowStep::InitiateRequest,
@@ -78,7 +78,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         tracing::info!(
             "Account opening workflow {} initiated for customer {} with product {}",
-            workflow.workflow_id, request.customer_id, request.product_code.as_str()
+            workflow.id, request.customer_id, request.product_code.as_str()
         );
 
         Ok(workflow)
@@ -99,7 +99,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Approved => {
                 // Advance workflow to next step
                 self.advance_workflow_step(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStep::DocumentVerification,
                     "KYC verification completed successfully",
                 ).await?;
@@ -112,7 +112,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Rejected => {
                 // Fail the workflow
                 self.fail_workflow(
-                    workflow.workflow_id,
+                    workflow.id,
                     &format!("KYC verification failed: {} missing documents", verification_result.missing_documents.len()),
                 ).await?;
 
@@ -124,7 +124,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Pending => {
                 // Update workflow with pending status
                 self.update_workflow_status(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStatus::PendingAction,
                     "Awaiting additional KYC documentation",
                 ).await?;
@@ -132,7 +132,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::NotStarted => {
                 // KYC not started - treat as pending
                 self.update_workflow_status(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStatus::PendingAction,
                     "KYC verification not started",
                 ).await?;
@@ -140,7 +140,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::InProgress => {
                 // KYC in progress - continue waiting
                 self.update_workflow_status(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStatus::InProgress,
                     "KYC verification in progress",
                 ).await?;
@@ -148,7 +148,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Complete => {
                 // Complete is same as approved for our purposes
                 self.advance_workflow_step(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStep::DocumentVerification,
                     "KYC verification completed successfully",
                 ).await?;
@@ -156,7 +156,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::RequiresUpdate => {
                 // Requires update - treat as pending
                 self.update_workflow_status(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStatus::PendingAction,
                     "KYC verification requires update",
                 ).await?;
@@ -164,7 +164,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             banking_api::domain::KycStatus::Failed => {
                 // Failed is same as rejected
                 self.fail_workflow(
-                    workflow.workflow_id,
+                    workflow.id,
                     &format!("KYC verification failed: {} missing documents", verification_result.missing_documents.len()),
                 ).await?;
 
@@ -205,7 +205,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             .find_active_workflow(account_id, "AccountOpening")
             .await 
         {
-            self.complete_workflow(workflow.workflow_id, "Account successfully activated").await?;
+            self.complete_workflow(workflow.id, "Account successfully activated").await?;
         }
 
         tracing::info!(
@@ -307,7 +307,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         // Create reactivation workflow
         let workflow = AccountWorkflow {
-            workflow_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             account_id,
             workflow_type: WorkflowType::AccountReactivation,
             current_step: WorkflowStep::InitiateRequest,
@@ -334,7 +334,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         tracing::info!(
             "Reactivation workflow {} initiated for dormant account {}",
-            workflow.workflow_id, account_id
+            workflow.id, account_id
         );
 
         Ok(workflow)
@@ -358,7 +358,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                     .await?;
 
                 // Complete workflow
-                self.complete_workflow(workflow.workflow_id, "Account reactivated after mini-KYC").await?;
+                self.complete_workflow(workflow.id, "Account reactivated after mini-KYC").await?;
 
                 tracing::info!(
                     "Account {} reactivated after successful mini-KYC",
@@ -372,7 +372,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                     .await?;
 
                 self.fail_workflow(
-                    workflow.workflow_id,
+                    workflow.id,
                     &format!("Mini-KYC failed: {} missing documents", verification_result.missing_documents.len()),
                 ).await?;
 
@@ -383,21 +383,21 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             }
             banking_api::domain::KycStatus::Pending => {
                 self.update_workflow_status(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStatus::PendingAction,
                     "Awaiting additional mini-KYC documentation",
                 ).await?;
             }
             banking_api::domain::KycStatus::NotStarted => {
                 self.update_workflow_status(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStatus::PendingAction,
                     "Mini-KYC verification not started",
                 ).await?;
             }
             banking_api::domain::KycStatus::InProgress => {
                 self.update_workflow_status(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStatus::InProgress,
                     "Mini-KYC verification in progress",
                 ).await?;
@@ -407,11 +407,11 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                 self.account_repository
                     .update_status(account_id, "Active", "Account reactivated successfully", LIFECYCLE_AUTOMATION_PERSON_ID)
                     .await?;
-                self.complete_workflow(workflow.workflow_id, "Account reactivated after mini-KYC").await?;
+                self.complete_workflow(workflow.id, "Account reactivated after mini-KYC").await?;
             }
             banking_api::domain::KycStatus::RequiresUpdate => {
                 self.update_workflow_status(
-                    workflow.workflow_id,
+                    workflow.id,
                     WorkflowStatus::PendingAction,
                     "Mini-KYC verification requires update",
                 ).await?;
@@ -422,7 +422,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                     .update_status(account_id, "Dormant", "KYC verification failed", SYSTEM_PERSON_ID)
                     .await?;
                 self.fail_workflow(
-                    workflow.workflow_id,
+                    workflow.id,
                     &format!("Mini-KYC failed: {} missing documents", verification_result.missing_documents.len()),
                 ).await?;
                 return Err(banking_api::BankingError::ValidationError {
@@ -454,7 +454,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         // Create closure workflow
         let workflow = AccountWorkflow {
-            workflow_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             account_id,
             workflow_type: WorkflowType::AccountClosure,
             current_step: WorkflowStep::InitiateRequest,
@@ -481,7 +481,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         tracing::info!(
             "Account closure workflow {} initiated for account {} (reason: {:?})",
-            workflow.workflow_id, account_id, closure_request.reason
+            workflow.id, account_id, closure_request.reason
         );
 
         Ok(workflow)
@@ -599,7 +599,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             .find_active_workflow(account_id, "AccountClosure")
             .await 
         {
-            self.complete_workflow(workflow.workflow_id, "Account closure finalized").await?;
+            self.complete_workflow(workflow.id, "Account closure finalized").await?;
         }
 
         tracing::info!("Account {} closure finalized", account_id);
@@ -656,7 +656,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
 
     /// Find workflow by ID
-    async fn find_workflow_by_id(&self, _workflow_id: Uuid) -> BankingResult<Option<banking_api::domain::AccountWorkflow>> {
+    async fn find_workflow_by_id(&self, _id: Uuid) -> BankingResult<Option<banking_api::domain::AccountWorkflow>> {
         todo!("Implement find_workflow_by_id")
     }
 
@@ -666,17 +666,17 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
 
     /// Update workflow status
-    async fn update_workflow_status(&self, _workflow_id: Uuid, _status: banking_api::domain::WorkflowStatus) -> BankingResult<()> {
+    async fn update_workflow_status(&self, _id: Uuid, _status: banking_api::domain::WorkflowStatus) -> BankingResult<()> {
         todo!("Implement update_workflow_status")
     }
 
     /// Advance workflow step
-    async fn advance_workflow_step(&self, _workflow_id: Uuid, _completed_by: Uuid, _notes: Option<HeaplessString<500>>) -> BankingResult<()> {
+    async fn advance_workflow_step(&self, _id: Uuid, _completed_by: Uuid, _notes: Option<HeaplessString<500>>) -> BankingResult<()> {
         todo!("Implement advance_workflow_step")
     }
 
     /// Reject workflow with reason ID validation
-    async fn reject_workflow(&self, _workflow_id: Uuid, _reason_id: Uuid, _additional_details: Option<&str>, _rejected_by: Uuid) -> BankingResult<()> {
+    async fn reject_workflow(&self, _id: Uuid, _reason_id: Uuid, _additional_details: Option<&str>, _rejected_by: Uuid) -> BankingResult<()> {
         // TODO: Validate reason_id against ReasonAndPurpose table
         // TODO: Store additional_details if provided
         todo!("Implement reject_workflow with reason_id")
@@ -705,7 +705,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
     
     /// Legacy method - deprecated, use reject_workflow with reason_id instead
-    async fn reject_workflow_legacy(&self, _workflow_id: Uuid, _reason: HeaplessString<500>, _rejected_by: Uuid) -> BankingResult<()> {
+    async fn reject_workflow_legacy(&self, _id: Uuid, _reason: HeaplessString<500>, _rejected_by: Uuid) -> BankingResult<()> {
         todo!("Implement reject_workflow_legacy")
     }
 
@@ -763,46 +763,46 @@ impl AccountLifecycleServiceImpl {
     /// Advance workflow to next step
     async fn advance_workflow_step(
         &self,
-        workflow_id: Uuid,
+        id: Uuid,
         next_step: WorkflowStep,
         notes: &str,
     ) -> BankingResult<()> {
         let step_str = format!("{next_step:?}");
         self.workflow_repository
-            .update_workflow_step(workflow_id, &step_str)
+            .update_workflow_step(id, &step_str)
             .await?;
 
         tracing::debug!(
             "Workflow {} advanced to step {:?}: {}",
-            workflow_id, next_step, notes
+            id, next_step, notes
         );
 
         Ok(())
     }
 
     /// Complete workflow successfully
-    async fn complete_workflow(&self, workflow_id: Uuid, completion_notes: &str) -> BankingResult<()> {
+    async fn complete_workflow(&self, id: Uuid, completion_notes: &str) -> BankingResult<()> {
         self.workflow_repository
-            .complete_workflow(workflow_id, completion_notes)
+            .complete_workflow(id, completion_notes)
             .await?;
 
         tracing::info!(
             "Workflow {} completed: {}",
-            workflow_id, completion_notes
+            id, completion_notes
         );
 
         Ok(())
     }
 
     /// Fail workflow with reason
-    async fn fail_workflow(&self, workflow_id: Uuid, failure_reason: &str) -> BankingResult<()> {
+    async fn fail_workflow(&self, id: Uuid, failure_reason: &str) -> BankingResult<()> {
         self.workflow_repository
-            .fail_workflow(workflow_id, failure_reason)
+            .fail_workflow(id, failure_reason)
             .await?;
 
         tracing::warn!(
             "Workflow {} failed: {}",
-            workflow_id, failure_reason
+            id, failure_reason
         );
 
         Ok(())
@@ -811,18 +811,18 @@ impl AccountLifecycleServiceImpl {
     /// Update workflow status
     async fn update_workflow_status(
         &self,
-        workflow_id: Uuid,
+        id: Uuid,
         status: WorkflowStatus,
         notes: &str,
     ) -> BankingResult<()> {
         let status_str = format!("{status:?}");
         self.workflow_repository
-            .update_workflow_status(workflow_id, &status_str, notes)
+            .update_workflow_status(id, &status_str, notes)
             .await?;
 
         tracing::debug!(
             "Workflow {} status updated to {:?}: {}",
-            workflow_id, status, notes
+            id, status, notes
         );
 
         Ok(())

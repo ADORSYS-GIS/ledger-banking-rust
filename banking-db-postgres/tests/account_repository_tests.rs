@@ -17,7 +17,7 @@ fn create_test_account() -> AccountModel {
     let domicile_branch_id = Uuid::new_v4();
     
     AccountModel {
-        account_id,
+        id: account_id,
         product_code: HeaplessString::try_from("SAV01").unwrap(),
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,
@@ -63,7 +63,7 @@ fn create_test_loan_account() -> AccountModel {
     let domicile_branch_id = Uuid::new_v4();
     
     AccountModel {
-        account_id,
+        id: account_id,
         product_code: HeaplessString::try_from("LON01").unwrap(),
         account_type: AccountType::Loan,
         account_status: AccountStatus::Active,
@@ -120,9 +120,9 @@ async fn setup_test_db() -> PgPool {
     let test_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     sqlx::query(
         r#"
-        INSERT INTO persons (person_id, person_type, display_name, external_identifier)
+        INSERT INTO persons (id, person_type, display_name, external_identifier)
         VALUES ($1, 'system', 'Test User', 'test-user')
-        ON CONFLICT (person_id) DO NOTHING
+        ON CONFLICT (id) DO NOTHING
         "#
     )
     .bind(test_person_id)
@@ -143,15 +143,15 @@ async fn test_account_crud_operations() {
     // Test CREATE
     let created_account = repo.create(account.clone()).await
         .expect("Failed to create account");
-    assert_eq!(created_account.account_id, account.account_id);
+    assert_eq!(created_account.id, account.id);
     assert_eq!(created_account.product_code, account.product_code);
     assert_eq!(created_account.account_type, account.account_type);
     
     // Test READ
-    let found_account = repo.find_by_id(account.account_id).await
+    let found_account = repo.find_by_id(account.id).await
         .expect("Failed to find account")
         .expect("Account not found");
-    assert_eq!(found_account.account_id, account.account_id);
+    assert_eq!(found_account.id, account.id);
     assert_eq!(found_account.current_balance, account.current_balance);
     
     // Test UPDATE
@@ -162,7 +162,7 @@ async fn test_account_crud_operations() {
     assert_eq!(updated_account.current_balance, account.current_balance);
     
     // Test EXISTS
-    let exists = repo.exists(account.account_id).await
+    let exists = repo.exists(account.id).await
         .expect("Failed to check if account exists");
     assert!(exists);
     
@@ -188,11 +188,11 @@ async fn test_account_balance_operations() {
     let new_current = Decimal::from_str("2000.00").unwrap();
     let new_available = Decimal::from_str("1900.00").unwrap();
     
-    repo.update_balance(account.account_id, new_current, new_available).await
+    repo.update_balance(account.id, new_current, new_available).await
         .expect("Failed to update balance");
     
     // Verify balance was updated
-    let updated_account = repo.find_by_id(account.account_id).await
+    let updated_account = repo.find_by_id(account.id).await
         .expect("Failed to find account")
         .expect("Account not found");
     assert_eq!(updated_account.current_balance, new_current);
@@ -212,21 +212,21 @@ async fn test_accrued_interest_operations() {
     
     // Test accrued interest update
     let new_interest = Decimal::from_str("25.75").unwrap();
-    repo.update_accrued_interest(account.account_id, new_interest).await
+    repo.update_accrued_interest(account.id, new_interest).await
         .expect("Failed to update accrued interest");
     
     // Verify interest was updated
-    let updated_account = repo.find_by_id(account.account_id).await
+    let updated_account = repo.find_by_id(account.id).await
         .expect("Failed to find account")
         .expect("Account not found");
     assert_eq!(updated_account.accrued_interest, new_interest);
     
     // Test reset accrued interest
-    repo.reset_accrued_interest(account.account_id).await
+    repo.reset_accrued_interest(account.id).await
         .expect("Failed to reset accrued interest");
     
     // Verify interest was reset to zero
-    let reset_account = repo.find_by_id(account.account_id).await
+    let reset_account = repo.find_by_id(account.id).await
         .expect("Failed to find account")
         .expect("Account not found");
     assert_eq!(reset_account.accrued_interest, Decimal::from_str("0.00").unwrap());
@@ -246,11 +246,11 @@ async fn test_account_status_operations() {
         .expect("Failed to create account");
     
     // Test status update
-    repo.update_status(account.account_id, "Frozen", "Compliance hold", changed_by).await
+    repo.update_status(account.id, "Frozen", "Compliance hold", changed_by).await
         .expect("Failed to update status");
     
     // Verify status was updated
-    let updated_account = repo.find_by_id(account.account_id).await
+    let updated_account = repo.find_by_id(account.id).await
         .expect("Failed to find account")
         .expect("Account not found");
     assert_eq!(updated_account.account_status, AccountStatus::Frozen);
@@ -272,7 +272,7 @@ async fn test_find_operations() {
     let mut account1 = create_test_account();
     account1.product_code = HeaplessString::try_from(product_code_1.as_str()).unwrap();
     let mut account2 = create_test_account();
-    account2.account_id = Uuid::new_v4();
+    account2.id = Uuid::new_v4();
     account2.product_code = HeaplessString::try_from(product_code_2.as_str()).unwrap();
     account2.account_status = AccountStatus::Dormant;
     
@@ -284,16 +284,16 @@ async fn test_find_operations() {
     let accounts_by_code = repo.find_by_product_code(&product_code_1).await
         .expect("Failed to find by product code");
     assert_eq!(accounts_by_code.len(), 1);
-    assert_eq!(accounts_by_code[0].account_id, account1.account_id);
+    assert_eq!(accounts_by_code[0].id, account1.id);
     
     // Test find by status
     let active_accounts = repo.find_by_status("Active").await
         .expect("Failed to find by status");
-    assert!(active_accounts.iter().any(|a| a.account_id == account1.account_id));
+    assert!(active_accounts.iter().any(|a| a.id == account1.id));
     
     let dormant_accounts = repo.find_by_status("Dormant").await
         .expect("Failed to find by status");
-    assert!(dormant_accounts.iter().any(|a| a.account_id == account2.account_id));
+    assert!(dormant_accounts.iter().any(|a| a.id == account2.id));
 }
 
 #[cfg(feature = "postgres_tests")]
@@ -304,7 +304,7 @@ async fn test_interest_bearing_accounts() {
     let savings_account = create_test_account(); // Savings account
     let loan_account = create_test_loan_account(); // Loan account
     let mut current_account = create_test_account();
-    current_account.account_id = Uuid::new_v4();
+    current_account.id = Uuid::new_v4();
     current_account.account_type = AccountType::Current;
     
     // Create accounts
@@ -317,10 +317,10 @@ async fn test_interest_bearing_accounts() {
         .expect("Failed to find interest-bearing accounts");
     
     // Should include savings and loan accounts, but not current account
-    let account_ids: Vec<Uuid> = interest_accounts.iter().map(|a| a.account_id).collect();
-    assert!(account_ids.contains(&savings_account.account_id));
-    assert!(account_ids.contains(&loan_account.account_id));
-    assert!(!account_ids.contains(&current_account.account_id));
+    let account_ids: Vec<Uuid> = interest_accounts.iter().map(|a| a.id).collect();
+    assert!(account_ids.contains(&savings_account.id));
+    assert!(account_ids.contains(&loan_account.id));
+    assert!(!account_ids.contains(&current_account.id));
 }
 
 #[cfg(feature = "postgres_tests")]
@@ -332,7 +332,7 @@ async fn test_dormancy_candidates() {
     old_account.last_activity_date = Some(NaiveDate::from_ymd_opt(2023, 1, 1).unwrap()); // Very old activity
     
     let mut recent_account = create_test_account();
-    recent_account.account_id = Uuid::new_v4();
+    recent_account.id = Uuid::new_v4();
     recent_account.last_activity_date = Some(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()); // Recent activity
     
     // Create accounts
@@ -345,9 +345,9 @@ async fn test_dormancy_candidates() {
         .expect("Failed to find dormancy candidates");
     
     // Should include old account but not recent account
-    let candidate_ids: Vec<Uuid> = dormancy_candidates.iter().map(|a| a.account_id).collect();
-    assert!(candidate_ids.contains(&old_account.account_id));
-    assert!(!candidate_ids.contains(&recent_account.account_id));
+    let candidate_ids: Vec<Uuid> = dormancy_candidates.iter().map(|a| a.id).collect();
+    assert!(candidate_ids.contains(&old_account.id));
+    assert!(!candidate_ids.contains(&recent_account.id));
 }
 
 #[cfg(feature = "postgres_tests")]
@@ -362,7 +362,7 @@ async fn test_count_operations() {
     // Create a few test accounts
     let account1 = create_test_account();
     let mut account2 = create_test_account();
-    account2.account_id = Uuid::new_v4();
+    account2.id = Uuid::new_v4();
     account2.product_code = HeaplessString::try_from("SAV02").unwrap();
     
     repo.create(account1.clone()).await.expect("Failed to create account1");
@@ -425,11 +425,11 @@ async fn test_last_activity_date_update() {
     
     // Update last activity date
     let new_activity_date = NaiveDate::from_ymd_opt(2024, 2, 1).unwrap();
-    repo.update_last_activity_date(account.account_id, new_activity_date).await
+    repo.update_last_activity_date(account.id, new_activity_date).await
         .expect("Failed to update last activity date");
     
     // Verify update
-    let updated_account = repo.find_by_id(account.account_id).await
+    let updated_account = repo.find_by_id(account.id).await
         .expect("Failed to find account")
         .expect("Account not found");
     assert_eq!(updated_account.last_activity_date, Some(new_activity_date));

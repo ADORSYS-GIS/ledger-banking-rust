@@ -14,7 +14,7 @@ use uuid::Uuid;
 /// Create a test workflow with provided IDs
 fn create_workflow_for_test(workflow_id: Uuid, account_id: Uuid, person_id: Uuid) -> AccountWorkflowModel {
     AccountWorkflowModel {
-        workflow_id,
+        id: workflow_id,
         account_id,
         workflow_type: WorkflowTypeModel::AccountOpening,
         current_step: WorkflowStepModel::InitiateRequest,
@@ -42,14 +42,14 @@ async fn test_workflow_crud_with_cleanup() {
     // CREATE
     let created_workflow = repo.create_workflow(&workflow).await
         .expect("Failed to create workflow");
-    assert_eq!(created_workflow.workflow_id, workflow.workflow_id);
+    assert_eq!(created_workflow.id, workflow.id);
     assert_eq!(created_workflow.workflow_type, workflow.workflow_type);
     
     // READ
     let found_workflow = repo.find_workflow_by_id(workflow_id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
-    assert_eq!(found_workflow.workflow_id, workflow_id);
+    assert_eq!(found_workflow.id, workflow_id);
     
     // UPDATE
     let updated_workflow = repo.complete_workflow(workflow_id, "Successfully completed").await;
@@ -128,8 +128,8 @@ async fn test_workflow_pagination_isolated() {
     assert_eq!(second_page.len(), 2, "Second page should have exactly 2 workflows");
     
     // Verify no overlap between pages
-    let first_ids: Vec<_> = first_page.iter().map(|w| w.workflow_id).collect();
-    let second_ids: Vec<_> = second_page.iter().map(|w| w.workflow_id).collect();
+    let first_ids: Vec<_> = first_page.iter().map(|w| w.id).collect();
+    let second_ids: Vec<_> = second_page.iter().map(|w| w.id).collect();
     
     for id in first_ids {
         assert!(!second_ids.contains(&id), "Workflow should not appear in both pages");

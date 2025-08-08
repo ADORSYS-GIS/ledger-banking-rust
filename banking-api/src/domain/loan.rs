@@ -10,7 +10,7 @@ use validator::Validate;
 /// Amortization schedule for loan installment planning
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AmortizationSchedule {
-    pub schedule_id: Uuid,
+    pub id: Uuid,
     pub loan_account_id: Uuid,
     pub original_principal: Decimal,
     pub interest_rate: Decimal,
@@ -28,7 +28,7 @@ pub struct AmortizationSchedule {
 /// Individual installment in the amortization schedule
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AmortizationEntry {
-    pub entry_id: Uuid,
+    pub id: Uuid,
     pub schedule_id: Uuid,
     pub installment_number: u32,
     pub due_date: NaiveDate,
@@ -58,7 +58,7 @@ pub enum InstallmentStatus {
 /// Loan delinquency tracking and management
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoanDelinquency {
-    pub delinquency_id: Uuid,
+    pub id: Uuid,
     pub loan_account_id: Uuid,
     pub delinquency_start_date: NaiveDate,
     pub current_dpd: u32, // Days Past Due
@@ -91,7 +91,7 @@ pub enum DelinquencyStage {
 /// Collection actions taken for delinquent loans
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct CollectionAction {
-    pub action_id: Uuid,
+    pub id: Uuid,
     pub delinquency_id: Uuid,
     pub loan_account_id: Uuid,
     pub action_type: CollectionActionType,
@@ -136,7 +136,7 @@ pub enum ActionStatus {
 /// Loan payment processing and allocation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoanPayment {
-    pub payment_id: Uuid,
+    pub id: Uuid,
     pub loan_account_id: Uuid,
     pub payment_date: NaiveDate,
     pub payment_amount: Decimal,
@@ -174,7 +174,7 @@ pub enum PaymentMethod {
 /// Detailed payment allocation across loan components
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentAllocation {
-    pub allocation_id: Uuid,
+    pub id: Uuid,
     pub payment_id: Uuid,
     pub penalty_interest_payment: Decimal,
     pub overdue_interest_payment: Decimal,
@@ -219,7 +219,7 @@ pub enum PaymentStatus {
 /// Payment reversal tracking
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentReversal {
-    pub reversal_id: Uuid,
+    pub id: Uuid,
     pub original_payment_id: Uuid,
     /// References ReasonAndPurpose.id for reversal reason
     pub reversal_reason_id: Uuid,
@@ -234,7 +234,7 @@ pub struct PaymentReversal {
 /// Loan restructuring and modification
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct LoanRestructuring {
-    pub restructuring_id: Uuid,
+    pub id: Uuid,
     pub loan_account_id: Uuid,
     pub restructuring_type: RestructuringType,
     pub request_date: NaiveDate,
@@ -292,7 +292,7 @@ pub enum LoanApprovalStatus {
 /// EOD loan processing job for delinquency management
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoanDelinquencyJob {
-    pub job_id: Uuid,
+    pub id: Uuid,
     pub processing_date: NaiveDate,
     pub loans_processed: u32,
     pub new_delinquent_loans: u32,

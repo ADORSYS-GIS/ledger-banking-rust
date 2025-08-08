@@ -26,7 +26,7 @@ impl LoanMapper {
     /// Map from domain AmortizationSchedule to database model
     pub fn amortization_schedule_to_model(schedule: AmortizationSchedule) -> DbAmortizationSchedule {
         DbAmortizationSchedule {
-            schedule_id: schedule.schedule_id,
+            id: schedule.id,
             loan_account_id: schedule.loan_account_id,
             original_principal: schedule.original_principal,
             interest_rate: schedule.interest_rate,
@@ -45,7 +45,7 @@ impl LoanMapper {
     /// Map from database AmortizationSchedule to domain model
     pub fn amortization_schedule_from_model(model: DbAmortizationSchedule) -> AmortizationSchedule {
         AmortizationSchedule {
-            schedule_id: model.schedule_id,
+            id: model.id,
             loan_account_id: model.loan_account_id,
             original_principal: model.original_principal,
             interest_rate: model.interest_rate,
@@ -64,7 +64,7 @@ impl LoanMapper {
     /// Map from domain AmortizationEntry to database model
     pub fn amortization_entry_to_model(entry: AmortizationEntry) -> DbAmortizationEntry {
         DbAmortizationEntry {
-            entry_id: entry.entry_id,
+            id: entry.id,
             schedule_id: entry.schedule_id,
             installment_number: entry.installment_number,
             due_date: entry.due_date,
@@ -85,7 +85,7 @@ impl LoanMapper {
     /// Map from database AmortizationEntry to domain model
     pub fn amortization_entry_from_model(model: DbAmortizationEntry) -> AmortizationEntry {
         AmortizationEntry {
-            entry_id: model.entry_id,
+            id: model.id,
             schedule_id: model.schedule_id,
             installment_number: model.installment_number,
             due_date: model.due_date,
@@ -106,7 +106,7 @@ impl LoanMapper {
     /// Map from domain LoanDelinquency to database model
     pub fn loan_delinquency_to_model(delinquency: LoanDelinquency) -> DbLoanDelinquency {
         DbLoanDelinquency {
-            delinquency_id: delinquency.delinquency_id,
+            id: delinquency.id,
             loan_account_id: delinquency.loan_account_id,
             delinquency_start_date: delinquency.delinquency_start_date,
             current_dpd: delinquency.current_dpd,
@@ -130,7 +130,7 @@ impl LoanMapper {
     /// Map from database LoanDelinquency to domain model
     pub fn loan_delinquency_from_model(model: DbLoanDelinquency) -> LoanDelinquency {
         LoanDelinquency {
-            delinquency_id: model.delinquency_id,
+            id: model.id,
             loan_account_id: model.loan_account_id,
             delinquency_start_date: model.delinquency_start_date,
             current_dpd: model.current_dpd,
@@ -154,7 +154,7 @@ impl LoanMapper {
     /// Map from domain CollectionAction to database model
     pub fn collection_action_to_model(action: CollectionAction) -> DbCollectionAction {
         DbCollectionAction {
-            action_id: action.action_id,
+            id: action.id,
             delinquency_id: action.delinquency_id,
             loan_account_id: action.loan_account_id,
             action_type: Self::collection_action_type_to_db(action.action_type),
@@ -177,7 +177,7 @@ impl LoanMapper {
     /// Map from database CollectionAction to domain model
     pub fn collection_action_from_model(model: DbCollectionAction) -> CollectionAction {
         CollectionAction {
-            action_id: model.action_id,
+            id: model.id,
             delinquency_id: model.delinquency_id,
             loan_account_id: model.loan_account_id,
             action_type: Self::db_to_collection_action_type(model.action_type),
@@ -200,7 +200,7 @@ impl LoanMapper {
     /// Map from domain LoanPayment to database model
     pub fn loan_payment_to_model(payment: LoanPayment) -> DbLoanPayment {
         DbLoanPayment {
-            payment_id: payment.payment_id,
+            id: payment.id,
             loan_account_id: payment.loan_account_id,
             payment_date: payment.payment_date,
             payment_amount: payment.payment_amount,
@@ -218,7 +218,7 @@ impl LoanMapper {
     /// Map from database LoanPayment to domain model
     pub fn loan_payment_from_model(model: DbLoanPayment) -> LoanPayment {
         LoanPayment {
-            payment_id: model.payment_id,
+            id: model.id,
             loan_account_id: model.loan_account_id,
             payment_date: model.payment_date,
             payment_amount: model.payment_amount,
@@ -236,7 +236,7 @@ impl LoanMapper {
     /// Map from domain PaymentAllocation to database model
     pub fn payment_allocation_to_model(allocation: PaymentAllocation) -> DbPaymentAllocation {
         DbPaymentAllocation {
-            allocation_id: allocation.allocation_id,
+            id: allocation.id,
             payment_id: allocation.payment_id,
             penalty_interest_payment: allocation.penalty_interest_payment,
             overdue_interest_payment: allocation.overdue_interest_payment,
@@ -252,7 +252,7 @@ impl LoanMapper {
     /// Map from database PaymentAllocation to domain model
     pub fn payment_allocation_from_model(model: DbPaymentAllocation) -> PaymentAllocation {
         PaymentAllocation {
-            allocation_id: model.allocation_id,
+            id: model.id,
             payment_id: model.payment_id,
             penalty_interest_payment: model.penalty_interest_payment,
             overdue_interest_payment: model.overdue_interest_payment,
@@ -296,7 +296,7 @@ impl LoanMapper {
     /// Map from domain PaymentReversal to database model
     pub fn payment_reversal_to_model(reversal: PaymentReversal) -> DbPaymentReversal {
         DbPaymentReversal {
-            reversal_id: reversal.reversal_id,
+            id: reversal.id,
             original_payment_id: reversal.original_payment_id,
             reversal_reason_id: reversal.reversal_reason_id,
             additional_details: reversal.additional_details,
@@ -310,7 +310,7 @@ impl LoanMapper {
     /// Map from database PaymentReversal to domain model
     pub fn payment_reversal_from_model(model: DbPaymentReversal) -> PaymentReversal {
         PaymentReversal {
-            reversal_id: model.reversal_id,
+            id: model.id,
             original_payment_id: model.original_payment_id,
             reversal_reason_id: model.reversal_reason_id,
             additional_details: model.additional_details,
@@ -324,7 +324,7 @@ impl LoanMapper {
     /// Map from domain LoanRestructuring to database model
     pub fn loan_restructuring_to_model(restructuring: LoanRestructuring) -> DbLoanRestructuring {
         DbLoanRestructuring {
-            restructuring_id: restructuring.restructuring_id,
+            id: restructuring.id,
             loan_account_id: restructuring.loan_account_id,
             restructuring_type: Self::restructuring_type_to_db(restructuring.restructuring_type),
             request_date: restructuring.request_date,
@@ -355,7 +355,7 @@ impl LoanMapper {
     /// Map from database LoanRestructuring to domain model
     pub fn loan_restructuring_from_model(model: DbLoanRestructuring) -> LoanRestructuring {
         LoanRestructuring {
-            restructuring_id: model.restructuring_id,
+            id: model.id,
             loan_account_id: model.loan_account_id,
             restructuring_type: Self::db_to_restructuring_type(model.restructuring_type),
             request_date: model.request_date,
@@ -386,7 +386,7 @@ impl LoanMapper {
     /// Map from domain LoanDelinquencyJob to database model
     pub fn loan_delinquency_job_to_model(job: LoanDelinquencyJob) -> DbLoanDelinquencyJob {
         DbLoanDelinquencyJob {
-            job_id: job.job_id,
+            id: job.id,
             processing_date: job.processing_date,
             loans_processed: job.loans_processed,
             new_delinquent_loans: job.new_delinquent_loans,
@@ -405,7 +405,7 @@ impl LoanMapper {
     /// Map from database LoanDelinquencyJob to domain model
     pub fn loan_delinquency_job_from_model(model: DbLoanDelinquencyJob) -> LoanDelinquencyJob {
         LoanDelinquencyJob {
-            job_id: model.job_id,
+            id: model.id,
             processing_date: model.processing_date,
             loans_processed: model.loans_processed,
             new_delinquent_loans: model.new_delinquent_loans,

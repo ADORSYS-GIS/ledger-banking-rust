@@ -283,7 +283,7 @@ impl std::str::FromStr for ReconciliationStatus {
 /// Database model for channels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelModel {
-    pub channel_id: Uuid,
+    pub id: Uuid,
     pub channel_code: HeaplessString<50>,
     pub channel_name: HeaplessString<100>,
     pub channel_type: String,
@@ -301,7 +301,7 @@ pub struct ChannelModel {
 /// Database model for fee schedules
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeScheduleModel {
-    pub schedule_id: Uuid,
+    pub id: Uuid,
     pub schedule_name: HeaplessString<100>,
     pub channel_id: Option<Uuid>,
     pub effective_date: NaiveDate,
@@ -315,7 +315,7 @@ pub struct FeeScheduleModel {
 /// Database model for fee items
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeItemModel {
-    pub fee_item_id: Uuid,
+    pub id: Uuid,
     pub schedule_id: Uuid,
     pub fee_code: HeaplessString<20>,
     pub fee_name: HeaplessString<100>,
@@ -336,7 +336,7 @@ pub struct FeeItemModel {
 /// Database model for fee tiers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeTierModel {
-    pub tier_id: Uuid,
+    pub id: Uuid,
     pub fee_item_id: Uuid,
     pub tier_name: HeaplessString<50>,
     pub min_amount: Decimal,
@@ -350,7 +350,7 @@ pub struct FeeTierModel {
 /// Database model for channel reconciliation reports
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelReconciliationReportModel {
-    pub report_id: Uuid,
+    pub id: Uuid,
     pub channel_id: Uuid,
     pub reconciliation_date: NaiveDate,
     pub total_transactions: i64,
@@ -365,7 +365,7 @@ pub struct ChannelReconciliationReportModel {
 /// Database model for reconciliation discrepancies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReconciliationDiscrepancyModel {
-    pub discrepancy_id: Uuid,
+    pub id: Uuid,
     pub report_id: Uuid,
     pub transaction_id: Uuid,
     pub description: HeaplessString<200>,
@@ -380,7 +380,7 @@ pub struct ReconciliationDiscrepancyModel {
 /// Database model for channel fees
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelFeeModel {
-    pub fee_id: Uuid,
+    pub id: Uuid,
     #[serde(serialize_with = "serialize_channel_fee_type", deserialize_with = "deserialize_channel_fee_type")]
     pub fee_type: ChannelFeeType,
     pub amount: Decimal,

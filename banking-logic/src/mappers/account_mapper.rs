@@ -14,7 +14,7 @@ impl AccountMapper {
     /// Map from domain Account to database AccountModel
     pub fn to_model(account: Account) -> AccountModel {
         AccountModel {
-            account_id: account.account_id,
+            id: account.id,
             product_code: account.product_code,
             account_type: account.account_type,
             account_status: account.account_status,
@@ -57,7 +57,7 @@ impl AccountMapper {
     /// Map from database AccountModel to domain Account
     pub fn from_model(model: AccountModel) -> banking_api::BankingResult<Account> {
         Ok(Account {
-            account_id: model.account_id,
+            id: model.id,
             product_code: model.product_code,
             account_type: model.account_type,
             account_status: model.account_status,
@@ -102,8 +102,8 @@ impl AccountMapper {
     // Account Ownership mappers
     pub fn account_ownership_to_model(ownership: AccountOwnership) -> AccountOwnershipModel {
         AccountOwnershipModel {
-            ownership_id: ownership.ownership_id,
-            account_id: ownership.account_id,
+            id: ownership.id,
+            account_id: ownership.id,
             customer_id: ownership.customer_id,
             ownership_type: ownership.ownership_type,
             ownership_percentage: ownership.ownership_percentage,
@@ -113,8 +113,8 @@ impl AccountMapper {
 
     pub fn account_ownership_from_model(model: AccountOwnershipModel) -> AccountOwnership {
         AccountOwnership {
-            ownership_id: model.ownership_id,
-            account_id: model.account_id,
+            id: model.id,
+            account_id: model.id,
             customer_id: model.customer_id,
             ownership_type: model.ownership_type,
             ownership_percentage: model.ownership_percentage,
@@ -125,8 +125,8 @@ impl AccountMapper {
     // Account Relationship mappers
     pub fn account_relationship_to_model(relationship: AccountRelationship) -> AccountRelationshipModel {
         AccountRelationshipModel {
-            relationship_id: relationship.relationship_id,
-            account_id: relationship.account_id,
+            id: relationship.id,
+            account_id: relationship.id,
             entity_id: relationship.entity_id,
             entity_type: relationship.entity_type,
             relationship_type: relationship.relationship_type,
@@ -138,8 +138,8 @@ impl AccountMapper {
 
     pub fn account_relationship_from_model(model: AccountRelationshipModel) -> AccountRelationship {
         AccountRelationship {
-            relationship_id: model.relationship_id,
-            account_id: model.account_id,
+            id: model.id,
+            account_id: model.id,
             entity_id: model.entity_id,
             entity_type: model.entity_type,
             relationship_type: model.relationship_type,
@@ -152,8 +152,8 @@ impl AccountMapper {
     // Account Mandate mappers
     pub fn account_mandate_to_model(mandate: AccountMandate) -> AccountMandateModel {
         AccountMandateModel {
-            mandate_id: mandate.mandate_id,
-            account_id: mandate.account_id,
+            id: mandate.id,
+            account_id: mandate.id,
             grantee_customer_id: mandate.grantee_customer_id,
             permission_type: mandate.permission_type,
             transaction_limit: mandate.transaction_limit,
@@ -166,8 +166,8 @@ impl AccountMapper {
 
     pub fn account_mandate_from_model(model: AccountMandateModel) -> AccountMandate {
         AccountMandate {
-            mandate_id: model.mandate_id,
-            account_id: model.account_id,
+            id: model.id,
+            account_id: model.id,
             grantee_customer_id: model.grantee_customer_id,
             permission_type: model.permission_type,
             transaction_limit: model.transaction_limit,
@@ -181,7 +181,7 @@ impl AccountMapper {
     // Ultimate Beneficial Owner mappers
     pub fn ultimate_beneficiary_to_model(ubo: UltimateBeneficiary) -> UltimateBeneficiaryModel {
         UltimateBeneficiaryModel {
-            ubo_link_id: ubo.ubo_link_id,
+            id: ubo.id,
             corporate_customer_id: ubo.corporate_customer_id,
             beneficiary_customer_id: ubo.beneficiary_customer_id,
             ownership_percentage: ubo.ownership_percentage,
@@ -197,7 +197,7 @@ impl AccountMapper {
 
     pub fn ultimate_beneficiary_from_model(model: UltimateBeneficiaryModel) -> UltimateBeneficiary {
         UltimateBeneficiary {
-            ubo_link_id: model.ubo_link_id,
+            id: model.id,
             corporate_customer_id: model.corporate_customer_id,
             beneficiary_customer_id: model.beneficiary_customer_id,
             ownership_percentage: model.ownership_percentage,
@@ -214,8 +214,8 @@ impl AccountMapper {
     // Account Hold mappers
     pub fn account_hold_to_model(hold: AccountHold) -> AccountHoldModel {
         AccountHoldModel {
-            hold_id: hold.hold_id,
-            account_id: hold.account_id,
+            id: hold.id,
+            account_id: hold.id,
             amount: hold.amount,
             hold_type: hold.hold_type,
             reason_id: hold.reason_id,
@@ -234,8 +234,8 @@ impl AccountMapper {
 
     pub fn account_hold_from_model(model: AccountHoldModel) -> AccountHold {
         AccountHold {
-            hold_id: model.hold_id,
-            account_id: model.account_id,
+            id: model.id,
+            account_id: model.id,
             amount: model.amount,
             hold_type: model.hold_type,
             reason_id: model.reason_id,
@@ -255,8 +255,8 @@ impl AccountMapper {
     // Status Change Record mappers
     pub fn status_change_record_to_model(record: StatusChangeRecord) -> AccountStatusHistoryModel {
         AccountStatusHistoryModel {
-            history_id: record.change_id,
-            account_id: record.account_id,
+            id: record.id,
+            account_id: record.id,
             old_status: record.old_status,
             new_status: record.new_status,
             change_reason_id: record.reason_id,
@@ -270,8 +270,8 @@ impl AccountMapper {
 
     pub fn status_change_record_from_model(model: AccountStatusHistoryModel) -> StatusChangeRecord {
         StatusChangeRecord {
-            change_id: model.history_id,
-            account_id: model.account_id,
+            id: model.id,
+            account_id: model.id,
             old_status: model.old_status,
             new_status: model.new_status,
             reason_id: model.change_reason_id,

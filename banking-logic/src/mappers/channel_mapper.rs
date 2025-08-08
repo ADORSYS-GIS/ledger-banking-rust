@@ -23,7 +23,7 @@ impl ChannelMapper {
         };
 
         ChannelModel {
-            channel_id: channel.channel_id,
+            id: channel.id,
             channel_code: channel.channel_code,
             channel_name: channel.channel_name,
             channel_type: format!("{:?}", channel.channel_type),
@@ -62,7 +62,7 @@ impl ChannelMapper {
         };
 
         Ok(Channel {
-            channel_id: model.channel_id,
+            id: model.id,
             channel_code: model.channel_code,
             channel_name: model.channel_name,
             channel_type,
@@ -79,7 +79,7 @@ impl ChannelMapper {
     /// Convert domain FeeSchedule to database FeeScheduleModel
     pub fn to_fee_schedule_model(schedule: FeeSchedule) -> FeeScheduleModel {
         FeeScheduleModel {
-            schedule_id: schedule.schedule_id,
+            id: schedule.id,
             schedule_name: schedule.schedule_name,
             channel_id: Some(schedule.channel_id),
             effective_date: schedule.effective_date,
@@ -94,7 +94,7 @@ impl ChannelMapper {
     /// Convert database FeeScheduleModel to domain FeeSchedule
     pub fn from_fee_schedule_model(model: FeeScheduleModel, fee_items: Vec<FeeItem>) -> Result<FeeSchedule, String> {
         Ok(FeeSchedule {
-            schedule_id: model.schedule_id,
+            id: model.id,
             schedule_name: model.schedule_name,
             channel_id: model.channel_id.ok_or("Channel ID is required for fee schedule")?,
             effective_date: model.effective_date,
@@ -117,7 +117,7 @@ impl ChannelMapper {
         };
 
         ChannelReconciliationReportModel {
-            report_id: report.report_id,
+            id: report.id,
             channel_id: report.channel_id,
             reconciliation_date: report.reconciliation_date,
             total_transactions: report.total_transactions,
@@ -142,7 +142,7 @@ impl ChannelMapper {
         };
 
         ReconciliationReport {
-            report_id: model.report_id,
+            id: model.id,
             channel_id: model.channel_id,
             reconciliation_date: model.reconciliation_date,
             total_transactions: model.total_transactions,
@@ -166,7 +166,7 @@ impl ChannelMapper {
         };
 
         Discrepancy {
-            transaction_id: model.transaction_id,
+            transaction_id: model.id,
             description,
             expected_amount: model.expected_amount,
             actual_amount: model.actual_amount,
@@ -197,7 +197,7 @@ impl ChannelMapper {
         };
 
         FeeItemModel {
-            fee_item_id: item.fee_item_id,
+            id: item.id,
             schedule_id,
             fee_code: item.fee_code,
             fee_name: item.fee_name,
@@ -237,7 +237,7 @@ impl ChannelMapper {
         };
 
         FeeItem {
-            fee_item_id: model.fee_item_id,
+            id: model.id,
             fee_code: model.fee_code,
             fee_name: model.fee_name,
             fee_type,
@@ -256,7 +256,7 @@ impl ChannelMapper {
     /// Convert database FeeTierModel to domain ChannelFeeTier
     pub fn from_fee_tier_model(model: FeeTierModel) -> ChannelFeeTier {
         ChannelFeeTier {
-            tier_id: model.tier_id,
+            id: model.id,
             tier_name: model.tier_name,
             min_amount: model.min_amount,
             max_amount: model.max_amount,
@@ -269,7 +269,7 @@ impl ChannelMapper {
     /// Convert domain ChannelFeeTier to database FeeTierModel
     pub fn to_fee_tier_model(tier: ChannelFeeTier, fee_item_id: uuid::Uuid) -> FeeTierModel {
         FeeTierModel {
-            tier_id: tier.tier_id,
+            id: tier.id,
             fee_item_id,
             tier_name: tier.tier_name,
             min_amount: tier.min_amount,

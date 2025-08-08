@@ -80,7 +80,7 @@ impl HierarchyServiceImpl {
 
         let mut sub_branches = Vec::new();
         for sub_branch_model in sub_branch_models {
-            let sub_hierarchy = self.build_branch_hierarchy(sub_branch_model.branch_id).await?;
+            let sub_hierarchy = self.build_branch_hierarchy(sub_branch_model.id).await?;
             sub_branches.push(sub_hierarchy);
         }
 
@@ -457,7 +457,7 @@ impl HierarchyService for HierarchyServiceImpl {
 
         let mut branches = Vec::new();
         for root_branch_model in root_branch_models {
-            let branch_hierarchy = self.build_branch_hierarchy(root_branch_model.branch_id).await?;
+            let branch_hierarchy = self.build_branch_hierarchy(root_branch_model.id).await?;
             branches.push(branch_hierarchy);
         }
 

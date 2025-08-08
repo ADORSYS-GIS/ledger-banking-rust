@@ -8,7 +8,7 @@ use validator::Validate;
 /// Fee Application Record - tracks individual fee applications
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct FeeApplication {
-    pub fee_application_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub transaction_id: Option<Uuid>, // For event-based fees
     pub fee_type: FeeType,
@@ -217,7 +217,7 @@ pub enum ComparisonOperator {
 /// Batch fee processing job configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeProcessingJob {
-    pub job_id: Uuid,
+    pub id: Uuid,
     pub job_type: FeeJobType,
     pub job_name: String,
     pub schedule_expression: String, // Cron expression
@@ -254,7 +254,7 @@ pub enum FeeJobStatus {
 /// Fee waiver record for audit trail
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeWaiver {
-    pub waiver_id: Uuid,
+    pub id: Uuid,
     pub fee_application_id: Uuid,
     pub account_id: Uuid,
     pub waived_amount: Decimal,
