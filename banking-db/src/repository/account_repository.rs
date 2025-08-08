@@ -266,7 +266,7 @@ pub trait AccountRepository: Send + Sync {
         &self,
         account_id: Uuid,
         hold_priority_updates: Vec<(Uuid, String)>, // (hold_id, new_priority)
-        updated_by: Uuid, // References Person.person_id
+        updated_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<Vec<AccountHoldModel>>;
     
     /// Get holds that can be overridden by priority
@@ -303,7 +303,7 @@ pub trait AccountRepository: Send + Sync {
         loan_account_id: Uuid,
         collateral_account_ids: Vec<Uuid>,
         new_pledge_amount: Decimal,
-        updated_by: Uuid, // References Person.person_id
+        updated_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<Vec<AccountHoldModel>>;
     
     /// Get compliance holds by alert reference

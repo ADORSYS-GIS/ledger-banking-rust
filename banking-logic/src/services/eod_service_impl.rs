@@ -220,7 +220,7 @@ impl EodService for EodServiceImpl {
                     account.id,
                     "Delinquent",
                     "EOD delinquency check",
-                    account.updated_by,
+                    account.updated_by_person_id,
                 ).await {
                     Ok(_) => successful += 1,
                     Err(e) => errors.push(format!("Account {}: {e}", account.id)),
@@ -371,7 +371,7 @@ impl EodService for EodServiceImpl {
                 account.id,
                 "Dormant",
                 "EOD dormancy processing",
-                account.updated_by,
+                account.updated_by_person_id,
             ).await {
                 Ok(_) => {
                     accounts_marked_dormant += 1;

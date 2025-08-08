@@ -270,8 +270,8 @@ CREATE TABLE countries (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- States/Provinces table
@@ -284,8 +284,8 @@ CREATE TABLE state_provinces (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Cities table
@@ -299,8 +299,8 @@ CREATE TABLE cities (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Addresses table
@@ -319,13 +319,13 @@ CREATE TABLE addresses (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Add person reference foreign keys to messaging table now that persons table exists
-ALTER TABLE messaging ADD COLUMN created_by UUID REFERENCES persons(id);
-ALTER TABLE messaging ADD COLUMN updated_by UUID REFERENCES persons(id);
+ALTER TABLE messaging ADD COLUMN created_by_person_id UUID REFERENCES persons(id);
+ALTER TABLE messaging ADD COLUMN updated_by_person_id UUID REFERENCES persons(id);
 
 -- Entity Reference table for person entity relationships
 CREATE TABLE entity_reference (
@@ -339,8 +339,8 @@ CREATE TABLE entity_reference (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Indexes for geographic tables
@@ -391,7 +391,7 @@ CREATE TABLE customers (
     status customer_status NOT NULL DEFAULT 'PendingVerification',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id),
     
     -- Business constraints
     CONSTRAINT uk_customer_identity UNIQUE (id_type, id_number),
@@ -468,8 +468,8 @@ CREATE TABLE reason_and_purpose (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by VARCHAR(100) NOT NULL,
-    updated_by VARCHAR(100) NOT NULL
+    created_by_person_id VARCHAR(100) NOT NULL,
+    updated_by_person_id VARCHAR(100) NOT NULL
 );
 
 -- Create indexes for efficient querying
@@ -494,7 +494,7 @@ CREATE TABLE accounts (
     signing_condition signing_condition NOT NULL DEFAULT 'None',
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     open_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    domicile_branch_id UUID NOT NULL,
+    domicile_agency_branch_id UUID NOT NULL,
     
     -- Balance fields - core to all account types
     current_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
@@ -524,14 +524,14 @@ CREATE TABLE accounts (
     last_disbursement_instruction_id UUID, -- References DisbursementInstructions.disbursement_id
     
     -- Enhanced audit trail
-    status_changed_by UUID REFERENCES persons(id),
+    status_changed_by_person_id UUID REFERENCES persons(id),
     status_change_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for status change
     status_change_timestamp TIMESTAMP WITH TIME ZONE,
     
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id),
     
     -- Business constraints ensuring data integrity
     CONSTRAINT ck_balance_consistency CHECK (current_balance >= 0 OR account_type = 'Current'),
@@ -555,9 +555,9 @@ CREATE TABLE disbursement_instructions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     source_account_id UUID NOT NULL REFERENCES accounts(id),
     method disbursement_method NOT NULL,
-    target_account UUID REFERENCES accounts(id),
-    cash_pickup_branch_id UUID, -- Foreign key added later after agent_branches is created
-    authorized_recipient UUID REFERENCES persons(id),
+    target_account_id UUID REFERENCES accounts(id),
+    cash_pickup_agency_branch_id UUID, -- Foreign key added later after agent_branches is created
+    authorized_recipient_person_id UUID REFERENCES persons(id),
     
     -- Disbursement tracking and staging
     disbursement_amount DECIMAL(15,2),
@@ -569,8 +569,8 @@ CREATE TABLE disbursement_instructions (
     -- Audit trail
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Indexes for disbursement instructions
@@ -605,7 +605,7 @@ CREATE TABLE account_ownership (
 CREATE TABLE account_relationships (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    entity_id UUID NOT NULL, -- Could be employee, department, or external entity
+    person_id UUID NOT NULL, -- Could be employee, department, or external entity
     entity_type entity_type NOT NULL,
     relationship_type relationship_type NOT NULL,
     status relationship_status NOT NULL DEFAULT 'Active',
@@ -795,8 +795,8 @@ CREATE TABLE holliday_plan (
     name_l3 VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Holiday Schedule table
@@ -826,8 +826,8 @@ CREATE TABLE temporary_closure (
     alternative_branch_id UUID,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Required Document table moved before branch_capabilities
@@ -881,8 +881,8 @@ CREATE TABLE operating_hours (
     timezone VARCHAR(50) NOT NULL DEFAULT 'UTC',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Required Document table (moved here to resolve dependencies)
@@ -924,8 +924,8 @@ CREATE TABLE branch_capabilities (
     language_spoken3 VARCHAR(3),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Security Access standalone table
@@ -972,8 +972,8 @@ CREATE TABLE security_access (
     required_document20 UUID REFERENCES required_document(id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Agent networks - hierarchical structure for agent banking
@@ -1050,7 +1050,7 @@ CREATE TABLE agent_branches (
     
     -- Metadata
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id),
     
     CONSTRAINT uk_branch_code_per_network UNIQUE (network_id, branch_code)
 );
@@ -1083,7 +1083,7 @@ CREATE TRIGGER tr_security_access_updated_at BEFORE UPDATE ON security_access FO
 
 -- Add foreign key constraints that were deferred
 ALTER TABLE disbursement_instructions ADD CONSTRAINT fk_disbursement_instructions_branch 
-    FOREIGN KEY (cash_pickup_branch_id) REFERENCES agent_branches(id);
+    FOREIGN KEY (cash_pickup_agency_branch_id) REFERENCES agent_branches(id);
 
 -- =============================================================================
 -- CALENDAR AND BUSINESS DAY MANAGEMENT
@@ -1121,7 +1121,7 @@ CREATE TABLE bank_holidays (
     is_recurring BOOLEAN NOT NULL DEFAULT FALSE,
     description VARCHAR(256),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
     
     CONSTRAINT uk_holiday_per_jurisdiction UNIQUE (jurisdiction, holiday_date)
 );
@@ -1135,9 +1135,9 @@ CREATE TABLE weekend_configuration (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     notes VARCHAR(256),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Date calculation rules for business day calculations
@@ -1154,9 +1154,9 @@ CREATE TABLE date_calculation_rules (
     effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
     expiry_date DATE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by UUID NOT NULL REFERENCES persons(id),
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_by UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id),
     
     CONSTRAINT ck_rule_dates CHECK (expiry_date IS NULL OR expiry_date > effective_date)
 );
@@ -1311,7 +1311,7 @@ CREATE TABLE account_status_history (
     new_status VARCHAR(30) NOT NULL,
     change_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for status change
     additional_context VARCHAR(200), -- Additional context beyond the standard reason
-    changed_by UUID NOT NULL REFERENCES persons(id),
+    changed_by_person_id UUID NOT NULL REFERENCES persons(id),
     changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     system_triggered BOOLEAN NOT NULL DEFAULT FALSE,
     workflow_id UUID, -- Link to associated workflow
@@ -1483,12 +1483,12 @@ CREATE TABLE account_holds (
     hold_type hold_type NOT NULL,
     reason_id UUID NOT NULL REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for hold reason
     additional_details VARCHAR(200), -- Additional context beyond the standard reason
-    placed_by UUID NOT NULL REFERENCES persons(id),
+    placed_by_person_id UUID NOT NULL REFERENCES persons(id),
     placed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMP WITH TIME ZONE,
     status hold_status NOT NULL DEFAULT 'Active',
     released_at TIMESTAMP WITH TIME ZONE,
-    released_by UUID REFERENCES persons(id),
+    released_by_person_id UUID REFERENCES persons(id),
     priority hold_priority NOT NULL DEFAULT 'Medium',
     source_reference VARCHAR(100), -- External reference for judicial holds, etc.
     automatic_release BOOLEAN NOT NULL DEFAULT FALSE,
@@ -1497,7 +1497,7 @@ CREATE TABLE account_holds (
     
     CONSTRAINT ck_hold_release_consistency CHECK (
         (status NOT IN ('Released', 'PartiallyReleased') AND released_at IS NULL) OR
-        (status IN ('Released', 'PartiallyReleased') AND released_at IS NOT NULL AND released_by IS NOT NULL)
+        (status IN ('Released', 'PartiallyReleased') AND released_at IS NOT NULL AND released_by_person_id IS NOT NULL)
     ),
     CONSTRAINT ck_hold_expiry_consistency CHECK (
         (automatic_release = FALSE AND expires_at IS NULL) OR
@@ -1974,7 +1974,7 @@ CREATE TABLE collection_actions (
     follow_up_date DATE,
     action_status VARCHAR(20) NOT NULL CHECK (action_status IN ('Planned', 'InProgress', 'Completed', 'Failed', 'Cancelled')),
     assigned_to UUID NOT NULL REFERENCES persons(id),
-    created_by UUID NOT NULL REFERENCES persons(id),
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_response_consistency CHECK (
@@ -2026,7 +2026,7 @@ CREATE TABLE loan_restructurings (
     approved_by UUID REFERENCES persons(id),
     approved_at TIMESTAMP WITH TIME ZONE,
     conditions TEXT[], -- Array of conditions
-    created_by UUID NOT NULL REFERENCES persons(id),
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_approval_consistency CHECK (
@@ -2055,12 +2055,12 @@ BEGIN
                 -- Log significant field changes
                 IF OLD.risk_rating != NEW.risk_rating THEN
                     INSERT INTO customer_audit_trail (id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason)
-                    VALUES (uuid_generate_v4(), NEW.id, 'risk_rating', OLD.risk_rating, NEW.risk_rating, NOW(), NEW.updated_by, 'Risk rating change');
+                    VALUES (uuid_generate_v4(), NEW.id, 'risk_rating', OLD.risk_rating, NEW.risk_rating, NOW(), NEW.updated_by_person_id, 'Risk rating change');
                 END IF;
                 
                 IF OLD.status != NEW.status THEN
                     INSERT INTO customer_audit_trail (id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason)
-                    VALUES (uuid_generate_v4(), NEW.id, 'status', OLD.status, NEW.status, NOW(), NEW.updated_by, 'Status change');
+                    VALUES (uuid_generate_v4(), NEW.id, 'status', OLD.status, NEW.status, NOW(), NEW.updated_by_person_id, 'Status change');
                 END IF;
             END IF;
         ELSE
@@ -2125,7 +2125,7 @@ INSERT INTO reason_and_purpose (
     l1_content, l2_content, l3_content,
     l1_language_code, l2_language_code, l3_language_code,
     requires_details, is_active, severity, display_order,
-    created_by, updated_by
+    created_by_person_id, updated_by_person_id
 ) VALUES 
 -- Loan Purposes
 (
@@ -2399,7 +2399,7 @@ WHERE code = 'HOLD_FRAUD_INVESTIGATION';
 -- =============================================================================
 
 -- Bank holidays for multiple jurisdictions
-INSERT INTO bank_holidays (id, jurisdiction, holiday_date, holiday_name, holiday_type, is_recurring, created_by) VALUES
+INSERT INTO bank_holidays (id, jurisdiction, holiday_date, holiday_name, holiday_type, is_recurring, created_by_person_id) VALUES
 (uuid_generate_v4(), 'US', '2024-01-01', 'New Year''s Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
 (uuid_generate_v4(), 'US', '2024-01-15', 'Martin Luther King Jr. Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
 (uuid_generate_v4(), 'US', '2024-02-19', 'Presidents Day', 'National', true, '00000000-0000-0000-0000-000000000000'),
@@ -2417,7 +2417,7 @@ INSERT INTO bank_holidays (id, jurisdiction, holiday_date, holiday_name, holiday
 (uuid_generate_v4(), 'CM', '2024-12-25', 'Christmas Day', 'Religious', true, '00000000-0000-0000-0000-000000000000');
 
 -- Weekend configuration
-INSERT INTO weekend_configuration (id, jurisdiction, weekend_days, effective_date, created_by, updated_by) VALUES
+INSERT INTO weekend_configuration (id, jurisdiction, weekend_days, effective_date, created_by_person_id, updated_by_person_id) VALUES
 (uuid_generate_v4(), 'US', '[6,7]', '2024-01-01', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'), -- Saturday, Sunday
 (uuid_generate_v4(), 'CM', '[6,7]', '2024-01-01', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'), -- Saturday, Sunday
 (uuid_generate_v4(), 'AE', '[5,6]', '2024-01-01', '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'); -- Friday, Saturday (UAE style)
@@ -2429,13 +2429,13 @@ INSERT INTO weekend_configuration (id, jurisdiction, weekend_days, effective_dat
 -- Customer table indexes
 CREATE INDEX idx_customers_risk_rating ON customers(risk_rating);
 CREATE INDEX idx_customers_status ON customers(status);
-CREATE INDEX idx_customers_updated_by ON customers(updated_by);
+CREATE INDEX idx_customers_updated_by_person_id ON customers(updated_by_person_id);
 
 -- Account table indexes
 CREATE INDEX idx_accounts_customer_product ON accounts(product_code);
 CREATE INDEX idx_accounts_status ON accounts(account_status);
 CREATE INDEX idx_accounts_type ON accounts(account_type);
-CREATE INDEX idx_accounts_branch ON accounts(domicile_branch_id);
+CREATE INDEX idx_accounts_branch ON accounts(domicile_agency_branch_id);
 CREATE INDEX idx_accounts_balance ON accounts(current_balance);
 CREATE INDEX idx_accounts_loan_maturity ON accounts(maturity_date) WHERE account_type = 'Loan';
 
@@ -2578,8 +2578,8 @@ CREATE TABLE collateral (
     -- Audit and tracking
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id),
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id),
     last_valuation_by UUID REFERENCES persons(id),
     next_review_date DATE
 );
@@ -2601,7 +2601,7 @@ CREATE TABLE collateral_valuations (
     
     -- Audit trail
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Collateral pledges table
@@ -2628,8 +2628,8 @@ CREATE TABLE collateral_pledges (
     -- Audit trail
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Collateral alerts table
@@ -2670,8 +2670,8 @@ CREATE TABLE collateral_enforcement (
     -- Audit trail
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES persons(id),
-    updated_by UUID NOT NULL REFERENCES persons(id)
+    created_by_person_id UUID NOT NULL REFERENCES persons(id),
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id)
 );
 
 -- Indexes for collateral tables

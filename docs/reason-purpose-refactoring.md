@@ -54,8 +54,8 @@ pub struct ReasonAndPurpose {
     /// Audit fields
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: HeaplessString<100>,
-    pub updated_by: HeaplessString<100>,
+    pub created_by_person_id: HeaplessString<100>,
+    pub updated_by_person_id: HeaplessString<100>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -295,8 +295,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by: HeaplessString::try_from("system").unwrap(),
-                updated_by: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("system").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
             },
             
             // Account Closure Reasons
@@ -318,8 +318,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by: HeaplessString::try_from("system").unwrap(),
-                updated_by: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("system").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
             },
             
             // AML/CTF Reasons
@@ -355,8 +355,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by: HeaplessString::try_from("system").unwrap(),
-                updated_by: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("system").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -393,8 +393,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by: HeaplessString::try_from("system").unwrap(),
-                updated_by: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("system").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -425,8 +425,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by: HeaplessString::try_from("system").unwrap(),
-                updated_by: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("system").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
             },
             
             // KYC Reasons
@@ -458,8 +458,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by: HeaplessString::try_from("system").unwrap(),
-                updated_by: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("system").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -490,8 +490,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by: HeaplessString::try_from("system").unwrap(),
-                updated_by: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("system").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -522,8 +522,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by: HeaplessString::try_from("system").unwrap(),
-                updated_by: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("system").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
             },
             
             // Add more predefined reasons...
@@ -777,8 +777,8 @@ CREATE TABLE reason_and_purpose (
     -- Audit fields
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    created_by VARCHAR(100) NOT NULL,
-    updated_by VARCHAR(100) NOT NULL
+    created_by_person_id VARCHAR(100) NOT NULL,
+    updated_by_person_id VARCHAR(100) NOT NULL
 );
 
 CREATE INDEX idx_reason_code ON reason_and_purpose(code);

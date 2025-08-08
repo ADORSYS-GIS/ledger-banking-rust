@@ -309,7 +309,7 @@ impl AccountRepository for SimpleAccountRepositoryImpl {
         Ok(holds)
     }
 
-    async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+    async fn update_hold_priorities(&self, _account_id: Uuid, _hold_priority_updates: Vec<(Uuid, String)>, _updated_by_person_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         Ok(vec![])
     }
 
@@ -325,7 +325,7 @@ impl AccountRepository for SimpleAccountRepositoryImpl {
         Ok(vec![])
     }
 
-    async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: Decimal, _updated_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
+    async fn update_loan_pledge_holds(&self, _loan_id: Uuid, _account_ids: Vec<Uuid>, _new_amount: Decimal, _updated_by_person_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         Ok(vec![])
     }
 
@@ -375,7 +375,7 @@ impl SimpleAccountRepositoryImpl {
             signing_condition: SigningCondition::AnyOwner,
             currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
-            domicile_branch_id: Uuid::new_v4(),
+            domicile_agency_branch_id: Uuid::new_v4(),
             current_balance: Decimal::new(100000, 2), // 1000.00
             available_balance: Decimal::new(95000, 2), // 950.00
             accrued_interest: Decimal::new(1250, 2), // 12.50
@@ -397,12 +397,12 @@ impl SimpleAccountRepositoryImpl {
             reactivation_required: false,
             pending_closure_reason_id: None,
             last_disbursement_instruction_id: None,
-            status_changed_by: None,
+            status_changed_by_person_id: None,
             status_change_reason_id: None,
             status_change_timestamp: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         }
     }
 

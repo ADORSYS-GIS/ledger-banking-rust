@@ -127,16 +127,16 @@ impl TryFromRow<sqlx::postgres::PgRow> for ReasonAndPurposeModel {
             compliance_metadata: None, // TODO: Implement JSON parsing for compliance metadata
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            created_by: HeaplessString::try_from(
-                row.get::<String, _>("created_by").as_str()
+            created_by_person_id: HeaplessString::try_from(
+                row.get::<String, _>("created_by_person_id").as_str()
             ).map_err(|_| BankingError::ValidationError {
-                field: "created_by".to_string(),
+                field: "created_by_person_id".to_string(),
                 message: "Created by too long".to_string(),
             })?,
-            updated_by: HeaplessString::try_from(
-                row.get::<String, _>("updated_by").as_str()
+            updated_by_person_id: HeaplessString::try_from(
+                row.get::<String, _>("updated_by_person_id").as_str()
             ).map_err(|_| BankingError::ValidationError {
-                field: "updated_by".to_string(),
+                field: "updated_by_person_id".to_string(),
                 message: "Updated by too long".to_string(),
             })?,
         })
@@ -154,12 +154,12 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
             "INSERT INTO reason_and_purpose 
                 (id, code, category, context, l1_content, l2_content, l3_content,
                  l1_language_code, l2_language_code, l3_language_code, requires_details,
-                 is_active, severity, display_order, created_at, updated_at, created_by, updated_by)
+                 is_active, severity, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id)
              VALUES ($1, $2, $3::reason_category, $4::reason_context, $5, $6, $7, $8, $9, $10, 
                      $11, $12, $13::reason_severity, $14, $15, $16, $17, $18)
              RETURNING id, code, category::text, context::text, l1_content, l2_content, l3_content,
                       l1_language_code, l2_language_code, l3_language_code, requires_details,
-                      is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by"
+                      is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id"
         )
         .bind(reason.id)
         .bind(reason.code.as_str())
@@ -177,8 +177,8 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         .bind(reason.display_order)
         .bind(reason.created_at)
         .bind(reason.updated_at)
-        .bind(reason.created_by.as_str())
-        .bind(reason.updated_by.as_str())
+        .bind(reason.created_by_person_id.as_str())
+        .bind(reason.updated_by_person_id.as_str())
         .fetch_one(&self.pool)
         .await
         .map_err(BankingError::from)?;
@@ -190,7 +190,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let row = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE id = $1"
         )
         .bind(reason_id)
@@ -208,7 +208,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let row = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE code = $1"
         )
         .bind(code)
@@ -229,11 +229,11 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
                 l1_content = $5, l2_content = $6, l3_content = $7,
                 l1_language_code = $8, l2_language_code = $9, l3_language_code = $10,
                 requires_details = $11, is_active = $12, severity = $13::reason_severity,
-                display_order = $14, updated_at = $15, updated_by = $16
+                display_order = $14, updated_at = $15, updated_by_person_id = $16
              WHERE id = $1
              RETURNING id, code, category::text, context::text, l1_content, l2_content, l3_content,
                       l1_language_code, l2_language_code, l3_language_code, requires_details,
-                      is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by"
+                      is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id"
         )
         .bind(reason.id)
         .bind(reason.code.as_str())
@@ -250,7 +250,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         .bind(reason.severity.as_ref().map(|s| s.to_string()))
         .bind(reason.display_order)
         .bind(reason.updated_at)
-        .bind(reason.updated_by.as_str())
+        .bind(reason.updated_by_person_id.as_str())
         .fetch_one(&self.pool)
         .await
         .map_err(BankingError::from)?;
@@ -270,7 +270,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
     
     async fn deactivate(&self, reason_id: Uuid, deactivated_by: &str) -> BankingResult<()> {
         sqlx::query(
-            "UPDATE reason_and_purpose SET is_active = false, updated_at = NOW(), updated_by = $2 WHERE id = $1"
+            "UPDATE reason_and_purpose SET is_active = false, updated_at = NOW(), updated_by_person_id = $2 WHERE id = $1"
         )
         .bind(reason_id)
         .bind(deactivated_by)
@@ -283,7 +283,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
     
     async fn reactivate(&self, reason_id: Uuid, reactivated_by: &str) -> BankingResult<()> {
         sqlx::query(
-            "UPDATE reason_and_purpose SET is_active = true, updated_at = NOW(), updated_by = $2 WHERE id = $1"
+            "UPDATE reason_and_purpose SET is_active = true, updated_at = NOW(), updated_by_person_id = $2 WHERE id = $1"
         )
         .bind(reason_id)
         .bind(reactivated_by)
@@ -302,7 +302,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE is_active = true ORDER BY display_order, code"
         )
         .fetch_all(&self.pool)
@@ -321,7 +321,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE category = $1::reason_category ORDER BY display_order, code"
         )
         .bind(category.to_string())
@@ -341,7 +341,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE context = $1::reason_context ORDER BY display_order, code"
         )
         .bind(context.to_string())
@@ -361,7 +361,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose 
              WHERE category = $1::reason_category AND context = $2::reason_context 
              ORDER BY display_order, code"
@@ -384,7 +384,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE severity = $1::reason_severity ORDER BY display_order, code"
         )
         .bind(severity.to_string())
@@ -406,7 +406,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose 
              WHERE l1_content ILIKE $1 OR l2_content ILIKE $1 OR l3_content ILIKE $1 OR code ILIKE $1
              ORDER BY display_order, code"
@@ -427,7 +427,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
     async fn find_for_display(&self, category: Option<ReasonCategory>, context: Option<ReasonContext>, active_only: bool) -> BankingResult<Vec<ReasonAndPurposeModel>> {
         let mut query = "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                                 l1_language_code, l2_language_code, l3_language_code, requires_details,
-                                is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                                is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
                          FROM reason_and_purpose WHERE 1=1".to_string();
         
         let mut param_count = 0;
@@ -476,7 +476,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE reportable = true ORDER BY display_order, code"
         )
         .fetch_all(&self.pool)
@@ -495,7 +495,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE requires_sar = true ORDER BY display_order, code"
         )
         .fetch_all(&self.pool)
@@ -514,7 +514,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE requires_ctr = true ORDER BY display_order, code"
         )
         .fetch_all(&self.pool)
@@ -547,7 +547,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         let rows = sqlx::query(
             "SELECT id, code, category::text, context::text, l1_content, l2_content, l3_content,
                     l1_language_code, l2_language_code, l3_language_code, requires_details,
-                    is_active, severity::text, display_order, created_at, updated_at, created_by, updated_by
+                    is_active, severity::text, display_order, created_at, updated_at, created_by_person_id, updated_by_person_id
              FROM reason_and_purpose WHERE escalation_required = true ORDER BY display_order, code"
         )
         .fetch_all(&self.pool)
@@ -654,19 +654,19 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         Err(BankingError::NotImplemented("Bulk insert not yet implemented".to_string()))
     }
     
-    async fn bulk_update_display_orders(&self, _category: ReasonCategory, _order_updates: Vec<(Uuid, i32)>, _updated_by: &str) -> BankingResult<()> {
+    async fn bulk_update_display_orders(&self, _category: ReasonCategory, _order_updates: Vec<(Uuid, i32)>, _updated_by_person_id: &str) -> BankingResult<()> {
         Ok(()) // TODO: Implement bulk display order updates
     }
     
-    async fn bulk_update_status(&self, _reason_ids: Vec<Uuid>, _is_active: bool, _updated_by: &str) -> BankingResult<BulkOperationResult> {
+    async fn bulk_update_status(&self, _reason_ids: Vec<Uuid>, _is_active: bool, _updated_by_person_id: &str) -> BankingResult<BulkOperationResult> {
         Err(BankingError::NotImplemented("Bulk status update not yet implemented".to_string()))
     }
     
-    async fn update_localized_content(&self, _reason_id: Uuid, _language_code: [u8; 3], _content: &str, _updated_by: &str) -> BankingResult<()> {
+    async fn update_localized_content(&self, _reason_id: Uuid, _language_code: [u8; 3], _content: &str, _updated_by_person_id: &str) -> BankingResult<()> {
         Ok(()) // TODO: Implement localized content updates
     }
     
-    async fn remove_localized_content(&self, _reason_id: Uuid, _language_code: [u8; 3], _updated_by: &str) -> BankingResult<()> {
+    async fn remove_localized_content(&self, _reason_id: Uuid, _language_code: [u8; 3], _updated_by_person_id: &str) -> BankingResult<()> {
         Ok(()) // TODO: Implement localized content removal
     }
     

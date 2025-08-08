@@ -57,7 +57,7 @@ pub trait CollateralService: Send + Sync {
     async fn get_overdue_valuations(&self, reference_date: NaiveDate) -> Result<Vec<Collateral>, String>;
     
     /// Update collateral market value based on latest valuation
-    async fn update_market_value(&self, collateral_id: Uuid, new_value: Decimal, valuation_date: NaiveDate, updated_by: Uuid) -> Result<(), String>;
+    async fn update_market_value(&self, collateral_id: Uuid, new_value: Decimal, valuation_date: NaiveDate, updated_by_person_id: Uuid) -> Result<(), String>;
 
     // === PLEDGE MANAGEMENT ===
     
@@ -145,7 +145,7 @@ pub trait CollateralService: Send + Sync {
     async fn get_enforcements_by_collateral(&self, collateral_id: Uuid) -> Result<Vec<CollateralEnforcement>, String>;
     
     /// Update enforcement status
-    async fn update_enforcement_status(&self, enforcement_id: Uuid, status: crate::domain::EnforcementStatus, updated_by: Uuid) -> Result<(), String>;
+    async fn update_enforcement_status(&self, enforcement_id: Uuid, status: crate::domain::EnforcementStatus, updated_by_person_id: Uuid) -> Result<(), String>;
     
     /// Record enforcement completion and recovery amounts
     async fn complete_enforcement(
@@ -162,7 +162,7 @@ pub trait CollateralService: Send + Sync {
     // === BULK OPERATIONS ===
     
     /// Bulk update collateral market values (for end-of-day processing)
-    async fn bulk_update_market_values(&self, valuations: Vec<(Uuid, Decimal, NaiveDate)>, updated_by: Uuid) -> Result<u32, String>;
+    async fn bulk_update_market_values(&self, valuations: Vec<(Uuid, Decimal, NaiveDate)>, updated_by_person_id: Uuid) -> Result<u32, String>;
     
     /// Bulk generate alerts for multiple collaterals
     async fn bulk_generate_alerts(&self, collateral_ids: Vec<Uuid>, reference_date: NaiveDate) -> Result<Vec<CollateralAlert>, String>;

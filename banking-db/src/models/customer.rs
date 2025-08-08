@@ -23,7 +23,7 @@ pub struct CustomerModel {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Database model for Customer Portfolio summary

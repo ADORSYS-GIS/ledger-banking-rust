@@ -46,10 +46,10 @@ pub trait CollateralRepository: Send + Sync {
     ) -> Result<u64, String>;
     
     /// Update collateral status
-    async fn update_collateral_status(&self, collateral_id: Uuid, status: String, updated_by: Uuid) -> Result<(), String>;
+    async fn update_collateral_status(&self, collateral_id: Uuid, status: String, updated_by_person_id: Uuid) -> Result<(), String>;
     
     /// Update collateral market value
-    async fn update_market_value(&self, collateral_id: Uuid, new_value: Decimal, valuation_date: NaiveDate, updated_by: Uuid) -> Result<(), String>;
+    async fn update_market_value(&self, collateral_id: Uuid, new_value: Decimal, valuation_date: NaiveDate, updated_by_person_id: Uuid) -> Result<(), String>;
 
     // === VALUATION OPERATIONS ===
     
@@ -89,10 +89,10 @@ pub trait CollateralRepository: Send + Sync {
     async fn find_active_pledges_by_collateral(&self, collateral_id: Uuid) -> Result<Vec<String>, String>;
     
     /// Update pledge status
-    async fn update_pledge_status(&self, pledge_id: Uuid, status: String, updated_by: Uuid) -> Result<(), String>;
+    async fn update_pledge_status(&self, pledge_id: Uuid, status: String, updated_by_person_id: Uuid) -> Result<(), String>;
     
     /// Update pledged amount (for partial releases)
-    async fn update_pledged_amount(&self, pledge_id: Uuid, new_amount: Decimal, updated_by: Uuid) -> Result<(), String>;
+    async fn update_pledged_amount(&self, pledge_id: Uuid, new_amount: Decimal, updated_by_person_id: Uuid) -> Result<(), String>;
     
     /// Find pledges by priority level (returns JSON data)
     async fn find_pledges_by_priority(&self, priority: String) -> Result<Vec<String>, String>;
@@ -121,7 +121,7 @@ pub trait CollateralRepository: Send + Sync {
     async fn find_alerts_by_assignee(&self, assigned_to: Uuid) -> Result<Vec<String>, String>;
     
     /// Update alert status
-    async fn update_alert_status(&self, alert_id: Uuid, status: String, updated_by: Uuid) -> Result<(), String>;
+    async fn update_alert_status(&self, alert_id: Uuid, status: String, updated_by_person_id: Uuid) -> Result<(), String>;
     
     /// Resolve alert with notes
     async fn resolve_alert(&self, alert_id: Uuid, resolution_notes: String, resolved_by: Uuid) -> Result<(), String>;
@@ -144,7 +144,7 @@ pub trait CollateralRepository: Send + Sync {
     async fn find_enforcements_by_status(&self, status: String) -> Result<Vec<CollateralEnforcementModel>, String>;
     
     /// Update enforcement status
-    async fn update_enforcement_status(&self, enforcement_id: Uuid, status: String, updated_by: Uuid) -> Result<(), String>;
+    async fn update_enforcement_status(&self, enforcement_id: Uuid, status: String, updated_by_person_id: Uuid) -> Result<(), String>;
     
     /// Complete enforcement with recovery details
     async fn complete_enforcement(
@@ -188,13 +188,13 @@ pub trait CollateralRepository: Send + Sync {
     // === BATCH OPERATIONS ===
     
     /// Batch update market values
-    async fn batch_update_market_values(&self, updates: Vec<(Uuid, Decimal, NaiveDate)>, updated_by: Uuid) -> Result<u32, String>;
+    async fn batch_update_market_values(&self, updates: Vec<(Uuid, Decimal, NaiveDate)>, updated_by_person_id: Uuid) -> Result<u32, String>;
     
     /// Batch create alerts (using JSON data)
     async fn batch_create_alerts(&self, alert_data: Vec<String>) -> Result<u32, String>;
     
     /// Batch update pledge statuses
-    async fn batch_update_pledge_statuses(&self, updates: Vec<(Uuid, String)>, updated_by: Uuid) -> Result<u32, String>;
+    async fn batch_update_pledge_statuses(&self, updates: Vec<(Uuid, String)>, updated_by_person_id: Uuid) -> Result<u32, String>;
 
     // === REPORTING QUERIES ===
     
@@ -219,7 +219,7 @@ pub trait CollateralRepository: Send + Sync {
     async fn find_covenant_breaches(&self, reference_date: NaiveDate) -> Result<Vec<String>, String>;
     
     /// Update covenant compliance status
-    async fn update_covenant_compliance(&self, pledge_id: Uuid, compliance_data: String, updated_by: Uuid) -> Result<(), String>;
+    async fn update_covenant_compliance(&self, pledge_id: Uuid, compliance_data: String, updated_by_person_id: Uuid) -> Result<(), String>;
     
     /// Find pledges requiring covenant review (returns JSON data)
     async fn find_pledges_requiring_covenant_review(&self, reference_date: NaiveDate) -> Result<Vec<String>, String>;

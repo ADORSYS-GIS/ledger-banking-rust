@@ -46,8 +46,8 @@ pub struct ReasonAndPurpose {
     /// Audit fields
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: HeaplessString<100>,
-    pub updated_by: HeaplessString<100>,
+    pub created_by_person_id: HeaplessString<100>,
+    pub updated_by_person_id: HeaplessString<100>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]

@@ -9,8 +9,8 @@ use uuid::Uuid;
 /// Test helper to create a sample account model for unit testing
 fn create_test_account() -> AccountModel {
     let account_id = Uuid::new_v4();
-    let updated_by = Uuid::new_v4();
-    let domicile_branch_id = Uuid::new_v4();
+    let updated_by_person_id = Uuid::new_v4();
+    let domicile_agency_branch_id = Uuid::new_v4();
     
     AccountModel {
         id: account_id,
@@ -20,7 +20,7 @@ fn create_test_account() -> AccountModel {
         signing_condition: SigningCondition::AnyOwner,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
-        domicile_branch_id,
+        domicile_agency_branch_id: domicile_agency_branch_id,
         current_balance: Decimal::from_str("1000.00").unwrap(),
         available_balance: Decimal::from_str("950.00").unwrap(),
         accrued_interest: Decimal::from_str("12.50").unwrap(),
@@ -42,12 +42,12 @@ fn create_test_account() -> AccountModel {
         reactivation_required: false,
         pending_closure_reason_id: None,
         last_disbursement_instruction_id: None,
-        status_changed_by: None,
+        status_changed_by_person_id: None,
         status_change_reason_id: None,
         status_change_timestamp: None,
         created_at: Utc::now(),
         last_updated_at: Utc::now(),
-        updated_by,
+        updated_by_person_id: updated_by_person_id,
     }
 }
 
@@ -236,7 +236,7 @@ fn test_audit_fields() {
     // Test that audit fields are properly set
     assert!(account.created_at <= Utc::now());
     assert!(account.last_updated_at <= Utc::now());
-    assert_ne!(account.updated_by, Uuid::nil());
+    assert_ne!(account.updated_by_person_id, Uuid::nil());
 }
 
 #[test]

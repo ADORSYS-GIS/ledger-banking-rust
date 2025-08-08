@@ -315,7 +315,7 @@ pub struct CollectionProgramModel {
     pub interest_rate: Option<Decimal>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     pub reason_id: Option<Uuid>,
 }
 

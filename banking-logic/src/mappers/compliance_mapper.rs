@@ -162,7 +162,7 @@ impl ComplianceMapper {
             verification_notes: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: HeaplessString::try_from("system").unwrap_or_default(),
+            updated_by_person_id: HeaplessString::try_from("system").unwrap_or_default(),
         }
     }
 

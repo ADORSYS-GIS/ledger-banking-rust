@@ -17,7 +17,7 @@ impl CalendarMapper {
             is_recurring: holiday.is_recurring,
             description: holiday.description,
             created_at: holiday.created_at,
-            created_by: holiday.created_by,
+            created_by_person_id: holiday.created_by_person_id,
         }
     }
 
@@ -31,7 +31,7 @@ impl CalendarMapper {
             holiday_type: Self::model_holiday_type_to_domain(&model.holiday_type),
             is_recurring: model.is_recurring,
             description: model.description,
-            created_by: model.created_by,
+            created_by_person_id: model.created_by_person_id,
             created_at: model.created_at,
         }
     }

@@ -227,7 +227,7 @@ pub struct KycRecordModel {
     pub verification_notes: Option<HeaplessString<500>>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: HeaplessString<100>,
+    pub updated_by_person_id: HeaplessString<100>,
 }
 
 /// Screening Result database model - aligned with domain ScreeningResult
@@ -403,7 +403,7 @@ pub struct ExtendedSarDataModel {
     pub supporting_documents: Option<HeaplessString<1000>>, // JSON array
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: HeaplessString<100>,
+    pub updated_by_person_id: HeaplessString<100>,
 }
 
 /// Customer Document database model (for KYC)

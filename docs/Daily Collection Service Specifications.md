@@ -111,7 +111,7 @@ pub struct CollectionProgram {
     pub interest_rate: Option<Decimal>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
-    pub created_by: UUID,
+    pub created_by_person_id: UUID,
     pub reason_id: Option<UUID>,
 }
 

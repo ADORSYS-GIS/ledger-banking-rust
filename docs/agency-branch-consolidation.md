@@ -75,7 +75,7 @@ pub struct AgencyBranch {
     
     // Metadata
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: HeaplessString<100>,
+    pub updated_by_person_id: HeaplessString<100>,
 }
 
 // Extend BranchStatus if needed

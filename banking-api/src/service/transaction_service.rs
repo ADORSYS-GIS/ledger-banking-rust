@@ -60,7 +60,7 @@ pub trait TransactionService: Send + Sync {
     async fn get_transaction_audit_trail(&self, transaction_id: Uuid) -> BankingResult<Vec<TransactionAuditEntry>>;
 
     /// Update transaction status
-    async fn update_transaction_status(&self, transaction_id: Uuid, status: crate::domain::TransactionStatus, updated_by: String) -> BankingResult<()>;
+    async fn update_transaction_status(&self, transaction_id: Uuid, status: crate::domain::TransactionStatus, updated_by_person_id: String) -> BankingResult<()>;
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

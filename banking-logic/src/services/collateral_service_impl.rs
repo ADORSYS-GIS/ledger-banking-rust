@@ -194,8 +194,8 @@ impl CollateralService for CollateralServiceImpl {
         Err("CollateralMapper model_to_domain for Vec not yet implemented".to_string())
     }
     
-    async fn update_market_value(&self, collateral_id: Uuid, new_value: Decimal, valuation_date: NaiveDate, updated_by: Uuid) -> Result<(), String> {
-        self.collateral_repository.update_market_value(collateral_id, new_value, valuation_date, updated_by).await
+    async fn update_market_value(&self, collateral_id: Uuid, new_value: Decimal, valuation_date: NaiveDate, updated_by_person_id: Uuid) -> Result<(), String> {
+        self.collateral_repository.update_market_value(collateral_id, new_value, valuation_date, updated_by_person_id).await
     }
 
     // === PLEDGE MANAGEMENT ===
@@ -230,7 +230,7 @@ impl CollateralService for CollateralServiceImpl {
     }
     
     #[allow(unused_variables)]
-    async fn partial_release_pledge(&self, pledge_id: Uuid, release_amount: Decimal, updated_by: Uuid) -> Result<(), String> {
+    async fn partial_release_pledge(&self, pledge_id: Uuid, release_amount: Decimal, updated_by_person_id: Uuid) -> Result<(), String> {
         // Get current pledge
         if let Some(_pledge_model) = self.collateral_repository.find_pledge_by_id(pledge_id).await? {
             // TODO: Implement CollateralMapper::pledge_model_to_domain conversion to get current amount
@@ -371,8 +371,8 @@ impl CollateralService for CollateralServiceImpl {
             net_recovery: enforcement.net_recovery,
             created_at: enforcement.created_at,
             last_updated_at: enforcement.last_updated_at,
-            created_by: enforcement.created_by,
-            updated_by: enforcement.updated_by,
+            created_by_person_id: enforcement.created_by_person_id,
+            updated_by_person_id: enforcement.updated_by_person_id,
         }).await?;
         
         Ok(enforcement.id)
@@ -384,9 +384,9 @@ impl CollateralService for CollateralServiceImpl {
         Err("CollateralMapper enforcement_model_to_domain not yet implemented".to_string())
     }
     
-    async fn update_enforcement_status(&self, enforcement_id: Uuid, status: EnforcementStatus, updated_by: Uuid) -> Result<(), String> {
+    async fn update_enforcement_status(&self, enforcement_id: Uuid, status: EnforcementStatus, updated_by_person_id: Uuid) -> Result<(), String> {
         let status_str = format!("{status:?}");
-        self.collateral_repository.update_enforcement_status(enforcement_id, status_str, updated_by).await
+        self.collateral_repository.update_enforcement_status(enforcement_id, status_str, updated_by_person_id).await
     }
     
     async fn complete_enforcement(
@@ -417,8 +417,8 @@ impl CollateralService for CollateralServiceImpl {
 
     // === BULK OPERATIONS ===
     
-    async fn bulk_update_market_values(&self, valuations: Vec<(Uuid, Decimal, NaiveDate)>, updated_by: Uuid) -> Result<u32, String> {
-        self.collateral_repository.batch_update_market_values(valuations, updated_by).await
+    async fn bulk_update_market_values(&self, valuations: Vec<(Uuid, Decimal, NaiveDate)>, updated_by_person_id: Uuid) -> Result<u32, String> {
+        self.collateral_repository.batch_update_market_values(valuations, updated_by_person_id).await
     }
     
     async fn bulk_generate_alerts(&self, _collateral_ids: Vec<Uuid>, _reference_date: NaiveDate) -> Result<Vec<CollateralAlert>, String> {

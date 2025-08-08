@@ -317,7 +317,7 @@ pub trait CollectionProgramRepository: Send + Sync {
     async fn find_by_program_type(&self, program_type: &str) -> BankingResult<Vec<CollectionProgramModel>>;
     
     /// Find programs created by user
-    async fn find_by_created_by(&self, created_by: Uuid) -> BankingResult<Vec<CollectionProgramModel>>;
+    async fn find_by_created_by(&self, created_by_person_id: Uuid) -> BankingResult<Vec<CollectionProgramModel>>;
     
     /// Find programs within date range
     async fn find_by_date_range(

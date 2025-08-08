@@ -119,7 +119,7 @@ impl CasaService for CasaServiceImpl {
         new_limit: Option<Decimal>,
         new_rate: Option<Decimal>,
         new_expiry_date: Option<NaiveDate>,
-        updated_by: Uuid, // References Person.person_id
+        updated_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftFacility> {
         // Implementation would update facility and account
         todo!("Implement overdraft facility update")
@@ -131,7 +131,7 @@ impl CasaService for CasaServiceImpl {
         facility_id: Uuid,
         new_status: OverdraftStatus,
         reason: String,
-        updated_by: Uuid, // References Person.person_id
+        updated_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftFacility> {
         todo!("Implement overdraft status update")
     }

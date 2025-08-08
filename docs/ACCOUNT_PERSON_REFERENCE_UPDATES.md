@@ -8,7 +8,7 @@ This document summarizes the changes made to update person references in the acc
 ### 1. Domain Model Updates (`banking-api/src/domain/account.rs`)
 Updated the following fields from HeaplessString<100> to Uuid:
 - `Account.status_changed_by: Option<Uuid>` - References ReferencedPerson.person_id
-- `Account.updated_by: Uuid` - References ReferencedPerson.person_id
+- `Account.updated_by_person_id: Uuid` - References ReferencedPerson.person_id
 - `DisbursementInstructions.authorized_recipient: Option<Uuid>` - References ReferencedPerson.person_id
 - `AccountHold.placed_by: Uuid` - References ReferencedPerson.person_id
 - `AccountHold.released_by: Option<Uuid>` - References ReferencedPerson.person_id
@@ -19,7 +19,7 @@ Updated the following fields from HeaplessString<100> to Uuid:
 ### 2. Database Model Updates (`banking-db/src/models/account.rs`)
 Updated corresponding fields in database models:
 - `AccountModel.status_changed_by: Option<Uuid>`
-- `AccountModel.updated_by: Uuid`
+- `AccountModel.updated_by_person_id: Uuid`
 - `AccountHoldModel.placed_by: Uuid`
 - `AccountHoldModel.released_by: Option<Uuid>`
 - `AccountStatusHistoryModel.changed_by: Uuid`
@@ -28,7 +28,7 @@ Updated corresponding fields in database models:
 ### 3. Service Interface Updates (`banking-api/src/service/account_service.rs`)
 Updated method signatures to accept UUID instead of String:
 - `update_account_status(..., authorized_by: Uuid)`
-- `update_balance(..., updated_by: Uuid)`
+- `update_balance(..., updated_by_person_id: Uuid)`
 - `release_hold(..., released_by: Uuid)`
 
 ### 4. Service Implementation Updates (`banking-logic/src/services/account_service_impl.rs`)

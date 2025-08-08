@@ -91,8 +91,8 @@ impl TryFromRow<sqlx::postgres::PgRow> for CollateralModel {
             },
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            created_by: row.get("created_by"),
-            updated_by: row.get("updated_by"),
+            created_by_person_id: row.get("created_by_person_id"),
+            updated_by_person_id: row.get("updated_by_person_id"),
         })
     }
 }
@@ -149,7 +149,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                 perfection_status, perfection_date, perfection_expiry, insurance_required,
                 insurance_value, insurance_expiry, environmental_risk, risk_rating, status,
                 notes, legal_description, appraisal_reference, created_at, updated_at,
-                created_by, updated_by
+                created_by_person_id, updated_by
             )
             VALUES (
                 $1, $2, $3::collateral_type, $4::collateral_category, $5, $6,
@@ -185,7 +185,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                 legal_description = EXCLUDED.legal_description,
                 appraisal_reference = EXCLUDED.appraisal_reference,
                 updated_at = EXCLUDED.updated_at,
-                updated_by = EXCLUDED.updated_by
+                updated_by_person_id = EXCLUDED.updated_by
             "#
         )
         .bind(collateral.collateral_id)
@@ -216,8 +216,8 @@ impl CollateralRepository for CollateralRepositoryImpl {
         .bind(collateral.appraisal_reference.as_ref().map(|s| s.as_str()))
         .bind(collateral.created_at)
         .bind(collateral.updated_at)
-        .bind(collateral.created_by)
-        .bind(collateral.updated_by)
+        .bind(collateral.created_by_person_id)
+        .bind(collateral.updated_by_person_id)
         .execute(&self.pool)
         .await
         .map_err(|e| format!("Failed to save collateral: {}", e))?;
@@ -236,7 +236,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE collateral_id = $1
             "#
@@ -263,7 +263,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE customer_id = $1
             ORDER BY created_at DESC
@@ -292,7 +292,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE collateral_type = $1::collateral_type
             ORDER BY created_at DESC
@@ -321,7 +321,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE status = $1
             ORDER BY created_at DESC
@@ -357,7 +357,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals WHERE 1=1
             "#
         );
@@ -445,19 +445,19 @@ impl CollateralRepository for CollateralRepositoryImpl {
         Ok(result.get::<i64, _>("count") as u64)
     }
     
-    async fn update_collateral_status(&self, collateral_id: Uuid, status: String, updated_by: Uuid) -> Result<(), String> {
+    async fn update_collateral_status(&self, collateral_id: Uuid, status: String, updated_by_person_id: Uuid) -> Result<(), String> {
         sqlx::query(
             r#"
             UPDATE collaterals SET
                 status = $2,
-                updated_by = $3,
+                updated_by_person_id = $3,
                 updated_at = CURRENT_TIMESTAMP
             WHERE collateral_id = $1
             "#
         )
         .bind(collateral_id)
         .bind(status)
-        .bind(updated_by)
+        .bind(updated_by_person_id)
         .execute(&self.pool)
         .await
         .map_err(|e| format!("Failed to update collateral status: {}", e))?;
@@ -465,13 +465,13 @@ impl CollateralRepository for CollateralRepositoryImpl {
         Ok(())
     }
     
-    async fn update_market_value(&self, collateral_id: Uuid, new_value: Decimal, valuation_date: NaiveDate, updated_by: Uuid) -> Result<(), String> {
+    async fn update_market_value(&self, collateral_id: Uuid, new_value: Decimal, valuation_date: NaiveDate, updated_by_person_id: Uuid) -> Result<(), String> {
         sqlx::query(
             r#"
             UPDATE collaterals SET
                 current_market_value = $2,
                 valuation_date = $3,
-                updated_by = $4,
+                updated_by_person_id = $4,
                 updated_at = CURRENT_TIMESTAMP
             WHERE collateral_id = $1
             "#
@@ -479,7 +479,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
         .bind(collateral_id)
         .bind(new_value)
         .bind(valuation_date)
-        .bind(updated_by)
+        .bind(updated_by_person_id)
         .execute(&self.pool)
         .await
         .map_err(|e| format!("Failed to update market value: {}", e))?;
@@ -515,7 +515,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE next_valuation_due <= $1 AND status = 'Active'
             ORDER BY next_valuation_due ASC
@@ -544,7 +544,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE next_valuation_due < $1 AND status = 'Active'
             ORDER BY next_valuation_due ASC
@@ -589,11 +589,11 @@ impl CollateralRepository for CollateralRepositoryImpl {
         Ok(Vec::new())
     }
     
-    async fn update_pledge_status(&self, _pledge_id: Uuid, _status: String, _updated_by: Uuid) -> Result<(), String> {
+    async fn update_pledge_status(&self, _pledge_id: Uuid, _status: String, _updated_by_person_id: Uuid) -> Result<(), String> {
         Ok(())
     }
     
-    async fn update_pledged_amount(&self, _pledge_id: Uuid, _new_amount: Decimal, _updated_by: Uuid) -> Result<(), String> {
+    async fn update_pledged_amount(&self, _pledge_id: Uuid, _new_amount: Decimal, _updated_by_person_id: Uuid) -> Result<(), String> {
         Ok(())
     }
     
@@ -631,7 +631,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
         Ok(Vec::new())
     }
     
-    async fn update_alert_status(&self, _alert_id: Uuid, _status: String, _updated_by: Uuid) -> Result<(), String> {
+    async fn update_alert_status(&self, _alert_id: Uuid, _status: String, _updated_by_person_id: Uuid) -> Result<(), String> {
         Ok(())
     }
     
@@ -781,7 +781,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
         Ok(enforcements)
     }
     
-    async fn update_enforcement_status(&self, enforcement_id: Uuid, status: String, updated_by: Uuid) -> Result<(), String> {
+    async fn update_enforcement_status(&self, enforcement_id: Uuid, status: String, updated_by_person_id: Uuid) -> Result<(), String> {
         sqlx::query(
             r#"
             UPDATE collateral_enforcements SET
@@ -875,7 +875,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE loan_to_value_ratio >= $1
             "#
@@ -904,10 +904,10 @@ impl CollateralRepository for CollateralRepositoryImpl {
 
     // === BATCH OPERATIONS - Simplified implementations ===
     
-    async fn batch_update_market_values(&self, updates: Vec<(Uuid, Decimal, NaiveDate)>, updated_by: Uuid) -> Result<u32, String> {
+    async fn batch_update_market_values(&self, updates: Vec<(Uuid, Decimal, NaiveDate)>, updated_by_person_id: Uuid) -> Result<u32, String> {
         let mut count = 0;
         for (collateral_id, value, date) in updates {
-            self.update_market_value(collateral_id, value, date, updated_by).await?;
+            self.update_market_value(collateral_id, value, date, updated_by_person_id).await?;
             count += 1;
         }
         Ok(count)
@@ -917,7 +917,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
         Ok(0)
     }
     
-    async fn batch_update_pledge_statuses(&self, _updates: Vec<(Uuid, String)>, _updated_by: Uuid) -> Result<u32, String> {
+    async fn batch_update_pledge_statuses(&self, _updates: Vec<(Uuid, String)>, _updated_by_person_id: Uuid) -> Result<u32, String> {
         Ok(0)
     }
 
@@ -938,7 +938,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE insurance_required = true AND insurance_expiry <= $1
             ORDER BY insurance_expiry ASC
@@ -969,7 +969,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE perfection_expiry <= $1 AND perfection_status = 'perfected'
             ORDER BY perfection_expiry ASC
@@ -1002,7 +1002,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
                    insurance_required, insurance_value, insurance_expiry,
                    environmental_risk::text as environmental_risk, risk_rating::text as risk_rating,
                    status, notes, legal_description, appraisal_reference,
-                   created_at, updated_at, created_by, updated_by
+                   created_at, updated_at, created_by_person_id, updated_by
             FROM collaterals 
             WHERE environmental_risk = $1::collateral_risk_rating
             ORDER BY created_at DESC
@@ -1026,7 +1026,7 @@ impl CollateralRepository for CollateralRepositoryImpl {
         Ok(Vec::new())
     }
     
-    async fn update_covenant_compliance(&self, _pledge_id: Uuid, _compliance_data: String, _updated_by: Uuid) -> Result<(), String> {
+    async fn update_covenant_compliance(&self, _pledge_id: Uuid, _compliance_data: String, _updated_by_person_id: Uuid) -> Result<(), String> {
         Ok(())
     }
     
@@ -1107,8 +1107,8 @@ mod tests {
             appraisal_reference: Some(HeaplessString::try_from("APR-2024-001").unwrap()),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by: Uuid::new_v4(),
-            updated_by: Uuid::new_v4(),
+            created_by_person_id: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         }
     }
 

@@ -195,16 +195,16 @@ pub async fn create_test_person(pool: &PgPool) -> uuid::Uuid {
 /// 
 /// Many workflow and transaction tests need an account record.
 /// This function creates a standard test account that can be reused.
-pub async fn create_test_account(pool: &PgPool, created_by: uuid::Uuid) -> uuid::Uuid {
+pub async fn create_test_account(pool: &PgPool, created_by_person_id: uuid::Uuid) -> uuid::Uuid {
     let test_account_id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
     
     sqlx::query(
         r#"
         INSERT INTO accounts (
             id, product_code, account_type, account_status, 
-            signing_condition, currency, open_date, domicile_branch_id,
+            signing_condition, currency, open_date, domicile_agency_branch_id,
             current_balance, available_balance, accrued_interest, 
-            created_at, last_updated_at, updated_by
+            created_at, last_updated_at, updated_by_person_id
         ) VALUES (
             $1, 'TST01', 'Savings', 'Active', 
             'AnyOwner', 'USD', '2024-01-01', $2,
@@ -215,8 +215,8 @@ pub async fn create_test_account(pool: &PgPool, created_by: uuid::Uuid) -> uuid:
         "#
     )
     .bind(test_account_id)
-    .bind(uuid::Uuid::new_v4()) // domicile_branch_id - random is fine for tests
-    .bind(created_by)
+    .bind(uuid::Uuid::new_v4()) // domicile_agency_branch_id - random is fine for tests
+    .bind(created_by_person_id)
     .execute(pool)
     .await
     .expect("Failed to create test account");

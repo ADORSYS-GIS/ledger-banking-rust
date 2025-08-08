@@ -42,7 +42,7 @@ pub trait CasaService: Send + Sync {
         new_limit: Option<Decimal>,
         new_rate: Option<Decimal>,
         new_expiry_date: Option<NaiveDate>,
-        updated_by: Uuid, // References Person.person_id
+        updated_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftFacility>;
     
     /// Suspend or activate overdraft facility
@@ -51,7 +51,7 @@ pub trait CasaService: Send + Sync {
         facility_id: Uuid,
         new_status: crate::domain::OverdraftStatus,
         reason: String,
-        updated_by: Uuid, // References Person.person_id
+        updated_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftFacility>;
     
     /// Get overdraft facility details for an account

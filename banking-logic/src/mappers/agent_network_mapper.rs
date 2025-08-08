@@ -33,7 +33,7 @@ impl AgentNetworkMapper {
             settlement_gl_code: network.settlement_gl_code,
             created_at: network.created_at,
             last_updated_at: network.created_at,
-            updated_by: Uuid::nil(), // System UUID
+            updated_by_person_id: Uuid::nil(), // System UUID
         }
     }
 
@@ -114,7 +114,7 @@ impl AgentNetworkMapper {
             
             // Metadata
             last_updated_at: branch.last_updated_at,
-            updated_by: branch.updated_by,
+            updated_by_person_id: branch.updated_by_person_id,
         }
     }
 
@@ -180,7 +180,7 @@ impl AgentNetworkMapper {
             
             // Metadata
             last_updated_at: model.last_updated_at,
-            updated_by: model.updated_by,
+            updated_by_person_id: model.updated_by_person_id,
         }
     }
 
@@ -201,7 +201,7 @@ impl AgentNetworkMapper {
             last_sync_at: terminal.last_sync_at,
             created_at: terminal.last_sync_at,
             last_updated_at: terminal.last_sync_at,
-            updated_by: Uuid::nil(), // System UUID
+            updated_by_person_id: Uuid::nil(), // System UUID
         }
     }
 
@@ -401,7 +401,7 @@ impl AgentNetworkMapper {
         name_l1: &str,
         name_l2: Option<&str>,
         name_l3: Option<&str>,
-        created_by: Uuid,
+        created_by_person_id: Uuid,
     ) -> HollidayPlanModel {
         use heapless::String as HeaplessString;
         use chrono::Utc;
@@ -413,8 +413,8 @@ impl AgentNetworkMapper {
             name_l3: name_l3.map(|n| HeaplessString::try_from(n).unwrap_or_default()).unwrap_or_default(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by,
-            updated_by: created_by,
+            created_by_person_id,
+            updated_by_person_id: created_by_person_id,
         }
     }
 

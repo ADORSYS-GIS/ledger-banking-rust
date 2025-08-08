@@ -24,8 +24,8 @@ impl ReasonAndPurposeMapper {
             compliance_metadata: reason.compliance_metadata.map(Self::compliance_metadata_to_model),
             created_at: reason.created_at,
             updated_at: reason.updated_at,
-            created_by: reason.created_by,
-            updated_by: reason.updated_by,
+            created_by_person_id: reason.created_by_person_id,
+            updated_by_person_id: reason.updated_by_person_id,
         }
     }
 
@@ -49,8 +49,8 @@ impl ReasonAndPurposeMapper {
             compliance_metadata: model.compliance_metadata.map(Self::compliance_metadata_to_domain),
             created_at: model.created_at,
             updated_at: model.updated_at,
-            created_by: model.created_by,
-            updated_by: model.updated_by,
+            created_by_person_id: model.created_by_person_id,
+            updated_by_person_id: model.updated_by_person_id,
         }
     }
 
@@ -143,8 +143,8 @@ mod tests {
             compliance_metadata: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by: HeaplessString::try_from("test_user").unwrap(),
-            updated_by: HeaplessString::try_from("test_user").unwrap(),
+            created_by_person_id: HeaplessString::try_from("test_user").unwrap(),
+            updated_by_person_id: HeaplessString::try_from("test_user").unwrap(),
         };
 
         // Test domain -> model -> domain roundtrip

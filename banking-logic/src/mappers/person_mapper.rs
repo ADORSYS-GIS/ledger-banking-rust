@@ -195,7 +195,7 @@ impl PersonMapper {
         person_id: uuid::Uuid,
         entity_role: RelationshipRole,
         reference_external_id: Option<&str>,
-        created_by: uuid::Uuid,
+        created_by_person_id: uuid::Uuid,
     ) -> EntityReferenceModel {
         use chrono::Utc;
         use heapless::String as HeaplessString;
@@ -211,8 +211,8 @@ impl PersonMapper {
             is_active: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by,
-            updated_by: created_by,
+            created_by_person_id,
+            updated_by_person_id: created_by_person_id,
         }
     }
 }

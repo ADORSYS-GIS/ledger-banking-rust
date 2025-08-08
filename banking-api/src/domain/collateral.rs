@@ -60,9 +60,9 @@ pub struct Collateral {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
     pub last_valuation_by: Option<Uuid>,
     pub next_review_date: Option<NaiveDate>,
 }
@@ -235,7 +235,7 @@ pub struct CollateralValuation {
     // Audit trail
     pub created_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -274,9 +274,9 @@ pub struct CollateralPledge {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -471,9 +471,9 @@ pub struct CollateralEnforcement {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References Person.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -586,8 +586,8 @@ mod tests {
             maturity_date: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            created_by: Uuid::new_v4(),
-            updated_by: Uuid::new_v4(),
+            created_by_person_id: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
             last_valuation_by: None,
             next_review_date: None,
         };
@@ -636,8 +636,8 @@ mod tests {
             maturity_date: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            created_by: Uuid::new_v4(),
-            updated_by: Uuid::new_v4(),
+            created_by_person_id: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
             last_valuation_by: None,
             next_review_date: None,
         };
@@ -686,8 +686,8 @@ mod tests {
             maturity_date: None,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            created_by: Uuid::new_v4(),
-            updated_by: Uuid::new_v4(),
+            created_by_person_id: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
             last_valuation_by: None,
             next_review_date: None,
         };

@@ -13,7 +13,7 @@ pub struct BankHoliday {
     pub is_recurring: bool,
     pub description: Option<HeaplessString<200>>,
     /// References Person.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     pub created_at: DateTime<Utc>,
 }
 
@@ -34,7 +34,7 @@ impl BankHoliday {
         holiday_type: HolidayType,
         is_recurring: bool,
         description: Option<&str>,
-        created_by: Uuid,
+        created_by_person_id: Uuid,
         created_at: DateTime<Utc>,
     ) -> Result<Self, &'static str> {
         if jurisdiction.len() < 2 {
@@ -62,7 +62,7 @@ impl BankHoliday {
             holiday_type,
             is_recurring,
             description,
-            created_by,
+            created_by_person_id,
             created_at,
         })
     }
@@ -87,7 +87,7 @@ pub struct BankHolidayBuilder {
     holiday_name: Option<String>,
     is_recurring: bool,
     description: Option<String>,
-    created_by: Option<Uuid>,
+    created_by_person_id: Option<Uuid>,
     created_at: Option<DateTime<Utc>>,
 }
 
@@ -101,7 +101,7 @@ impl BankHolidayBuilder {
             holiday_name: None,
             is_recurring: false,
             description: None,
-            created_by: None,
+            created_by_person_id: None,
             created_at: None,
         }
     }
@@ -131,8 +131,8 @@ impl BankHolidayBuilder {
         self
     }
 
-    pub fn created_by(mut self, created_by: Uuid) -> Self {
-        self.created_by = Some(created_by);
+    pub fn created_by(mut self, created_by_person_id: Uuid) -> Self {
+        self.created_by_person_id = Some(created_by_person_id);
         self
     }
 
@@ -145,7 +145,7 @@ impl BankHolidayBuilder {
         let jurisdiction = self.jurisdiction.ok_or("Jurisdiction is required")?;
         let holiday_date = self.holiday_date.ok_or("Holiday date is required")?;
         let holiday_name = self.holiday_name.ok_or("Holiday name is required")?;
-        let created_by = self.created_by.ok_or("Created by is required")?;
+        let created_by_person_id = self.created_by_person_id.ok_or("Created by is required")?;
         let created_at = self.created_at.ok_or("Created at is required")?;
 
         if jurisdiction.len() < 2 {
@@ -173,7 +173,7 @@ impl BankHolidayBuilder {
             holiday_type: self.holiday_type,
             is_recurring: self.is_recurring,
             description,
-            created_by,
+            created_by_person_id,
             created_at,
         })
     }
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn test_bank_holiday_builder_pattern() {
         let holiday_id = uuid::Uuid::new_v4();
-        let created_by = uuid::Uuid::new_v4();
+        let created_by_person_id = uuid::Uuid::new_v4();
         let created_at = Utc::now();
         let holiday_date = chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
 
@@ -284,7 +284,7 @@ mod tests {
             .holiday_name("New Year's Day")
             .is_recurring(true)
             .description("Annual national holiday")
-            .created_by(created_by)
+            .created_by(created_by_person_id)
             .created_at(created_at)
             .build()
             .expect("Should build successfully");
@@ -296,7 +296,7 @@ mod tests {
         assert_eq!(holiday.holiday_name.as_str(), "New Year's Day");
         assert!(holiday.is_recurring);
         assert_eq!(holiday.description.as_ref().unwrap().as_str(), "Annual national holiday");
-        assert_eq!(holiday.created_by, created_by);
+        assert_eq!(holiday.created_by_person_id, created_by_person_id);
         assert_eq!(holiday.created_at, created_at);
     }
 

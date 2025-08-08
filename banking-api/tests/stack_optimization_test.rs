@@ -24,7 +24,7 @@ mod stack_optimization_tests {
             signing_condition: SigningCondition::None,
             currency: HeaplessString::try_from("USD").unwrap(),
             open_date: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-            domicile_branch_id: Uuid::new_v4(),
+            domicile_agency_branch_id: Uuid::new_v4(),
             current_balance: Decimal::new(150000, 2), // $1500.00
             available_balance: Decimal::new(150000, 2),
             accrued_interest: Decimal::new(1250, 2), // $12.50
@@ -46,12 +46,12 @@ mod stack_optimization_tests {
             reactivation_required: false,
             pending_closure_reason_id: None,
             last_disbursement_instruction_id: None,
-            status_changed_by: Some(Uuid::new_v4()), // Changed to UUID for Person.person_id
+            status_changed_by_person_id: Some(Uuid::new_v4()), // Changed to UUID for Person.person_id
             status_change_reason_id: None,  // Changed to UUID, using None for test
             status_change_timestamp: Some(Utc::now()),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(), // Changed to UUID for Person.person_id
+            updated_by_person_id: Uuid::new_v4(), // Changed to UUID for Person.person_id
         };
 
         // Test serialization
@@ -73,8 +73,8 @@ mod stack_optimization_tests {
         assert_eq!(currency_str, "USD");
         assert!(matches!(deserialized.account_type, AccountType::Savings));
         assert!(matches!(deserialized.account_status, AccountStatus::Active));
-        // updated_by is now a UUID, so we just verify it exists
-        assert!(!deserialized.updated_by.is_nil());
+        // updated_by_person_id is now a UUID, so we just verify it exists
+        assert!(!deserialized.updated_by_person_id.is_nil());
     }
 
     #[test]
@@ -143,8 +143,8 @@ mod stack_optimization_tests {
         // Verify bounded string fields
         assert!(json.contains("\"full_name\":\"Jane Smith-Johnson\""));
         assert!(json.contains("\"id_number\":\"ID789012345\""));
-        // updated_by is now a UUID, check it exists in JSON
-        assert!(json.contains("\"updated_by\":\""));
+        // updated_by_person_id is now a UUID, check it exists in JSON
+        assert!(json.contains("\"updated_by_person_id\":\""));
 
         // Test deserialization
         let deserialized: Customer = serde_json::from_str(&json).expect("Customer deserialization should succeed");
@@ -152,8 +152,8 @@ mod stack_optimization_tests {
         // Verify HeaplessString fields maintain data integrity
         assert_eq!(deserialized.full_name.as_str(), "Jane Smith-Johnson");
         assert_eq!(deserialized.id_number.as_str(), "ID789012345");
-        // updated_by is now a UUID
-        assert!(!deserialized.updated_by.is_nil());
+        // updated_by_person_id is now a UUID
+        assert!(!deserialized.updated_by_person_id.is_nil());
         assert!(matches!(deserialized.customer_type, CustomerType::Individual));
         assert!(matches!(deserialized.risk_rating, RiskRating::Low));
     }

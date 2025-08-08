@@ -400,9 +400,9 @@ pub struct CollateralModel {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References PersonModel.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References PersonModel.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
     pub last_valuation_by: Option<Uuid>,
     pub next_review_date: Option<NaiveDate>,
 }
@@ -427,7 +427,7 @@ pub struct CollateralValuationModel {
     // Audit trail
     pub created_at: DateTime<Utc>,
     /// References PersonModel.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
 }
 
 /// Database model for CollateralPledge
@@ -458,9 +458,9 @@ pub struct CollateralPledgeModel {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References PersonModel.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References PersonModel.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Database model for CollateralAlert
@@ -511,9 +511,9 @@ pub struct CollateralEnforcementModel {
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
     /// References PersonModel.person_id
-    pub created_by: Uuid,
+    pub created_by_person_id: Uuid,
     /// References PersonModel.person_id
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 // Serialization functions for CollateralType

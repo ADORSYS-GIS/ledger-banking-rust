@@ -39,7 +39,7 @@ pub trait ComplianceService: Send + Sync {
     async fn get_pending_compliance_alerts(&self) -> BankingResult<Vec<crate::domain::ComplianceAlert>>;
 
     /// Update compliance alert status
-    async fn update_alert_status(&self, alert_id: Uuid, status: crate::domain::AlertStatus, updated_by: Uuid) -> BankingResult<()>;
+    async fn update_alert_status(&self, alert_id: Uuid, status: crate::domain::AlertStatus, updated_by_person_id: Uuid) -> BankingResult<()>;
 
     /// Generate compliance report
     async fn generate_compliance_report(&self, from_date: chrono::NaiveDate, to_date: chrono::NaiveDate) -> BankingResult<ComplianceReport>;

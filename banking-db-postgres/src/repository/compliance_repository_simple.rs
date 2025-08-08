@@ -296,7 +296,7 @@ impl ComplianceRepository for SimpleComplianceRepositoryImpl {
         Ok(vec![])
     }
     
-    async fn update_sar_status(&self, _sar_id: Uuid, _status: &str, _updated_by: &str) -> BankingResult<()> {
+    async fn update_sar_status(&self, _sar_id: Uuid, _status: &str, _updated_by_person_id: &str) -> BankingResult<()> {
         Ok(())
     }
     
@@ -439,7 +439,7 @@ impl SimpleComplianceRepositoryImpl {
             verification_notes: Some(HeaplessString::try_from("All documents verified successfully").unwrap()),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: HeaplessString::try_from("system").unwrap(),
+            updated_by_person_id: HeaplessString::try_from("system").unwrap(),
         }
     }
     

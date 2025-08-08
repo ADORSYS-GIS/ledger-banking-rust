@@ -381,7 +381,7 @@ mod tests {
             settlement_gl_code: HeaplessString::try_from("GL123").unwrap(),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         };
 
         let branch = AgencyBranchModel {
@@ -426,7 +426,7 @@ mod tests {
             last_audit_date: None,
             last_compliance_certification_id: None,
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         };
 
         let result = AgentNetworkValidation::validate_branch_limits_against_network(&branch, &network);
@@ -446,7 +446,7 @@ mod tests {
             settlement_gl_code: HeaplessString::try_from("GL123").unwrap(),
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         };
 
         let branch = AgencyBranchModel {
@@ -491,7 +491,7 @@ mod tests {
             last_audit_date: None,
             last_compliance_certification_id: None,
             last_updated_at: Utc::now(),
-            updated_by: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         };
 
         let result = AgentNetworkValidation::validate_branch_limits_against_network(&branch, &network);

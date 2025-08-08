@@ -21,7 +21,7 @@ impl CustomerMapper {
             status: Self::customer_status_to_db(customer.status),
             created_at: customer.created_at,
             last_updated_at: customer.last_updated_at,
-            updated_by: customer.updated_by,
+            updated_by_person_id: customer.updated_by_person_id,
         }
     }
 
@@ -37,7 +37,7 @@ impl CustomerMapper {
             status: Self::db_to_customer_status(model.status),
             created_at: model.created_at,
             last_updated_at: model.last_updated_at,
-            updated_by: model.updated_by,
+            updated_by_person_id: model.updated_by_person_id,
         })
     }
 

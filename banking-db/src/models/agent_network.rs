@@ -136,7 +136,7 @@ pub struct AgentNetworkModel {
     pub created_at: DateTime<Utc>,
     // Note: Added missing fields from domain (though domain doesn't have these, keeping for DB audit trail)
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Agency Branch database model
@@ -203,7 +203,7 @@ pub struct AgencyBranchModel {
     
     // Metadata
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Agent Terminal database model
@@ -223,7 +223,7 @@ pub struct AgentTerminalModel {
     pub last_sync_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
-    pub updated_by: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Cash Limit Check database model
@@ -281,8 +281,8 @@ pub struct OperatingHoursModel {
     pub timezone: HeaplessString<50>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Branch Capabilities database model
@@ -314,8 +314,8 @@ pub struct BranchCapabilitiesModel {
     pub language_spoken3: Option<HeaplessString<3>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Security Access database model
@@ -364,8 +364,8 @@ pub struct SecurityAccessModel {
     pub required_document20: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Holiday Plan database model
@@ -377,8 +377,8 @@ pub struct HollidayPlanModel {
     pub name_l3: HeaplessString<100>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Holiday Schedule database model
@@ -414,8 +414,8 @@ pub struct TemporaryClosureModel {
     pub alternative_branch_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub created_by: Uuid,
-    pub updated_by: Uuid,
+    pub created_by_person_id: Uuid,
+    pub updated_by_person_id: Uuid,
 }
 
 /// Required Document database model

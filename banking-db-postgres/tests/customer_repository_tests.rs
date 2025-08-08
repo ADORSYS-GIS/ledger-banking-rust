@@ -49,7 +49,7 @@ mod tests {
             status: CustomerStatus::Active,
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
-            updated_by: test_person_id,
+            updated_by_person_id: test_person_id,
         }
     }
 
@@ -108,7 +108,7 @@ mod tests {
         assert!(exists);
 
         // Test soft DELETE
-        repo.delete(customer.id, customer.updated_by).await
+        repo.delete(customer.id, customer.updated_by_person_id).await
             .expect("Failed to delete customer");
 
         // Verify soft delete (status should be Deceased)
@@ -179,7 +179,7 @@ mod tests {
         repo.create(customer.clone()).await.expect("Failed to create customer");
 
         // Update risk rating
-        repo.update_risk_rating(customer.id, "High", customer.updated_by).await
+        repo.update_risk_rating(customer.id, "High", customer.updated_by_person_id).await
             .expect("Failed to update risk rating");
 
         // Verify risk rating was updated
@@ -222,7 +222,7 @@ mod tests {
             document_path: Some(HeaplessString::try_from("/documents/passport.pdf").unwrap()),
             status: DocumentStatus::Uploaded,
             uploaded_at: Utc::now(),
-            uploaded_by: customer.updated_by,
+            uploaded_by: customer.updated_by_person_id,
             verified_at: None,
             verified_by: None,
         };
@@ -356,7 +356,7 @@ mod tests {
             old_value: None,
             new_value: Some(HeaplessString::try_from("Test note added").unwrap()),
             changed_at: Utc::now(),
-            changed_by: customer.updated_by,
+            changed_by: customer.updated_by_person_id,
             reason: Some(HeaplessString::try_from("Manual test").unwrap()),
         };
 

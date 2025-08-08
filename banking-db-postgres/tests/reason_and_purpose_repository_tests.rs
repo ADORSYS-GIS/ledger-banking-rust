@@ -50,8 +50,8 @@ mod reason_and_purpose_repository_tests {
             compliance_metadata: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by: HeaplessString::try_from("test_user").unwrap(),
-            updated_by: HeaplessString::try_from("test_user").unwrap(),
+            created_by_person_id: HeaplessString::try_from("test_user").unwrap(),
+            updated_by_person_id: HeaplessString::try_from("test_user").unwrap(),
         }
     }
 
