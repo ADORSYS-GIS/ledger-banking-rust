@@ -1566,7 +1566,7 @@ CREATE TABLE overdraft_facilities (
     facility_status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (facility_status IN ('Active', 'Suspended', 'Expired', 'UnderReview', 'Cancelled')),
     approval_date DATE NOT NULL,
     expiry_date DATE,
-    approved_by UUID NOT NULL REFERENCES persons(id),
+    approved_by_person_id UUID NOT NULL REFERENCES persons(id),
     review_frequency VARCHAR(20) NOT NULL CHECK (review_frequency IN ('Monthly', 'Quarterly', 'SemiAnnually', 'Annually')),
     next_review_date DATE NOT NULL,
     security_required BOOLEAN NOT NULL DEFAULT FALSE,
@@ -1596,7 +1596,7 @@ CREATE TABLE interest_posting_records (
     tax_withheld DECIMAL(15,2),
     net_amount DECIMAL(15,2) NOT NULL,
     posting_status VARCHAR(20) NOT NULL CHECK (posting_status IN ('Calculated', 'Posted', 'Reversed', 'Adjusted')),
-    posted_by UUID NOT NULL REFERENCES persons(id),
+    posted_by_person_id UUID NOT NULL REFERENCES persons(id),
     posted_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -1616,10 +1616,10 @@ CREATE TABLE overdraft_limit_adjustments (
     adjustment_reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
     additional_details VARCHAR(200),
     supporting_documents TEXT[], -- Array of document references
-    requested_by UUID NOT NULL REFERENCES persons(id),
+    requested_by_person_id UUID NOT NULL REFERENCES persons(id),
     requested_at TIMESTAMP WITH TIME ZONE NOT NULL,
     approval_status VARCHAR(30) NOT NULL DEFAULT 'Pending' CHECK (approval_status IN ('Pending', 'Approved', 'Rejected', 'RequiresAdditionalDocuments', 'UnderReview')),
-    approved_by UUID REFERENCES persons(id),
+    approved_by_person_id UUID REFERENCES persons(id),
     approved_at TIMESTAMP WITH TIME ZONE,
     approval_notes VARCHAR(512),
     effective_date DATE,
@@ -1628,8 +1628,8 @@ CREATE TABLE overdraft_limit_adjustments (
     
     CONSTRAINT ck_limit_adjustment_valid CHECK (current_limit >= 0 AND requested_limit >= 0),
     CONSTRAINT ck_approval_consistency CHECK (
-        (approval_status IN ('Approved', 'Rejected') AND approved_by IS NOT NULL AND approved_at IS NOT NULL) OR
-        (approval_status NOT IN ('Approved', 'Rejected') AND approved_by IS NULL AND approved_at IS NULL)
+        (approval_status IN ('Approved', 'Rejected') AND approved_by_person_id IS NOT NULL AND approved_at IS NOT NULL) OR
+        (approval_status NOT IN ('Approved', 'Rejected') AND approved_by_person_id IS NULL AND approved_at IS NULL)
     )
 );
 
@@ -1646,7 +1646,7 @@ CREATE TABLE overdraft_interest_calculations (
     compounding_frequency VARCHAR(20) NOT NULL CHECK (compounding_frequency IN ('Daily', 'Weekly', 'Monthly', 'Quarterly')),
     capitalization_due BOOLEAN NOT NULL DEFAULT FALSE,
     calculated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    calculated_by UUID NOT NULL REFERENCES persons(id),
+    calculated_by_person_id UUID NOT NULL REFERENCES persons(id),
     
     CONSTRAINT ck_calculation_period_valid CHECK (calculation_period_start <= calculation_period_end),
     CONSTRAINT ck_calculation_days_valid CHECK (days_calculated > 0),

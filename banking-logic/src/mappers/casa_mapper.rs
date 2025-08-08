@@ -35,7 +35,7 @@ impl CasaMapper {
             facility_status: Self::overdraft_status_to_db(facility.facility_status),
             approval_date: facility.approval_date,
             expiry_date: facility.expiry_date,
-            approved_by: facility.approved_by,
+            approved_by_person_id: facility.approved_by_person_id,
             review_frequency: Self::review_frequency_to_db(facility.review_frequency),
             next_review_date: facility.next_review_date,
             security_required: facility.security_required,
@@ -57,7 +57,7 @@ impl CasaMapper {
             facility_status: Self::db_to_overdraft_status(model.facility_status),
             approval_date: model.approval_date,
             expiry_date: model.expiry_date,
-            approved_by: model.approved_by,
+            approved_by_person_id: model.approved_by_person_id,
             review_frequency: Self::db_to_review_frequency(model.review_frequency),
             next_review_date: model.next_review_date,
             security_required: model.security_required,
@@ -117,7 +117,7 @@ impl CasaMapper {
             compounding_frequency: Self::compounding_frequency_to_db(calc.compounding_frequency),
             capitalization_due: calc.capitalization_due,
             calculated_at: calc.calculated_at,
-            calculated_by: calc.calculated_by,
+            calculated_by_person_id: calc.calculated_by_person_id,
         }
     }
 
@@ -135,7 +135,7 @@ impl CasaMapper {
             compounding_frequency: Self::db_to_compounding_frequency(model.compounding_frequency),
             capitalization_due: model.capitalization_due,
             calculated_at: model.calculated_at,
-            calculated_by: model.calculated_by,
+            calculated_by_person_id: model.calculated_by_person_id,
         }
     }
 
@@ -181,10 +181,10 @@ impl CasaMapper {
             adjustment_reason_id: adjustment.adjustment_reason_id,
             additional_details: adjustment.additional_details,
             supporting_documents: adjustment.supporting_documents,
-            requested_by: adjustment.requested_by,
+            requested_by_person_id: adjustment.requested_by_person_id,
             requested_at: adjustment.requested_at,
             approval_status: Self::casa_approval_status_to_db(adjustment.approval_status),
-            approved_by: adjustment.approved_by,
+            approved_by_person_id: adjustment.approved_by_person_id,
             approved_at: adjustment.approved_at,
             approval_notes: adjustment.approval_notes,
             effective_date: adjustment.effective_date,
@@ -201,10 +201,10 @@ impl CasaMapper {
             adjustment_reason_id: model.adjustment_reason_id,
             additional_details: model.additional_details,
             supporting_documents: model.supporting_documents,
-            requested_by: model.requested_by,
+            requested_by_person_id: model.requested_by_person_id,
             requested_at: model.requested_at,
             approval_status: Self::db_to_casa_approval_status(model.approval_status),
-            approved_by: model.approved_by,
+            approved_by_person_id: model.approved_by_person_id,
             approved_at: model.approved_at,
             approval_notes: model.approval_notes,
             effective_date: model.effective_date,
@@ -227,7 +227,7 @@ impl CasaMapper {
             tax_withheld: posting.tax_withheld,
             net_amount: posting.net_amount,
             posting_status: Self::posting_status_to_db(posting.posting_status),
-            posted_by: posting.posted_by,
+            posted_by_person_id: posting.posted_by_person_id,
             posted_at: posting.posted_at,
         }
     }
@@ -248,7 +248,7 @@ impl CasaMapper {
             tax_withheld: model.tax_withheld,
             net_amount: model.net_amount,
             posting_status: Self::db_to_posting_status(model.posting_status),
-            posted_by: model.posted_by,
+            posted_by_person_id: model.posted_by_person_id,
             posted_at: model.posted_at,
         }
     }

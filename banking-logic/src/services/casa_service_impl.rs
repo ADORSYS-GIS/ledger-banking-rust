@@ -93,7 +93,7 @@ impl CasaService for CasaServiceImpl {
             facility_status: OverdraftStatus::Active,
             approval_date: chrono::Utc::now().date_naive(),
             expiry_date: request.expiry_date,
-            approved_by: request.approved_by,
+            approved_by_person_id: request.approved_by_person_id,
             review_frequency: ReviewFrequency::Annually,
             next_review_date: chrono::Utc::now().date_naive() + chrono::Duration::days(365),
             security_required: request.security_required,
@@ -151,7 +151,7 @@ impl CasaService for CasaServiceImpl {
         requested_limit: Decimal,
         adjustment_reason: String,
         supporting_documents: Vec<String>,
-        requested_by: Uuid, // References Person.person_id
+        requested_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftLimitAdjustment> {
         todo!("Implement overdraft limit adjustment request")
     }
@@ -161,7 +161,7 @@ impl CasaService for CasaServiceImpl {
         &self,
         adjustment_id: Uuid,
         approved: bool,
-        approved_by: Uuid, // References Person.person_id
+        approved_by_person_id: Uuid, // References Person.person_id
         approval_notes: Option<HeaplessString<512>>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<OverdraftLimitAdjustment> {
@@ -333,7 +333,7 @@ impl CasaService for CasaServiceImpl {
         account_id: Uuid,
         requested_amount: Decimal,
         authorization_reason: String,
-        authorized_by: String,
+        authorized_by_person_id: Uuid,
         validity_period: chrono::Duration,
     ) -> BankingResult<banking_api::service::casa_service::OverdraftPreauthorization> {
         todo!("Implement overdraft preauthorization")
@@ -390,7 +390,7 @@ impl CasaService for CasaServiceImpl {
             compounding_frequency: CompoundingFrequency::Daily,
             capitalization_due: false, // Would be determined by product rules
             calculated_at: Utc::now(),
-            calculated_by: Uuid::nil(), // System-generated calculation
+            calculated_by_person_id: Uuid::nil(), // System-generated calculation
         };
 
         tracing::debug!("Calculated daily overdraft interest: {} for account {}", interest_amount, account_id);
@@ -457,7 +457,7 @@ impl CasaService for CasaServiceImpl {
         calculation_period_start: NaiveDate,
         calculation_period_end: NaiveDate,
         posting_date: NaiveDate,
-        posted_by: String,
+        posted_by_person_id: Uuid,
     ) -> BankingResult<InterestPostingRecord> {
         todo!("Implement overdraft interest posting")
     }
@@ -468,7 +468,7 @@ impl CasaService for CasaServiceImpl {
         account_id: Uuid,
         interest_amount: Decimal,
         capitalization_date: NaiveDate,
-        authorized_by: String,
+        authorized_by_person_id: Uuid,
     ) -> BankingResult<InterestPostingRecord> {
         todo!("Implement overdraft interest capitalization")
     }

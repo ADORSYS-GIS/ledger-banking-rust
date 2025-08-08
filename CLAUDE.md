@@ -81,7 +81,7 @@ banking-db-postgres/   # PostgreSQL implementation (✅ 100% complete)
 - **25+ Tables**: Complete schema with foreign keys, constraints, indexes
 
 ### Identifier Normalization (January 2025)
-Completed comprehensive identifier normalization: all structs use uniform `id` field naming, eliminating legacy `*_id` patterns across 83+ files. This ensures consistent database schema alignment and improved developer experience.
+Completed comprehensive identifier normalization: all structs use uniform `id` field naming, eliminating legacy `*_id` patterns across 83+ files. Normalized foreign key references to include explicit entity names (e.g., `approved_by` → `approved_by_person_id`) for improved readability and schema consistency. This ensures consistent database schema alignment and improved developer experience.
 
 ## Development Guidelines
 
