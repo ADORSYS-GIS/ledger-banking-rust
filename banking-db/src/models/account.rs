@@ -133,7 +133,15 @@ pub struct AccountMandateModel {
     )]
     pub permission_type: PermissionType,
     pub transaction_limit: Option<Decimal>,
-    pub approval_group_id: Option<Uuid>,
+    pub approver01_person_id: Option<Uuid>,
+    pub approver02_person_id: Option<Uuid>,
+    pub approver03_person_id: Option<Uuid>,
+    pub approver04_person_id: Option<Uuid>,
+    pub approver05_person_id: Option<Uuid>,
+    pub approver06_person_id: Option<Uuid>,
+    pub approver07_person_id: Option<Uuid>,
+    pub required_signers_count: u8,
+    pub conditional_mandate_id: Option<Uuid>,
     #[serde(
         serialize_with = "serialize_mandate_status",
         deserialize_with = "deserialize_mandate_status"
