@@ -1828,7 +1828,7 @@ CREATE TABLE channel_fees (
     amount DECIMAL(15,2) NOT NULL,
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     description VARCHAR(200) NOT NULL,
-    applies_to_transaction UUID NOT NULL REFERENCES transactions(id),
+    applies_to_transaction_id UUID NOT NULL REFERENCES transactions(id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -1853,7 +1853,7 @@ CREATE INDEX idx_reconciliation_reports_date ON channel_reconciliation_reports(r
 CREATE INDEX idx_reconciliation_discrepancies_report ON reconciliation_discrepancies(report_id);
 CREATE INDEX idx_reconciliation_discrepancies_transaction ON reconciliation_discrepancies(transaction_id);
 CREATE INDEX idx_channel_fees_type ON channel_fees(fee_type);
-CREATE INDEX idx_channel_fees_transaction ON channel_fees(applies_to_transaction);
+CREATE INDEX idx_channel_fees_transaction ON channel_fees(applies_to_transaction_id);
 
 -- Triggers for updated_at timestamps
 CREATE TRIGGER update_channels_updated_at

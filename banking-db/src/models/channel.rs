@@ -386,7 +386,7 @@ pub struct ChannelFeeModel {
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
     pub description: HeaplessString<200>,
-    pub applies_to_transaction: Uuid,
+    pub applies_to_transaction_id: Uuid,
     pub created_at: DateTime<Utc>,
 }
 
