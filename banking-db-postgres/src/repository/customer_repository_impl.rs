@@ -23,7 +23,7 @@ impl PostgresCustomerRepository {
 impl TryFromRow<PgRow> for CustomerModel {
     fn try_from_row(row: &PgRow) -> BankingResult<Self> {
         Ok(CustomerModel {
-            customer_id: row.get("customer_id"),
+            id: row.get("id"),
             customer_type: row.get::<String, _>("customer_type").parse().map_err(|_| 
                 BankingError::ValidationError {
                     field: "customer_type".to_string(),
@@ -71,7 +71,7 @@ impl TryFromRow<PgRow> for CustomerModel {
 impl TryFromRow<PgRow> for CustomerDocumentModel {
     fn try_from_row(row: &PgRow) -> BankingResult<Self> {
         Ok(CustomerDocumentModel {
-            document_id: row.get("document_id"),
+            id: row.get("id"),
             customer_id: row.get("customer_id"),
             document_type: HeaplessString::try_from(
                 row.get::<String, _>("document_type").as_str()
@@ -104,7 +104,7 @@ impl TryFromRow<PgRow> for CustomerDocumentModel {
 impl TryFromRow<PgRow> for CustomerAuditModel {
     fn try_from_row(row: &PgRow) -> BankingResult<Self> {
         Ok(CustomerAuditModel {
-            audit_id: row.get("audit_id"),
+            id: row.get("id"),
             customer_id: row.get("customer_id"),
             field_name: HeaplessString::try_from(
                 row.get::<String, _>("field_name").as_str()
@@ -152,19 +152,19 @@ impl CustomerRepository for PostgresCustomerRepository {
         let result = sqlx::query(
             r#"
             INSERT INTO customers (
-                customer_id, customer_type, full_name, id_type, id_number,
+                id, customer_type, full_name, id_type, id_number,
                 risk_rating, status, created_at, last_updated_at, updated_by
             )
             VALUES (
                 $1, $2::customer_type, $3, $4::identity_type, $5,
                 $6::risk_rating, $7::customer_status, $8, $9, $10
             )
-            RETURNING customer_id, customer_type::text as customer_type, full_name,
+            RETURNING id, customer_type::text as customer_type, full_name,
                      id_type::text as id_type, id_number, risk_rating::text as risk_rating,
                      status::text as status, created_at, last_updated_at, updated_by
             "#
         )
-        .bind(customer.customer_id)
+        .bind(customer.id)
         .bind(customer.customer_type.to_string())
         .bind(customer.full_name.as_str())
         .bind(customer.id_type.to_string())
@@ -189,13 +189,13 @@ impl CustomerRepository for PostgresCustomerRepository {
             SET customer_type = $2::customer_type, full_name = $3, id_type = $4::identity_type,
                 id_number = $5, risk_rating = $6::risk_rating, status = $7::customer_status,
                 last_updated_at = $8, updated_by = $9
-            WHERE customer_id = $1
-            RETURNING customer_id, customer_type::text as customer_type, full_name,
+            WHERE id = $1
+            RETURNING id, customer_type::text as customer_type, full_name,
                      id_type::text as id_type, id_number, risk_rating::text as risk_rating,
                      status::text as status, created_at, last_updated_at, updated_by
             "#
         )
-        .bind(customer.customer_id)
+        .bind(customer.id)
         .bind(customer.customer_type.to_string())
         .bind(customer.full_name.as_str())
         .bind(customer.id_type.to_string())
@@ -215,11 +215,11 @@ impl CustomerRepository for PostgresCustomerRepository {
     async fn find_by_id(&self, customer_id: Uuid) -> BankingResult<Option<CustomerModel>> {
         let result = sqlx::query(
             r#"
-            SELECT customer_id, customer_type::text as customer_type, full_name,
+            SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
                    status::text as status, created_at, last_updated_at, updated_by
             FROM customers 
-            WHERE customer_id = $1
+            WHERE id = $1
             "#
         )
         .bind(customer_id)
@@ -237,7 +237,7 @@ impl CustomerRepository for PostgresCustomerRepository {
     async fn find_by_identity(&self, id_type: &str, id_number: &str) -> BankingResult<Option<CustomerModel>> {
         let result = sqlx::query(
             r#"
-            SELECT customer_id, customer_type::text as customer_type, full_name,
+            SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
                    status::text as status, created_at, last_updated_at, updated_by
             FROM customers 
@@ -260,7 +260,7 @@ impl CustomerRepository for PostgresCustomerRepository {
     async fn find_by_risk_rating(&self, risk_rating: &str) -> BankingResult<Vec<CustomerModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT customer_id, customer_type::text as customer_type, full_name,
+            SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
                    status::text as status, created_at, last_updated_at, updated_by
             FROM customers 
@@ -284,7 +284,7 @@ impl CustomerRepository for PostgresCustomerRepository {
     async fn find_requiring_review(&self) -> BankingResult<Vec<CustomerModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT customer_id, customer_type::text as customer_type, full_name,
+            SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
                    status::text as status, created_at, last_updated_at, updated_by
             FROM customers 
@@ -355,7 +355,7 @@ impl CustomerRepository for PostgresCustomerRepository {
 
         // Get current risk rating for audit
         let current_customer = sqlx::query(
-            "SELECT risk_rating::text as risk_rating FROM customers WHERE customer_id = $1"
+            "SELECT risk_rating::text as risk_rating FROM customers WHERE id = $1"
         )
         .bind(customer_id)
         .fetch_one(&mut *tx)
@@ -367,7 +367,7 @@ impl CustomerRepository for PostgresCustomerRepository {
 
         // Update risk rating
         sqlx::query(
-            "UPDATE customers SET risk_rating = $1::risk_rating, last_updated_at = NOW(), updated_by = $2 WHERE customer_id = $3"
+            "UPDATE customers SET risk_rating = $1::risk_rating, last_updated_at = NOW(), updated_by = $2 WHERE id = $3"
         )
         .bind(risk_rating)
         .bind(authorized_by)
@@ -381,7 +381,7 @@ impl CustomerRepository for PostgresCustomerRepository {
         sqlx::query(
             r#"
             INSERT INTO customer_audit_trail (
-                audit_id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason
+                id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason
             )
             VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)
             "#
@@ -408,7 +408,7 @@ impl CustomerRepository for PostgresCustomerRepository {
 
         // Get current status for audit
         let current_customer = sqlx::query(
-            "SELECT status::text as status FROM customers WHERE customer_id = $1"
+            "SELECT status::text as status FROM customers WHERE id = $1"
         )
         .bind(customer_id)
         .fetch_one(&mut *tx)
@@ -420,7 +420,7 @@ impl CustomerRepository for PostgresCustomerRepository {
 
         // Update status
         sqlx::query(
-            "UPDATE customers SET status = $1::customer_status, last_updated_at = NOW() WHERE customer_id = $2"
+            "UPDATE customers SET status = $1::customer_status, last_updated_at = NOW() WHERE id = $2"
         )
         .bind(status)
         .bind(customer_id)
@@ -433,7 +433,7 @@ impl CustomerRepository for PostgresCustomerRepository {
         sqlx::query(
             r#"
             INSERT INTO customer_audit_trail (
-                audit_id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason
+                id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason
             )
             VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)
             "#
@@ -458,15 +458,15 @@ impl CustomerRepository for PostgresCustomerRepository {
         let result = sqlx::query(
             r#"
             INSERT INTO customer_documents (
-                document_id, customer_id, document_type, document_path, status,
+                id, customer_id, document_type, document_path, status,
                 uploaded_at, uploaded_by, verified_at, verified_by
             )
             VALUES ($1, $2, $3, $4, $5::document_status, $6, $7, $8, $9)
-            RETURNING document_id, customer_id, document_type, document_path,
+            RETURNING id, customer_id, document_type, document_path,
                      status::text as status, uploaded_at, uploaded_by, verified_at, verified_by
             "#
         )
-        .bind(document.document_id)
+        .bind(document.id)
         .bind(document.customer_id)
         .bind(document.document_type.as_str())
         .bind(document.document_path.as_ref().map(|s| s.as_str()))
@@ -486,7 +486,7 @@ impl CustomerRepository for PostgresCustomerRepository {
     async fn get_documents(&self, customer_id: Uuid) -> BankingResult<Vec<CustomerDocumentModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT document_id, customer_id, document_type, document_path,
+            SELECT id, customer_id, document_type, document_path,
                    status::text as status, uploaded_at, uploaded_by, verified_at, verified_by
             FROM customer_documents 
             WHERE customer_id = $1
@@ -510,15 +510,15 @@ impl CustomerRepository for PostgresCustomerRepository {
         let result = sqlx::query(
             r#"
             INSERT INTO customer_audit_trail (
-                audit_id, customer_id, field_name, old_value, new_value,
+                id, customer_id, field_name, old_value, new_value,
                 changed_at, changed_by, reason
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING audit_id, customer_id, field_name, old_value, new_value,
+            RETURNING id, customer_id, field_name, old_value, new_value,
                      changed_at, changed_by, reason
             "#
         )
-        .bind(audit.audit_id)
+        .bind(audit.id)
         .bind(audit.customer_id)
         .bind(audit.field_name.as_str())
         .bind(audit.old_value.as_ref().map(|s| s.as_str()))
@@ -537,7 +537,7 @@ impl CustomerRepository for PostgresCustomerRepository {
     async fn get_audit_trail(&self, customer_id: Uuid) -> BankingResult<Vec<CustomerAuditModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT audit_id, customer_id, field_name, old_value, new_value,
+            SELECT id, customer_id, field_name, old_value, new_value,
                    changed_at, changed_by, reason
             FROM customer_audit_trail 
             WHERE customer_id = $1
@@ -565,7 +565,7 @@ impl CustomerRepository for PostgresCustomerRepository {
         sqlx::query(
             r#"
             INSERT INTO customer_audit_trail (
-                audit_id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason
+                id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason
             )
             VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)
             "#
@@ -584,7 +584,7 @@ impl CustomerRepository for PostgresCustomerRepository {
 
         // Soft delete by updating status
         sqlx::query(
-            "UPDATE customers SET status = 'Deceased'::customer_status, last_updated_at = NOW(), updated_by = $1 WHERE customer_id = $2"
+            "UPDATE customers SET status = 'Deceased'::customer_status, last_updated_at = NOW(), updated_by = $1 WHERE id = $2"
         )
         .bind(deleted_by)
         .bind(customer_id)
@@ -599,7 +599,7 @@ impl CustomerRepository for PostgresCustomerRepository {
 
     async fn exists(&self, customer_id: Uuid) -> BankingResult<bool> {
         let result = sqlx::query(
-            "SELECT EXISTS(SELECT 1 FROM customers WHERE customer_id = $1) as exists"
+            "SELECT EXISTS(SELECT 1 FROM customers WHERE id = $1) as exists"
         )
         .bind(customer_id)
         .fetch_one(&self.pool)
@@ -613,7 +613,7 @@ impl CustomerRepository for PostgresCustomerRepository {
     async fn list(&self, offset: i64, limit: i64) -> BankingResult<Vec<CustomerModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT customer_id, customer_type::text as customer_type, full_name,
+            SELECT id, customer_type::text as customer_type, full_name,
                    id_type::text as id_type, id_number, risk_rating::text as risk_rating,
                    status::text as status, created_at, last_updated_at, updated_by
             FROM customers 

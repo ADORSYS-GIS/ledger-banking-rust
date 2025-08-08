@@ -340,7 +340,7 @@ pub enum ConcentrationCategory {
 /// Database model for Collateral
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CollateralModel {
-    pub collateral_id: Uuid,
+    pub id: Uuid,
     #[serde(serialize_with = "serialize_collateral_type", deserialize_with = "deserialize_collateral_type")]
     pub collateral_type: CollateralType,
     #[serde(serialize_with = "serialize_collateral_category", deserialize_with = "deserialize_collateral_category")]
@@ -410,7 +410,7 @@ pub struct CollateralModel {
 /// Database model for CollateralValuation
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CollateralValuationModel {
-    pub valuation_id: Uuid,
+    pub id: Uuid,
     pub collateral_id: Uuid,
     pub valuation_date: NaiveDate,
     #[serde(serialize_with = "serialize_valuation_method", deserialize_with = "deserialize_valuation_method")]
@@ -433,7 +433,7 @@ pub struct CollateralValuationModel {
 /// Database model for CollateralPledge
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CollateralPledgeModel {
-    pub pledge_id: Uuid,
+    pub id: Uuid,
     pub collateral_id: Uuid,
     pub loan_account_id: Uuid,
     pub pledged_amount: Decimal,
@@ -466,7 +466,7 @@ pub struct CollateralPledgeModel {
 /// Database model for CollateralAlert
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CollateralAlertModel {
-    pub alert_id: Uuid,
+    pub id: Uuid,
     pub collateral_id: Uuid,
     #[serde(serialize_with = "serialize_collateral_alert_type", deserialize_with = "deserialize_collateral_alert_type")]
     pub alert_type: CollateralAlertType,
@@ -486,7 +486,7 @@ pub struct CollateralAlertModel {
 /// Database model for CollateralEnforcement
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CollateralEnforcementModel {
-    pub enforcement_id: Uuid,
+    pub id: Uuid,
     pub collateral_id: Uuid,
     pub loan_account_id: Uuid,
     #[serde(serialize_with = "serialize_enforcement_type", deserialize_with = "deserialize_enforcement_type")]

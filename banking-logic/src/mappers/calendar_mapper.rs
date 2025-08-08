@@ -9,7 +9,7 @@ impl CalendarMapper {
     /// Convert domain BankHoliday to database BankHolidayModel
     pub fn holiday_to_model(holiday: BankHoliday) -> BankHolidayModel {
         BankHolidayModel {
-            holiday_id: holiday.holiday_id,
+            id: holiday.id,
             jurisdiction: holiday.jurisdiction,
             holiday_date: holiday.holiday_date,
             holiday_name: holiday.holiday_name,
@@ -24,7 +24,7 @@ impl CalendarMapper {
     /// Convert database BankHolidayModel to domain BankHoliday
     pub fn holiday_from_model(model: BankHolidayModel) -> BankHoliday {
         BankHoliday {
-            holiday_id: model.holiday_id,
+            id: model.id,
             jurisdiction: model.jurisdiction,
             holiday_date: model.holiday_date,
             holiday_name: model.holiday_name,

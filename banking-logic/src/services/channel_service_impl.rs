@@ -84,7 +84,7 @@ impl<R: ChannelRepository + Send + Sync> ChannelProcessor for ChannelServiceImpl
         
         // For now, return a basic report
         let report = ReconciliationReport {
-            report_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             channel_id: channel_uuid,
             reconciliation_date: date,
             total_transactions: 0,

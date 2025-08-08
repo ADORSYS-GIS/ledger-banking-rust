@@ -367,7 +367,7 @@ impl AccountService for AccountServiceImpl {
 
         // Create the hold
         let hold = AccountHold {
-            hold_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             account_id: request.account_id,
             amount: request.amount,
             hold_type: request.hold_type,
@@ -389,7 +389,7 @@ impl AccountService for AccountServiceImpl {
         let created_model = self.account_repository.create_hold(hold_model).await?;
         
         tracing::info!("Successfully placed hold {} for amount {} on account {}", 
-                      created_model.hold_id, created_model.amount, created_model.account_id);
+                      created_model.id, created_model.amount, created_model.account_id);
 
         Ok(AccountMapper::account_hold_from_model(created_model))
     }
@@ -440,7 +440,7 @@ impl AccountService for AccountServiceImpl {
             .await?;
         
         tracing::info!("Successfully released hold {} with amount {}", 
-                      released_model.hold_id, release_amount);
+                      released_model.id, release_amount);
 
         Ok(AccountMapper::account_hold_from_model(released_model))
     }
@@ -762,7 +762,7 @@ impl AccountService for AccountServiceImpl {
         for hold in expired_holds {
             let _ = self.account_repository
                 .release_hold_detailed(
-                    hold.hold_id,
+                    hold.id,
                     None, // Full release
                     Uuid::new_v4(), // System reason ID - should be configurable
                     Uuid::new_v4(), // System user ID - should be configurable
@@ -772,7 +772,7 @@ impl AccountService for AccountServiceImpl {
         }
 
         Ok(HoldExpiryJob {
-            job_id,
+            id: job_id,
             processing_date,
             expired_holds_count: processed_count,
             total_released_amount: total_amount,
@@ -796,7 +796,7 @@ impl AccountService for AccountServiceImpl {
         for hold in eligible_holds {
             match self.account_repository
                 .release_hold_detailed(
-                    hold.hold_id,
+                    hold.id,
                     None, // Full release
                     Uuid::new_v4(), // System reason ID
                     Uuid::new_v4(), // System user ID
@@ -808,7 +808,7 @@ impl AccountService for AccountServiceImpl {
                     released_holds.push(AccountMapper::account_hold_from_model(released_hold));
                 }
                 Err(e) => {
-                    tracing::error!("Failed to auto-release hold {}: {}", hold.hold_id, e);
+                    tracing::error!("Failed to auto-release hold {}: {}", hold.id, e);
                 }
             }
         }
@@ -832,7 +832,7 @@ impl AccountService for AccountServiceImpl {
         
         for account_id in account_ids {
             let hold = banking_db::models::AccountHoldModel {
-                hold_id: Uuid::new_v4(),
+                id: Uuid::new_v4(),
                 account_id,
                 amount: amount_per_account,
                 hold_type: hold_type.clone(),
@@ -897,7 +897,7 @@ impl AccountService for AccountServiceImpl {
             .get_overrideable_holds(account_id, transaction_amount, override_priority.to_string())
             .await?;
 
-        let hold_ids: Vec<Uuid> = overridden_holds.iter().map(|h| h.hold_id).collect();
+        let hold_ids: Vec<Uuid> = overridden_holds.iter().map(|h| h.id).collect();
 
         let _override_record = self.account_repository
             .create_hold_override(
@@ -1297,7 +1297,7 @@ impl AccountServiceImpl {
                 Ok(())
             }
             _status => Err(banking_api::BankingError::AccountNotTransactional {
-                account_id: account.account_id,
+                account_id: account.id,
             }),
         }
     }
@@ -1682,7 +1682,7 @@ mod tests {
     // Helper function to create valid test account
     fn create_valid_test_account() -> Account {
         Account {
-            account_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             product_code: HeaplessString::try_from("SAV001").unwrap(),
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
@@ -1726,7 +1726,7 @@ mod tests {
     async fn test_calculate_balance_savings_account() {
         let account_id = Uuid::new_v4();
         let mut account_model = create_test_account_model(AccountType::Savings, Decimal::new(50000, 2), None);
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1741,7 +1741,7 @@ mod tests {
     async fn test_calculate_balance_current_account() {
         let account_id = Uuid::new_v4();
         let mut account_model = create_test_account_model(AccountType::Current, Decimal::new(75000, 2), None);
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1760,7 +1760,7 @@ mod tests {
             Decimal::new(60000, 2),  // outstanding: $600.00
             Decimal::new(25000, 2)   // current_balance: $250.00 (ignored for loans)
         );
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1780,7 +1780,7 @@ mod tests {
             Decimal::ZERO,           // outstanding: $0.00 (fully paid)
             Decimal::new(25000, 2)   // current_balance: $250.00 (ignored)
         );
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1814,7 +1814,7 @@ mod tests {
     async fn test_calculate_available_balance_current_account_with_overdraft() {
         let account_id = Uuid::new_v4();
         let mut account_model = create_test_account_model(AccountType::Current, Decimal::new(50000, 2), Some(Decimal::new(25000, 2))); // $500 balance, $250 overdraft
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1830,7 +1830,7 @@ mod tests {
     async fn test_calculate_available_balance_current_account_no_overdraft() {
         let account_id = Uuid::new_v4();
         let mut account_model = create_test_account_model(AccountType::Current, Decimal::new(50000, 2), None); // $500 balance, no overdraft
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1846,7 +1846,7 @@ mod tests {
     async fn test_calculate_available_balance_savings_account_positive() {
         let account_id = Uuid::new_v4();
         let mut account_model = create_test_account_model(AccountType::Savings, Decimal::new(50000, 2), None); // $500 balance
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1862,7 +1862,7 @@ mod tests {
     async fn test_calculate_available_balance_savings_account_with_low_balance() {
         let account_id = Uuid::new_v4();
         let mut account_model = create_test_account_model(AccountType::Savings, Decimal::new(5000, 2), None); // $50 balance
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1882,7 +1882,7 @@ mod tests {
             Decimal::new(60000, 2),  // outstanding: $600.00
             Decimal::new(25000, 2)   // current_balance: $250.00
         );
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1898,7 +1898,7 @@ mod tests {
     async fn test_calculate_available_balance_current_account_with_large_overdraft() {
         let account_id = Uuid::new_v4();
         let mut account_model = create_test_account_model(AccountType::Current, Decimal::new(-5000, 2), Some(Decimal::new(100000, 2))); // -$50 balance, $1000 overdraft
-        account_model.account_id = account_id;
+        account_model.id = account_id;
         
         let mock_repo = Arc::new(MockAccountRepository::new().with_account(account_model));
         let mock_catalog = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
@@ -1931,7 +1931,7 @@ mod tests {
     
     fn create_test_account_model(account_type: AccountType, current_balance: Decimal, overdraft_limit: Option<Decimal>) -> banking_db::models::AccountModel {
         banking_db::models::AccountModel {
-            account_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             product_code: HeaplessString::try_from("TEST001").unwrap(),
             account_type,
             account_status: AccountStatus::Active,
@@ -1971,7 +1971,7 @@ mod tests {
 
     fn create_test_loan_account_model(original_principal: Decimal, outstanding_principal: Decimal, current_balance: Decimal) -> banking_db::models::AccountModel {
         banking_db::models::AccountModel {
-            account_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             product_code: HeaplessString::try_from("LOAN001").unwrap(),
             account_type: AccountType::Loan,
             account_status: AccountStatus::Active,
@@ -2027,7 +2027,7 @@ mod tests {
         }
         
         fn with_account(self, account: banking_db::models::AccountModel) -> Self {
-            self.accounts.lock().unwrap().insert(account.account_id, account);
+            self.accounts.lock().unwrap().insert(account.id, account);
             self
         }
     }

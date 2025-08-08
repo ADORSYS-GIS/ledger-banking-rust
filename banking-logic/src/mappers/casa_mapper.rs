@@ -26,7 +26,7 @@ impl CasaMapper {
     /// Map from domain OverdraftFacility to database model
     pub fn overdraft_facility_to_model(facility: OverdraftFacility) -> DbOverdraftFacility {
         DbOverdraftFacility {
-            facility_id: facility.facility_id,
+            id: facility.id,
             account_id: facility.account_id,
             approved_limit: facility.approved_limit,
             current_utilized: facility.current_utilized,
@@ -48,7 +48,7 @@ impl CasaMapper {
     /// Map from database OverdraftFacility to domain model
     pub fn overdraft_facility_from_model(model: DbOverdraftFacility) -> banking_api::BankingResult<OverdraftFacility> {
         Ok(OverdraftFacility {
-            facility_id: model.facility_id,
+            id: model.id,
             account_id: model.account_id,
             approved_limit: model.approved_limit,
             current_utilized: model.current_utilized,
@@ -70,7 +70,7 @@ impl CasaMapper {
     /// Map from domain OverdraftUtilization to database model
     pub fn overdraft_utilization_to_model(utilization: OverdraftUtilization) -> DbOverdraftUtilization {
         DbOverdraftUtilization {
-            utilization_id: utilization.utilization_id,
+            id: utilization.id,
             account_id: utilization.account_id,
             utilization_date: utilization.utilization_date,
             opening_balance: utilization.opening_balance,
@@ -88,7 +88,7 @@ impl CasaMapper {
     /// Map from database OverdraftUtilization to domain model
     pub fn overdraft_utilization_from_model(model: DbOverdraftUtilization) -> OverdraftUtilization {
         OverdraftUtilization {
-            utilization_id: model.utilization_id,
+            id: model.id,
             account_id: model.account_id,
             utilization_date: model.utilization_date,
             opening_balance: model.opening_balance,
@@ -106,7 +106,7 @@ impl CasaMapper {
     /// Map from domain OverdraftInterestCalculation to database model
     pub fn interest_calculation_to_model(calc: OverdraftInterestCalculation) -> DbOverdraftInterestCalculation {
         DbOverdraftInterestCalculation {
-            calculation_id: calc.calculation_id,
+            id: calc.id,
             account_id: calc.account_id,
             calculation_period_start: calc.calculation_period_start,
             calculation_period_end: calc.calculation_period_end,
@@ -124,7 +124,7 @@ impl CasaMapper {
     /// Map from database OverdraftInterestCalculation to domain model
     pub fn interest_calculation_from_model(model: DbOverdraftInterestCalculation) -> OverdraftInterestCalculation {
         OverdraftInterestCalculation {
-            calculation_id: model.calculation_id,
+            id: model.id,
             account_id: model.account_id,
             calculation_period_start: model.calculation_period_start,
             calculation_period_end: model.calculation_period_end,
@@ -142,7 +142,7 @@ impl CasaMapper {
     /// Map from domain OverdraftProcessingJob to database model
     pub fn processing_job_to_model(job: OverdraftProcessingJob) -> DbOverdraftProcessingJob {
         DbOverdraftProcessingJob {
-            job_id: job.job_id,
+            id: job.id,
             processing_date: job.processing_date,
             accounts_processed: job.accounts_processed,
             total_interest_accrued: job.total_interest_accrued,
@@ -158,7 +158,7 @@ impl CasaMapper {
     /// Map from database OverdraftProcessingJob to domain model
     pub fn processing_job_from_model(model: DbOverdraftProcessingJob) -> OverdraftProcessingJob {
         OverdraftProcessingJob {
-            job_id: model.job_id,
+            id: model.id,
             processing_date: model.processing_date,
             accounts_processed: model.accounts_processed,
             total_interest_accrued: model.total_interest_accrued,
@@ -174,7 +174,7 @@ impl CasaMapper {
     /// Map from domain OverdraftLimitAdjustment to database model
     pub fn limit_adjustment_to_model(adjustment: OverdraftLimitAdjustment) -> DbOverdraftLimitAdjustment {
         DbOverdraftLimitAdjustment {
-            adjustment_id: adjustment.adjustment_id,
+            id: adjustment.id,
             account_id: adjustment.account_id,
             current_limit: adjustment.current_limit,
             requested_limit: adjustment.requested_limit,
@@ -194,7 +194,7 @@ impl CasaMapper {
     /// Map from database OverdraftLimitAdjustment to domain model
     pub fn limit_adjustment_from_model(model: DbOverdraftLimitAdjustment) -> OverdraftLimitAdjustment {
         OverdraftLimitAdjustment {
-            adjustment_id: model.adjustment_id,
+            id: model.id,
             account_id: model.account_id,
             current_limit: model.current_limit,
             requested_limit: model.requested_limit,
@@ -214,7 +214,7 @@ impl CasaMapper {
     /// Map from domain InterestPostingRecord to database model
     pub fn interest_posting_to_model(posting: InterestPostingRecord) -> DbInterestPostingRecord {
         DbInterestPostingRecord {
-            posting_id: posting.posting_id,
+            id: posting.id,
             account_id: posting.account_id,
             posting_date: posting.posting_date,
             interest_type: Self::interest_type_to_db(posting.interest_type),
@@ -235,7 +235,7 @@ impl CasaMapper {
     /// Map from database InterestPostingRecord to domain model
     pub fn interest_posting_from_model(model: DbInterestPostingRecord) -> InterestPostingRecord {
         InterestPostingRecord {
-            posting_id: model.posting_id,
+            id: model.id,
             account_id: model.account_id,
             posting_date: model.posting_date,
             interest_type: Self::db_to_interest_type(model.interest_type),

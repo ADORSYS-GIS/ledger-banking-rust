@@ -42,7 +42,7 @@ pub enum ImportStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct BankHolidayModel {
-    pub holiday_id: Uuid,
+    pub id: Uuid,
     pub jurisdiction: HeaplessString<10>, // Country/region code (e.g., "US", "UK", "CM")
     pub holiday_date: NaiveDate,
     pub holiday_name: HeaplessString<50>, // Updated to match API domain
@@ -58,7 +58,7 @@ pub struct BankHolidayModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct WeekendConfigurationModel {
-    pub config_id: Uuid,
+    pub id: Uuid,
     pub jurisdiction: HeaplessString<10>,
     pub weekend_days: HeaplessString<100>, // JSON array of weekday numbers (0=Sunday, 1=Monday, etc.)
     pub effective_date: NaiveDate,
@@ -74,7 +74,7 @@ pub struct WeekendConfigurationModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct DateCalculationRulesModel {
-    pub rule_id: Uuid,
+    pub id: Uuid,
     pub jurisdiction: HeaplessString<10>,
     pub rule_name: HeaplessString<100>,
     pub rule_type: HeaplessString<30>, // DateShift, MaturityCalculation, PaymentDue
@@ -95,7 +95,7 @@ pub struct DateCalculationRulesModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct HolidayImportLogModel {
-    pub import_id: Uuid,
+    pub id: Uuid,
     pub jurisdiction: HeaplessString<10>,
     pub import_year: i32,
     pub import_source: HeaplessString<100>,
@@ -112,7 +112,7 @@ pub struct HolidayImportLogModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct BusinessDayCacheModel {
-    pub cache_id: Uuid,
+    pub id: Uuid,
     pub jurisdiction: HeaplessString<10>,
     pub date: NaiveDate,
     pub is_business_day: bool,

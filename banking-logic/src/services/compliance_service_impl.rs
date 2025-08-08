@@ -78,7 +78,7 @@ impl ComplianceService for ComplianceServiceImpl {
 
         // Create KYC result based on customer data
         let kyc_result = KycResult {
-            customer_id: customer.customer_id,
+            customer_id: customer.id,
             status: if customer.status == banking_api::domain::CustomerStatus::Active {
                 KycStatus::Approved
             } else {
@@ -102,7 +102,7 @@ impl ComplianceService for ComplianceServiceImpl {
     async fn screen_against_sanctions(&self, customer: &Customer) -> BankingResult<ScreeningResult> {
         // Simulate sanctions screening - in production this would call external services
         let screening_result = ScreeningResult {
-            customer_id: customer.customer_id,
+            customer_id: customer.id,
             screening_type: ScreeningType::Sanctions,
             matches_found: vec![], // Would be populated with actual matches
             risk_level: RiskLevel::Low, // Default to low risk
@@ -121,7 +121,7 @@ impl ComplianceService for ComplianceServiceImpl {
     async fn monitor_transaction(&self, transaction: &Transaction) -> BankingResult<MonitoringResult> {
         // Simulate transaction monitoring
         let monitoring_result = MonitoringResult {
-            transaction_id: transaction.transaction_id,
+            transaction_id: transaction.id,
             alerts_triggered: vec![], // Would be populated with actual alerts
             risk_score: rust_decimal::Decimal::from_f64(25.0).unwrap_or_default(),
             requires_investigation: false,
@@ -134,7 +134,7 @@ impl ComplianceService for ComplianceServiceImpl {
     /// Generate SAR (Suspicious Activity Report) data with reason ID validation
     async fn generate_sar_data(&self, customer_id: Uuid, reason_id: Uuid, additional_details: Option<HeaplessString<500>>) -> BankingResult<SarData> {
         let sar_data = SarData {
-            sar_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             customer_id,
             reason_id,
             additional_details,
@@ -215,7 +215,7 @@ impl ComplianceService for ComplianceServiceImpl {
         let mut alerts = Vec::new();
         for model in alert_models {
             let alert = ComplianceAlert {
-                alert_id: model.alert_id,
+                id: model.id,
                 alert_type: banking_api::domain::AlertType::SuspiciousPattern, // Default
                 description: model.description,
                 severity: banking_api::domain::Severity::Medium, // Default

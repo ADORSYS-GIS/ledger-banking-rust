@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Customer {
-    pub customer_id: Uuid,
+    pub id: Uuid,
     pub customer_type: CustomerType,
     pub full_name: HeaplessString<100>,
     pub id_type: IdentityType,
@@ -35,6 +35,16 @@ pub enum IdentityType {
     Unknown
 }
 
+// Display implementations for database compatibility
+impl std::fmt::Display for CustomerType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CustomerType::Individual => write!(f, "Individual"),
+            CustomerType::Corporate => write!(f, "Corporate"),
+        }
+    }
+}
+
 impl std::fmt::Display for IdentityType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -45,6 +55,121 @@ impl std::fmt::Display for IdentityType {
             IdentityType::AsylumCard => write!(f, "AsylumCard"),
             IdentityType::TemporaryResidentPermit => write!(f, "TemporaryResidentPermit"),
             IdentityType::Unknown => write!(f, "Unknown"),
+        }
+    }
+}
+
+impl std::fmt::Display for RiskRating {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RiskRating::Low => write!(f, "Low"),
+            RiskRating::Medium => write!(f, "Medium"),
+            RiskRating::High => write!(f, "High"),
+            RiskRating::Blacklisted => write!(f, "Blacklisted"),
+        }
+    }
+}
+
+impl std::fmt::Display for CustomerStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CustomerStatus::Active => write!(f, "Active"),
+            CustomerStatus::PendingVerification => write!(f, "PendingVerification"),
+            CustomerStatus::Deceased => write!(f, "Deceased"),
+            CustomerStatus::Dissolved => write!(f, "Dissolved"),
+            CustomerStatus::Blacklisted => write!(f, "Blacklisted"),
+        }
+    }
+}
+
+impl std::fmt::Display for KycStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KycStatus::NotStarted => write!(f, "NotStarted"),
+            KycStatus::InProgress => write!(f, "InProgress"),
+            KycStatus::Pending => write!(f, "Pending"),
+            KycStatus::Complete => write!(f, "Complete"),
+            KycStatus::Approved => write!(f, "Approved"),
+            KycStatus::Rejected => write!(f, "Rejected"),
+            KycStatus::RequiresUpdate => write!(f, "RequiresUpdate"),
+            KycStatus::Failed => write!(f, "Failed"),
+        }
+    }
+}
+
+// FromStr implementations for database compatibility
+impl std::str::FromStr for CustomerType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Individual" => Ok(CustomerType::Individual),
+            "Corporate" => Ok(CustomerType::Corporate),
+            _ => Err(format!("Invalid CustomerType: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for IdentityType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NationalId" => Ok(IdentityType::NationalId),
+            "Passport" => Ok(IdentityType::Passport),
+            "CompanyRegistration" => Ok(IdentityType::CompanyRegistration),
+            "PermanentResidentCard" => Ok(IdentityType::PermanentResidentCard),
+            "AsylumCard" => Ok(IdentityType::AsylumCard),
+            "TemporaryResidentPermit" => Ok(IdentityType::TemporaryResidentPermit),
+            "Unknown" => Ok(IdentityType::Unknown),
+            _ => Err(format!("Invalid IdentityType: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for RiskRating {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Low" => Ok(RiskRating::Low),
+            "Medium" => Ok(RiskRating::Medium),
+            "High" => Ok(RiskRating::High),
+            "Blacklisted" => Ok(RiskRating::Blacklisted),
+            _ => Err(format!("Invalid RiskRating: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for CustomerStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(CustomerStatus::Active),
+            "PendingVerification" => Ok(CustomerStatus::PendingVerification),
+            "Deceased" => Ok(CustomerStatus::Deceased),
+            "Dissolved" => Ok(CustomerStatus::Dissolved),
+            "Blacklisted" => Ok(CustomerStatus::Blacklisted),
+            _ => Err(format!("Invalid CustomerStatus: {s}")),
+        }
+    }
+}
+
+impl std::str::FromStr for KycStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NotStarted" => Ok(KycStatus::NotStarted),
+            "InProgress" => Ok(KycStatus::InProgress),
+            "Pending" => Ok(KycStatus::Pending),
+            "Complete" => Ok(KycStatus::Complete),
+            "Approved" => Ok(KycStatus::Approved),
+            "Rejected" => Ok(KycStatus::Rejected),
+            "RequiresUpdate" => Ok(KycStatus::RequiresUpdate),
+            "Failed" => Ok(KycStatus::Failed),
+            _ => Err(format!("Invalid KycStatus: {s}")),
         }
     }
 }
@@ -166,7 +291,7 @@ impl CustomerBuilder {
         let now = chrono::Utc::now();
         
         Ok(Customer {
-            customer_id: self.customer_id,
+            id: self.customer_id,
             customer_type: self.customer_type,
             full_name: full_name_heap,
             id_type: self.id_type,

@@ -50,7 +50,7 @@ impl CustomerService for CustomerServiceImpl {
         {
             return Err(banking_api::BankingError::DuplicateIdentityDocument(
                 format!("Customer with {} '{}' already exists (existing customer ID: {})", 
-                    id_type_str, customer.id_number.as_str(), existing.customer_id)
+                    id_type_str, customer.id_number.as_str(), existing.id)
             ));
         }
 
@@ -71,8 +71,8 @@ impl CustomerService for CustomerServiceImpl {
         self.validate_customer_data(&customer)?;
 
         // Ensure customer exists
-        if !self.customer_repository.exists(customer.customer_id).await? {
-            return Err(banking_api::BankingError::CustomerNotFound(customer.customer_id));
+        if !self.customer_repository.exists(customer.id).await? {
+            return Err(banking_api::BankingError::CustomerNotFound(customer.id));
         }
 
         // Convert to database model and update

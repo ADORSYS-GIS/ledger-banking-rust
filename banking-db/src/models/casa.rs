@@ -4,15 +4,14 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
-use crate::models::customer::{KycStatus, RiskRating};
-use crate::models::transaction::TransactionType;
+use banking_api::domain::{KycStatus, RiskRating, TransactionType};
 
 /// CASA (Current & Savings Account) specialized functionality
 /// Building upon the Unified Account Model
 /// Overdraft facility configuration and management
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OverdraftFacility {
-    pub facility_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub approved_limit: Decimal,
     pub current_utilized: Decimal,
@@ -52,7 +51,7 @@ pub enum ReviewFrequency {
 /// Overdraft utilization tracking for interest calculation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OverdraftUtilization {
-    pub utilization_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub utilization_date: NaiveDate,
     pub opening_balance: Decimal, // Negative for overdrawn
@@ -69,7 +68,7 @@ pub struct OverdraftUtilization {
 /// Overdraft interest calculation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OverdraftInterestCalculation {
-    pub calculation_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub calculation_period_start: NaiveDate,
     pub calculation_period_end: NaiveDate,
@@ -146,7 +145,7 @@ pub struct CasaComplianceStatus {
 /// Daily overdraft processing job for EOD
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OverdraftProcessingJob {
-    pub job_id: Uuid,
+    pub id: Uuid,
     pub processing_date: NaiveDate,
     pub accounts_processed: u32,
     pub total_interest_accrued: Decimal,
@@ -171,7 +170,7 @@ pub enum ProcessingJobStatus {
 /// Overdraft limit adjustment request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OverdraftLimitAdjustment {
-    pub adjustment_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub current_limit: Decimal,
     pub requested_limit: Decimal,
@@ -238,7 +237,7 @@ pub enum AuthorizationLevel {
 /// Interest posting record for CASA accounts
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InterestPostingRecord {
-    pub posting_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub posting_date: NaiveDate,
     #[serde(serialize_with = "serialize_interest_type", deserialize_with = "deserialize_interest_type")]

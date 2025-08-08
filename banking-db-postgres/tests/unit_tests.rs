@@ -13,7 +13,7 @@ fn create_test_account() -> AccountModel {
     let domicile_branch_id = Uuid::new_v4();
     
     AccountModel {
-        account_id,
+        id: account_id,
         product_code: HeaplessString::try_from("SAV01").unwrap(),
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,

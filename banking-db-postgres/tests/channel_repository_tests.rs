@@ -33,7 +33,7 @@ mod channel_repository_tests {
         let now = Utc::now();
         
         ChannelModel {
-            channel_id,
+            id: channel_id,
             channel_code: HeaplessString::try_from("ATM001").unwrap(),
             channel_name: HeaplessString::try_from("ATM Branch 001").unwrap(),
             channel_type: "ATM".to_string(),
@@ -58,7 +58,7 @@ mod channel_repository_tests {
         let unique_name = format!("Channel {}", suffix);
         
         ChannelModel {
-            channel_id,
+            id: channel_id,
             channel_code: HeaplessString::try_from(unique_code.as_str()).unwrap(),
             channel_name: HeaplessString::try_from(unique_name.as_str()).unwrap(),
             channel_type: "MobileApp".to_string(),
@@ -80,11 +80,11 @@ mod channel_repository_tests {
         
         let repo = ChannelRepositoryImpl::new(pool);
         let channel = create_test_channel();
-        let channel_id = channel.channel_id;
+        let channel_id = channel.id;
         
         let created = repo.create(channel.clone()).await.expect("Failed to create channel");
         
-        assert_eq!(created.channel_id, channel_id);
+        assert_eq!(created.id, channel_id);
         assert_eq!(created.channel_code.as_str(), "ATM001");
         assert_eq!(created.channel_name.as_str(), "ATM Branch 001");
         assert_eq!(created.channel_type, "ATM");
@@ -104,14 +104,14 @@ mod channel_repository_tests {
         
         let repo = ChannelRepositoryImpl::new(pool);
         let channel = create_test_channel();
-        let channel_id = channel.channel_id;
+        let channel_id = channel.id;
         
         let _created = repo.create(channel).await.expect("Failed to create channel");
         
         let found = repo.find_by_id(channel_id).await.expect("Failed to find channel by ID");
         assert!(found.is_some());
         let found_channel = found.unwrap();
-        assert_eq!(found_channel.channel_id, channel_id);
+        assert_eq!(found_channel.id, channel_id);
         assert_eq!(found_channel.channel_code.as_str(), "ATM001");
         
         cleanup_database(&repo.get_pool()).await;
@@ -214,7 +214,7 @@ mod channel_repository_tests {
         
         let repo = ChannelRepositoryImpl::new(pool);
         let channel = create_test_channel();
-        let channel_id = channel.channel_id;
+        let channel_id = channel.id;
         
         let _created = repo.create(channel).await.expect("Failed to create channel");
         
@@ -233,7 +233,7 @@ mod channel_repository_tests {
         
         let repo = ChannelRepositoryImpl::new(pool);
         let channel = create_test_channel();
-        let channel_id = channel.channel_id;
+        let channel_id = channel.id;
         
         let exists_before = repo.exists(channel_id).await.expect("Failed to check existence");
         assert!(!exists_before);
@@ -283,7 +283,7 @@ mod channel_repository_tests {
         
         let repo = ChannelRepositoryImpl::new(pool);
         let channel = create_test_channel();
-        let channel_id = channel.channel_id;
+        let channel_id = channel.id;
         
         let _created = repo.create(channel).await.expect("Failed to create channel");
         
@@ -348,7 +348,7 @@ mod channel_repository_tests {
         
         let repo = ChannelRepositoryImpl::new(pool);
         let channel = create_test_channel();
-        let channel_id = channel.channel_id;
+        let channel_id = channel.id;
         
         let _created = repo.create(channel).await.expect("Failed to create channel");
         
@@ -400,7 +400,7 @@ mod channel_repository_tests {
         // Test duplicate channel code
         let _created1 = repo.create(channel.clone()).await.expect("Failed to create first channel");
         
-        channel.channel_id = Uuid::new_v4(); // Different ID but same code
+        channel.id = Uuid::new_v4(); // Different ID but same code
         let duplicate_result = repo.create(channel).await;
         assert!(duplicate_result.is_err());
         

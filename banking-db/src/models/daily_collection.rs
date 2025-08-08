@@ -251,7 +251,7 @@ pub struct CollectionAgentModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(sqlx::FromRow)]
 pub struct CoverageAreaModel {
-    pub area_id: Uuid,
+    pub id: Uuid,
     pub territory_id: Uuid,
     pub area_name: HeaplessString<100>,
     pub area_type: AreaType,
@@ -265,7 +265,7 @@ pub struct CoverageAreaModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(sqlx::FromRow)]
 pub struct PerformanceAlertModel {
-    pub alert_id: Uuid,
+    pub id: Uuid,
     pub agent_id: Uuid,
     pub alert_type: AlertType,
     pub severity: AlertSeverity,
@@ -417,7 +417,7 @@ pub struct CollectionRecordModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(sqlx::FromRow)]
 pub struct CollectionBatchModel {
-    pub batch_id: Uuid,
+    pub id: Uuid,
     pub agent_id: Uuid,
     pub collection_date: NaiveDate,
     pub total_collections: i32,

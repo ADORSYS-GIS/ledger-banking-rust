@@ -15,7 +15,7 @@ fn create_test_transaction(account_id: Uuid) -> TransactionModel {
     let transaction_id = Uuid::new_v4();
     
     TransactionModel {
-        transaction_id,
+        id: transaction_id,
         account_id,
         transaction_code: HeaplessString::try_from("DEPOSIT").unwrap(),
         transaction_type: TransactionType::Credit,
@@ -56,7 +56,7 @@ fn create_test_account() -> AccountModel {
     let domicile_branch_id = Uuid::new_v4();
     
     AccountModel {
-        account_id,
+        id: account_id,
         product_code: HeaplessString::try_from("SAV01").unwrap(),
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,
@@ -113,9 +113,9 @@ async fn setup_test_db() -> PgPool {
     let test_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     sqlx::query(
         r#"
-        INSERT INTO persons (person_id, person_type, display_name, external_identifier)
+        INSERT INTO persons (id, person_type, display_name, external_identifier)
         VALUES ($1, 'system', 'Test User', 'test-user')
-        ON CONFLICT (person_id) DO NOTHING
+        ON CONFLICT (id) DO NOTHING
         "#
     )
     .bind(test_person_id)
@@ -129,12 +129,12 @@ async fn setup_test_db() -> PgPool {
 /// Create a test account in the database
 async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
     let account = create_test_account();
-    let account_id = account.account_id;
+    let account_id = account.id;
     
     sqlx::query(
         r#"
         INSERT INTO accounts (
-            account_id, product_code, account_type, account_status, signing_condition,
+            id, product_code, account_type, account_status, signing_condition,
             currency, open_date, domicile_branch_id, current_balance, available_balance,
             accrued_interest, updated_by
         )
@@ -142,10 +142,10 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
             $1, $2, $3::account_type, $4::account_status, $5::signing_condition,
             $6, $7, $8, $9, $10, $11, $12
         )
-        ON CONFLICT (account_id) DO NOTHING
+        ON CONFLICT (id) DO NOTHING
         "#
     )
-    .bind(account.account_id)
+    .bind(account.id)
     .bind(account.product_code.as_str())
     .bind(account.account_type.to_string())
     .bind(account.account_status.to_string())
@@ -177,17 +177,17 @@ async fn test_transaction_crud_operations() {
     // Test CREATE
     let created_transaction = repo.create(transaction.clone()).await
         .expect("Failed to create transaction");
-    assert_eq!(created_transaction.transaction_id, transaction.transaction_id);
+    assert_eq!(created_transaction.id, transaction.id);
     assert_eq!(created_transaction.account_id, transaction.account_id);
     assert_eq!(created_transaction.amount, transaction.amount);
     assert_eq!(created_transaction.transaction_type, transaction.transaction_type);
     assert_eq!(created_transaction.status, transaction.status);
     
     // Test READ by ID
-    let found_transaction = repo.find_by_id(transaction.transaction_id).await
+    let found_transaction = repo.find_by_id(transaction.id).await
         .expect("Failed to find transaction")
         .expect("Transaction not found");
-    assert_eq!(found_transaction.transaction_id, transaction.transaction_id);
+    assert_eq!(found_transaction.id, transaction.id);
     assert_eq!(found_transaction.amount, transaction.amount);
     
     // Test UPDATE
@@ -199,7 +199,7 @@ async fn test_transaction_crud_operations() {
     assert_eq!(updated_transaction.amount, Decimal::from_str("150.00").unwrap());
     
     // Test EXISTS
-    let exists = repo.exists(transaction.transaction_id).await
+    let exists = repo.exists(transaction.id).await
         .expect("Failed to check if transaction exists");
     assert!(exists);
     
@@ -228,7 +228,7 @@ async fn test_transaction_find_by_reference() {
     let found_transaction = repo.find_by_reference(transaction.reference_number.as_str()).await
         .expect("Failed to find transaction by reference")
         .expect("Transaction not found by reference");
-    assert_eq!(found_transaction.transaction_id, transaction.transaction_id);
+    assert_eq!(found_transaction.id, transaction.id);
     assert_eq!(found_transaction.reference_number, transaction.reference_number);
     
     // Test with non-existent reference
@@ -384,7 +384,7 @@ async fn test_transaction_requiring_approval() {
     
     // Find our specific transaction in the results
     let our_transaction = requiring_approval.iter()
-        .find(|t| t.transaction_id == transaction.transaction_id);
+        .find(|t| t.id == transaction.id);
     assert!(our_transaction.is_some());
     
     let found_transaction = our_transaction.unwrap();
@@ -407,21 +407,21 @@ async fn test_transaction_status_updates() {
         .expect("Failed to create transaction");
     
     // Test status update
-    repo.update_status(transaction.transaction_id, "Posted", "Approved by system").await
+    repo.update_status(transaction.id, "Posted", "Approved by system").await
         .expect("Failed to update transaction status");
     
     // Verify status was updated
-    let updated_transaction = repo.find_by_id(transaction.transaction_id).await
+    let updated_transaction = repo.find_by_id(transaction.id).await
         .expect("Failed to find updated transaction")
         .expect("Transaction not found");
     assert_eq!(updated_transaction.status, TransactionStatus::Posted);
     
     // Test approval status update
-    repo.update_approval_status(transaction.transaction_id, "Approved").await
+    repo.update_approval_status(transaction.id, "Approved").await
         .expect("Failed to update approval status");
     
     // Verify approval status was updated
-    let approved_transaction = repo.find_by_id(transaction.transaction_id).await
+    let approved_transaction = repo.find_by_id(transaction.id).await
         .expect("Failed to find approved transaction")
         .expect("Transaction not found");
     assert_eq!(approved_transaction.approval_status, Some(TransactionApprovalStatus::Approved));
@@ -461,7 +461,7 @@ async fn test_transaction_find_by_channel() {
     
     // Find our specific transaction in the results
     let our_transaction = mobile_transactions.iter()
-        .find(|t| t.transaction_id == transaction1.transaction_id);
+        .find(|t| t.id == transaction1.id);
     assert!(our_transaction.is_some());
     assert_eq!(our_transaction.unwrap().channel_id.as_str(), channel);
 }
@@ -501,7 +501,7 @@ async fn test_transaction_find_last_customer_transaction() {
         .expect("Failed to find last customer transaction")
         .expect("No customer transaction found");
     
-    assert_eq!(last_transaction.transaction_id, customer_transaction.transaction_id);
+    assert_eq!(last_transaction.id, customer_transaction.id);
     assert_eq!(last_transaction.channel_id.as_str(), "MobileApp");
 }
 
@@ -526,7 +526,7 @@ async fn test_transaction_reverse_transaction() {
     
     // Create reversal transaction (use positive amount, opposite transaction type)
     let mut reversal_transaction = create_test_transaction(account_id);
-    reversal_transaction.transaction_id = Uuid::new_v4();
+    reversal_transaction.id = Uuid::new_v4();
     reversal_transaction.reference_number = HeaplessString::try_from(
         format!("REV{}", Utc::now().timestamp_micros() % 100000).as_str()
     ).unwrap();
@@ -540,17 +540,17 @@ async fn test_transaction_reverse_transaction() {
     
     // Test reverse transaction
     let created_reversal = repo.reverse_transaction(
-        original_transaction.transaction_id, 
+        original_transaction.id, 
         reversal_transaction.clone()
     ).await
         .expect("Failed to reverse transaction");
     
-    assert_eq!(created_reversal.transaction_id, reversal_transaction.transaction_id);
+    assert_eq!(created_reversal.id, reversal_transaction.id);
     assert_eq!(created_reversal.amount, reversal_transaction.amount);
     assert_eq!(created_reversal.transaction_type, reversal_transaction.transaction_type);
     
     // Verify original transaction status was updated to Reversed
-    let updated_original = repo.find_by_id(original_transaction.transaction_id).await
+    let updated_original = repo.find_by_id(original_transaction.id).await
         .expect("Failed to find original transaction")
         .expect("Original transaction not found");
     assert_eq!(updated_original.status, TransactionStatus::Reversed);
@@ -596,9 +596,9 @@ async fn test_transaction_reconciliation() {
     
     // Should find both transactions (Posted and Pending statuses)
     let found_txn1 = reconciliation_transactions.iter()
-        .find(|t| t.transaction_id == transaction1.transaction_id);
+        .find(|t| t.id == transaction1.id);
     let found_txn2 = reconciliation_transactions.iter()
-        .find(|t| t.transaction_id == transaction2.transaction_id);
+        .find(|t| t.id == transaction2.id);
     
     assert!(found_txn1.is_some());
     assert!(found_txn2.is_some());
@@ -688,8 +688,8 @@ async fn test_transaction_with_approval_workflow() {
     
     // Create approval workflow
     let workflow = ApprovalWorkflowModel {
-        workflow_id: Uuid::new_v4(),
-        transaction_id: Some(created_transaction.transaction_id),
+        id: Uuid::new_v4(),
+        transaction_id: Some(created_transaction.id),
         account_id: Some(account_id),
         approval_type: HeaplessString::try_from("TransactionApproval").unwrap(),
         minimum_approvals: 1,
@@ -706,27 +706,27 @@ async fn test_transaction_with_approval_workflow() {
     
     let created_workflow = repo.create_workflow(workflow.clone()).await
         .expect("Failed to create workflow");
-    assert_eq!(created_workflow.workflow_id, workflow.workflow_id);
+    assert_eq!(created_workflow.id, workflow.id);
     
     // Test find workflow by ID
-    let found_workflow = repo.find_workflow_by_id(workflow.workflow_id).await
+    let found_workflow = repo.find_workflow_by_id(workflow.id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
-    assert_eq!(found_workflow.workflow_id, workflow.workflow_id);
+    assert_eq!(found_workflow.id, workflow.id);
     
     // Test find pending workflows
     let pending_workflows = repo.find_pending_workflows().await
         .expect("Failed to find pending workflows");
     let our_workflow = pending_workflows.iter()
-        .find(|w| w.workflow_id == workflow.workflow_id);
+        .find(|w| w.id == workflow.id);
     assert!(our_workflow.is_some());
     
     // Test update workflow status
-    repo.update_workflow_status(workflow.workflow_id, "Completed").await
+    repo.update_workflow_status(workflow.id, "Completed").await
         .expect("Failed to update workflow status");
     
     // Verify status was updated
-    let updated_workflow = repo.find_workflow_by_id(workflow.workflow_id).await
+    let updated_workflow = repo.find_workflow_by_id(workflow.id).await
         .expect("Failed to find updated workflow")
         .expect("Updated workflow not found");
     assert_eq!(updated_workflow.status, WorkflowStatusModel::Completed);
@@ -747,8 +747,8 @@ async fn test_transaction_approval_operations() {
         .expect("Failed to create transaction");
     
     let workflow = ApprovalWorkflowModel {
-        workflow_id: Uuid::new_v4(),
-        transaction_id: Some(created_transaction.transaction_id),
+        id: Uuid::new_v4(),
+        transaction_id: Some(created_transaction.id),
         account_id: Some(account_id),
         approval_type: HeaplessString::try_from("TransactionApproval").unwrap(),
         minimum_approvals: 2,
@@ -768,9 +768,9 @@ async fn test_transaction_approval_operations() {
     
     // Create transaction approval
     let approval = WorkflowTransactionApprovalModel {
-        approval_id: Uuid::new_v4(),
-        workflow_id: created_workflow.workflow_id,
-        transaction_id: created_transaction.transaction_id,
+        id: Uuid::new_v4(),
+        workflow_id: created_workflow.id,
+        transaction_id: created_transaction.id,
         approver_id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
         approval_action: HeaplessString::try_from("Approved").unwrap(),
         approved_at: Utc::now(),
@@ -782,23 +782,23 @@ async fn test_transaction_approval_operations() {
     
     let created_approval = repo.create_approval(approval.clone()).await
         .expect("Failed to create approval");
-    assert_eq!(created_approval.approval_id, approval.approval_id);
+    assert_eq!(created_approval.id, approval.id);
     
     // Test find approvals by workflow
-    let workflow_approvals = repo.find_approvals_by_workflow(created_workflow.workflow_id).await
+    let workflow_approvals = repo.find_approvals_by_workflow(created_workflow.id).await
         .expect("Failed to find approvals by workflow");
     assert_eq!(workflow_approvals.len(), 1);
-    assert_eq!(workflow_approvals[0].approval_id, approval.approval_id);
+    assert_eq!(workflow_approvals[0].id, approval.id);
     
     // Test find approvals by approver
     let approver_approvals = repo.find_approvals_by_approver(approval.approver_id).await
         .expect("Failed to find approvals by approver");
     let our_approval = approver_approvals.iter()
-        .find(|a| a.approval_id == approval.approval_id);
+        .find(|a| a.id == approval.id);
     assert!(our_approval.is_some());
     
     // Test count approvals for workflow
-    let approval_count = repo.count_approvals_for_workflow(created_workflow.workflow_id).await
+    let approval_count = repo.count_approvals_for_workflow(created_workflow.id).await
         .expect("Failed to count approvals for workflow");
     assert_eq!(approval_count, 1);
 }

@@ -7,7 +7,7 @@ use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
-    pub account_id: Uuid,
+    pub id: Uuid,
     pub product_code: HeaplessString<12>,
     pub account_type: AccountType,
     pub account_status: AccountStatus,
@@ -87,7 +87,7 @@ pub enum SigningCondition {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisbursementInstructions {
-    pub disbursement_id: Uuid,
+    pub id: Uuid,
     /// References the account holding the loan (source of funds)
     pub source_account_id: Uuid,
     pub method: DisbursementMethod,
@@ -117,7 +117,7 @@ impl Default for DisbursementInstructions {
     fn default() -> Self {
         let now = Utc::now();
         Self {
-            disbursement_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             source_account_id: Uuid::nil(),
             method: DisbursementMethod::Transfer,
             target_account: None,
@@ -158,7 +158,7 @@ pub enum DisbursementStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountHold {
-    pub hold_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub amount: Decimal,
     pub hold_type: HoldType,
@@ -265,7 +265,7 @@ pub struct HoldReleaseRequest {
 /// Batch hold processing for expired holds
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HoldExpiryJob {
-    pub job_id: Uuid,
+    pub id: Uuid,
     pub processing_date: NaiveDate,
     pub expired_holds_count: u32,
     pub total_released_amount: Decimal,
@@ -275,7 +275,7 @@ pub struct HoldExpiryJob {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusChangeRecord {
-    pub change_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub old_status: Option<AccountStatus>,
     pub new_status: AccountStatus,
@@ -352,7 +352,7 @@ mod tests {
         
         // Test conversion functions
         let mut account = Account {
-            account_id: uuid::Uuid::new_v4(),
+            id: uuid::Uuid::new_v4(),
             product_code: heapless_product,
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
@@ -455,7 +455,7 @@ mod tests {
     #[test]
     fn test_disbursement_instruction_management() {
         let mut account = Account {
-            account_id: uuid::Uuid::new_v4(),
+            id: uuid::Uuid::new_v4(),
             product_code: HeaplessString::try_from("LNST0001").unwrap(),
             account_type: AccountType::Loan,
             account_status: AccountStatus::Active,
@@ -522,7 +522,7 @@ mod tests {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountOwnership {
-    pub ownership_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub customer_id: Uuid,
     pub ownership_type: OwnershipType,
@@ -532,7 +532,7 @@ pub struct AccountOwnership {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountRelationship {
-    pub relationship_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub entity_id: Uuid,
     pub entity_type: EntityType,
@@ -544,7 +544,7 @@ pub struct AccountRelationship {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AccountMandate {
-    pub mandate_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub grantee_customer_id: Uuid,
     pub permission_type: PermissionType,
@@ -557,7 +557,7 @@ pub struct AccountMandate {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct UltimateBeneficiary {
-    pub ubo_link_id: Uuid,
+    pub id: Uuid,
     pub corporate_customer_id: Uuid,
     pub beneficiary_customer_id: Uuid,
     pub ownership_percentage: Option<Decimal>,

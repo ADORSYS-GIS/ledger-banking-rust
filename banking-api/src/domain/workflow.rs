@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountWorkflow {
-    pub workflow_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub workflow_type: WorkflowType,
     pub current_step: WorkflowStep,

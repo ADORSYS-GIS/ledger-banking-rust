@@ -94,7 +94,7 @@ impl FeeService for FeeServiceImpl {
 
             // Create fee application
             let fee_application = FeeApplication {
-                fee_application_id: Uuid::new_v4(),
+                id: Uuid::new_v4(),
                 account_id,
                 transaction_id: Some(transaction_id),
                 fee_type: FeeType::EventBased,
@@ -177,7 +177,7 @@ impl FeeService for FeeServiceImpl {
 
             // Create preview fee application (not persisted)
             let fee_application = FeeApplication {
-                fee_application_id: Uuid::new_v4(),
+                id: Uuid::new_v4(),
                 account_id,
                 transaction_id: None,
                 fee_type: FeeType::EventBased,
@@ -250,7 +250,7 @@ impl FeeService for FeeServiceImpl {
         target_categories: Vec<FeeCategory>,
     ) -> BankingResult<FeeProcessingJob> {
         let job = FeeProcessingJob {
-            job_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             job_type,
             job_name: format!("Batch Fee Processing - {processing_date:?}"),
             schedule_expression: "0 2 * * *".to_string(), // 2 AM daily
@@ -270,7 +270,7 @@ impl FeeService for FeeServiceImpl {
         let created_model = self.fee_repository.create_fee_processing_job(job_model).await?;
         let created_job = crate::mappers::FeeMapper::fee_processing_job_from_model(created_model)?;
 
-        tracing::info!("Scheduled batch fee job {} for date {}", created_job.job_id, processing_date);
+        tracing::info!("Scheduled batch fee job {} for date {}", created_job.id, processing_date);
 
         Ok(created_job)
     }
@@ -406,7 +406,7 @@ impl FeeService for FeeServiceImpl {
 
                 if fee_amount > Decimal::ZERO {
                     let fee_application = FeeApplication {
-                        fee_application_id: Uuid::new_v4(),
+                        id: Uuid::new_v4(),
                         account_id,
                         transaction_id: None,
                         fee_type: FeeType::Periodic,

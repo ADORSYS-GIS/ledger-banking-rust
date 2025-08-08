@@ -5,8 +5,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use uuid::Uuid;
 
-// Import enums from other models for consistency
-use super::customer::KycStatus;
+// Re-export enums from API domain for backward compatibility in mappers
+pub use banking_api::domain::KycStatus;
 
 // Domain-aligned enums with custom serialization
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -116,7 +116,7 @@ pub enum ComplianceStatus {
 }
 
 // Re-export KycStatus from customer model for local use
-pub use super::customer::KycStatus as ComplianceKycStatus;
+pub use banking_api::domain::KycStatus as ComplianceKycStatus;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CheckType {
@@ -215,7 +215,7 @@ pub struct KycCheckModel {
 /// KYC Record database model (legacy - kept for repository compatibility)
 #[derive(Debug, Clone)]
 pub struct KycRecordModel {
-    pub kyc_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     pub status: KycStatus,
     pub risk_assessment: HeaplessString<100>,
@@ -255,7 +255,7 @@ pub struct SanctionsMatchModel {
 /// Sanctions Screening database model (legacy - kept for repository compatibility)
 #[derive(Debug, Clone)]
 pub struct SanctionsScreeningModel {
-    pub screening_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     pub screening_date: DateTime<Utc>,
     pub screening_result: HeaplessString<50>, // Clear, Match, PotentialMatch
@@ -272,7 +272,7 @@ pub struct SanctionsScreeningModel {
 /// Compliance Alert database model - aligned with domain ComplianceAlert
 #[derive(Debug, Clone, Serialize, Deserialize)] 
 pub struct ComplianceAlertModel {
-    pub alert_id: Uuid,
+    pub id: Uuid,
     #[serde(serialize_with = "serialize_alert_type", deserialize_with = "deserialize_alert_type")]
     pub alert_type: AlertType,
     pub description: HeaplessString<500>,
@@ -286,7 +286,7 @@ pub struct ComplianceAlertModel {
 /// Extended Compliance Alert database model (for repository use)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtendedComplianceAlertModel {
-    pub alert_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Option<Uuid>,
     pub transaction_id: Option<Uuid>,
     #[serde(serialize_with = "serialize_alert_type", deserialize_with = "deserialize_alert_type")]
@@ -318,7 +318,7 @@ pub struct UboVerificationResultModel {
 /// UBO Link database model - aligned with domain UboLink
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UboLinkModel {
-    pub ubo_id: Uuid,
+    pub id: Uuid,
     pub beneficiary_customer_id: Uuid,
     pub ownership_percentage: Option<Decimal>,
     #[serde(serialize_with = "serialize_control_type", deserialize_with = "deserialize_control_type")]
@@ -333,7 +333,7 @@ pub struct UboLinkModel {
 /// Compliance Result database model
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceResultModel {
-    pub result_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     #[serde(serialize_with = "serialize_check_type", deserialize_with = "deserialize_check_type")]
     pub check_type: CheckType,
@@ -349,7 +349,7 @@ pub struct ComplianceResultModel {
 /// Compliance Risk Score database model
 #[derive(Debug, Clone)]
 pub struct ComplianceRiskScoreModel {
-    pub risk_score_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     pub risk_score: Decimal,
     pub risk_category: HeaplessString<20>, // Low, Medium, High, Critical
@@ -366,7 +366,7 @@ pub struct ComplianceRiskScoreModel {
 /// SAR Data database model - aligned with domain SarData
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SarDataModel {
-    pub sar_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     /// References ReasonAndPurpose.id for SAR reason
     pub reason_id: Uuid,
@@ -381,7 +381,7 @@ pub struct SarDataModel {
 /// Extended SAR Data database model (for repository use)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtendedSarDataModel {
-    pub sar_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     pub reason_id: Uuid,
     pub additional_details: Option<HeaplessString<500>>,
@@ -409,7 +409,7 @@ pub struct ExtendedSarDataModel {
 /// Customer Document database model (for KYC)
 #[derive(Debug, Clone)]
 pub struct ComplianceDocumentModel {
-    pub document_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     pub document_type: HeaplessString<50>,
     pub document_path: Hash,
@@ -425,7 +425,7 @@ pub struct ComplianceDocumentModel {
 /// Customer Audit Trail database model
 #[derive(Debug, Clone)]
 pub struct ComplianceCustomerAuditModel {
-    pub audit_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     pub field_name: HeaplessString<50>,
     pub old_value: Option<HeaplessString<500>>,

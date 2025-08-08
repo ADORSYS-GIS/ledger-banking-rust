@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Collateral {
-    pub collateral_id: Uuid,
+    pub id: Uuid,
     pub collateral_type: CollateralType,
     pub collateral_category: CollateralCategory,
     pub description: HeaplessString<200>,
@@ -219,7 +219,7 @@ pub enum CollateralStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollateralValuation {
-    pub valuation_id: Uuid,
+    pub id: Uuid,
     pub collateral_id: Uuid,
     pub valuation_date: NaiveDate,
     pub valuation_method: ValuationMethod,
@@ -251,7 +251,7 @@ pub enum ValuationMethod {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollateralPledge {
-    pub pledge_id: Uuid,
+    pub id: Uuid,
     pub collateral_id: Uuid,
     pub loan_account_id: Uuid,
     pub pledged_amount: Decimal,
@@ -339,7 +339,7 @@ pub enum CovenantComplianceStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollateralAlert {
-    pub alert_id: Uuid,
+    pub id: Uuid,
     pub collateral_id: Uuid,
     pub alert_type: CollateralAlertType,
     pub severity: AlertSeverity,
@@ -390,7 +390,7 @@ pub enum CollateralAlertStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollateralPortfolioSummary {
-    pub portfolio_id: Uuid,
+    pub id: Uuid,
     pub as_of_date: NaiveDate,
     pub total_collateral_count: u32,
     pub total_market_value: Decimal,
@@ -449,7 +449,7 @@ pub struct ComplianceSummary {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollateralEnforcement {
-    pub enforcement_id: Uuid,
+    pub id: Uuid,
     pub collateral_id: Uuid,
     pub loan_account_id: Uuid,
     pub enforcement_type: EnforcementType,
@@ -550,7 +550,7 @@ mod tests {
     #[test]
     fn test_ltv_calculation() {
         let collateral = Collateral {
-            collateral_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             collateral_type: CollateralType::ResidentialProperty,
             collateral_category: CollateralCategory::Immovable,
             description: HeaplessString::try_from("Test Property").unwrap(),
@@ -600,7 +600,7 @@ mod tests {
     #[test]
     fn test_available_value_calculation() {
         let collateral = Collateral {
-            collateral_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             collateral_type: CollateralType::ResidentialProperty,
             collateral_category: CollateralCategory::Immovable,
             description: HeaplessString::try_from("Test Property").unwrap(),
@@ -650,7 +650,7 @@ mod tests {
     #[test]
     fn test_valuation_due_check() {
         let collateral = Collateral {
-            collateral_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             collateral_type: CollateralType::ResidentialProperty,
             collateral_category: CollateralCategory::Immovable,
             description: HeaplessString::try_from("Test Property").unwrap(),

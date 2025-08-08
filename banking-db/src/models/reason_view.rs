@@ -27,7 +27,7 @@ pub struct ReasonViewModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountViewModel {
-    pub account_id: Uuid,
+    pub id: Uuid,
     pub product_code: HeaplessString<12>,
     #[serde(serialize_with = "serialize_account_type", deserialize_with = "deserialize_account_type")]
     pub account_type: AccountType,
@@ -51,7 +51,7 @@ pub struct AccountViewModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountHoldViewModel {
-    pub hold_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     pub amount: Decimal,
     #[serde(serialize_with = "serialize_hold_type", deserialize_with = "deserialize_hold_type")]
@@ -73,7 +73,7 @@ pub struct AccountHoldViewModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct FeeWaiverViewModel {
-    pub waiver_id: Uuid,
+    pub id: Uuid,
     pub fee_application_id: Uuid,
     pub account_id: Uuid,
     pub waived_amount: Decimal,
@@ -92,7 +92,7 @@ pub struct FeeWaiverViewModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct TransactionAuditViewModel {
-    pub audit_id: Uuid,
+    pub id: Uuid,
     pub transaction_id: Uuid,
     #[serde(serialize_with = "serialize_transaction_audit_action", deserialize_with = "deserialize_transaction_audit_action")]
     pub action_type: TransactionAuditAction,
@@ -109,7 +109,7 @@ pub struct TransactionAuditViewModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct SarDataViewModel {
-    pub sar_id: Uuid,
+    pub id: Uuid,
     pub customer_id: Uuid,
     pub supporting_transactions: Vec<Uuid>,
     pub generated_at: DateTime<Utc>,
@@ -124,7 +124,7 @@ pub struct SarDataViewModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct LoanRestructuringViewModel {
-    pub restructuring_id: Uuid,
+    pub id: Uuid,
     pub loan_account_id: Uuid,
     #[serde(serialize_with = "serialize_restructuring_type", deserialize_with = "deserialize_restructuring_type")]
     pub restructuring_type: RestructuringType,
@@ -151,7 +151,7 @@ pub struct LoanRestructuringViewModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct WorkflowApprovalViewModel {
-    pub workflow_id: Uuid,
+    pub id: Uuid,
     pub account_id: Uuid,
     #[serde(serialize_with = "serialize_workflow_type", deserialize_with = "deserialize_workflow_type")]
     pub workflow_type: WorkflowType,

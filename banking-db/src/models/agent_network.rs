@@ -125,7 +125,7 @@ pub enum CertificationStatus {
 /// Agent Network database model
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AgentNetworkModel {
-    pub network_id: Uuid,
+    pub id: Uuid,
     pub network_name: HeaplessString<100>,
     pub network_type: NetworkType,
     pub status: NetworkStatus,
@@ -143,7 +143,7 @@ pub struct AgentNetworkModel {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AgencyBranchModel {
     // === EXISTING FIELDS ===
-    pub branch_id: Uuid,
+    pub id: Uuid,
     pub network_id: Uuid,
     pub parent_branch_id: Option<Uuid>,
     pub branch_name: HeaplessString<100>,
@@ -209,7 +209,7 @@ pub struct AgencyBranchModel {
 /// Agent Terminal database model
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AgentTerminalModel {
-    pub terminal_id: Uuid,
+    pub id: Uuid,
     pub branch_id: Uuid,
     pub agent_user_id: Uuid,
     pub terminal_type: TerminalType,
@@ -229,7 +229,7 @@ pub struct AgentTerminalModel {
 /// Cash Limit Check database model
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CashLimitCheckModel {
-    pub check_id: Uuid,
+    pub id: Uuid,
     pub entity_id: Uuid,
     pub entity_type: CashLimitEntityType,
     pub requested_amount: Decimal,

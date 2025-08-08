@@ -98,7 +98,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
             cumulative_interest += interest_component;
 
             let entry = AmortizationEntry {
-                entry_id: Uuid::new_v4(),
+                id: Uuid::new_v4(),
                 schedule_id: Uuid::new_v4(), // Will be set when schedule is created
                 installment_number: i,
                 due_date: current_date,
@@ -141,7 +141,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
         let total_payments = request.principal_amount + total_interest;
 
         let schedule = AmortizationSchedule {
-            schedule_id,
+            id: schedule_id,
             loan_account_id: request.loan_account_id,
             original_principal: request.principal_amount,
             interest_rate: request.annual_interest_rate,
@@ -260,7 +260,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
 
         // Create loan payment record
         let payment = LoanPayment {
-            payment_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             loan_account_id,
             payment_date,
             payment_amount,
@@ -340,7 +340,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
         let excess_amount = remaining_amount;
 
         Ok(PaymentAllocation {
-            allocation_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             payment_id: Uuid::new_v4(), // Will be set when payment is created
             penalty_interest_payment,
             overdue_interest_payment,
@@ -529,7 +529,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
             existing
         } else {
             LoanDelinquency {
-                delinquency_id: Uuid::new_v4(),
+                id: Uuid::new_v4(),
                 loan_account_id,
                 delinquency_start_date: assessment_date,
                 current_dpd: dpd,
@@ -626,7 +626,7 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
         loan_filter: Option<Vec<Uuid>>,
     ) -> BankingResult<LoanDelinquencyJob> {
         let job = LoanDelinquencyJob {
-            job_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             processing_date,
             loans_processed: 0,
             new_delinquent_loans: 0,
@@ -678,8 +678,8 @@ impl<A: AccountRepository + Send + Sync, T: TransactionRepository + Send + Sync>
             })?;
 
         let action = CollectionAction {
-            action_id: Uuid::new_v4(),
-            delinquency_id: delinquency.delinquency_id,
+            id: Uuid::new_v4(),
+            delinquency_id: delinquency.id,
             loan_account_id: request.loan_account_id,
             action_type: request.action_type,
             action_date: Utc::now().date_naive(),

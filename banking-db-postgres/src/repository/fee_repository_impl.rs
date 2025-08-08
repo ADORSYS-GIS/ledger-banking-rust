@@ -32,7 +32,7 @@ impl FeeRepositoryImpl {
 impl TryFromRow<sqlx::postgres::PgRow> for FeeApplicationModel {
     fn try_from_row(row: &sqlx::postgres::PgRow) -> BankingResult<Self> {
         Ok(FeeApplicationModel {
-            fee_application_id: row.get("fee_application_id"),
+            id: row.get("id"),
             account_id: row.get("account_id"),
             transaction_id: row.get("transaction_id"),
             fee_type: row.get::<String, _>("fee_type").parse().map_err(|_| 
@@ -107,7 +107,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for FeeApplicationModel {
 impl TryFromRow<sqlx::postgres::PgRow> for FeeWaiverModel {
     fn try_from_row(row: &sqlx::postgres::PgRow) -> BankingResult<Self> {
         Ok(FeeWaiverModel {
-            waiver_id: row.get("waiver_id"),
+            id: row.get("id"),
             fee_application_id: row.get("fee_application_id"),
             account_id: row.get("account_id"),
             waived_amount: row.get("waived_amount"),
@@ -126,7 +126,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for FeeWaiverModel {
 impl TryFromRow<sqlx::postgres::PgRow> for FeeProcessingJobModel {
     fn try_from_row(row: &sqlx::postgres::PgRow) -> BankingResult<Self> {
         Ok(FeeProcessingJobModel {
-            job_id: row.get("job_id"),
+            id: row.get("id"),
             job_type: row.get::<String, _>("job_type").parse().map_err(|_| 
                 BankingError::ValidationError {
                     field: "job_type".to_string(),
@@ -175,19 +175,19 @@ impl FeeRepository for FeeRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO fee_applications (
-                fee_application_id, account_id, transaction_id, fee_type, fee_category,
+                id, account_id, transaction_id, fee_type, fee_category,
                 product_code, fee_code, description, amount, currency, calculation_method,
                 calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                 value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-            RETURNING fee_application_id, account_id, transaction_id, fee_type, fee_category,
+            RETURNING id, account_id, transaction_id, fee_type, fee_category,
                      product_code, fee_code, description, amount, currency, calculation_method,
                      calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                      value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
             "#
         )
-        .bind(fee_application.fee_application_id)
+        .bind(fee_application.id)
         .bind(fee_application.account_id)
         .bind(fee_application.transaction_id)
         .bind(fee_application.fee_type.to_string())
@@ -228,14 +228,14 @@ impl FeeRepository for FeeRepositoryImpl {
                 trigger_event = $14, status = $15, applied_at = $16, value_date = $17,
                 reversal_deadline = $18, waived = $19, waived_by = $20, waived_reason_id = $21,
                 applied_by = $22
-            WHERE fee_application_id = $1
-            RETURNING fee_application_id, account_id, transaction_id, fee_type, fee_category,
+            WHERE id = $1
+            RETURNING id, account_id, transaction_id, fee_type, fee_category,
                      product_code, fee_code, description, amount, currency, calculation_method,
                      calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                      value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
             "#
         )
-        .bind(fee_application.fee_application_id)
+        .bind(fee_application.id)
         .bind(fee_application.account_id)
         .bind(fee_application.transaction_id)
         .bind(fee_application.fee_type.to_string())
@@ -265,12 +265,12 @@ impl FeeRepository for FeeRepositoryImpl {
     
     async fn get_fee_application_by_id(
         &self,
-        fee_application_id: Uuid,
+        id: Uuid,
     ) -> BankingResult<Option<FeeApplicationModel>> {
         let result = sqlx::query(
-            "SELECT * FROM fee_applications WHERE fee_application_id = $1"
+            "SELECT * FROM fee_applications WHERE id = $1"
         )
-        .bind(fee_application_id)
+        .bind(id)
         .fetch_optional(&self.pool)
         .await?;
         
@@ -402,19 +402,19 @@ impl FeeRepository for FeeRepositoryImpl {
             let result = sqlx::query(
                 r#"
                 INSERT INTO fee_applications (
-                    fee_application_id, account_id, transaction_id, fee_type, fee_category,
+                    id, account_id, transaction_id, fee_type, fee_category,
                     product_code, fee_code, description, amount, currency, calculation_method,
                     calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                     value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-                RETURNING fee_application_id, account_id, transaction_id, fee_type, fee_category,
+                RETURNING id, account_id, transaction_id, fee_type, fee_category,
                          product_code, fee_code, description, amount, currency, calculation_method,
                          calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                          value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
                 "#
             )
-            .bind(app.fee_application_id)
+            .bind(app.id)
             .bind(app.account_id)
             .bind(app.transaction_id)
             .bind(app.fee_type.to_string())
@@ -458,15 +458,15 @@ impl FeeRepository for FeeRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO fee_waivers (
-                waiver_id, fee_application_id, account_id, waived_amount, reason_id,
+                id, fee_application_id, account_id, waived_amount, reason_id,
                 additional_details, waived_by, waived_at, approval_required, approved_by, approved_at
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            RETURNING waiver_id, fee_application_id, account_id, waived_amount, reason_id,
+            RETURNING id, fee_application_id, account_id, waived_amount, reason_id,
                      additional_details, waived_by, waived_at, approval_required, approved_by, approved_at
             "#
         )
-        .bind(fee_waiver.waiver_id)
+        .bind(fee_waiver.id)
         .bind(fee_waiver.fee_application_id)
         .bind(fee_waiver.account_id)
         .bind(fee_waiver.waived_amount)
@@ -485,7 +485,7 @@ impl FeeRepository for FeeRepositoryImpl {
     
     async fn update_fee_waiver_approval(
         &self,
-        waiver_id: Uuid,
+        id: Uuid,
         approved_by: String,
         approved_at: DateTime<Utc>,
     ) -> BankingResult<FeeWaiverModel> {
@@ -498,12 +498,12 @@ impl FeeRepository for FeeRepositoryImpl {
             r#"
             UPDATE fee_waivers SET
                 approved_by = $2, approved_at = $3
-            WHERE waiver_id = $1
-            RETURNING waiver_id, fee_application_id, account_id, waived_amount, reason_id,
+            WHERE id = $1
+            RETURNING id, fee_application_id, account_id, waived_amount, reason_id,
                      additional_details, waived_by, waived_at, approval_required, approved_by, approved_at
             "#
         )
-        .bind(waiver_id)
+        .bind(id)
         .bind(approved_by_uuid)
         .bind(approved_at)
         .fetch_one(&self.pool)
@@ -602,7 +602,7 @@ impl FeeRepository for FeeRepositoryImpl {
     
     async fn get_fee_processing_job_by_id(
         &self,
-        _job_id: Uuid,
+        _id: Uuid,
     ) -> BankingResult<Option<FeeProcessingJobModel>> {
         Err(BankingError::NotImplemented("Fee processing jobs table not implemented in schema".to_string()))
     }
@@ -625,7 +625,7 @@ impl FeeRepository for FeeRepositoryImpl {
         limit: i32,
     ) -> BankingResult<Vec<Uuid>> {
         let mut query = String::from(
-            "SELECT account_id FROM accounts WHERE account_status = 'Active'"
+            "SELECT id FROM accounts WHERE account_status = 'Active'"
         );
         let mut param_count = 0;
         
@@ -637,7 +637,7 @@ impl FeeRepository for FeeRepositoryImpl {
         }
         
         param_count += 1;
-        query.push_str(&format!(" ORDER BY account_id LIMIT ${param_count}"));
+        query.push_str(&format!(" ORDER BY id LIMIT ${param_count}"));
         param_count += 1;
         query.push_str(&format!(" OFFSET ${param_count}"));
         
@@ -657,7 +657,7 @@ impl FeeRepository for FeeRepositoryImpl {
         
         let mut account_ids = Vec::new();
         for row in rows {
-            account_ids.push(row.get("account_id"));
+            account_ids.push(row.get("id"));
         }
         
         Ok(account_ids)
@@ -797,7 +797,7 @@ impl FeeRepository for FeeRepositoryImpl {
                 COALESCE(AVG(CASE WHEN fa.status = 'Applied' AND fa.waived = FALSE THEN fa.amount END), 0) as avg_fee_amount,
                 a.product_code
             FROM fee_applications fa
-            JOIN accounts a ON fa.account_id = a.account_id
+            JOIN accounts a ON fa.account_id = a.id
             WHERE fa.value_date >= $1 AND fa.value_date <= $2
             GROUP BY fa.account_id, a.product_code
             ORDER BY total_fees DESC
@@ -881,7 +881,7 @@ impl FeeRepository for FeeRepositoryImpl {
     
     async fn reverse_fee_application(
         &self,
-        fee_application_id: Uuid,
+        id: Uuid,
         reversal_reason: String,
         reversed_by: String,
         _reversed_at: DateTime<Utc>,
@@ -901,14 +901,14 @@ impl FeeRepository for FeeRepositoryImpl {
                     LIMIT 1
                 ),
                 applied_by = $3
-            WHERE fee_application_id = $1 AND status != 'Reversed'
-            RETURNING fee_application_id, account_id, transaction_id, fee_type, fee_category,
+            WHERE id = $1 AND status != 'Reversed'
+            RETURNING id, account_id, transaction_id, fee_type, fee_category,
                      product_code, fee_code, description, amount, currency, calculation_method,
                      calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                      value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
             "#
         )
-        .bind(fee_application_id)
+        .bind(id)
         .bind(reversal_reason)
         .bind(reversed_by_uuid)
         .fetch_one(&self.pool)
@@ -920,7 +920,7 @@ impl FeeRepository for FeeRepositoryImpl {
     async fn bulk_reverse_account_fees(
         &self,
         account_id: Uuid,
-        fee_application_ids: Vec<Uuid>,
+        ids: Vec<Uuid>,
         reversal_reason: String,
         reversed_by: String,
     ) -> BankingResult<Vec<FeeApplicationModel>> {
@@ -933,7 +933,7 @@ impl FeeRepository for FeeRepositoryImpl {
         
         let mut reversed_applications = Vec::new();
         
-        for fee_id in fee_application_ids {
+        for fee_id in ids {
             let result = sqlx::query(
                 r#"
                 UPDATE fee_applications SET
@@ -944,8 +944,8 @@ impl FeeRepository for FeeRepositoryImpl {
                         LIMIT 1
                     ),
                     applied_by = $4
-                WHERE fee_application_id = $1 AND account_id = $2 AND status != 'Reversed'
-                RETURNING fee_application_id, account_id, transaction_id, fee_type, fee_category,
+                WHERE id = $1 AND account_id = $2 AND status != 'Reversed'
+                RETURNING id, account_id, transaction_id, fee_type, fee_category,
                          product_code, fee_code, description, amount, currency, calculation_method,
                          calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                          value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at

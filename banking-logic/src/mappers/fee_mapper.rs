@@ -11,8 +11,8 @@ impl FeeMapper {
     /// Map from domain FeeApplication to database FeeApplicationModel
     pub fn fee_application_to_model(fee: FeeApplication) -> FeeApplicationModel {
         FeeApplicationModel {
-            fee_application_id: fee.fee_application_id,
-            account_id: fee.account_id,
+            id: fee.id,
+            account_id: fee.id,
             transaction_id: fee.transaction_id,
             fee_type: fee.fee_type,
             fee_category: fee.fee_category,
@@ -40,8 +40,8 @@ impl FeeMapper {
     /// Map from database FeeApplicationModel to domain FeeApplication
     pub fn fee_application_from_model(model: FeeApplicationModel) -> banking_api::BankingResult<FeeApplication> {
         Ok(FeeApplication {
-            fee_application_id: model.fee_application_id,
-            account_id: model.account_id,
+            id: model.id,
+            account_id: model.id,
             transaction_id: model.transaction_id,
             fee_type: model.fee_type,
             fee_category: model.fee_category,
@@ -69,9 +69,9 @@ impl FeeMapper {
     /// Map from domain FeeWaiver to database FeeWaiverModel
     pub fn fee_waiver_to_model(waiver: FeeWaiver) -> FeeWaiverModel {
         FeeWaiverModel {
-            waiver_id: waiver.waiver_id,
+            id: waiver.id,
             fee_application_id: waiver.fee_application_id,
-            account_id: waiver.account_id,
+            account_id: waiver.id,
             waived_amount: waiver.waived_amount,
             reason_id: waiver.reason_id,
             additional_details: waiver.additional_details,
@@ -86,9 +86,9 @@ impl FeeMapper {
     /// Map from database FeeWaiverModel to domain FeeWaiver
     pub fn fee_waiver_from_model(model: FeeWaiverModel) -> FeeWaiver {
         FeeWaiver {
-            waiver_id: model.waiver_id,
+            id: model.id,
             fee_application_id: model.fee_application_id,
-            account_id: model.account_id,
+            account_id: model.id,
             waived_amount: model.waived_amount,
             reason_id: model.reason_id,
             additional_details: model.additional_details,
@@ -103,7 +103,7 @@ impl FeeMapper {
     /// Map from domain FeeProcessingJob to database FeeProcessingJobModel
     pub fn fee_processing_job_to_model(job: FeeProcessingJob) -> FeeProcessingJobModel {
         FeeProcessingJobModel {
-            job_id: job.job_id,
+            id: job.id,
             job_type: job.job_type,
             job_name: job.job_name,
             schedule_expression: job.schedule_expression,
@@ -131,7 +131,7 @@ impl FeeMapper {
             .unwrap_or_default();
 
         Ok(FeeProcessingJob {
-            job_id: model.job_id,
+            id: model.id,
             job_type: model.job_type,
             job_name: model.job_name,
             schedule_expression: model.schedule_expression,

@@ -17,7 +17,7 @@ mod stack_optimization_tests {
     fn test_account_serialization_with_fixed_arrays() {
         // Create account with optimized field types
         let account = Account {
-            account_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             product_code: HeaplessString::try_from("SAVP0001").unwrap(),
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
@@ -80,7 +80,7 @@ mod stack_optimization_tests {
     #[test]
     fn test_transaction_serialization_with_heapless_strings() {
         let transaction = Transaction {
-            transaction_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             account_id: Uuid::new_v4(),
             transaction_code: HeaplessString::try_from("DEBIT1").unwrap(),
             transaction_type: TransactionType::Debit,

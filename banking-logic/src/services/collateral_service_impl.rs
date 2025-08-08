@@ -164,7 +164,7 @@ impl CollateralService for CollateralServiceImpl {
         let valuation_data = serde_json::to_string(&valuation).unwrap_or_default();
         self.collateral_repository.save_valuation(valuation.collateral_id, valuation_data).await?;
         
-        Ok(valuation.valuation_id)
+        Ok(valuation.id)
     }
     
     async fn get_valuations_by_collateral(&self, collateral_id: Uuid) -> Result<Vec<CollateralValuation>, String> {
@@ -210,7 +210,7 @@ impl CollateralService for CollateralServiceImpl {
         let pledge_data = serde_json::to_string(&pledge).unwrap_or_default();
         self.collateral_repository.save_pledge(pledge.collateral_id, pledge_data).await?;
         
-        Ok(pledge.pledge_id)
+        Ok(pledge.id)
     }
     
     async fn get_pledges_by_collateral(&self, collateral_id: Uuid) -> Result<Vec<CollateralPledge>, String> {
@@ -295,7 +295,7 @@ impl CollateralService for CollateralServiceImpl {
         let alert_data = serde_json::to_string(&alert).unwrap_or_default();
         self.collateral_repository.save_alert(alert.collateral_id, alert_data).await?;
         
-        Ok(alert.alert_id)
+        Ok(alert.id)
     }
     
     async fn get_alerts_by_collateral(&self, collateral_id: Uuid) -> Result<Vec<CollateralAlert>, String> {
@@ -352,7 +352,7 @@ impl CollateralService for CollateralServiceImpl {
         // For now, use JSON serialization approach until mapper is implemented
         let _enforcement_data = serde_json::to_string(&enforcement).unwrap_or_default();
         self.collateral_repository.save_enforcement(&banking_db::models::CollateralEnforcementModel {
-            enforcement_id: enforcement.enforcement_id,
+            id: enforcement.id,
             collateral_id: enforcement.collateral_id,
             loan_account_id: enforcement.loan_account_id,
             enforcement_type: banking_db::models::EnforcementType::PrivateSale,
@@ -375,7 +375,7 @@ impl CollateralService for CollateralServiceImpl {
             updated_by: enforcement.updated_by,
         }).await?;
         
-        Ok(enforcement.enforcement_id)
+        Ok(enforcement.id)
     }
     
     async fn get_enforcements_by_collateral(&self, collateral_id: Uuid) -> Result<Vec<CollateralEnforcement>, String> {

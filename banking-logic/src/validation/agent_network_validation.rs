@@ -24,7 +24,7 @@ impl AgentNetworkValidation {
         if network.status != NetworkStatus::Active {
             return Err(BankingError::AgentNetworkEntityInactive {
                 entity_type: "Network".to_string(),
-                entity_id: network.network_id,
+                entity_id: network.id,
                 status: format!("{:?}", network.status),
             });
         }
@@ -60,7 +60,7 @@ impl AgentNetworkValidation {
             // This could be a warning in a real system, but for now we allow it
             log::warn!(
                 "Branch {} daily limit ({}) is unusually high compared to transaction limit ({})",
-                branch.branch_id,
+                branch.id,
                 branch.daily_transaction_limit,
                 branch.per_transaction_limit
             );
@@ -78,7 +78,7 @@ impl AgentNetworkValidation {
         if branch.status != BranchStatus::Active {
             return Err(BankingError::AgentNetworkEntityInactive {
                 entity_type: "Branch".to_string(),
-                entity_id: branch.branch_id,
+                entity_id: branch.id,
                 status: format!("{:?}", branch.status),
             });
         }
@@ -125,7 +125,7 @@ impl AgentNetworkValidation {
         if terminal.status != TerminalStatus::Active {
             validation_errors.push(format!(
                 "Terminal {} is not active (status: {:?})", 
-                terminal.terminal_id, terminal.status
+                terminal.id, terminal.status
             ));
         }
 
@@ -140,7 +140,7 @@ impl AgentNetworkValidation {
         if branch.status != BranchStatus::Active {
             validation_errors.push(format!(
                 "Branch {} is not active (status: {:?})", 
-                branch.branch_id, branch.status
+                branch.id, branch.status
             ));
         }
 
@@ -155,7 +155,7 @@ impl AgentNetworkValidation {
         if network.status != NetworkStatus::Active {
             validation_errors.push(format!(
                 "Network {} is not active (status: {:?})", 
-                network.network_id, network.status
+                network.id, network.status
             ));
         }
 
@@ -371,7 +371,7 @@ mod tests {
     #[test]
     fn test_branch_limit_validation_success() {
         let network = AgentNetworkModel {
-            network_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             network_name: HeaplessString::try_from("Test Network").unwrap(),
             network_type: NetworkType::Internal,
             status: NetworkStatus::Active,
@@ -385,8 +385,8 @@ mod tests {
         };
 
         let branch = AgencyBranchModel {
-            branch_id: Uuid::new_v4(),
-            network_id: network.network_id,
+            id: Uuid::new_v4(),
+            network_id: network.id,
             parent_branch_id: None,
             branch_name: HeaplessString::try_from("Test Branch").unwrap(),
             branch_code: HeaplessString::try_from("BR001").unwrap(),
@@ -436,7 +436,7 @@ mod tests {
     #[test]
     fn test_branch_limit_validation_failure() {
         let network = AgentNetworkModel {
-            network_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             network_name: HeaplessString::try_from("Test Network").unwrap(),
             network_type: NetworkType::Internal,
             status: NetworkStatus::Active,
@@ -450,8 +450,8 @@ mod tests {
         };
 
         let branch = AgencyBranchModel {
-            branch_id: Uuid::new_v4(),
-            network_id: network.network_id,
+            id: Uuid::new_v4(),
+            network_id: network.id,
             parent_branch_id: None,
             branch_name: HeaplessString::try_from("Test Branch").unwrap(),
             branch_code: HeaplessString::try_from("BR001").unwrap(),

@@ -16,7 +16,7 @@ use banking_db::models::{
     RiskLevel as DbRiskLevel, Severity as DbSeverity,
     compliance::AlertType as DbAlertType,
     AlertStatus as DbAlertStatus, SarStatus as DbSarStatus, KycStatus as DbKycStatus,
-    ControlType as DbControlType, VerificationStatus as DbVerificationStatus,
+    compliance::{ControlType as DbControlType, VerificationStatus as DbVerificationStatus},
     ComplianceStatus as DbComplianceStatus
 };
 use heapless::String as HeaplessString;
@@ -77,7 +77,7 @@ impl ComplianceMapper {
     /// Map from domain ComplianceAlert to database ComplianceAlertModel
     pub fn compliance_alert_to_model(alert: ComplianceAlert) -> ComplianceAlertModel {
         ComplianceAlertModel {
-            alert_id: alert.alert_id,
+            id: alert.id,
             alert_type: Self::domain_alert_type_to_db_alert_type(alert.alert_type),
             description: alert.description,
             severity: Self::domain_severity_to_db_severity(alert.severity),
@@ -89,7 +89,7 @@ impl ComplianceMapper {
     /// Map from domain SarData to database SarDataModel
     pub fn sar_data_to_model(sar_data: SarData) -> SarDataModel {
         SarDataModel {
-            sar_id: sar_data.sar_id,
+            id: sar_data.id,
             customer_id: sar_data.customer_id,
             reason_id: sar_data.reason_id,
             additional_details: sar_data.additional_details,
@@ -114,7 +114,7 @@ impl ComplianceMapper {
     /// Map from domain UboLink to database UboLinkModel
     pub fn ubo_link_to_model(ubo_link: UboLink) -> UboLinkModel {
         UboLinkModel {
-            ubo_id: ubo_link.ubo_id,
+            id: ubo_link.id,
             beneficiary_customer_id: ubo_link.beneficiary_customer_id,
             ownership_percentage: ubo_link.ownership_percentage,
             control_type: Self::domain_control_type_to_db_control_type(ubo_link.control_type),
@@ -150,7 +150,7 @@ impl ComplianceMapper {
     /// Legacy compatibility - Map from domain KycResult to database KycRecordModel 
     pub fn kyc_result_to_record_model(kyc_result: KycResult) -> KycRecordModel {
         KycRecordModel {
-            kyc_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             customer_id: kyc_result.customer_id,
             status: Self::domain_kyc_status_to_db_kyc_status(kyc_result.status),
             risk_assessment: HeaplessString::try_from("Standard").unwrap_or_default(),
@@ -169,7 +169,7 @@ impl ComplianceMapper {
     /// Legacy compatibility - Map from domain ScreeningResult to database SanctionsScreeningModel
     pub fn screening_result_to_screening_model(screening_result: ScreeningResult) -> SanctionsScreeningModel {
         SanctionsScreeningModel {
-            screening_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             customer_id: screening_result.customer_id,
             screening_date: screening_result.screened_at,
             screening_result: Self::screening_type_to_heapless_string(screening_result.screening_type),
@@ -339,7 +339,7 @@ impl ComplianceMapper {
     /// Map domain ComplianceResult to database ComplianceResultModel
     pub fn compliance_result_to_model(result: banking_api::domain::compliance::ComplianceResult) -> ComplianceResultModel {
         ComplianceResultModel {
-            result_id: result.result_id,
+            id: result.id,
             account_id: result.account_id,
             check_type: Self::domain_check_type_to_db_check_type(result.check_type),
             status: Self::domain_compliance_status_to_db_compliance_status(result.status),

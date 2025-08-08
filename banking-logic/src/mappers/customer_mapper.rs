@@ -12,7 +12,7 @@ impl CustomerMapper {
     /// Map from domain Customer to database CustomerModel
     pub fn to_model(customer: Customer) -> CustomerModel {
         CustomerModel {
-            customer_id: customer.customer_id,
+            id: customer.id,
             customer_type: Self::customer_type_to_db(customer.customer_type),
             full_name: customer.full_name,
             id_type: Self::identity_type_to_db(customer.id_type),
@@ -28,7 +28,7 @@ impl CustomerMapper {
     /// Map from database CustomerModel to domain Customer
     pub fn from_model(model: CustomerModel) -> banking_api::BankingResult<Customer> {
         Ok(Customer {
-            customer_id: model.customer_id,
+            id: model.id,
             customer_type: Self::db_to_customer_type(model.customer_type),
             full_name: model.full_name,
             id_type: Self::db_to_identity_type(model.id_type),

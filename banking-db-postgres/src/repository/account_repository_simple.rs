@@ -38,7 +38,7 @@ impl AccountRepository for SimpleAccountRepositoryImpl {
     async fn find_by_id(&self, account_id: Uuid) -> BankingResult<Option<AccountModel>> {
         // Use basic query without enum handling
         let result = sqlx::query!(
-            "SELECT account_id FROM accounts WHERE account_id = $1",
+            "SELECT id FROM accounts WHERE id = $1",
             account_id
         )
         .fetch_optional(&self.pool)
@@ -199,7 +199,7 @@ impl AccountRepository for SimpleAccountRepositoryImpl {
     // Utility Operations
     async fn exists(&self, account_id: Uuid) -> BankingResult<bool> {
         let result = sqlx::query!(
-            "SELECT EXISTS(SELECT 1 FROM accounts WHERE account_id = $1)",
+            "SELECT EXISTS(SELECT 1 FROM accounts WHERE id = $1)",
             account_id
         )
         .fetch_one(&self.pool)
@@ -368,7 +368,7 @@ impl SimpleAccountRepositoryImpl {
         use heapless::String as HeaplessString;
         
         AccountModel {
-            account_id,
+            id: account_id,
             product_code: HeaplessString::try_from("SAV01").unwrap(),
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,

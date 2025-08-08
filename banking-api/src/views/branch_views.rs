@@ -50,7 +50,7 @@ impl BranchSummary {
     /// For full functionality, additional data would need to be fetched from referenced entities
     pub fn from_branch(branch: &AgencyBranch, _current_time: DateTime<Utc>) -> Self {
         Self {
-            branch_id: branch.branch_id,
+            branch_id: branch.id,
             branch_name: branch.branch_name.to_string(),
             branch_code: branch.branch_code.to_string(),
             branch_type: branch.branch_type,
@@ -179,7 +179,7 @@ impl BranchDetailView {
         };
 
         Self {
-            branch_id: branch.branch_id,
+            branch_id: branch.id,
             network_id: branch.network_id,
             parent_branch_id: branch.parent_branch_id,
             branch_name: branch.branch_name.to_string(),

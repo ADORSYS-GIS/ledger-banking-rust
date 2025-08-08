@@ -103,7 +103,7 @@ impl InterestService for InterestServiceImpl {
 
         // Create interest credit transaction
         let interest_transaction = Transaction {
-            transaction_id: Uuid::new_v4(),
+            id: Uuid::new_v4(),
             account_id,
             transaction_code: HeaplessString::try_from("INT_POST").map_err(|_| BankingError::ValidationError {
                 field: "transaction_code".to_string(),
@@ -397,14 +397,14 @@ impl InterestServiceImpl {
     async fn calculate_historical_daily_interest(&self, account: &banking_api::domain::Account, _date: NaiveDate) -> BankingResult<Decimal> {
         // In production, this would get the balance as of the specific date
         // For now, use current balance
-        self.calculate_daily_interest(account.account_id).await
+        self.calculate_daily_interest(account.id).await
     }
 
     /// Generate reference number for interest transactions
     async fn generate_interest_reference(&self, account: &banking_api::domain::Account, date: NaiveDate) -> BankingResult<String> {
         Ok(format!(
             "INT_{}_{}",
-            account.account_id.to_string().replace('-', "")[..8].to_uppercase(),
+            account.id.to_string().replace('-', "")[..8].to_uppercase(),
             date.format("%Y%m%d")
         ))
     }
@@ -688,13 +688,13 @@ mod tests {
         async fn create_workflow(&self, workflow: banking_db::models::ApprovalWorkflowModel) -> BankingResult<banking_db::models::ApprovalWorkflowModel> {
             Ok(workflow)
         }
-        async fn find_workflow_by_id(&self, _workflow_id: Uuid) -> BankingResult<Option<banking_db::models::ApprovalWorkflowModel>> {
+        async fn find_workflow_by_id(&self, _id: Uuid) -> BankingResult<Option<banking_db::models::ApprovalWorkflowModel>> {
             Ok(None)
         }
         async fn find_workflow_by_transaction(&self, _transaction_id: Uuid) -> BankingResult<Option<banking_db::models::ApprovalWorkflowModel>> {
             Ok(None)
         }
-        async fn update_workflow_status(&self, _workflow_id: Uuid, _status: &str) -> BankingResult<()> {
+        async fn update_workflow_status(&self, _id: Uuid, _status: &str) -> BankingResult<()> {
             Ok(())
         }
         async fn find_pending_workflows(&self) -> BankingResult<Vec<banking_db::models::ApprovalWorkflowModel>> {
@@ -706,13 +706,13 @@ mod tests {
         async fn create_approval(&self, approval: banking_db::models::workflow::WorkflowTransactionApprovalModel) -> BankingResult<banking_db::models::workflow::WorkflowTransactionApprovalModel> {
             Ok(approval)
         }
-        async fn find_approvals_by_workflow(&self, _workflow_id: Uuid) -> BankingResult<Vec<banking_db::models::workflow::WorkflowTransactionApprovalModel>> {
+        async fn find_approvals_by_workflow(&self, _id: Uuid) -> BankingResult<Vec<banking_db::models::workflow::WorkflowTransactionApprovalModel>> {
             Ok(Vec::new())
         }
         async fn find_approvals_by_approver(&self, _approver_id: Uuid) -> BankingResult<Vec<banking_db::models::workflow::WorkflowTransactionApprovalModel>> {
             Ok(Vec::new())
         }
-        async fn count_approvals_for_workflow(&self, _workflow_id: Uuid) -> BankingResult<i64> {
+        async fn count_approvals_for_workflow(&self, _id: Uuid) -> BankingResult<i64> {
             Ok(0)
         }
         async fn exists(&self, _transaction_id: Uuid) -> BankingResult<bool> {

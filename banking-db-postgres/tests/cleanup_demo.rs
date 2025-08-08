@@ -15,7 +15,7 @@ use sqlx;
 /// Create a test workflow with provided IDs
 fn create_workflow_for_test(workflow_id: Uuid, account_id: Uuid, person_id: Uuid) -> AccountWorkflowModel {
     AccountWorkflowModel {
-        workflow_id,
+        id: workflow_id,
         account_id,
         workflow_type: WorkflowTypeModel::AccountOpening,
         current_step: WorkflowStepModel::InitiateRequest,
@@ -87,7 +87,7 @@ async fn test_workflow_crud_basic() {
     
     // Verify both person and account exist
     let person_exists: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM persons WHERE person_id = $1"
+        "SELECT COUNT(*) FROM persons WHERE id = $1"
     )
     .bind(person_id)
     .fetch_one(&pool)
@@ -95,7 +95,7 @@ async fn test_workflow_crud_basic() {
     .expect("Failed to check person existence");
     
     let account_exists: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM accounts WHERE account_id = $1"
+        "SELECT COUNT(*) FROM accounts WHERE id = $1"
     )
     .bind(account_id)
     .fetch_one(&pool)
@@ -113,14 +113,14 @@ async fn test_workflow_crud_basic() {
     // CREATE
     let created_workflow = repo.create_workflow(&workflow).await
         .expect("Failed to create workflow");
-    assert_eq!(created_workflow.workflow_id, workflow.workflow_id);
+    assert_eq!(created_workflow.id, workflow.id);
     assert_eq!(created_workflow.workflow_type, workflow.workflow_type);
     
     // READ
     let found_workflow = repo.find_workflow_by_id(workflow_id).await
         .expect("Failed to find workflow")
         .expect("Workflow not found");
-    assert_eq!(found_workflow.workflow_id, workflow_id);
+    assert_eq!(found_workflow.id, workflow_id);
     
     // UPDATE - Use status update instead of complete workflow
     repo.update_workflow_status(workflow_id, "Completed", "Test completion").await
