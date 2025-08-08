@@ -482,6 +482,104 @@ CREATE INDEX idx_reason_sar ON reason_and_purpose(requires_sar) WHERE requires_s
 CREATE INDEX idx_reason_category_context ON reason_and_purpose(category, context) WHERE is_active = TRUE;
 
 -- =============================================================================
+-- ACCOUNT HOLDS - Must be defined before accounts table due to FK reference
+-- =============================================================================
+
+-- Account holds table - temporary restrictions on account balances
+CREATE TABLE account_holds (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL, -- FK to accounts(id) - added after accounts table creation
+    amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
+    hold_type hold_type NOT NULL,
+    reason_id UUID NOT NULL REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for hold reason
+    additional_details VARCHAR(200), -- Additional context beyond the standard reason
+    placed_by_person_id UUID NOT NULL REFERENCES persons(id),
+    placed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE,
+    status hold_status NOT NULL DEFAULT 'Active',
+    released_at TIMESTAMP WITH TIME ZONE,
+    released_by_person_id UUID REFERENCES persons(id),
+    priority hold_priority NOT NULL DEFAULT 'Medium',
+    source_reference VARCHAR(100), -- External reference for judicial holds, etc.
+    automatic_release BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_hold_release_consistency CHECK (
+        (status NOT IN ('Released', 'PartiallyReleased') AND released_at IS NULL) OR
+        (status IN ('Released', 'PartiallyReleased') AND released_at IS NOT NULL AND released_by_person_id IS NOT NULL)
+    ),
+    CONSTRAINT ck_hold_expiry_consistency CHECK (
+        (automatic_release = FALSE AND expires_at IS NULL) OR
+        (automatic_release = TRUE AND expires_at IS NOT NULL)
+    )
+);
+
+-- Account ownership table - ownership records for accounts
+CREATE TABLE account_ownership (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL, -- FK to accounts(id) - added after accounts table creation
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    ownership_type ownership_type NOT NULL,
+    ownership_percentage DECIMAL(5,2) DEFAULT 100.00 CHECK (ownership_percentage > 0 AND ownership_percentage <= 100),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT uk_account_primary_owner UNIQUE (account_id, customer_id)
+);
+
+-- Account relationships for servicing and internal bank operations
+CREATE TABLE account_relationships (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL, -- FK to accounts(id) - added after accounts table creation
+    person_id UUID NOT NULL, -- Could be employee, department, or external entity
+    entity_type entity_type NOT NULL,
+    relationship_type relationship_type NOT NULL,
+    status relationship_status NOT NULL DEFAULT 'Active',
+    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    end_date DATE,
+    
+    CONSTRAINT ck_relationship_dates CHECK (end_date IS NULL OR end_date >= start_date)
+);
+
+-- Account mandates for operational permissions
+CREATE TABLE account_mandates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL, -- FK to accounts(id) - added after accounts table creation
+    grantee_customer_id UUID NOT NULL REFERENCES customers(id), -- References external person or customer
+    permission_type permission_type NOT NULL,
+    transaction_limit DECIMAL(15,2),
+    approver01_person_id UUID REFERENCES persons(id),
+    approver02_person_id UUID REFERENCES persons(id),
+    approver03_person_id UUID REFERENCES persons(id),
+    approver04_person_id UUID REFERENCES persons(id),
+    approver05_person_id UUID REFERENCES persons(id),
+    approver06_person_id UUID REFERENCES persons(id),
+    approver07_person_id UUID REFERENCES persons(id),
+    required_signers_count SMALLINT NOT NULL DEFAULT 1 CHECK (required_signers_count >= 1 AND required_signers_count <= 7),
+    conditional_mandate_id UUID REFERENCES account_mandates(id),
+    status mandate_status NOT NULL DEFAULT 'Active',
+    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    end_date DATE,
+    
+    CONSTRAINT ck_mandate_dates CHECK (end_date IS NULL OR end_date >= start_date)
+);
+
+-- Ultimate Beneficial Owner (UBO) tracking for corporate accounts - regulatory requirement
+CREATE TABLE ultimate_beneficial_owners (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    corporate_customer_id UUID NOT NULL REFERENCES customers(id),
+    beneficiary_customer_id UUID NOT NULL REFERENCES customers(id),
+    ownership_percentage DECIMAL(5,2) CHECK (ownership_percentage > 0 AND ownership_percentage <= 100),
+    control_type control_type NOT NULL,
+    description VARCHAR(256),
+    status ubo_status NOT NULL DEFAULT 'Active',
+    verification_status verification_status NOT NULL DEFAULT 'Pending',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT ck_ubo_not_self_reference CHECK (corporate_customer_id != beneficiary_customer_id)
+);
+
+-- =============================================================================
 -- UNIFIED ACCOUNT MODEL (UAM) - Multi-Product Support
 -- =============================================================================
 
@@ -528,6 +626,31 @@ CREATE TABLE accounts (
     status_change_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for status change
     status_change_timestamp TIMESTAMP WITH TIME ZONE,
     
+    -- Direct reference fields for most significant related entities
+    most_significant_account_hold_id UUID REFERENCES account_holds(id),
+    account_ownership_id UUID REFERENCES account_ownership(id),
+    access01_account_relationship_id UUID REFERENCES account_relationships(id),
+    access02_account_relationship_id UUID REFERENCES account_relationships(id),
+    access03_account_relationship_id UUID REFERENCES account_relationships(id),
+    access04_account_relationship_id UUID REFERENCES account_relationships(id),
+    access05_account_relationship_id UUID REFERENCES account_relationships(id),
+    access06_account_relationship_id UUID REFERENCES account_relationships(id),
+    access07_account_relationship_id UUID REFERENCES account_relationships(id),
+    access11_account_mandate_id UUID REFERENCES account_mandates(id),
+    access12_account_mandate_id UUID REFERENCES account_mandates(id),
+    access13_account_mandate_id UUID REFERENCES account_mandates(id),
+    access14_account_mandate_id UUID REFERENCES account_mandates(id),
+    access15_account_mandate_id UUID REFERENCES account_mandates(id),
+    access16_account_mandate_id UUID REFERENCES account_mandates(id),
+    access17_account_mandate_id UUID REFERENCES account_mandates(id),
+    interest01_ultimate_beneficiary_id UUID REFERENCES ultimate_beneficial_owners(id),
+    interest02_ultimate_beneficiary_id UUID REFERENCES ultimate_beneficial_owners(id),
+    interest03_ultimate_beneficiary_id UUID REFERENCES ultimate_beneficial_owners(id),
+    interest04_ultimate_beneficiary_id UUID REFERENCES ultimate_beneficial_owners(id),
+    interest05_ultimate_beneficiary_id UUID REFERENCES ultimate_beneficial_owners(id),
+    interest06_ultimate_beneficiary_id UUID REFERENCES ultimate_beneficial_owners(id),
+    interest07_ultimate_beneficiary_id UUID REFERENCES ultimate_beneficial_owners(id),
+    
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -549,6 +672,19 @@ CREATE TABLE accounts (
     ),
     CONSTRAINT ck_currency_code_format CHECK (LENGTH(currency) = 3 AND currency = UPPER(currency))
 );
+
+-- Add foreign key constraints for circular dependencies after accounts table creation
+ALTER TABLE account_holds ADD CONSTRAINT fk_account_holds_account_id 
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
+
+ALTER TABLE account_ownership ADD CONSTRAINT fk_account_ownership_account_id 
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
+
+ALTER TABLE account_relationships ADD CONSTRAINT fk_account_relationships_account_id 
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
+
+ALTER TABLE account_mandates ADD CONSTRAINT fk_account_mandates_account_id 
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
 
 -- Disbursement Instructions table
 CREATE TABLE disbursement_instructions (
@@ -584,66 +720,6 @@ CREATE TRIGGER tr_disbursement_instructions_updated_at BEFORE UPDATE ON disburse
 -- Add foreign key constraint for accounts table after disbursement_instructions is created
 ALTER TABLE accounts ADD CONSTRAINT fk_accounts_last_disbursement 
     FOREIGN KEY (last_disbursement_instruction_id) REFERENCES disbursement_instructions(id);
-
--- =============================================================================
--- ACCOUNT ACCESS AND OWNERSHIP
--- =============================================================================
-
--- Account ownership tracking (supports individual and joint accounts)
-CREATE TABLE account_ownership (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    customer_id UUID NOT NULL REFERENCES customers(id),
-    ownership_type ownership_type NOT NULL,
-    ownership_percentage DECIMAL(5,2) DEFAULT 100.00 CHECK (ownership_percentage > 0 AND ownership_percentage <= 100),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT uk_account_primary_owner UNIQUE (account_id, customer_id)
-);
-
--- Account relationships for servicing and internal bank operations
-CREATE TABLE account_relationships (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    person_id UUID NOT NULL, -- Could be employee, department, or external entity
-    entity_type entity_type NOT NULL,
-    relationship_type relationship_type NOT NULL,
-    status relationship_status NOT NULL DEFAULT 'Active',
-    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    end_date DATE,
-    
-    CONSTRAINT ck_relationship_dates CHECK (end_date IS NULL OR end_date >= start_date)
-);
-
--- Account mandates for operational permissions
-CREATE TABLE account_mandates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    grantee_customer_id UUID NOT NULL REFERENCES customers(id), -- References external person or customer
-    permission_type permission_type NOT NULL,
-    transaction_limit DECIMAL(15,2),
-    approval_group_id UUID,
-    status mandate_status NOT NULL DEFAULT 'Active',
-    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    end_date DATE,
-    
-    CONSTRAINT ck_mandate_dates CHECK (end_date IS NULL OR end_date >= start_date)
-);
-
--- Ultimate Beneficial Owner (UBO) tracking for corporate accounts - regulatory requirement
-CREATE TABLE ultimate_beneficial_owners (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    corporate_customer_id UUID NOT NULL REFERENCES customers(id),
-    beneficiary_customer_id UUID NOT NULL REFERENCES customers(id),
-    ownership_percentage DECIMAL(5,2) CHECK (ownership_percentage > 0 AND ownership_percentage <= 100),
-    control_type control_type NOT NULL,
-    description VARCHAR(256),
-    status ubo_status NOT NULL DEFAULT 'Active',
-    verification_status verification_status NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT ck_ubo_not_self_reference CHECK (corporate_customer_id != beneficiary_customer_id)
-);
 
 -- =============================================================================
 -- TRANSACTION PROCESSING ENGINE
@@ -1472,36 +1548,6 @@ CREATE TABLE fee_waivers (
     CONSTRAINT ck_waiver_approval CHECK (
         (approval_required = FALSE) OR 
         (approval_required = TRUE AND approved_by IS NOT NULL AND approved_at IS NOT NULL)
-    )
-);
-
--- Enhanced account holds
-CREATE TABLE account_holds (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
-    hold_type hold_type NOT NULL,
-    reason_id UUID NOT NULL REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for hold reason
-    additional_details VARCHAR(200), -- Additional context beyond the standard reason
-    placed_by_person_id UUID NOT NULL REFERENCES persons(id),
-    placed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMP WITH TIME ZONE,
-    status hold_status NOT NULL DEFAULT 'Active',
-    released_at TIMESTAMP WITH TIME ZONE,
-    released_by_person_id UUID REFERENCES persons(id),
-    priority hold_priority NOT NULL DEFAULT 'Medium',
-    source_reference VARCHAR(100), -- External reference for judicial holds, etc.
-    automatic_release BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT ck_hold_release_consistency CHECK (
-        (status NOT IN ('Released', 'PartiallyReleased') AND released_at IS NULL) OR
-        (status IN ('Released', 'PartiallyReleased') AND released_at IS NOT NULL AND released_by_person_id IS NOT NULL)
-    ),
-    CONSTRAINT ck_hold_expiry_consistency CHECK (
-        (automatic_release = FALSE AND expires_at IS NULL) OR
-        (automatic_release = TRUE AND expires_at IS NOT NULL)
     )
 );
 

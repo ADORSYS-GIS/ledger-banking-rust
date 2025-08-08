@@ -71,6 +71,36 @@ pub struct AccountModel {
     pub status_change_reason_id: Option<Uuid>,
     pub status_change_timestamp: Option<DateTime<Utc>>,
     
+    // Direct reference fields for most significant related entities
+    /// References AccountHold.id - most significant hold on this account
+    pub most_significant_account_hold_id: Option<Uuid>,
+    /// References AccountOwnership.id
+    pub account_ownership_id: Option<Uuid>,
+    /// References AccountRelationship.id for access permissions
+    pub access01_account_relationship_id: Option<Uuid>,
+    pub access02_account_relationship_id: Option<Uuid>,
+    pub access03_account_relationship_id: Option<Uuid>,
+    pub access04_account_relationship_id: Option<Uuid>,
+    pub access05_account_relationship_id: Option<Uuid>,
+    pub access06_account_relationship_id: Option<Uuid>,
+    pub access07_account_relationship_id: Option<Uuid>,
+    /// References AccountMandate.id for access permissions
+    pub access11_account_mandate_id: Option<Uuid>,
+    pub access12_account_mandate_id: Option<Uuid>,
+    pub access13_account_mandate_id: Option<Uuid>,
+    pub access14_account_mandate_id: Option<Uuid>,
+    pub access15_account_mandate_id: Option<Uuid>,
+    pub access16_account_mandate_id: Option<Uuid>,
+    pub access17_account_mandate_id: Option<Uuid>,
+    /// References UltimateBeneficiary.id for beneficial interest
+    pub interest01_ultimate_beneficiary_id: Option<Uuid>,
+    pub interest02_ultimate_beneficiary_id: Option<Uuid>,
+    pub interest03_ultimate_beneficiary_id: Option<Uuid>,
+    pub interest04_ultimate_beneficiary_id: Option<Uuid>,
+    pub interest05_ultimate_beneficiary_id: Option<Uuid>,
+    pub interest06_ultimate_beneficiary_id: Option<Uuid>,
+    pub interest07_ultimate_beneficiary_id: Option<Uuid>,
+    
     // Audit fields
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
@@ -133,7 +163,15 @@ pub struct AccountMandateModel {
     )]
     pub permission_type: PermissionType,
     pub transaction_limit: Option<Decimal>,
-    pub approval_group_id: Option<Uuid>,
+    pub approver01_person_id: Option<Uuid>,
+    pub approver02_person_id: Option<Uuid>,
+    pub approver03_person_id: Option<Uuid>,
+    pub approver04_person_id: Option<Uuid>,
+    pub approver05_person_id: Option<Uuid>,
+    pub approver06_person_id: Option<Uuid>,
+    pub approver07_person_id: Option<Uuid>,
+    pub required_signers_count: u8,
+    pub conditional_mandate_id: Option<Uuid>,
     #[serde(
         serialize_with = "serialize_mandate_status",
         deserialize_with = "deserialize_mandate_status"
@@ -178,6 +216,8 @@ pub struct AccountHoldModel {
     pub priority: HoldPriority,
     pub source_reference: Option<HeaplessString<100>>,
     pub automatic_release: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 /// Database model for Account Status History (from enhancements)
@@ -688,6 +728,7 @@ where
         RelationshipType::BackupHandler => "BackupHandler",
         RelationshipType::RiskOversight => "RiskOversight",
         RelationshipType::ComplianceOversight => "ComplianceOversight",
+        RelationshipType::Accountant => "Accountant",
     };
     serializer.serialize_str(type_str)
 }
@@ -702,6 +743,7 @@ where
         "BackupHandler" => Ok(RelationshipType::BackupHandler),
         "RiskOversight" => Ok(RelationshipType::RiskOversight),
         "ComplianceOversight" => Ok(RelationshipType::ComplianceOversight),
+        "Accountant" => Ok(RelationshipType::Accountant),
         _ => Err(serde::de::Error::custom(format!("Invalid relationship type: {type_str}"))),
     }
 }
