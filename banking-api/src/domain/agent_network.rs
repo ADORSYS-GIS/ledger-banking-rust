@@ -13,7 +13,7 @@ pub struct AgentNetwork {
     pub network_name: HeaplessString<100>,
     pub network_type: NetworkType,
     pub status: NetworkStatus,
-    pub contract_id: Option<Uuid>,
+    pub contract_external_id: Option<HeaplessString<50>>,
     pub aggregate_daily_limit: Decimal,
     pub current_daily_volume: Decimal,
     pub settlement_gl_code: HeaplessString<8>,
@@ -24,8 +24,8 @@ pub struct AgentNetwork {
 pub struct AgencyBranch {
 
     pub id: Uuid,
-    pub network_id: Uuid,
-    pub parent_branch_id: Option<Uuid>,
+    pub agent_network_id: Uuid,
+    pub parent_agency_branch_id: Option<Uuid>,
     pub branch_name: HeaplessString<100>,
     pub branch_code: HeaplessString<8>,
     pub branch_level: i32,
@@ -39,12 +39,12 @@ pub struct AgencyBranch {
     pub created_at: DateTime<Utc>,
     
     // Physical address
-    pub address: Uuid,
+    pub address_id: Uuid,
     pub landmark_description: Option<HeaplessString<200>>,
     
     // Operational details
-    pub operating_hours: Uuid,
-    pub holiday_plan: Uuid,
+    pub operating_hours_id: Uuid,
+    pub holiday_plan_id: Uuid,
     pub temporary_closure_id: Option<Uuid>,
     
     // Contact information - individual messaging fields (up to 5 entries)
@@ -59,14 +59,14 @@ pub struct AgencyBranch {
     pub messaging4_type: Option<MessagingType>,
     pub messaging5_id: Option<Uuid>,
     pub messaging5_type: Option<MessagingType>,
-    pub branch_manager_id: Option<Uuid>,
+    pub branch_manager_person_id: Option<Uuid>,
     
     // Services and capabilities - references to separate entities
     pub branch_type: BranchType,  // Replaces LocationType
-    pub branch_capabilities: Uuid,
+    pub branch_capabilities_id: Uuid,
     
     // Security and access - reference to separate entity
-    pub security_access: Uuid,
+    pub security_access_id: Uuid,
     
     // Customer capacity
     pub max_daily_customers: Option<u32>,
@@ -89,8 +89,8 @@ pub struct AgencyBranch {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentTerminal {
     pub id: Uuid,
-    pub branch_id: Uuid,
-    pub agent_user_id: Uuid,
+    pub agency_branch_id: Uuid,
+    pub agent_person_id: Uuid,
     pub terminal_type: TerminalType,
     pub terminal_name: HeaplessString<100>,
     pub daily_transaction_limit: Decimal,
@@ -326,12 +326,12 @@ pub struct TemporaryClosure {
     pub start_date: NaiveDate,
     pub end_date: Option<NaiveDate>,
     /// References ReasonAndPurpose.id for closure reason
-    pub reason_id: Uuid,
+    pub closure_reason_id: Uuid,
     /// Additional context for closure (multi-language support)
     pub additional_details_l1: Option<HeaplessString<100>>,
     pub additional_details_l2: Option<HeaplessString<100>>,
     pub additional_details_l3: Option<HeaplessString<100>>,
-    pub alternative_branch_id: Option<Uuid>,
+    pub alternative_agency_branch_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub created_by_person_id: Uuid,
@@ -390,9 +390,9 @@ pub struct RequiredDocument {
     pub document_type_l3: HeaplessString<50>,
     pub is_mandatory: bool,
     // Alternative document references (up to 3)
-    pub alternative1_id: Option<Uuid>,
-    pub alternative2_id: Option<Uuid>,
-    pub alternative3_id: Option<Uuid>,
+    pub alternative1_document_id: Option<Uuid>,
+    pub alternative2_document_id: Option<Uuid>,
+    pub alternative3_document_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -402,7 +402,7 @@ pub struct ComplianceCert {
     pub certification_name_l1: HeaplessString<100>,
     pub certification_name_l2: HeaplessString<100>,
     pub certification_name_l3: HeaplessString<100>,
-    pub issuer: Uuid,
+    pub issuer_person_id: Uuid,
     pub issue_date: NaiveDate,
     pub expiry_date: Option<NaiveDate>,
     pub status: CertificationStatus,
@@ -494,12 +494,12 @@ impl AgencyBranch {
     
     /// Get address reference ID
     pub fn get_address_id(&self) -> Uuid {
-        self.address
+        self.address_id
     }
     
     /// Get capabilities reference ID
     pub fn get_capabilities_id(&self) -> Uuid {
-        self.branch_capabilities
+        self.branch_capabilities_id
     }
     
     /// Create a minimal AgencyBranch for backward compatibility with existing mappers
@@ -507,8 +507,8 @@ impl AgencyBranch {
     #[allow(clippy::too_many_arguments)]
     pub fn create_minimal(
         id: Uuid,
-        network_id: Uuid,
-        parent_branch_id: Option<Uuid>,
+        agent_network_id: Uuid,
+        parent_agency_branch_id: Option<Uuid>,
         branch_name: HeaplessString<100>,
         branch_code: HeaplessString<8>,
         branch_level: i32,
@@ -527,8 +527,8 @@ impl AgencyBranch {
     ) -> Self {
         AgencyBranch {
             id,
-            network_id,
-            parent_branch_id,
+            agent_network_id,
+            parent_agency_branch_id,
             branch_name,
             branch_code,
             branch_level,
@@ -542,10 +542,10 @@ impl AgencyBranch {
             created_at,
             
             // Default values for new fields
-            address: default_address_id,
+            address_id: default_address_id,
             landmark_description: None,
-            operating_hours: default_operating_hours_id,
-            holiday_plan: Uuid::nil(), // Default to nil UUID
+            operating_hours_id: default_operating_hours_id,
+            holiday_plan_id: Uuid::nil(), // Default to nil UUID
             temporary_closure_id: None,
             messaging1_id: None,
             messaging1_type: None,
@@ -557,10 +557,10 @@ impl AgencyBranch {
             messaging4_type: None,
             messaging5_id: None,
             messaging5_type: None,
-            branch_manager_id: None,
+            branch_manager_person_id: None,
             branch_type: BranchType::SubBranch,
-            branch_capabilities: default_capabilities_id,
-            security_access: default_security_access_id,
+            branch_capabilities_id: default_capabilities_id,
+            security_access_id: default_security_access_id,
             max_daily_customers: None,
             average_wait_time_minutes: None,
             per_transaction_limit: daily_transaction_limit,

@@ -895,11 +895,11 @@ CREATE TABLE temporary_closure (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     start_date DATE NOT NULL,
     end_date DATE,
-    reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
+    closure_reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
     additional_details_l1 VARCHAR(100),
     additional_details_l2 VARCHAR(100),
     additional_details_l3 VARCHAR(100),
-    alternative_branch_id UUID,
+    alternative_agency_branch_id UUID,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_by_person_id UUID NOT NULL REFERENCES persons(id),
@@ -914,7 +914,7 @@ CREATE TABLE compliance_cert (
     certification_name_l1 VARCHAR(100) NOT NULL,
     certification_name_l2 VARCHAR(100),
     certification_name_l3 VARCHAR(100),
-    issuer UUID NOT NULL REFERENCES persons(id),
+    issuer_person_id UUID NOT NULL REFERENCES persons(id),
     issue_date DATE NOT NULL,
     expiry_date DATE,
     status certification_status NOT NULL DEFAULT 'active'
@@ -968,9 +968,9 @@ CREATE TABLE required_document (
     document_type_l2 VARCHAR(50),
     document_type_l3 VARCHAR(50),
     is_mandatory BOOLEAN NOT NULL DEFAULT FALSE,
-    alternative1_id UUID,
-    alternative2_id UUID,
-    alternative3_id UUID
+    alternative1_document_id UUID,
+    alternative2_document_id UUID,
+    alternative3_document_id UUID
 );
 
 -- Branch Capabilities standalone table
@@ -1058,7 +1058,7 @@ CREATE TABLE agent_networks (
     network_name VARCHAR(100) NOT NULL,
     network_type network_type NOT NULL,
     status network_status NOT NULL DEFAULT 'active',
-    contract_id UUID,
+    contract_external_id VARCHAR(50),
     aggregate_daily_limit DECIMAL(15,2) NOT NULL,
     current_daily_volume DECIMAL(15,2) NOT NULL DEFAULT 0,
     settlement_gl_code VARCHAR(8) NOT NULL,
@@ -1068,8 +1068,8 @@ CREATE TABLE agent_networks (
 -- Agent branches within networks
 CREATE TABLE agent_branches (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    network_id UUID NOT NULL REFERENCES agent_networks(id),
-    parent_branch_id UUID REFERENCES agent_branches(id),
+    agent_network_id UUID NOT NULL REFERENCES agent_networks(id),
+    parent_agency_branch_id UUID REFERENCES agent_branches(id),
     branch_name VARCHAR(100) NOT NULL,
     branch_code VARCHAR(8) NOT NULL,
     branch_level INTEGER NOT NULL DEFAULT 1,
@@ -1087,8 +1087,8 @@ CREATE TABLE agent_branches (
     landmark_description VARCHAR(200),
     
     -- Operational details
-    operating_hours UUID NOT NULL REFERENCES operating_hours(id),
-    holiday_plan UUID NOT NULL REFERENCES holliday_plan(id),
+    operating_hours_id UUID NOT NULL REFERENCES operating_hours(id),
+    holiday_plan_id UUID NOT NULL REFERENCES holliday_plan(id),
     temporary_closure_id UUID REFERENCES temporary_closure(id),
     
     -- Contact information - individual messaging fields (up to 5 entries)
@@ -1102,14 +1102,14 @@ CREATE TABLE agent_branches (
     messaging4_type messaging_type,
     messaging5_id UUID REFERENCES messaging(id),
     messaging5_type messaging_type,
-    branch_manager_id UUID,
+    branch_manager_person_id UUID,
     
     -- Services and capabilities
     branch_type branch_type NOT NULL,
-    branch_capabilities UUID NOT NULL REFERENCES branch_capabilities(id),
+    branch_capabilities_id UUID NOT NULL REFERENCES branch_capabilities(id),
     
     -- Security and access
-    security_access UUID NOT NULL REFERENCES security_access(id),
+    security_access_id UUID NOT NULL REFERENCES security_access(id),
     
     -- Customer capacity
     max_daily_customers INTEGER,
@@ -1128,15 +1128,15 @@ CREATE TABLE agent_branches (
     last_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_by_person_id UUID NOT NULL REFERENCES persons(id),
     
-    CONSTRAINT uk_branch_code_per_network UNIQUE (network_id, branch_code)
+    CONSTRAINT uk_branch_code_per_network UNIQUE (agent_network_id, branch_code)
 );
 
 
 -- Agent terminals - individual POS/mobile terminals
 CREATE TABLE agent_terminals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    branch_id UUID NOT NULL REFERENCES agent_branches(id),
-    agent_user_id UUID NOT NULL,
+    agency_branch_id UUID NOT NULL REFERENCES agent_branches(id),
+    agent_person_id UUID NOT NULL,
     terminal_type terminal_type NOT NULL,
     terminal_name VARCHAR(100) NOT NULL,
     daily_transaction_limit DECIMAL(15,2) NOT NULL,
@@ -1169,7 +1169,7 @@ CREATE INDEX idx_holiday_schedule_plan ON holiday_schedule(holiday_plan_id);
 CREATE INDEX idx_holiday_schedule_date ON holiday_schedule(date);
 
 -- Indexes for temporary closure
-CREATE INDEX idx_temporary_closure_reason ON temporary_closure(reason_id);
+CREATE INDEX idx_temporary_closure_reason ON temporary_closure(closure_reason_id);
 CREATE INDEX idx_temporary_closure_dates ON temporary_closure(start_date, end_date);
 
 -- Indexes for required documents
@@ -1177,7 +1177,7 @@ CREATE INDEX idx_required_document_l1 ON required_document(document_type_l1);
 CREATE INDEX idx_required_document_mandatory ON required_document(is_mandatory) WHERE is_mandatory = TRUE;
 
 -- Indexes for compliance certifications
-CREATE INDEX idx_compliance_cert_issuer ON compliance_cert(issuer);
+CREATE INDEX idx_compliance_cert_issuer ON compliance_cert(issuer_person_id);
 CREATE INDEX idx_compliance_cert_status ON compliance_cert(status);
 CREATE INDEX idx_compliance_cert_expiry ON compliance_cert(expiry_date);
 
@@ -2537,14 +2537,14 @@ CREATE INDEX idx_transactions_reference ON transactions(reference_number);
 
 -- Agent network indexes
 CREATE INDEX idx_agent_networks_status ON agent_networks(status);
-CREATE INDEX idx_agent_branches_network ON agent_branches(network_id);
+CREATE INDEX idx_agent_branches_network ON agent_branches(agent_network_id);
 CREATE INDEX idx_agent_branches_address ON agent_branches(address_id);
-CREATE INDEX idx_agent_branches_operating_hours ON agent_branches(operating_hours);
-CREATE INDEX idx_agent_branches_capabilities ON agent_branches(branch_capabilities);
-CREATE INDEX idx_agent_branches_security ON agent_branches(security_access);
-CREATE INDEX idx_agent_branches_holiday_plan ON agent_branches(holiday_plan);
+CREATE INDEX idx_agent_branches_operating_hours ON agent_branches(operating_hours_id);
+CREATE INDEX idx_agent_branches_capabilities ON agent_branches(branch_capabilities_id);
+CREATE INDEX idx_agent_branches_security ON agent_branches(security_access_id);
+CREATE INDEX idx_agent_branches_holiday_plan ON agent_branches(holiday_plan_id);
 CREATE INDEX idx_agent_branches_temporary_closure ON agent_branches(temporary_closure_id) WHERE temporary_closure_id IS NOT NULL;
-CREATE INDEX idx_agent_terminals_branch ON agent_terminals(branch_id);
+CREATE INDEX idx_agent_terminals_branch ON agent_terminals(agency_branch_id);
 CREATE INDEX idx_operating_hours_name ON operating_hours(name_l1);
 CREATE INDEX idx_branch_capabilities_name ON branch_capabilities(name_l1);
 CREATE INDEX idx_security_access_name ON security_access(name_l1);

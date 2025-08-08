@@ -240,7 +240,7 @@ impl AgentNetworkValidation {
         }
 
         // Network has contract_id - validate it exists if set
-        if network.contract_id.is_none() {
+        if network.contract_external_id.is_none() {
             validation_errors.push(
                 "Network must have a contract ID assigned".to_string()
             );
@@ -375,7 +375,7 @@ mod tests {
             network_name: HeaplessString::try_from("Test Network").unwrap(),
             network_type: NetworkType::Internal,
             status: NetworkStatus::Active,
-            contract_id: Some(Uuid::new_v4()),
+            contract_external_id: Some(HeaplessString::try_from("CONTRACT123").unwrap()),
             aggregate_daily_limit: Decimal::from(100000),
             current_daily_volume: Decimal::ZERO,
             settlement_gl_code: HeaplessString::try_from("GL123").unwrap(),
@@ -386,8 +386,8 @@ mod tests {
 
         let branch = AgencyBranchModel {
             id: Uuid::new_v4(),
-            network_id: network.id,
-            parent_branch_id: None,
+            agent_network_id: network.id,
+            parent_agency_branch_id: None,
             branch_name: HeaplessString::try_from("Test Branch").unwrap(),
             branch_code: HeaplessString::try_from("BR001").unwrap(),
             branch_level: 1,
@@ -399,10 +399,10 @@ mod tests {
             current_cash_balance: Decimal::from(50000),
             minimum_cash_balance: Decimal::from(10000),
             created_at: Utc::now(),
-            address: Uuid::new_v4(),
+            address_id: Uuid::new_v4(),
             landmark_description: None,
-            operating_hours: Uuid::new_v4(),
-            holiday_plan: Uuid::new_v4(),
+            operating_hours_id: Uuid::new_v4(),
+            holiday_plan_id: Uuid::new_v4(),
             temporary_closure_id: None,
             messaging1_id: None,
             messaging1_type: None,
@@ -414,10 +414,10 @@ mod tests {
             messaging4_type: None,
             messaging5_id: None,
             messaging5_type: None,
-            branch_manager_id: None,
+            branch_manager_person_id: None,
             branch_type: BranchType::MainBranch,
-            branch_capabilities: Uuid::new_v4(),
-            security_access: Uuid::new_v4(),
+            branch_capabilities_id: Uuid::new_v4(),
+            security_access_id: Uuid::new_v4(),
             max_daily_customers: Some(100),
             average_wait_time_minutes: Some(15),
             per_transaction_limit: Decimal::from(5000),
@@ -440,7 +440,7 @@ mod tests {
             network_name: HeaplessString::try_from("Test Network").unwrap(),
             network_type: NetworkType::Internal,
             status: NetworkStatus::Active,
-            contract_id: Some(Uuid::new_v4()),
+            contract_external_id: Some(HeaplessString::try_from("CONTRACT123").unwrap()),
             aggregate_daily_limit: Decimal::from(50000),
             current_daily_volume: Decimal::ZERO,
             settlement_gl_code: HeaplessString::try_from("GL123").unwrap(),
@@ -451,8 +451,8 @@ mod tests {
 
         let branch = AgencyBranchModel {
             id: Uuid::new_v4(),
-            network_id: network.id,
-            parent_branch_id: None,
+            agent_network_id: network.id,
+            parent_agency_branch_id: None,
             branch_name: HeaplessString::try_from("Test Branch").unwrap(),
             branch_code: HeaplessString::try_from("BR001").unwrap(),
             branch_level: 1,
@@ -464,10 +464,10 @@ mod tests {
             current_cash_balance: Decimal::from(50000),
             minimum_cash_balance: Decimal::from(10000),
             created_at: Utc::now(),
-            address: Uuid::new_v4(),
+            address_id: Uuid::new_v4(),
             landmark_description: None,
-            operating_hours: Uuid::new_v4(),
-            holiday_plan: Uuid::new_v4(),
+            operating_hours_id: Uuid::new_v4(),
+            holiday_plan_id: Uuid::new_v4(),
             temporary_closure_id: None,
             messaging1_id: None,
             messaging1_type: None,
@@ -479,10 +479,10 @@ mod tests {
             messaging4_type: None,
             messaging5_id: None,
             messaging5_type: None,
-            branch_manager_id: None,
+            branch_manager_person_id: None,
             branch_type: BranchType::MainBranch,
-            branch_capabilities: Uuid::new_v4(),
-            security_access: Uuid::new_v4(),
+            branch_capabilities_id: Uuid::new_v4(),
+            security_access_id: Uuid::new_v4(),
             max_daily_customers: Some(100),
             average_wait_time_minutes: Some(15),
             per_transaction_limit: Decimal::from(60000), // Exceeds network limit
