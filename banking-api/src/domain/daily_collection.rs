@@ -66,7 +66,7 @@ impl std::str::FromStr for AgentStatus {
 /// Territory assignment for collection agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Territory {
-    pub territory_id: Uuid,
+    pub id: Uuid,
     pub territory_name: HeaplessString<100>,
     pub coverage_areas_id: Uuid,
     pub customer_count: i32,
@@ -77,7 +77,7 @@ pub struct Territory {
 /// Coverage area within a territory
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageArea {
-    pub area_id: Uuid,
+    pub id: Uuid,
     pub area_name: HeaplessString<100>,
     pub area_type: AreaType,
     pub boundary_coordinates_long_1: Option<Decimal>,
@@ -206,7 +206,7 @@ impl std::str::FromStr for TransportMode {
 /// Agent performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentPerformanceMetrics {
-    pub metrics_id: Uuid,
+    pub id: Uuid,
     pub collection_rate: Decimal,
     pub customer_satisfaction_score: Decimal,
     pub punctuality_score: Decimal,
@@ -295,7 +295,7 @@ impl std::str::FromStr for AlertType {
 /// Device information for collection agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceInformation {
-    pub device_id: Uuid,
+    pub id: Uuid,
     pub external_id: HeaplessString<100>,
     pub device_type: DeviceType,
     pub model: HeaplessString<50>,
@@ -582,6 +582,7 @@ impl std::str::FromStr for FeeFrequency {
 /// in a daily collection program
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomerCollectionProfile {
+    pub id: Uuid,
     pub customer_id: Uuid,
     pub program_id: Uuid,
     pub account_id: Uuid,
@@ -925,7 +926,7 @@ pub struct WitnessInformation {
 /// Collection batch information for bulk processing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollectionBatch {
-    pub batch_id: Uuid,
+    pub id: Uuid,
     pub agent_id: Uuid,
     pub collection_date: NaiveDate,
     pub total_collections: i32,
@@ -1045,13 +1046,13 @@ impl CollectionAgentBuilder {
         self
     }
 
-    pub fn assigned_territory_id(mut self, territory_id: Uuid) -> Self {
-        self.assigned_territory_id = Some(territory_id);
+    pub fn assigned_territory_id(mut self, id: Uuid) -> Self {
+        self.assigned_territory_id = Some(id);
         self
     }
 
-    pub fn performance_metrics_id(mut self, metrics_id: Uuid) -> Self {
-        self.performance_metrics_id = Some(metrics_id);
+    pub fn performance_metrics_id(mut self, id: Uuid) -> Self {
+        self.performance_metrics_id = Some(id);
         self
     }
 
@@ -1060,8 +1061,8 @@ impl CollectionAgentBuilder {
         self
     }
 
-    pub fn device_information_id(mut self, device_id: Uuid) -> Self {
-        self.device_information_id = Some(device_id);
+    pub fn device_information_id(mut self, id: Uuid) -> Self {
+        self.device_information_id = Some(id);
         self
     }
 
@@ -1188,13 +1189,13 @@ impl CollectionProgramBuilder {
         self
     }
 
-    pub fn graduation_criteria_id(mut self, criteria_id: Uuid) -> Self {
-        self.graduation_criteria_id = Some(criteria_id);
+    pub fn graduation_criteria_id(mut self, id: Uuid) -> Self {
+        self.graduation_criteria_id = Some(id);
         self
     }
 
-    pub fn fee_structure_id(mut self, fee_structure_id: Uuid) -> Self {
-        self.fee_structure_id = Some(fee_structure_id);
+    pub fn fee_structure_id(mut self, id: Uuid) -> Self {
+        self.fee_structure_id = Some(id);
         self
     }
 
@@ -1238,6 +1239,7 @@ impl CollectionProgramBuilder {
 
 /// Builder for CustomerCollectionProfile
 pub struct CustomerCollectionProfileBuilder {
+    id: Uuid,
     customer_id: Uuid,
     program_id: Uuid,
     account_id: Uuid,
@@ -1254,11 +1256,13 @@ pub struct CustomerCollectionProfileBuilder {
 
 impl CustomerCollectionProfile {
     pub fn builder(
+        id: Uuid,
         customer_id: Uuid,
         program_id: Uuid,
         account_id: Uuid,
     ) -> CustomerCollectionProfileBuilder {
         CustomerCollectionProfileBuilder {
+            id,
             customer_id,
             program_id,
             account_id,
@@ -1291,28 +1295,28 @@ impl CustomerCollectionProfileBuilder {
         self
     }
 
-    pub fn collection_schedule_id(mut self, schedule_id: Uuid) -> Self {
-        self.collection_schedule_id = Some(schedule_id);
+    pub fn collection_schedule_id(mut self, id: Uuid) -> Self {
+        self.collection_schedule_id = Some(id);
         self
     }
 
-    pub fn assigned_agent_id(mut self, agent_id: Uuid) -> Self {
-        self.assigned_agent_id = Some(agent_id);
+    pub fn assigned_agent_id(mut self, id: Uuid) -> Self {
+        self.assigned_agent_id = Some(id);
         self
     }
 
-    pub fn collection_location_id(mut self, location_id: Uuid) -> Self {
-        self.collection_location_id = Some(location_id);
+    pub fn collection_location_id(mut self, id: Uuid) -> Self {
+        self.collection_location_id = Some(id);
         self
     }
 
-    pub fn collection_performance_metrics(mut self, metrics_id: Uuid) -> Self {
-        self.collection_performance_metrics = Some(metrics_id);
+    pub fn collection_performance_metrics(mut self, id: Uuid) -> Self {
+        self.collection_performance_metrics = Some(id);
         self
     }
 
-    pub fn graduation_progress_id(mut self, progress_id: Uuid) -> Self {
-        self.graduation_progress_id = Some(progress_id);
+    pub fn graduation_progress_id(mut self, id: Uuid) -> Self {
+        self.graduation_progress_id = Some(id);
         self
     }
 
@@ -1326,6 +1330,7 @@ impl CustomerCollectionProfileBuilder {
         let enrollment_date = self.enrollment_date.unwrap_or_else(|| now.date_naive());
 
         Ok(CustomerCollectionProfile {
+            id: self.id,
             customer_id: self.customer_id,
             program_id: self.program_id,
             account_id: self.account_id,
@@ -1420,8 +1425,8 @@ impl CollectionRecordBuilder {
         self
     }
 
-    pub fn location_address_id(mut self, address_id: Uuid) -> Self {
-        self.location_address_id = Some(address_id);
+    pub fn location_address_id(mut self, id: Uuid) -> Self {
+        self.location_address_id = Some(id);
         self
     }
 
@@ -1442,8 +1447,8 @@ impl CollectionRecordBuilder {
         Ok(self)
     }
 
-    pub fn collection_verification_id(mut self, verification_id: Uuid) -> Self {
-        self.collection_verification_id = Some(verification_id);
+    pub fn collection_verification_id(mut self, id: Uuid) -> Self {
+        self.collection_verification_id = Some(id);
         self
     }
 

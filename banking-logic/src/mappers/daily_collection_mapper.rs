@@ -1,34 +1,44 @@
 use banking_api::domain::{
     collateral::AlertSeverity as DomainAlertSeverity,
     daily_collection::{
-    CollectionAgent, CollectionProgram, CustomerCollectionProfile, CollectionRecord, CollectionBatch,
-    AgentStatus as DomainAgentStatus, AreaType as DomainAreaType, CustomerDensity as DomainCustomerDensity,
-    TransportMode as DomainTransportMode, DeviceType as DomainDeviceType, ConnectivityStatus as DomainConnectivityStatus,
-    CollectionProgramType as DomainCollectionProgramType, ProgramStatus as DomainProgramStatus,
-    CollectionFrequency as DomainCollectionFrequency, CollectionStatus as DomainCollectionStatus,
-    HolidayHandling as DomainHolidayHandling, ReliabilityRating as DomainReliabilityRating,
-    CollectionMethod as DomainCollectionMethod, CollectionRecordStatus as DomainCollectionRecordStatus,
-    BiometricMethod as DomainBiometricMethod, BatchStatus as DomainBatchStatus,
-    AlertType as DomainAlertType, FeeFrequency as DomainFeeFrequency,
-    CoverageArea, PerformanceAlert,
+        AgentPerformanceMetrics, AgentStatus as DomainAgentStatus, AlertType as DomainAlertType,
+        AreaType as DomainAreaType, BatchStatus as DomainBatchStatus, BiometricData,
+        BiometricMethod as DomainBiometricMethod, CollectionAgent, CollectionBatch,
+        CollectionFrequency as DomainCollectionFrequency, CollectionMethod as DomainCollectionMethod,
+        CollectionProgram, CollectionProgramType as DomainCollectionProgramType,
+        CollectionRecord, CollectionRecordStatus as DomainCollectionRecordStatus,
+        CollectionSchedule, CollectionStatus as DomainCollectionStatus,
+        CollectionVerification, ConnectivityStatus as DomainConnectivityStatus, CoverageArea,
+        CustomerCollectionProfile, CustomerDensity as DomainCustomerDensity,
+        DeviceInformation, DeviceType as DomainDeviceType, FeeFrequency as DomainFeeFrequency,
+        FeeStructure, GraduationCriteria, GraduationProgress,
+        HolidayHandling as DomainHolidayHandling, MonthlyTargets, PerformanceAlert,
+        CollectionPerformanceMetrics, PhotoEvidence, ProgramStatus as DomainProgramStatus,
+        ReconciliationData, ReliabilityRating as DomainReliabilityRating, SecurityFeatures,
+        TransportMode as DomainTransportMode, WitnessInformation,
     },
 };
-
 use banking_db::models::{
     collateral::AlertSeverity as DbAlertSeverity,
     daily_collection::{
-    CollectionAgentModel, CollectionProgramModel, CustomerCollectionProfileModel, 
-    CollectionRecordModel, CollectionBatchModel, CoverageAreaModel, PerformanceAlertModel,
-    AgentStatus as DbAgentStatus, AreaType as DbAreaType, CustomerDensity as DbCustomerDensity,
-    TransportMode as DbTransportMode, DeviceType as DbDeviceType, ConnectivityStatus as DbConnectivityStatus,
-    CollectionProgramType as DbCollectionProgramType, ProgramStatus as DbProgramStatus,
-    CollectionFrequency as DbCollectionFrequency, CollectionStatus as DbCollectionStatus,
-    HolidayHandling as DbHolidayHandling, ReliabilityRating as DbReliabilityRating,
-    CollectionMethod as DbCollectionMethod, CollectionRecordStatus as DbCollectionRecordStatus,
-    BiometricMethod as DbBiometricMethod, BatchStatus as DbBatchStatus,
-    AlertType as DbAlertType, FeeFrequency as DbFeeFrequency,
+        AgentStatus as DbAgentStatus, AlertType as DbAlertType, AreaType as DbAreaType,
+        BatchStatus as DbBatchStatus, BiometricMethod as DbBiometricMethod,
+        CollectionAgentModel, CollectionBatchModel,
+        CollectionFrequency as DbCollectionFrequency, CollectionMethod as DbCollectionMethod,
+        CollectionProgramModel, CollectionRecordModel,
+        CollectionRecordStatus as DbCollectionRecordStatus, CollectionProgramType as DbCollectionProgramType,
+        CollectionStatus as DbCollectionStatus, ConnectivityStatus as DbConnectivityStatus,
+        CoverageAreaModel, CustomerCollectionProfileModel,
+        CustomerDensity as DbCustomerDensity, DeviceType as DbDeviceType,
+        FeeFrequency as DbFeeFrequency, HolidayHandling as DbHolidayHandling,
+        PerformanceAlertModel, ProgramStatus as DbProgramStatus,
+        ReliabilityRating as DbReliabilityRating, TransportMode as DbTransportMode,
     },
 };
+use chrono::Utc;
+use heapless::String as HeaplessString;
+use rust_decimal::Decimal;
+use uuid::Uuid;
 
 /// Mapper for converting between domain and database models for Daily Collection entities
 pub struct DailyCollectionMapper;
@@ -446,127 +456,427 @@ impl DailyCollectionMapper {
 
     // ======== Model Mappers ========
 
-    /// Convert a vector of domain models to database models
-    pub fn collection_agents_to_models(agents: Vec<CollectionAgent>) -> Vec<CollectionAgentModel> {
-        agents.into_iter().map(Self::collection_agent_to_model).collect()
-    }
-
     /// Convert a vector of database models to domain models
     pub fn collection_agents_from_models(models: Vec<CollectionAgentModel>) -> Vec<CollectionAgent> {
-        models.into_iter().map(Self::collection_agent_from_model).collect()
-    }
-
-    /// Convert a vector of domain models to database models
-    pub fn collection_programs_to_models(programs: Vec<CollectionProgram>) -> Vec<CollectionProgramModel> {
-        programs.into_iter().map(Self::collection_program_to_model).collect()
-    }
-
-    /// Convert a vector of database models to domain models
-    pub fn collection_programs_from_models(models: Vec<CollectionProgramModel>) -> Vec<CollectionProgram> {
-        models.into_iter().map(Self::collection_program_from_model).collect()
-    }
-
-    /// Convert a vector of domain models to database models
-    pub fn customer_collection_profiles_to_models(profiles: Vec<CustomerCollectionProfile>) -> Vec<CustomerCollectionProfileModel> {
-        profiles.into_iter().map(Self::customer_collection_profile_to_model).collect()
+        models
+            .into_iter()
+            .map(Self::collection_agent_from_model)
+            .collect()
     }
 
     /// Convert a vector of database models to domain models
-    pub fn customer_collection_profiles_from_models(models: Vec<CustomerCollectionProfileModel>) -> Vec<CustomerCollectionProfile> {
-        models.into_iter().map(Self::customer_collection_profile_from_model).collect()
-    }
-
-    /// Convert a vector of domain models to database models
-    pub fn collection_records_to_models(records: Vec<CollectionRecord>) -> Vec<CollectionRecordModel> {
-        records.into_iter().map(Self::collection_record_to_model).collect()
-    }
-
-    /// Convert a vector of database models to domain models
-    pub fn collection_records_from_models(models: Vec<CollectionRecordModel>) -> Vec<CollectionRecord> {
-        models.into_iter().map(Self::collection_record_from_model).collect()
-    }
-
-    /// Convert a vector of domain models to database models
-    pub fn collection_batches_to_models(batches: Vec<CollectionBatch>) -> Vec<CollectionBatchModel> {
-        batches.into_iter().map(Self::collection_batch_to_model).collect()
+    pub fn collection_programs_from_models(
+        models: Vec<CollectionProgramModel>,
+    ) -> Vec<CollectionProgram> {
+        models
+            .into_iter()
+            .map(Self::collection_program_from_model)
+            .collect()
     }
 
     /// Convert a vector of database models to domain models
-    pub fn collection_batches_from_models(models: Vec<CollectionBatchModel>) -> Vec<CollectionBatch> {
-        models.into_iter().map(Self::collection_batch_from_model).collect()
+    pub fn customer_collection_profiles_from_models(
+        models: Vec<CustomerCollectionProfileModel>,
+    ) -> Vec<CustomerCollectionProfile> {
+        models
+            .into_iter()
+            .map(Self::customer_collection_profile_from_model)
+            .collect()
     }
 
-    // ======== Individual Model Mappers (TODO: Implement) ========
-    
+    /// Convert a vector of database models to domain models
+    pub fn collection_records_from_models(
+        models: Vec<CollectionRecordModel>,
+    ) -> Vec<CollectionRecord> {
+        models
+            .into_iter()
+            .map(Self::collection_record_from_model)
+            .collect()
+    }
+
+    /// Convert a vector of database models to domain models
+    pub fn collection_batches_from_models(
+        models: Vec<CollectionBatchModel>,
+    ) -> Vec<CollectionBatch> {
+        models
+            .into_iter()
+            .map(Self::collection_batch_from_model)
+            .collect()
+    }
+
+    // ======== Individual Model Mappers ========
+
     /// Convert domain CollectionAgent to database CollectionAgentModel
-    pub fn collection_agent_to_model(_agent: CollectionAgent) -> CollectionAgentModel {
-        todo!("Implement collection_agent_to_model")
+    pub fn collection_agent_to_model(
+        agent: CollectionAgent,
+        performance_metrics: AgentPerformanceMetrics,
+        monthly_targets: MonthlyTargets,
+        device_info: DeviceInformation,
+        security_features: SecurityFeatures,
+    ) -> CollectionAgentModel {
+        CollectionAgentModel {
+            id: agent.id,
+            person_reference: agent.person_reference,
+            license_number: agent.license_number,
+            license_expiry: agent.license_expiry,
+            status: Self::agent_status_to_model(agent.status),
+            assigned_territory_id: agent.assigned_territory_id,
+            performance_collection_rate: performance_metrics.collection_rate,
+            performance_customer_satisfaction_score: performance_metrics
+                .customer_satisfaction_score,
+            performance_punctuality_score: performance_metrics.punctuality_score,
+            performance_cash_handling_accuracy: performance_metrics.cash_handling_accuracy,
+            performance_compliance_score: performance_metrics.compliance_score,
+            performance_total_collections: performance_metrics.total_collections,
+            performance_total_amount_collected: performance_metrics.total_amount_collected,
+            performance_average_collection_time_minutes: performance_metrics
+                .average_collection_time
+                .num_minutes(),
+            performance_customer_retention_rate: performance_metrics.customer_retention_rate,
+            performance_route_efficiency: performance_metrics.route_efficiency,
+            targets_collection_target: monthly_targets.collection_target,
+            targets_customer_target: monthly_targets.customer_target,
+            targets_satisfaction_target: monthly_targets.satisfaction_target,
+            targets_punctuality_target: monthly_targets.punctuality_target,
+            targets_accuracy_target: monthly_targets.accuracy_target,
+            cash_limit: agent.cash_limit,
+            device_id: device_info.id,
+            device_external_id: device_info.external_id,
+            device_type: Self::device_type_to_model(device_info.device_type),
+            device_model: device_info.model,
+            device_os_version: device_info.os_version,
+            device_app_version: device_info.app_version,
+            device_last_sync: device_info.last_sync,
+            device_battery_level: device_info.battery_level,
+            device_connectivity_status: Self::connectivity_status_to_model(
+                device_info.connectivity_status,
+            ),
+            security_biometric_enabled: security_features.biometric_enabled,
+            security_pin_protection: security_features.pin_protection,
+            security_encryption_enabled: security_features.encryption_enabled,
+            security_remote_wipe_enabled: security_features.remote_wipe_enabled,
+            security_certificate_installed: security_features.certificate_installed,
+            security_last_security_scan: security_features.last_security_scan,
+            created_at: agent.created_at,
+            updated_at: agent.updated_at,
+        }
     }
 
-    /// Convert database CollectionAgentModel to domain CollectionAgent
-    pub fn collection_agent_from_model(_model: CollectionAgentModel) -> CollectionAgent {
-        todo!("Implement collection_agent_from_model")
-    }
+   /// Convert database CollectionAgentModel to domain CollectionAgent
+   pub fn collection_agent_from_model(model: CollectionAgentModel) -> CollectionAgent {
+       CollectionAgent {
+           id: model.id,
+           person_reference: model.person_reference,
+           license_number: model.license_number,
+           license_expiry: model.license_expiry,
+           status: Self::agent_status_from_model(model.status),
+           assigned_territory_id: model.assigned_territory_id,
+           performance_metrics_id: Uuid::nil(), // This needs to be handled separately
+           cash_limit: model.cash_limit,
+           device_information_id: model.device_id,
+           created_at: model.created_at,
+           updated_at: model.updated_at,
+       }
+   }
 
-    /// Convert domain CollectionProgram to database CollectionProgramModel
-    pub fn collection_program_to_model(_program: CollectionProgram) -> CollectionProgramModel {
-        todo!("Implement collection_program_to_model")
-    }
+   /// Convert domain CollectionProgram to database CollectionProgramModel
+   pub fn collection_program_to_model(program: CollectionProgram, graduation_criteria: GraduationCriteria, fee_structure: FeeStructure) -> CollectionProgramModel {
+       CollectionProgramModel {
+           id: program.id,
+           name: program.name,
+           description: program.description,
+           program_type: Self::collection_program_type_to_model(program.program_type),
+           status: Self::program_status_to_model(program.status),
+           start_date: program.start_date,
+           end_date: program.end_date,
+           collection_frequency: Self::collection_frequency_to_model(program.collection_frequency),
+           collection_time_operating_hours_id: program.collection_time_operating_hours_id,
+           minimum_amount: program.minimum_amount,
+           maximum_amount: program.maximum_amount,
+           target_amount: program.target_amount,
+           program_duration_days: program.program_duration_days,
+           graduation_minimum_balance: graduation_criteria.minimum_balance,
+           graduation_minimum_collection_rate: graduation_criteria.minimum_collection_rate,
+           graduation_minimum_duration_days: graduation_criteria.minimum_duration_days,
+           graduation_consecutive_collections_required: graduation_criteria.consecutive_collections_required,
+           graduation_target_achievement_required: graduation_criteria.target_achievement_required,
+           graduation_auto_graduation_enabled: graduation_criteria.auto_graduation_enabled,
+           fee_setup_fee: fee_structure.setup_fee,
+           fee_collection_fee: fee_structure.collection_fee,
+           fee_maintenance_fee: fee_structure.maintenance_fee,
+           fee_graduation_fee: fee_structure.graduation_fee,
+           fee_early_termination_fee: fee_structure.early_termination_fee,
+           fee_frequency: Self::fee_frequency_to_model(fee_structure.fee_frequency),
+           interest_rate: program.interest_rate,
+           created_at: program.created_at,
+           updated_at: program.updated_at,
+           created_by_person_id: program.created_by_person_id,
+           reason_id: program.reason_id,
+       }
+   }
 
-    /// Convert database CollectionProgramModel to domain CollectionProgram
-    pub fn collection_program_from_model(_model: CollectionProgramModel) -> CollectionProgram {
-        todo!("Implement collection_program_from_model")
-    }
+   /// Convert database CollectionProgramModel to domain CollectionProgram
+   pub fn collection_program_from_model(model: CollectionProgramModel) -> CollectionProgram {
+       CollectionProgram {
+           id: model.id,
+           name: model.name,
+           description: model.description,
+           program_type: Self::collection_program_type_from_model(model.program_type),
+           status: Self::program_status_from_model(model.status),
+           start_date: model.start_date,
+           end_date: model.end_date,
+           collection_frequency: Self::collection_frequency_from_model(model.collection_frequency),
+           collection_time_operating_hours_id: model.collection_time_operating_hours_id,
+           minimum_amount: model.minimum_amount,
+           maximum_amount: model.maximum_amount,
+           target_amount: model.target_amount,
+           program_duration_days: model.program_duration_days,
+           graduation_criteria_id: Uuid::nil(), // Needs to be handled separately
+           fee_structure_id: Uuid::nil(), // Needs to be handled separately
+           interest_rate: model.interest_rate,
+           created_at: model.created_at,
+           updated_at: model.updated_at,
+           created_by_person_id: model.created_by_person_id,
+           reason_id: model.reason_id,
+       }
+   }
 
-    /// Convert domain CustomerCollectionProfile to database CustomerCollectionProfileModel
-    pub fn customer_collection_profile_to_model(_profile: CustomerCollectionProfile) -> CustomerCollectionProfileModel {
-        todo!("Implement customer_collection_profile_to_model")
-    }
+   /// Convert domain CustomerCollectionProfile to database CustomerCollectionProfileModel
+   pub fn customer_collection_profile_to_model(profile: CustomerCollectionProfile, schedule: CollectionSchedule, performance: CollectionPerformanceMetrics, progress: GraduationProgress) -> CustomerCollectionProfileModel {
+       CustomerCollectionProfileModel {
+           id: profile.id,
+           customer_id: profile.customer_id,
+           program_id: profile.program_id,
+           account_id: profile.account_id,
+           enrollment_date: profile.enrollment_date,
+           status: Self::collection_status_to_model(profile.status),
+           daily_amount: profile.daily_amount,
+           schedule_frequency: Self::collection_frequency_to_model(schedule.frequency),
+           schedule_collection_time: schedule.collection_time,
+           schedule_timezone: schedule.timezone,
+           schedule_holiday_handling: Self::holiday_handling_to_model(schedule.holiday_handling),
+           assigned_agent_id: profile.assigned_agent_id,
+           collection_location_id: profile.collection_location_id,
+           performance_collection_rate: performance.collection_rate,
+           performance_total_collections: performance.total_collections,
+           performance_total_amount_collected: performance.total_amount_collected,
+           performance_average_collection_amount: performance.average_collection_amount,
+           performance_consecutive_collections: performance.consecutive_collections,
+           performance_missed_collections: performance.missed_collections,
+           performance_last_collection_date: performance.last_collection_date,
+           performance_score: performance.performance_score,
+           performance_reliability_rating: Self::reliability_rating_to_model(performance.reliability_rating),
+           graduation_current_balance: progress.current_balance,
+           graduation_target_balance: progress.target_balance,
+           graduation_days_in_program: progress.days_in_program,
+           graduation_minimum_days_required: progress.minimum_days_required,
+           graduation_collection_consistency_rate: progress.collection_consistency_rate,
+           graduation_minimum_consistency_required: progress.minimum_consistency_required,
+           graduation_eligible: progress.graduation_eligible,
+           graduation_date: progress.graduation_date,
+           graduation_next_review_date: progress.next_review_date,
+           created_at: profile.created_at,
+           updated_at: profile.updated_at,
+           reason_id: profile.reason_id,
+       }
+   }
 
-    /// Convert database CustomerCollectionProfileModel to domain CustomerCollectionProfile
-    pub fn customer_collection_profile_from_model(_model: CustomerCollectionProfileModel) -> CustomerCollectionProfile {
-        todo!("Implement customer_collection_profile_from_model")
-    }
+   /// Convert database CustomerCollectionProfileModel to domain CustomerCollectionProfile
+   pub fn customer_collection_profile_from_model(model: CustomerCollectionProfileModel) -> CustomerCollectionProfile {
+       CustomerCollectionProfile {
+           id: model.id,
+           customer_id: model.customer_id,
+           program_id: model.program_id,
+           account_id: model.account_id,
+           enrollment_date: model.enrollment_date,
+           status: Self::collection_status_from_model(model.status),
+           daily_amount: model.daily_amount,
+           collection_schedule_id: Uuid::nil(), // Needs to be handled separately
+           assigned_agent_id: model.assigned_agent_id,
+           collection_location_id: model.collection_location_id,
+           collection_performance_metrics: Uuid::nil(), // Needs to be handled separately
+           graduation_progress_id: Uuid::nil(), // Needs to be handled separately
+           created_at: model.created_at,
+           updated_at: model.updated_at,
+           reason_id: model.reason_id,
+       }
+   }
 
-    /// Convert domain CollectionRecord to database CollectionRecordModel
-    pub fn collection_record_to_model(_record: CollectionRecord) -> CollectionRecordModel {
-        todo!("Implement collection_record_to_model")
-    }
+   /// Convert domain CollectionRecord to database CollectionRecordModel
+   pub fn collection_record_to_model(record: CollectionRecord, verification: Option<CollectionVerification>, biometric: Option<BiometricData>, photo: Option<PhotoEvidence>, witness: Option<WitnessInformation>) -> CollectionRecordModel {
+       CollectionRecordModel {
+           id: record.id,
+           customer_id: record.customer_id,
+           agent_id: record.agent_id,
+           program_id: record.program_id,
+           account_id: record.account_id,
+           collection_date: record.collection_date,
+           collection_time: record.collection_time,
+           amount: record.amount,
+           currency: record.currency,
+           collection_method: Self::collection_method_to_model(record.collection_method),
+           location_address_id: record.location_address_id,
+           receipt_number: record.receipt_number,
+           status: Self::collection_record_status_to_model(record.status),
+           notes: record.notes,
+           verification_customer_signature: verification.as_ref().and_then(|v| v.customer_signature.clone()),
+           verification_agent_verification_code: verification.as_ref().and_then(|v| v.agent_verification_code.clone()),
+           verification_fingerprint_hash: biometric.as_ref().and_then(|b| b.fingerprint_hash.clone()),
+           verification_face_recognition_score: biometric.as_ref().and_then(|b| b.face_recognition_score),
+           verification_biometric_method: biometric.as_ref().map(|b| Self::biometric_method_to_model(b.verification_method.clone())),
+           verification_confidence_level: biometric.as_ref().map(|b| b.confidence_level),
+           verification_customer_photo_hash: photo.as_ref().and_then(|p| p.customer_photo_hash.clone()),
+           verification_receipt_photo_hash: photo.as_ref().and_then(|p| p.receipt_photo_hash.clone()),
+           verification_location_photo_hash: photo.as_ref().and_then(|p| p.location_photo_hash.clone()),
+           verification_photo_timestamp: photo.as_ref().map(|p| p.photo_timestamp),
+           verification_witness_name: witness.as_ref().map(|w| w.witness_name.clone()),
+           verification_witness_contact: witness.as_ref().map(|w| w.witness_contact.clone()),
+           verification_witness_relationship: witness.as_ref().map(|w| w.witness_relationship.clone()),
+           verification_witness_signature: witness.as_ref().and_then(|w| w.witness_signature.clone()),
+           verification_timestamp: verification.as_ref().map(|v| v.verification_timestamp),
+           created_at: record.created_at,
+           processed_at: record.processed_at,
+           reason_id: record.reason_id,
+       }
+   }
 
-    /// Convert database CollectionRecordModel to domain CollectionRecord
-    pub fn collection_record_from_model(_model: CollectionRecordModel) -> CollectionRecord {
-        todo!("Implement collection_record_from_model")
-    }
+   /// Convert database CollectionRecordModel to domain CollectionRecord
+   pub fn collection_record_from_model(model: CollectionRecordModel) -> CollectionRecord {
+       CollectionRecord {
+           id: model.id,
+           customer_id: model.customer_id,
+           agent_id: model.agent_id,
+           program_id: model.program_id,
+           account_id: model.account_id,
+           collection_date: model.collection_date,
+           collection_time: model.collection_time,
+           amount: model.amount,
+           currency: model.currency,
+           collection_method: Self::collection_method_from_model(model.collection_method),
+           location_address_id: model.location_address_id,
+           receipt_number: model.receipt_number,
+           status: Self::collection_record_status_from_model(model.status),
+           notes: model.notes,
+           collection_verification_id: None, // Needs to be handled separately
+           created_at: model.created_at,
+           processed_at: model.processed_at,
+           reason_id: model.reason_id,
+       }
+   }
 
-    /// Convert domain CollectionBatch to database CollectionBatchModel
-    pub fn collection_batch_to_model(_batch: CollectionBatch) -> CollectionBatchModel {
-        todo!("Implement collection_batch_to_model")
-    }
+   /// Convert domain CollectionBatch to database CollectionBatchModel
+   pub fn collection_batch_to_model(batch: CollectionBatch, reconciliation: Option<ReconciliationData>) -> CollectionBatchModel {
+       CollectionBatchModel {
+           id: batch.id,
+           agent_id: batch.agent_id,
+           collection_date: batch.collection_date,
+           total_collections: batch.total_collections,
+           total_amount: batch.total_amount,
+           currency: batch.currency,
+           status: Self::batch_status_to_model(batch.status),
+           collection_records: batch.collection_records,
+           reconciliation_expected_amount: reconciliation.as_ref().map(|r| r.expected_amount),
+           reconciliation_actual_amount: reconciliation.as_ref().map(|r| r.actual_amount),
+           reconciliation_variance: reconciliation.as_ref().map(|r| r.variance),
+           reconciliation_variance_reason: reconciliation.as_ref().and_then(|r| r.variance_reason.clone()),
+           reconciliation_reconciled_by: reconciliation.as_ref().map(|r| r.reconciled_by),
+           reconciliation_timestamp: reconciliation.as_ref().map(|r| r.reconciliation_timestamp),
+           reconciliation_adjustment_required: reconciliation.as_ref().map(|r| r.adjustment_required),
+           created_at: batch.created_at,
+           processed_at: batch.processed_at,
+       }
+   }
 
-    /// Convert database CollectionBatchModel to domain CollectionBatch
-    pub fn collection_batch_from_model(_model: CollectionBatchModel) -> CollectionBatch {
-        todo!("Implement collection_batch_from_model")
-    }
+   /// Convert database CollectionBatchModel to domain CollectionBatch
+   pub fn collection_batch_from_model(model: CollectionBatchModel) -> CollectionBatch {
+       CollectionBatch {
+           id: model.id,
+           agent_id: model.agent_id,
+           collection_date: model.collection_date,
+           total_collections: model.total_collections,
+           total_amount: model.total_amount,
+           currency: model.currency,
+           status: Self::batch_status_from_model(model.status),
+           collection_records: model.collection_records,
+           reconciliation_data_id: None, // Needs to be handled separately
+           created_at: model.created_at,
+           processed_at: model.processed_at,
+       }
+   }
 
-    /// Convert domain CoverageArea to database CoverageAreaModel
-    pub fn coverage_area_to_model(_area: CoverageArea) -> CoverageAreaModel {
-        todo!("Implement coverage_area_to_model")
-    }
+   /// Convert domain CoverageArea to database CoverageAreaModel
+   pub fn coverage_area_to_model(area: CoverageArea, territory_id: Uuid) -> CoverageAreaModel {
+       let coordinates = serde_json::to_string(&vec![
+           (area.boundary_coordinates_long_1, area.boundary_coordinates_lat_1),
+           (area.boundary_coordinates_long_2, area.boundary_coordinates_lat_2),
+           (area.boundary_coordinates_long_3, area.boundary_coordinates_lat_3),
+           (area.boundary_coordinates_long_4, area.boundary_coordinates_lat_4),
+           (area.boundary_coordinates_long_5, area.boundary_coordinates_lat_5),
+       ]).unwrap_or_default();
 
-    /// Convert database CoverageAreaModel to domain CoverageArea
-    pub fn coverage_area_from_model(_model: CoverageAreaModel) -> CoverageArea {
-        todo!("Implement coverage_area_from_model")
-    }
+       CoverageAreaModel {
+           id: area.id,
+           territory_id,
+           area_name: area.area_name,
+           area_type: Self::area_type_to_model(area.area_type),
+           boundary_coordinates: HeaplessString::try_from(coordinates.as_str()).unwrap_or_default(),
+           customer_density: Self::customer_density_to_model(area.customer_density),
+           transport_mode: Self::transport_mode_to_model(area.transport_mode),
+           created_at: Utc::now(),
+       }
+   }
 
-    /// Convert domain PerformanceAlert to database PerformanceAlertModel
-    pub fn performance_alert_to_model(_alert: PerformanceAlert) -> PerformanceAlertModel {
-        todo!("Implement performance_alert_to_model")
-    }
+   /// Convert database CoverageAreaModel to domain CoverageArea
+   pub fn coverage_area_from_model(model: CoverageAreaModel) -> CoverageArea {
+       let coordinates: Vec<(Option<Decimal>, Option<Decimal>)> = serde_json::from_str(&model.boundary_coordinates).unwrap_or_default();
+       CoverageArea {
+           id: model.id,
+           area_name: model.area_name,
+           area_type: Self::area_type_from_model(model.area_type),
+           boundary_coordinates_long_1: coordinates.first().and_then(|c| c.0),
+           boundary_coordinates_lat_1: coordinates.first().and_then(|c| c.1),
+           boundary_coordinates_long_2: coordinates.get(1).and_then(|c| c.0),
+           boundary_coordinates_lat_2: coordinates.get(1).and_then(|c| c.1),
+           boundary_coordinates_long_3: coordinates.get(2).and_then(|c| c.0),
+           boundary_coordinates_lat_3: coordinates.get(2).and_then(|c| c.1),
+           boundary_coordinates_long_4: coordinates.get(3).and_then(|c| c.0),
+           boundary_coordinates_lat_4: coordinates.get(3).and_then(|c| c.1),
+           boundary_coordinates_long_5: coordinates.get(4).and_then(|c| c.0),
+           boundary_coordinates_lat_5: coordinates.get(4).and_then(|c| c.1),
+           customer_density: Self::customer_density_from_model(model.customer_density),
+           transport_mode: Self::transport_mode_from_model(model.transport_mode),
+       }
+   }
 
-    /// Convert database PerformanceAlertModel to domain PerformanceAlert
-    pub fn performance_alert_from_model(_model: PerformanceAlertModel) -> PerformanceAlert {
-        todo!("Implement performance_alert_from_model")
-    }
+   /// Convert domain PerformanceAlert to database PerformanceAlertModel
+   pub fn performance_alert_to_model(alert: PerformanceAlert) -> PerformanceAlertModel {
+       PerformanceAlertModel {
+           id: alert.id,
+           agent_id: alert.metrics_id, // Assuming metrics_id is agent_id
+           alert_type: Self::alert_type_to_model(alert.alert_type),
+           severity: Self::alert_severity_to_model(alert.severity),
+           message: alert.message,
+           acknowledged: alert.acknowledged,
+           resolution_required: alert.resolution_required,
+           created_at: alert.created_at,
+           acknowledged_at: None,
+           resolved_at: None,
+       }
+   }
+
+   /// Convert database PerformanceAlertModel to domain PerformanceAlert
+   pub fn performance_alert_from_model(model: PerformanceAlertModel) -> PerformanceAlert {
+       PerformanceAlert {
+           id: model.id,
+           metrics_id: model.agent_id,
+           alert_type: Self::alert_type_from_model(model.alert_type),
+           severity: Self::alert_severity_from_model(model.severity),
+           message: model.message,
+           created_at: model.created_at,
+           acknowledged: model.acknowledged,
+           resolution_required: model.resolution_required,
+       }
+   }
 }
 
 #[cfg(test)]

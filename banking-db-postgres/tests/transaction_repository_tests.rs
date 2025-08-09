@@ -2,7 +2,7 @@ use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
 use banking_db::models::{TransactionModel, TransactionType, TransactionStatus, TransactionApprovalStatus, AccountModel};
 use banking_db::models::workflow::{ApprovalWorkflowModel, WorkflowTransactionApprovalModel, WorkflowStatusModel};
 use banking_db::repository::TransactionRepository;
-use banking_db_postgres::TransactionRepositoryImpl;
+use banking_db_postgres::repository::transaction_repository_impl::TransactionRepositoryImpl;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;

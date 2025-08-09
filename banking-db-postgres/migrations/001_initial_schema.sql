@@ -2954,6 +2954,90 @@ CREATE TRIGGER update_collateral_enforcement_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================================================
+-- DAILY COLLECTION TABLES
+-- =============================================================================
+
+-- Collection Operating Hours table
+CREATE TABLE collection_operating_hours (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    program_id UUID NOT NULL,
+    monday_open TIME,
+    monday_close TIME,
+    tuesday_open TIME,
+    tuesday_close TIME,
+    wednesday_open TIME,
+    wednesday_close TIME,
+    thursday_open TIME,
+    thursday_close TIME,
+    friday_open TIME,
+    friday_close TIME,
+    saturday_open TIME,
+    saturday_close TIME,
+    sunday_open TIME,
+    sunday_close TIME,
+    timezone VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Collection Records table
+CREATE TABLE collection_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id UUID NOT NULL,
+    agent_id UUID NOT NULL,
+    program_id UUID NOT NULL,
+    account_id UUID NOT NULL,
+    collection_date DATE NOT NULL,
+    collection_time TIMESTAMPTZ NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    currency VARCHAR(3) NOT NULL,
+    collection_method collection_method NOT NULL,
+    location_address_id UUID,
+    receipt_number VARCHAR(50) NOT NULL,
+    status collection_record_status NOT NULL,
+    notes VARCHAR(500),
+    verification_customer_signature VARCHAR(200),
+    verification_agent_verification_code VARCHAR(50),
+    verification_fingerprint_hash VARCHAR(100),
+    verification_face_recognition_score REAL,
+    verification_biometric_method biometric_method,
+    verification_confidence_level REAL,
+    verification_customer_photo_hash VARCHAR(100),
+    verification_receipt_photo_hash VARCHAR(100),
+    verification_location_photo_hash VARCHAR(100),
+    verification_photo_timestamp TIMESTAMPTZ,
+    verification_witness_name VARCHAR(100),
+    verification_witness_contact VARCHAR(50),
+    verification_witness_relationship VARCHAR(50),
+    verification_witness_signature VARCHAR(200),
+    verification_timestamp TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMPTZ,
+    reason_id UUID
+);
+
+-- Collection Batch table
+CREATE TABLE collection_batch (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    agent_id UUID NOT NULL,
+    collection_date DATE NOT NULL,
+    total_collections INTEGER NOT NULL,
+    total_amount DECIMAL(15, 2) NOT NULL,
+    currency VARCHAR(3) NOT NULL,
+    status batch_status NOT NULL,
+    collection_records UUID[],
+    reconciliation_expected_amount DECIMAL(15, 2),
+    reconciliation_actual_amount DECIMAL(15, 2),
+    reconciliation_variance DECIMAL(15, 2),
+    reconciliation_variance_reason VARCHAR(500),
+    reconciliation_reconciled_by UUID,
+    reconciliation_timestamp TIMESTAMPTZ,
+    reconciliation_adjustment_required BOOLEAN,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMPTZ
+);
+
+-- =============================================================================
 -- COMMENTS FOR DOCUMENTATION
 -- =============================================================================
 

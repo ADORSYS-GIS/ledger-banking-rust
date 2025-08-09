@@ -56,5 +56,5 @@ pub use daily_collection::{
     CollectionMethod as DbCollectionMethod, CollectionRecordStatus as DbCollectionRecordStatus,
     BiometricMethod as DbBiometricMethod, BatchStatus as DbDailyCollectionBatchStatus,
     AlertType as DbDailyCollectionAlertType, FeeFrequency as DbDailyCollectionFeeFrequency,
-    AlertSeverity as DbDailyCollectionAlertSeverity,
 };
+pub use collateral::AlertSeverity;
