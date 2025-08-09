@@ -15,6 +15,7 @@ pub mod casa;
 pub mod loan;
 pub mod reason_view;
 pub mod daily_collection;
+pub mod product;
 
 pub use customer::*;
 pub use account::*;
@@ -44,6 +45,7 @@ pub use collateral::*;
 pub use casa::*;
 pub use loan::*;
 pub use reason_view::*;
+pub use product::*;
 pub use daily_collection::{
     CollectionAgentModel, CollectionProgramModel, CustomerCollectionProfileModel,
     CollectionRecordModel, CollectionBatchModel, CollectionBatchRecordModel, CoverageAreaModel, PerformanceAlertModel,

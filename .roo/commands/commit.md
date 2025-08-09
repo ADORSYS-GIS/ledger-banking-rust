@@ -72,13 +72,9 @@ Benefits:
 - Benefit 2: Specific improvement achieved
 - Benefit 3: Specific improvement achieved
 
-🤖 Generated with [Claude Code](https://claude.ai/code)
+🤖 Generated with [Gemini 2.5 Pro](https://gemini.google.com/)
 
-Co-Authored-By: Claude <noreply@anthropic.com>
-
-🤖 Generated with [Qwen Code](https://tongyi.aliyun.com/qianwen/)
-
-Co-Authored-By: Qwen <noreply@alibaba.com>
+Co-Authored-By: Claude <noreply@google.com>
 
 ```
 
@@ -106,9 +102,10 @@ Co-Authored-By: Qwen <noreply@alibaba.com>
 
 ## Signing Requirements
 
+store commit message in a file target/commit.md
 Always commit with both flags:
 ```bash
-git commit -s -S -m "commit message"
+git commit -s -S -F target/commit.md
 ```
 
 - `-s`: Adds Signed-off-by line for DCO compliance

@@ -14,6 +14,7 @@ pub mod reason_and_purpose;
 pub mod person;
 pub mod collateral;
 pub mod daily_collection;
+pub mod product;
 
 pub use customer::*;
 pub use account::*;
@@ -37,6 +38,7 @@ pub use reason_view::*;
 pub use reason_and_purpose::*;
 pub use person::*;
 pub use collateral::*;
+pub use product::*;
 pub use daily_collection::{
     CollectionAgent, Territory, CoverageArea, AgentPerformanceMetrics, DeviceInformation,
     CollectionProgram, CustomerCollectionProfile, CollectionRecord, CollectionBatch,

@@ -94,11 +94,19 @@ let customer = Customer::builder(uuid, CustomerType::Corporate)
     .build()?;
 
 // Memory-optimized types
+pub id: Uuid,
 pub currency: HeaplessString<3>,           // ISO 4217 codes
 pub product_code: HeaplessString<12>,      // Banking codes
 pub name: HeaplessString<100>,             // Names/descriptions
 pub account_status: AccountStatus,         // Type-safe enums vs String
+pub description: Option<HeaplessString<200>>,
 ```
+
+// Multi-language name support
+pub name_l1: HeaplessString<100>,
+pub name_l2: HeaplessString<100>,
+pub name_l3: HeaplessString<100>,
+
 
 ### Key Rules
 1. **Use builders** for domain models (>4 parameters)

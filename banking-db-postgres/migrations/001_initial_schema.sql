@@ -182,6 +182,9 @@ CREATE TYPE biometric_method AS ENUM ('fingerprint', 'facerecognition', 'voicepr
 CREATE TYPE batch_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'partiallyprocessed', 'requiresreconciliation');
 CREATE TYPE fee_frequency AS ENUM ('percollection', 'daily', 'weekly', 'monthly', 'onetime');
 
+-- Product catalogue enums
+CREATE TYPE product_type AS ENUM ('CASA', 'LOAN');
+
 -- =============================================================================
 -- UTILITY FUNCTIONS
 -- =============================================================================
@@ -2950,6 +2953,34 @@ CREATE TRIGGER update_collateral_pledges_updated_at
 
 CREATE TRIGGER update_collateral_enforcement_updated_at
     BEFORE UPDATE ON collateral_enforcement
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================================
+-- PRODUCT CATALOGUE
+-- =============================================================================
+
+CREATE TABLE products (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_type product_type NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    valid_from DATE NOT NULL,
+    valid_to DATE,
+    rules VARCHAR(500),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id),
+
+    CONSTRAINT ck_product_dates CHECK (valid_to IS NULL OR valid_to >= valid_from)
+);
+
+CREATE INDEX idx_products_type ON products(product_type);
+CREATE INDEX idx_products_active ON products(is_active) WHERE is_active = TRUE;
+
+CREATE TRIGGER update_products_updated_at
+    BEFORE UPDATE ON products
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
