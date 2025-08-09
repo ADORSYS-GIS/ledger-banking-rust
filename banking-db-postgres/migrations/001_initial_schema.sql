@@ -220,7 +220,7 @@ CREATE TABLE persons (
     person_type person_type NOT NULL,
     display_name VARCHAR(100) NOT NULL,
     external_identifier VARCHAR(50),
-    organization UUID, -- References PersonModel.id for organizational hierarchy
+    organization_person_id UUID, -- References PersonModel.id for organizational hierarchy
     
     -- Individual messaging fields (up to 5 messaging methods)
     messaging1_id UUID REFERENCES messaging(id),
@@ -235,8 +235,8 @@ CREATE TABLE persons (
     messaging5_type messaging_type,
     
     department VARCHAR(50),
-    location UUID, -- References AddressModel.address_id for person's location (FK added later)
-    duplicate_of UUID REFERENCES persons(id),
+    location_address_id UUID, -- References AddressModel.address_id for person's location (FK added later)
+    duplicate_of_person_id UUID REFERENCES persons(id),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -245,7 +245,7 @@ CREATE TABLE persons (
 -- Indexes for persons
 CREATE INDEX idx_persons_external_id ON persons(external_identifier) WHERE external_identifier IS NOT NULL;
 -- Index on entity_reference removed since fields were moved to entity_reference table
-CREATE INDEX idx_persons_duplicate ON persons(duplicate_of) WHERE duplicate_of IS NOT NULL;
+CREATE INDEX idx_persons_duplicate ON persons(duplicate_of_person_id) WHERE duplicate_of_person_id IS NOT NULL;
 CREATE INDEX idx_persons_active ON persons(is_active) WHERE is_active = TRUE;
 CREATE INDEX idx_persons_display_name ON persons(display_name);
 CREATE INDEX idx_persons_type ON persons(person_type);
@@ -2347,8 +2347,8 @@ CREATE TRIGGER reason_and_purpose_updated_at
 -- SEED DATA: SYSTEM REFERENCED PERSONS
 -- =============================================================================
 
--- Insert system persons (organization field is now UUID, set to NULL for system accounts)
-INSERT INTO persons (id, person_type, display_name, external_identifier, organization, is_active)
+-- Insert system persons (organization_person_id field is now UUID, set to NULL for system accounts)
+INSERT INTO persons (id, person_type, display_name, external_identifier, organization_person_id, is_active)
 VALUES 
     ('00000000-0000-0000-0000-000000000000', 'system', 'SYSTEM', 'SYSTEM', NULL, TRUE),
     ('00000000-0000-0000-0000-000000000001', 'system', 'MIGRATION', 'MIGRATION', NULL, TRUE),
@@ -3047,12 +3047,12 @@ COMMENT ON COLUMN persons.id IS 'Unique identifier for this person reference';
 COMMENT ON COLUMN persons.person_type IS 'Type of person: natural (human), legal (company), system, integration, unknown';
 COMMENT ON COLUMN persons.display_name IS 'Display name of the person';
 COMMENT ON COLUMN persons.external_identifier IS 'External ID like employee number, badge ID, system ID';
-COMMENT ON COLUMN persons.organization IS 'Organization or department for employees or company name for legal entities';
+COMMENT ON COLUMN persons.organization_person_id IS 'Organization or department for employees or company name for legal entities';
 -- Comment on email removed since field is now handled through messaging table
 -- Comment on phone removed since field is now handled through messaging table
 COMMENT ON COLUMN persons.department IS 'Department within organization';
-COMMENT ON COLUMN persons.location IS 'Reference to address table for person location';
-COMMENT ON COLUMN persons.duplicate_of IS 'Reference to another person record if this is a duplicate';
+COMMENT ON COLUMN persons.location_address_id IS 'Reference to address table for person location';
+COMMENT ON COLUMN persons.duplicate_of_person_id IS 'Reference to another person record if this is a duplicate';
 -- Comment on entity_reference removed since field moved to entity_reference table
 -- Comment on entity_type removed since field moved to entity_reference table
 COMMENT ON COLUMN persons.is_active IS 'Whether this person reference is currently active';

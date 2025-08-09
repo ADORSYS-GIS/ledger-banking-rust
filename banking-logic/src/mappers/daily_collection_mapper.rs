@@ -516,7 +516,7 @@ impl DailyCollectionMapper {
     ) -> CollectionAgentModel {
         CollectionAgentModel {
             id: agent.id,
-            person_reference: agent.person_reference,
+            person_id: agent.person_id,
             license_number: agent.license_number,
             license_expiry: agent.license_expiry,
             status: Self::agent_status_to_model(agent.status),
@@ -566,12 +566,12 @@ impl DailyCollectionMapper {
    pub fn collection_agent_from_model(model: CollectionAgentModel) -> CollectionAgent {
        CollectionAgent {
            id: model.id,
-           person_reference: model.person_reference,
+           person_id: model.person_id,
            license_number: model.license_number,
            license_expiry: model.license_expiry,
            status: Self::agent_status_from_model(model.status),
            assigned_territory_id: model.assigned_territory_id,
-           performance_metrics_id: Uuid::nil(), // This needs to be handled separately
+           agent_performance_metrics_id: Uuid::nil(), // This needs to be handled separately
            cash_limit: model.cash_limit,
            device_information_id: model.device_id,
            created_at: model.created_at,
@@ -590,7 +590,7 @@ impl DailyCollectionMapper {
            start_date: program.start_date,
            end_date: program.end_date,
            collection_frequency: Self::collection_frequency_to_model(program.collection_frequency),
-           collection_time_operating_hours_id: program.collection_time_operating_hours_id,
+           operating_hours_id: program.operating_hours_id,
            minimum_amount: program.minimum_amount,
            maximum_amount: program.maximum_amount,
            target_amount: program.target_amount,
@@ -626,7 +626,7 @@ impl DailyCollectionMapper {
            start_date: model.start_date,
            end_date: model.end_date,
            collection_frequency: Self::collection_frequency_from_model(model.collection_frequency),
-           collection_time_operating_hours_id: model.collection_time_operating_hours_id,
+           operating_hours_id: model.operating_hours_id,
            minimum_amount: model.minimum_amount,
            maximum_amount: model.maximum_amount,
            target_amount: model.target_amount,
@@ -646,7 +646,7 @@ impl DailyCollectionMapper {
        CustomerCollectionProfileModel {
            id: profile.id,
            customer_id: profile.customer_id,
-           program_id: profile.program_id,
+           collection_program_id: profile.collection_program_id,
            account_id: profile.account_id,
            enrollment_date: profile.enrollment_date,
            status: Self::collection_status_to_model(profile.status),
@@ -655,8 +655,8 @@ impl DailyCollectionMapper {
            schedule_collection_time: schedule.collection_time,
            schedule_timezone: schedule.timezone,
            schedule_holiday_handling: Self::holiday_handling_to_model(schedule.holiday_handling),
-           assigned_agent_id: profile.assigned_agent_id,
-           collection_location_id: profile.collection_location_id,
+           assigned_collection_agent_id: profile.assigned_collection_agent_id,
+           collection_location_address_id: profile.collection_location_address_id,
            performance_collection_rate: performance.collection_rate,
            performance_total_collections: performance.total_collections,
            performance_total_amount_collected: performance.total_amount_collected,
@@ -686,15 +686,15 @@ impl DailyCollectionMapper {
        CustomerCollectionProfile {
            id: model.id,
            customer_id: model.customer_id,
-           program_id: model.program_id,
+           collection_program_id: model.collection_program_id,
            account_id: model.account_id,
            enrollment_date: model.enrollment_date,
            status: Self::collection_status_from_model(model.status),
            daily_amount: model.daily_amount,
            collection_schedule_id: Uuid::nil(), // Needs to be handled separately
-           assigned_agent_id: model.assigned_agent_id,
-           collection_location_id: model.collection_location_id,
-           collection_performance_metrics: Uuid::nil(), // Needs to be handled separately
+           assigned_collection_agent_id: model.assigned_collection_agent_id,
+           collection_location_address_id: model.collection_location_address_id,
+           collection_performance_metrics_id: Uuid::nil(), // Needs to be handled separately
            graduation_progress_id: Uuid::nil(), // Needs to be handled separately
            created_at: model.created_at,
            updated_at: model.updated_at,
@@ -707,8 +707,8 @@ impl DailyCollectionMapper {
        CollectionRecordModel {
            id: record.id,
            customer_id: record.customer_id,
-           agent_id: record.agent_id,
-           program_id: record.program_id,
+           collection_agent_id: record.collection_agent_id,
+           collection_program_id: record.collection_program_id,
            account_id: record.account_id,
            collection_date: record.collection_date,
            collection_time: record.collection_time,
@@ -745,8 +745,8 @@ impl DailyCollectionMapper {
        CollectionRecord {
            id: model.id,
            customer_id: model.customer_id,
-           agent_id: model.agent_id,
-           program_id: model.program_id,
+           collection_agent_id: model.collection_agent_id,
+           collection_program_id: model.collection_program_id,
            account_id: model.account_id,
            collection_date: model.collection_date,
            collection_time: model.collection_time,
@@ -768,7 +768,7 @@ impl DailyCollectionMapper {
    pub fn collection_batch_to_model(batch: CollectionBatch, reconciliation: Option<ReconciliationData>) -> CollectionBatchModel {
        CollectionBatchModel {
            id: batch.id,
-           agent_id: batch.agent_id,
+           collection_agent_id: batch.collection_agent_id,
            collection_date: batch.collection_date,
            total_collections: batch.total_collections,
            total_amount: batch.total_amount,
@@ -779,7 +779,7 @@ impl DailyCollectionMapper {
            reconciliation_actual_amount: reconciliation.as_ref().map(|r| r.actual_amount),
            reconciliation_variance: reconciliation.as_ref().map(|r| r.variance),
            reconciliation_variance_reason: reconciliation.as_ref().and_then(|r| r.variance_reason.clone()),
-           reconciliation_reconciled_by: reconciliation.as_ref().map(|r| r.reconciled_by),
+           reconciled_by_person_id: reconciliation.as_ref().map(|r| r.reconciled_by_person_id),
            reconciliation_timestamp: reconciliation.as_ref().map(|r| r.reconciliation_timestamp),
            reconciliation_adjustment_required: reconciliation.as_ref().map(|r| r.adjustment_required),
            created_at: batch.created_at,
@@ -791,7 +791,7 @@ impl DailyCollectionMapper {
    pub fn collection_batch_from_model(model: CollectionBatchModel) -> CollectionBatch {
        CollectionBatch {
            id: model.id,
-           agent_id: model.agent_id,
+           collection_agent_id: model.collection_agent_id,
            collection_date: model.collection_date,
            total_collections: model.total_collections,
            total_amount: model.total_amount,
@@ -852,7 +852,7 @@ impl DailyCollectionMapper {
    pub fn performance_alert_to_model(alert: PerformanceAlert) -> PerformanceAlertModel {
        PerformanceAlertModel {
            id: alert.id,
-           agent_id: alert.metrics_id, // Assuming metrics_id is agent_id
+           agent_performance_metrics_id: alert.agent_performance_metrics_id,
            alert_type: Self::alert_type_to_model(alert.alert_type),
            severity: Self::alert_severity_to_model(alert.severity),
            message: alert.message,
@@ -868,7 +868,7 @@ impl DailyCollectionMapper {
    pub fn performance_alert_from_model(model: PerformanceAlertModel) -> PerformanceAlert {
        PerformanceAlert {
            id: model.id,
-           metrics_id: model.agent_id,
+           agent_performance_metrics_id: model.agent_performance_metrics_id,
            alert_type: Self::alert_type_from_model(model.alert_type),
            severity: Self::alert_severity_from_model(model.severity),
            message: model.message,

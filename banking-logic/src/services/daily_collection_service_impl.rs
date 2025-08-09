@@ -256,7 +256,7 @@ impl DailyCollectionService for DailyCollectionServiceImpl {
         &self,
         _collection_id: Uuid,
         reason_id: Uuid,
-        authorized_by: Uuid,
+        authorized_by_person_id: Uuid,
     ) -> BankingResult<()> {
         // TODO: Validate collection exists and can be reversed
         // TODO: Create reversal transaction
@@ -271,7 +271,7 @@ impl DailyCollectionService for DailyCollectionServiceImpl {
         collection_date: NaiveDate,
         expected_amount: Decimal,
         actual_amount: Decimal,
-        reconciled_by: Uuid,
+        reconciled_by_person_id: Uuid,
     ) -> BankingResult<Vec<CollectionRecord>> {
         // TODO: Get collections for agent and date
         // TODO: Compare expected vs actual amounts
