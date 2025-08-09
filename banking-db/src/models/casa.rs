@@ -21,7 +21,7 @@ pub struct OverdraftFacility {
     pub facility_status: OverdraftStatus,
     pub approval_date: NaiveDate,
     pub expiry_date: Option<NaiveDate>,
-    pub approved_by: Uuid, // References Person.person_id
+    pub approved_by_person_id: Uuid, // References Person.person_id
     #[serde(serialize_with = "serialize_review_frequency", deserialize_with = "deserialize_review_frequency")]
     pub review_frequency: ReviewFrequency,
     pub next_review_date: NaiveDate,
@@ -80,7 +80,7 @@ pub struct OverdraftInterestCalculation {
     pub compounding_frequency: CompoundingFrequency,
     pub capitalization_due: bool,
     pub calculated_at: DateTime<Utc>,
-    pub calculated_by: Uuid, // References Person.person_id
+    pub calculated_by_person_id: Uuid, // References Person.person_id
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,7 +139,11 @@ pub struct CasaComplianceStatus {
     pub last_kyc_update: Option<NaiveDate>,
     #[serde(serialize_with = "serialize_risk_rating", deserialize_with = "deserialize_risk_rating")]
     pub aml_risk_rating: RiskRating,
-    pub regulatory_alerts: Vec<HeaplessString<200>>,
+    pub regulatory_alerts_01: HeaplessString<200>,
+    pub regulatory_alerts_02: HeaplessString<200>,
+    pub regulatory_alerts_03: HeaplessString<200>,
+    pub regulatory_alerts_04: HeaplessString<200>,
+    pub regulatory_alerts_05: HeaplessString<200>,
 }
 
 /// Daily overdraft processing job for EOD
@@ -155,7 +159,11 @@ pub struct OverdraftProcessingJob {
     pub status: ProcessingJobStatus,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
-    pub errors: Vec<String>,
+    pub errors_01: HeaplessString<200>,
+    pub errors_02: HeaplessString<200>,
+    pub errors_03: HeaplessString<200>,
+    pub errors_04: HeaplessString<200>,
+    pub errors_05: HeaplessString<200>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -178,12 +186,18 @@ pub struct OverdraftLimitAdjustment {
     pub adjustment_reason_id: Uuid,
     /// Additional context for adjustment
     pub additional_details: Option<HeaplessString<200>>,
-    pub supporting_documents: Vec<String>,
-    pub requested_by: Uuid, // References Person.person_id
+    pub required_document01_id: Option<Uuid>,
+    pub required_document02_id: Option<Uuid>,
+    pub required_document03_id: Option<Uuid>,
+    pub required_document04_id: Option<Uuid>,
+    pub required_document05_id: Option<Uuid>,
+    pub required_document06_id: Option<Uuid>,
+    pub required_document07_id: Option<Uuid>,
+    pub requested_by_person_id: Uuid, // References Person.person_id
     pub requested_at: DateTime<Utc>,
     #[serde(serialize_with = "serialize_casa_approval_status", deserialize_with = "deserialize_casa_approval_status")]
     pub approval_status: CasaApprovalStatus,
-    pub approved_by: Option<Uuid>, // References Person.person_id
+    pub approved_by_person_id: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<DateTime<Utc>>,
     pub approval_notes: Option<HeaplessString<500>>,
     pub effective_date: Option<NaiveDate>,
@@ -252,7 +266,7 @@ pub struct InterestPostingRecord {
     pub net_amount: Decimal,
     #[serde(serialize_with = "serialize_posting_status", deserialize_with = "deserialize_posting_status")]
     pub posting_status: PostingStatus,
-    pub posted_by: Uuid, // References Person.person_id
+    pub posted_by_person_id: Uuid, // References Person.person_id
     pub posted_at: DateTime<Utc>,
 }
 

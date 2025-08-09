@@ -30,7 +30,9 @@ impl ChannelMapper {
             status,
             daily_limit: channel.daily_limit,
             per_transaction_limit: channel.per_transaction_limit,
-            supported_currencies: channel.supported_currencies,
+            supported_currency01: channel.supported_currency01,
+            supported_currency02: channel.supported_currency02,
+            supported_currency03: channel.supported_currency03,
             requires_additional_auth: channel.requires_additional_auth,
             fee_schedule_id: channel.fee_schedule_id,
             created_at: Utc::now(),
@@ -69,7 +71,9 @@ impl ChannelMapper {
             status,
             daily_limit: model.daily_limit,
             per_transaction_limit: model.per_transaction_limit,
-            supported_currencies: model.supported_currencies,
+            supported_currency01: model.supported_currency01,
+            supported_currency02: model.supported_currency02,
+            supported_currency03: model.supported_currency03,
             requires_additional_auth: model.requires_additional_auth,
             fee_schedule_id: model.fee_schedule_id,
         })
@@ -85,6 +89,11 @@ impl ChannelMapper {
             effective_date: schedule.effective_date,
             expiry_date: schedule.expiry_date,
             currency: schedule.currency,
+            fee01_fee_item_id: schedule.fee01_fee_item_id,
+            fee02_fee_item_id: schedule.fee02_fee_item_id,
+            fee03_fee_item_id: schedule.fee03_fee_item_id,
+            fee04_fee_item_id: schedule.fee04_fee_item_id,
+            fee05_fee_item_id: schedule.fee05_fee_item_id,
             is_active: schedule.is_active,
             created_at: schedule.created_at,
             updated_at: schedule.updated_at,
@@ -92,7 +101,7 @@ impl ChannelMapper {
     }
 
     /// Convert database FeeScheduleModel to domain FeeSchedule
-    pub fn from_fee_schedule_model(model: FeeScheduleModel, fee_items: Vec<FeeItem>) -> Result<FeeSchedule, String> {
+    pub fn from_fee_schedule_model(model: FeeScheduleModel, _fee_items: Vec<FeeItem>) -> Result<FeeSchedule, String> {
         Ok(FeeSchedule {
             id: model.id,
             schedule_name: model.schedule_name,
@@ -100,7 +109,11 @@ impl ChannelMapper {
             effective_date: model.effective_date,
             expiry_date: model.expiry_date,
             currency: model.currency,
-            fee_items,
+            fee01_fee_item_id: model.fee01_fee_item_id,
+            fee02_fee_item_id: model.fee02_fee_item_id,
+            fee03_fee_item_id: model.fee03_fee_item_id,
+            fee04_fee_item_id: model.fee04_fee_item_id,
+            fee05_fee_item_id: model.fee05_fee_item_id,
             is_active: model.is_active,
             created_at: model.created_at,
             updated_at: model.updated_at,
@@ -131,8 +144,7 @@ impl ChannelMapper {
 
     /// Convert database ChannelReconciliationReportModel to domain ReconciliationReport
     pub fn from_reconciliation_report_model(
-        model: ChannelReconciliationReportModel,
-        discrepancies: Vec<Discrepancy>
+        model: ChannelReconciliationReportModel
     ) -> ReconciliationReport {
         let status = match model.status {
             banking_db::models::channel::ReconciliationStatus::InProgress => ReconciliationStatus::InProgress,
@@ -147,7 +159,6 @@ impl ChannelMapper {
             reconciliation_date: model.reconciliation_date,
             total_transactions: model.total_transactions,
             total_amount: model.total_amount,
-            discrepancies,
             status,
             generated_at: model.generated_at,
         }
@@ -207,7 +218,28 @@ impl ChannelMapper {
             fee_percentage: item.fee_percentage,
             minimum_fee: item.minimum_fee,
             maximum_fee: item.maximum_fee,
-            applies_to_transaction_types: item.applies_to_transaction_types,
+            tier01_channel_fee_tier_id: item.tier01_channel_fee_tier_id,
+            tier02_channel_fee_tier_id: item.tier02_channel_fee_tier_id,
+            tier03_channel_fee_tier_id: item.tier03_channel_fee_tier_id,
+            tier04_channel_fee_tier_id: item.tier04_channel_fee_tier_id,
+            tier05_channel_fee_tier_id: item.tier05_channel_fee_tier_id,
+            tier06_channel_fee_tier_id: item.tier06_channel_fee_tier_id,
+            tier07_channel_fee_tier_id: item.tier07_channel_fee_tier_id,
+            tier08_channel_fee_tier_id: item.tier08_channel_fee_tier_id,
+            tier09_channel_fee_tier_id: item.tier09_channel_fee_tier_id,
+            tier10_channel_fee_tier_id: item.tier10_channel_fee_tier_id,
+            tier11_channel_fee_tier_id: item.tier11_channel_fee_tier_id,
+            applies_to_transaction_type_01: item.applies_to_transaction_type_01,
+            applies_to_transaction_type_02: item.applies_to_transaction_type_02,
+            applies_to_transaction_type_03: item.applies_to_transaction_type_03,
+            applies_to_transaction_type_04: item.applies_to_transaction_type_04,
+            applies_to_transaction_type_05: item.applies_to_transaction_type_05,
+            applies_to_transaction_type_06: item.applies_to_transaction_type_06,
+            applies_to_transaction_type_07: item.applies_to_transaction_type_07,
+            applies_to_transaction_type_08: item.applies_to_transaction_type_08,
+            applies_to_transaction_type_09: item.applies_to_transaction_type_09,
+            applies_to_transaction_type_10: item.applies_to_transaction_type_10,
+            applies_to_transaction_type_11: item.applies_to_transaction_type_11,
             is_waivable: item.is_waivable,
             requires_approval_for_waiver: item.requires_approval_for_waiver,
             created_at: Utc::now(),
@@ -215,7 +247,7 @@ impl ChannelMapper {
     }
 
     /// Convert database FeeItemModel to domain FeeItem
-    pub fn from_fee_item_model(model: FeeItemModel, fee_tiers: Vec<ChannelFeeTier>) -> FeeItem {
+    pub fn from_fee_item_model(model: FeeItemModel, _fee_tiers: Vec<ChannelFeeTier>) -> FeeItem {
         let fee_type = match model.fee_type {
             banking_db::models::channel::ChannelFeeType::TransactionFee => ChannelFeeType::TransactionFee,
             banking_db::models::channel::ChannelFeeType::MaintenanceFee => ChannelFeeType::MaintenanceFee,
@@ -246,8 +278,28 @@ impl ChannelMapper {
             fee_percentage: model.fee_percentage,
             minimum_fee: model.minimum_fee,
             maximum_fee: model.maximum_fee,
-            fee_tiers,
-            applies_to_transaction_types: model.applies_to_transaction_types,
+            tier01_channel_fee_tier_id: model.tier01_channel_fee_tier_id,
+            tier02_channel_fee_tier_id: model.tier02_channel_fee_tier_id,
+            tier03_channel_fee_tier_id: model.tier03_channel_fee_tier_id,
+            tier04_channel_fee_tier_id: model.tier04_channel_fee_tier_id,
+            tier05_channel_fee_tier_id: model.tier05_channel_fee_tier_id,
+            tier06_channel_fee_tier_id: model.tier06_channel_fee_tier_id,
+            tier07_channel_fee_tier_id: model.tier07_channel_fee_tier_id,
+            tier08_channel_fee_tier_id: model.tier08_channel_fee_tier_id,
+            tier09_channel_fee_tier_id: model.tier09_channel_fee_tier_id,
+            tier10_channel_fee_tier_id: model.tier10_channel_fee_tier_id,
+            tier11_channel_fee_tier_id: model.tier11_channel_fee_tier_id,
+            applies_to_transaction_type_01: model.applies_to_transaction_type_01,
+            applies_to_transaction_type_02: model.applies_to_transaction_type_02,
+            applies_to_transaction_type_03: model.applies_to_transaction_type_03,
+            applies_to_transaction_type_04: model.applies_to_transaction_type_04,
+            applies_to_transaction_type_05: model.applies_to_transaction_type_05,
+            applies_to_transaction_type_06: model.applies_to_transaction_type_06,
+            applies_to_transaction_type_07: model.applies_to_transaction_type_07,
+            applies_to_transaction_type_08: model.applies_to_transaction_type_08,
+            applies_to_transaction_type_09: model.applies_to_transaction_type_09,
+            applies_to_transaction_type_10: model.applies_to_transaction_type_10,
+            applies_to_transaction_type_11: model.applies_to_transaction_type_11,
             is_waivable: model.is_waivable,
             requires_approval_for_waiver: model.requires_approval_for_waiver,
         }

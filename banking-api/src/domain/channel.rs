@@ -14,7 +14,9 @@ pub struct Channel {
     pub status: ChannelStatus,
     pub daily_limit: Option<Decimal>,
     pub per_transaction_limit: Option<Decimal>,
-    pub supported_currencies: Vec<HeaplessString<3>>,
+    pub supported_currency01: Option<HeaplessString<3>>,
+    pub supported_currency02: Option<HeaplessString<3>>,
+    pub supported_currency03: Option<HeaplessString<3>>,
     pub requires_additional_auth: bool,
     pub fee_schedule_id: Option<Uuid>,
 }
@@ -34,9 +36,16 @@ pub struct ChannelFee {
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
     pub description: HeaplessString<200>,
-    pub applies_to_transaction: Uuid,
+    pub applies_to_transaction_id: Uuid,
 }
 
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReconciliationReportDiscrepancy {
+    pub id: Uuid,
+    pub reconciliation_report_id: Uuid,
+    pub discrepancy_id: Uuid,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReconciliationReport {
@@ -45,7 +54,6 @@ pub struct ReconciliationReport {
     pub reconciliation_date: NaiveDate,
     pub total_transactions: i64,
     pub total_amount: Decimal,
-    pub discrepancies: Vec<Discrepancy>,
     pub status: ReconciliationStatus,
     pub generated_at: DateTime<Utc>,
 }
@@ -76,7 +84,11 @@ pub struct FeeSchedule {
     pub effective_date: chrono::NaiveDate,
     pub expiry_date: Option<chrono::NaiveDate>,
     pub currency: HeaplessString<3>,
-    pub fee_items: Vec<FeeItem>,
+    pub fee01_fee_item_id: Option<Uuid>,
+    pub fee02_fee_item_id: Option<Uuid>,
+    pub fee03_fee_item_id: Option<Uuid>,
+    pub fee04_fee_item_id: Option<Uuid>,
+    pub fee05_fee_item_id: Option<Uuid>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -94,8 +106,28 @@ pub struct FeeItem {
     pub fee_percentage: Option<Decimal>, // For percentage-based fees
     pub minimum_fee: Option<Decimal>,
     pub maximum_fee: Option<Decimal>,
-    pub fee_tiers: Vec<ChannelFeeTier>,
-    pub applies_to_transaction_types: Vec<HeaplessString<20>>,
+    pub tier01_channel_fee_tier_id: Option<Uuid>,
+    pub tier02_channel_fee_tier_id: Option<Uuid>,
+    pub tier03_channel_fee_tier_id: Option<Uuid>,
+    pub tier04_channel_fee_tier_id: Option<Uuid>,
+    pub tier05_channel_fee_tier_id: Option<Uuid>,
+    pub tier06_channel_fee_tier_id: Option<Uuid>,
+    pub tier07_channel_fee_tier_id: Option<Uuid>,
+    pub tier08_channel_fee_tier_id: Option<Uuid>,
+    pub tier09_channel_fee_tier_id: Option<Uuid>,
+    pub tier10_channel_fee_tier_id: Option<Uuid>,
+    pub tier11_channel_fee_tier_id: Option<Uuid>,
+    pub applies_to_transaction_type_01: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_02: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_03: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_04: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_05: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_06: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_07: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_08: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_09: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_10: Option<HeaplessString<20>>,
+    pub applies_to_transaction_type_11: Option<HeaplessString<20>>,
     pub is_waivable: bool,
     pub requires_approval_for_waiver: bool,
 }

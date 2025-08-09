@@ -93,7 +93,7 @@ impl CasaService for CasaServiceImpl {
             facility_status: OverdraftStatus::Active,
             approval_date: chrono::Utc::now().date_naive(),
             expiry_date: request.expiry_date,
-            approved_by: request.approved_by,
+            approved_by_person_id: request.approved_by_person_id,
             review_frequency: ReviewFrequency::Annually,
             next_review_date: chrono::Utc::now().date_naive() + chrono::Duration::days(365),
             security_required: request.security_required,
@@ -151,7 +151,7 @@ impl CasaService for CasaServiceImpl {
         requested_limit: Decimal,
         adjustment_reason: String,
         supporting_documents: Vec<String>,
-        requested_by: Uuid, // References Person.person_id
+        requested_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftLimitAdjustment> {
         todo!("Implement overdraft limit adjustment request")
     }
@@ -161,7 +161,7 @@ impl CasaService for CasaServiceImpl {
         &self,
         adjustment_id: Uuid,
         approved: bool,
-        approved_by: Uuid, // References Person.person_id
+        approved_by_person_id: Uuid, // References Person.person_id
         approval_notes: Option<HeaplessString<512>>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<OverdraftLimitAdjustment> {
@@ -333,7 +333,7 @@ impl CasaService for CasaServiceImpl {
         account_id: Uuid,
         requested_amount: Decimal,
         authorization_reason: String,
-        authorized_by: String,
+        authorized_by_person_id: Uuid,
         validity_period: chrono::Duration,
     ) -> BankingResult<banking_api::service::casa_service::OverdraftPreauthorization> {
         todo!("Implement overdraft preauthorization")
@@ -390,7 +390,7 @@ impl CasaService for CasaServiceImpl {
             compounding_frequency: CompoundingFrequency::Daily,
             capitalization_due: false, // Would be determined by product rules
             calculated_at: Utc::now(),
-            calculated_by: Uuid::nil(), // System-generated calculation
+            calculated_by_person_id: Uuid::nil(), // System-generated calculation
         };
 
         tracing::debug!("Calculated daily overdraft interest: {} for account {}", interest_amount, account_id);
@@ -457,7 +457,7 @@ impl CasaService for CasaServiceImpl {
         calculation_period_start: NaiveDate,
         calculation_period_end: NaiveDate,
         posting_date: NaiveDate,
-        posted_by: String,
+        posted_by_person_id: Uuid,
     ) -> BankingResult<InterestPostingRecord> {
         todo!("Implement overdraft interest posting")
     }
@@ -468,7 +468,7 @@ impl CasaService for CasaServiceImpl {
         account_id: Uuid,
         interest_amount: Decimal,
         capitalization_date: NaiveDate,
-        authorized_by: String,
+        authorized_by_person_id: Uuid,
     ) -> BankingResult<InterestPostingRecord> {
         todo!("Implement overdraft interest capitalization")
     }
@@ -506,8 +506,13 @@ impl CasaService for CasaServiceImpl {
             status: banking_api::domain::casa::ProcessingJobStatus::Running,
             started_at: Some(Utc::now()),
             completed_at: None,
-            errors: Vec::new(),
+            errors_01: HeaplessString::new(),
+            errors_02: HeaplessString::new(),
+            errors_03: HeaplessString::new(),
+            errors_04: HeaplessString::new(),
+            errors_05: HeaplessString::new(),
         };
+        let mut error_count = 0;
 
         // Get overdrawn accounts
         let overdrawn_accounts = self.get_overdrawn_accounts(processing_date).await?;
@@ -528,13 +533,29 @@ impl CasaService for CasaServiceImpl {
                     // self.post_overdraft_interest(...).await?;
                 }
                 Err(e) => {
-                    job.errors.push(format!("Account {account_id}: {e}"));
+                    error_count += 1;
+                    let error_msg = format!("Account {account_id}: {e}");
+                    let truncated_msg = if error_msg.len() > 200 {
+                        &error_msg[..200]
+                    } else {
+                        &error_msg
+                    };
+                    let error_heapless = HeaplessString::try_from(truncated_msg).unwrap_or_default();
+                    
+                    match error_count {
+                        1 => job.errors_01 = error_heapless,
+                        2 => job.errors_02 = error_heapless,
+                        3 => job.errors_03 = error_heapless,
+                        4 => job.errors_04 = error_heapless,
+                        5 => job.errors_05 = error_heapless,
+                        _ => {} // Skip additional errors beyond 5
+                    }
                     tracing::warn!("Failed to process overdraft interest for account {}: {}", account_id, e);
                 }
             }
         }
 
-        job.status = if job.errors.is_empty() { 
+        job.status = if error_count == 0 { 
             banking_api::domain::casa::ProcessingJobStatus::Completed
         } else { 
             banking_api::domain::casa::ProcessingJobStatus::PartiallyCompleted

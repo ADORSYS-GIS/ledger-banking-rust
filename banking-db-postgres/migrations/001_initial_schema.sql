@@ -1566,7 +1566,7 @@ CREATE TABLE overdraft_facilities (
     facility_status VARCHAR(20) NOT NULL DEFAULT 'Active' CHECK (facility_status IN ('Active', 'Suspended', 'Expired', 'UnderReview', 'Cancelled')),
     approval_date DATE NOT NULL,
     expiry_date DATE,
-    approved_by UUID NOT NULL REFERENCES persons(id),
+    approved_by_person_id UUID NOT NULL REFERENCES persons(id),
     review_frequency VARCHAR(20) NOT NULL CHECK (review_frequency IN ('Monthly', 'Quarterly', 'SemiAnnually', 'Annually')),
     next_review_date DATE NOT NULL,
     security_required BOOLEAN NOT NULL DEFAULT FALSE,
@@ -1596,7 +1596,7 @@ CREATE TABLE interest_posting_records (
     tax_withheld DECIMAL(15,2),
     net_amount DECIMAL(15,2) NOT NULL,
     posting_status VARCHAR(20) NOT NULL CHECK (posting_status IN ('Calculated', 'Posted', 'Reversed', 'Adjusted')),
-    posted_by UUID NOT NULL REFERENCES persons(id),
+    posted_by_person_id UUID NOT NULL REFERENCES persons(id),
     posted_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -1615,11 +1615,17 @@ CREATE TABLE overdraft_limit_adjustments (
     requested_limit DECIMAL(15,2) NOT NULL,
     adjustment_reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
     additional_details VARCHAR(200),
-    supporting_documents TEXT[], -- Array of document references
-    requested_by UUID NOT NULL REFERENCES persons(id),
+    required_document01_id UUID REFERENCES required_document(id),
+    required_document02_id UUID REFERENCES required_document(id),
+    required_document03_id UUID REFERENCES required_document(id),
+    required_document04_id UUID REFERENCES required_document(id),
+    required_document05_id UUID REFERENCES required_document(id),
+    required_document06_id UUID REFERENCES required_document(id),
+    required_document07_id UUID REFERENCES required_document(id),
+    requested_by_person_id UUID NOT NULL REFERENCES persons(id),
     requested_at TIMESTAMP WITH TIME ZONE NOT NULL,
     approval_status VARCHAR(30) NOT NULL DEFAULT 'Pending' CHECK (approval_status IN ('Pending', 'Approved', 'Rejected', 'RequiresAdditionalDocuments', 'UnderReview')),
-    approved_by UUID REFERENCES persons(id),
+    approved_by_person_id UUID REFERENCES persons(id),
     approved_at TIMESTAMP WITH TIME ZONE,
     approval_notes VARCHAR(512),
     effective_date DATE,
@@ -1628,8 +1634,8 @@ CREATE TABLE overdraft_limit_adjustments (
     
     CONSTRAINT ck_limit_adjustment_valid CHECK (current_limit >= 0 AND requested_limit >= 0),
     CONSTRAINT ck_approval_consistency CHECK (
-        (approval_status IN ('Approved', 'Rejected') AND approved_by IS NOT NULL AND approved_at IS NOT NULL) OR
-        (approval_status NOT IN ('Approved', 'Rejected') AND approved_by IS NULL AND approved_at IS NULL)
+        (approval_status IN ('Approved', 'Rejected') AND approved_by_person_id IS NOT NULL AND approved_at IS NOT NULL) OR
+        (approval_status NOT IN ('Approved', 'Rejected') AND approved_by_person_id IS NULL AND approved_at IS NULL)
     )
 );
 
@@ -1646,7 +1652,7 @@ CREATE TABLE overdraft_interest_calculations (
     compounding_frequency VARCHAR(20) NOT NULL CHECK (compounding_frequency IN ('Daily', 'Weekly', 'Monthly', 'Quarterly')),
     capitalization_due BOOLEAN NOT NULL DEFAULT FALSE,
     calculated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    calculated_by UUID NOT NULL REFERENCES persons(id),
+    calculated_by_person_id UUID NOT NULL REFERENCES persons(id),
     
     CONSTRAINT ck_calculation_period_valid CHECK (calculation_period_start <= calculation_period_end),
     CONSTRAINT ck_calculation_days_valid CHECK (days_calculated > 0),
@@ -1682,7 +1688,11 @@ CREATE TABLE overdraft_processing_jobs (
     status VARCHAR(20) NOT NULL DEFAULT 'Scheduled' CHECK (status IN ('Scheduled', 'Running', 'Completed', 'Failed', 'PartiallyCompleted')),
     started_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
-    errors TEXT[], -- Array of error messages
+    errors_01 VARCHAR(200) DEFAULT '',
+    errors_02 VARCHAR(200) DEFAULT '',
+    errors_03 VARCHAR(200) DEFAULT '',
+    errors_04 VARCHAR(200) DEFAULT '',
+    errors_05 VARCHAR(200) DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
     CONSTRAINT ck_job_timing CHECK (started_at IS NULL OR completed_at IS NULL OR completed_at >= started_at)
@@ -1724,7 +1734,9 @@ CREATE TABLE channels (
     status channel_status NOT NULL DEFAULT 'Active',
     daily_limit DECIMAL(15,2),
     per_transaction_limit DECIMAL(15,2),
-    supported_currencies VARCHAR(3)[] NOT NULL DEFAULT ARRAY['USD'], -- Array of 3-character currency codes
+    supported_currency01 VARCHAR(3),
+    supported_currency02 VARCHAR(3),
+    supported_currency03 VARCHAR(3),
     requires_additional_auth BOOLEAN NOT NULL DEFAULT FALSE,
     fee_schedule_id UUID,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1741,6 +1753,11 @@ CREATE TABLE fee_schedules (
     effective_date DATE NOT NULL,
     expiry_date DATE,
     currency VARCHAR(3) NOT NULL,
+    fee01_fee_item_id UUID,
+    fee02_fee_item_id UUID,
+    fee03_fee_item_id UUID,
+    fee04_fee_item_id UUID,
+    fee05_fee_item_id UUID,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1761,7 +1778,28 @@ CREATE TABLE fee_items (
     fee_percentage DECIMAL(8,6),
     minimum_fee DECIMAL(15,2),
     maximum_fee DECIMAL(15,2),
-    applies_to_transaction_types VARCHAR(20)[] DEFAULT ARRAY[]::VARCHAR[], -- Array of transaction type codes
+    tier01_channel_fee_tier_id UUID,
+    tier02_channel_fee_tier_id UUID,
+    tier03_channel_fee_tier_id UUID,
+    tier04_channel_fee_tier_id UUID,
+    tier05_channel_fee_tier_id UUID,
+    tier06_channel_fee_tier_id UUID,
+    tier07_channel_fee_tier_id UUID,
+    tier08_channel_fee_tier_id UUID,
+    tier09_channel_fee_tier_id UUID,
+    tier10_channel_fee_tier_id UUID,
+    tier11_channel_fee_tier_id UUID,
+    applies_to_transaction_type_01 VARCHAR(20),
+    applies_to_transaction_type_02 VARCHAR(20),
+    applies_to_transaction_type_03 VARCHAR(20),
+    applies_to_transaction_type_04 VARCHAR(20),
+    applies_to_transaction_type_05 VARCHAR(20),
+    applies_to_transaction_type_06 VARCHAR(20),
+    applies_to_transaction_type_07 VARCHAR(20),
+    applies_to_transaction_type_08 VARCHAR(20),
+    applies_to_transaction_type_09 VARCHAR(20),
+    applies_to_transaction_type_10 VARCHAR(20),
+    applies_to_transaction_type_11 VARCHAR(20),
     is_waivable BOOLEAN NOT NULL DEFAULT FALSE,
     requires_approval_for_waiver BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1821,6 +1859,16 @@ CREATE TABLE reconciliation_discrepancies (
     CONSTRAINT ck_discrepancy_difference CHECK (difference = expected_amount - actual_amount)
 );
 
+-- Reconciliation report discrepancies junction table
+CREATE TABLE reconciliation_report_discrepancies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    reconciliation_report_id UUID NOT NULL REFERENCES channel_reconciliation_reports(id) ON DELETE CASCADE,
+    discrepancy_id UUID NOT NULL REFERENCES reconciliation_discrepancies(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    UNIQUE(reconciliation_report_id, discrepancy_id)
+);
+
 -- Channel fees table
 CREATE TABLE channel_fees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -1828,7 +1876,7 @@ CREATE TABLE channel_fees (
     amount DECIMAL(15,2) NOT NULL,
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     description VARCHAR(200) NOT NULL,
-    applies_to_transaction UUID NOT NULL REFERENCES transactions(id),
+    applies_to_transaction_id UUID NOT NULL REFERENCES transactions(id),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -1853,7 +1901,7 @@ CREATE INDEX idx_reconciliation_reports_date ON channel_reconciliation_reports(r
 CREATE INDEX idx_reconciliation_discrepancies_report ON reconciliation_discrepancies(report_id);
 CREATE INDEX idx_reconciliation_discrepancies_transaction ON reconciliation_discrepancies(transaction_id);
 CREATE INDEX idx_channel_fees_type ON channel_fees(fee_type);
-CREATE INDEX idx_channel_fees_transaction ON channel_fees(applies_to_transaction);
+CREATE INDEX idx_channel_fees_transaction ON channel_fees(applies_to_transaction_id);
 
 -- Triggers for updated_at timestamps
 CREATE TRIGGER update_channels_updated_at
@@ -1949,7 +1997,11 @@ CREATE TABLE loan_delinquency_jobs (
     status VARCHAR(20) NOT NULL CHECK (status IN ('Scheduled', 'Running', 'Completed', 'Failed', 'PartiallyCompleted')),
     started_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
-    errors TEXT[],
+    errors_01 VARCHAR(200) DEFAULT '',
+    errors_02 VARCHAR(200) DEFAULT '',
+    errors_03 VARCHAR(200) DEFAULT '',
+    errors_04 VARCHAR(200) DEFAULT '',
+    errors_05 VARCHAR(200) DEFAULT '',
     
     CONSTRAINT ck_job_timing CHECK (
         (status IN ('Completed', 'Failed') AND started_at IS NOT NULL AND completed_at IS NOT NULL) OR

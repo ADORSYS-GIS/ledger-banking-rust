@@ -89,7 +89,6 @@ impl<R: ChannelRepository + Send + Sync> ChannelProcessor for ChannelServiceImpl
             reconciliation_date: date,
             total_transactions: 0,
             total_amount: rust_decimal::Decimal::ZERO,
-            discrepancies: Vec::new(),
             status: banking_api::domain::channel::ReconciliationStatus::Completed,
             generated_at: chrono::Utc::now(),
         };
@@ -213,7 +212,13 @@ impl<R: ChannelRepository + Send + Sync> ChannelProcessor for ChannelServiceImpl
         }
         
         // Validate currency codes
-        for currency in &channel.supported_currencies {
+        let currencies = [
+            &channel.supported_currency01,
+            &channel.supported_currency02, 
+            &channel.supported_currency03
+        ];
+        
+        for currency in currencies.iter().copied().flatten() {
             if currency.len() != 3 {
                 errors.push(format!("Invalid currency code: {currency}"));
             }

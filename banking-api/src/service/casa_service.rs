@@ -67,7 +67,7 @@ pub trait CasaService: Send + Sync {
         requested_limit: Decimal,
         adjustment_reason: String,
         supporting_documents: Vec<String>,
-        requested_by: Uuid, // References Person.person_id
+        requested_by_person_id: Uuid, // References Person.person_id
     ) -> BankingResult<OverdraftLimitAdjustment>;
     
     /// Process overdraft limit adjustment approval
@@ -75,7 +75,7 @@ pub trait CasaService: Send + Sync {
         &self,
         adjustment_id: Uuid,
         approved: bool,
-        approved_by: Uuid, // References Person.person_id
+        approved_by_person_id: Uuid, // References Person.person_id
         approval_notes: Option<HeaplessString<512>>,
         effective_date: Option<NaiveDate>,
     ) -> BankingResult<OverdraftLimitAdjustment>;
@@ -107,7 +107,7 @@ pub trait CasaService: Send + Sync {
         account_id: Uuid,
         requested_amount: Decimal,
         authorization_reason: String,
-        authorized_by: String,
+        authorized_by_person_id: Uuid,
         validity_period: chrono::Duration,
     ) -> BankingResult<OverdraftPreauthorization>;
     
@@ -162,7 +162,7 @@ pub trait CasaService: Send + Sync {
         calculation_period_start: NaiveDate,
         calculation_period_end: NaiveDate,
         posting_date: NaiveDate,
-        posted_by: String,
+        posted_by_person_id: Uuid,
     ) -> BankingResult<InterestPostingRecord>;
     
     /// Capitalize accrued interest (add to principal)
@@ -171,7 +171,7 @@ pub trait CasaService: Send + Sync {
         account_id: Uuid,
         interest_amount: Decimal,
         capitalization_date: NaiveDate,
-        authorized_by: String,
+        authorized_by_person_id: Uuid,
     ) -> BankingResult<InterestPostingRecord>;
     
     /// Get interest posting history for an account

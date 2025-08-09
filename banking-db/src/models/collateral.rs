@@ -369,18 +369,18 @@ pub struct CollateralModel {
     pub custody_location: CustodyLocation,
     /// References AddressModel.address_id for physical location
     pub physical_location: Option<Uuid>,
-    pub custodian_details: Option<serde_json::Value>, // JSON field for CustodianDetails
+    pub custodian_details_id: Option<Uuid>,
     
     // Legal and documentation
     /// References PersonModel.person_id for legal title holder
-    pub legal_title_holder: Uuid,
+    pub legal_title_holder_person_id: Uuid,
     #[serde(serialize_with = "serialize_perfection_status", deserialize_with = "deserialize_perfection_status")]
     pub perfection_status: PerfectionStatus,
     pub perfection_date: Option<NaiveDate>,
     pub perfection_expiry_date: Option<NaiveDate>,
     pub registration_number: Option<HeaplessString<100>>,
     /// References PersonModel.person_id for registration authority
-    pub registration_authority: Option<Uuid>,
+    pub registration_authority_person_id: Option<Uuid>,
     
     // Insurance and risk
     pub insurance_required: bool,
@@ -403,7 +403,7 @@ pub struct CollateralModel {
     pub created_by_person_id: Uuid,
     /// References PersonModel.person_id
     pub updated_by_person_id: Uuid,
-    pub last_valuation_by: Option<Uuid>,
+    pub last_valuation_by_person_id: Option<Uuid>,
     pub next_review_date: Option<NaiveDate>,
 }
 
@@ -477,10 +477,10 @@ pub struct CollateralAlertModel {
     pub due_date: Option<DateTime<Utc>>,
     #[serde(serialize_with = "serialize_collateral_alert_status", deserialize_with = "deserialize_collateral_alert_status")]
     pub status: CollateralAlertStatus,
-    pub assigned_to: Option<Uuid>,
+    pub assigned_to_person_id: Option<Uuid>,
     pub resolution_notes: Option<HeaplessString<1000>>,
     pub resolved_at: Option<DateTime<Utc>>,
-    pub resolved_by: Option<Uuid>,
+    pub resolved_by_person_id: Option<Uuid>,
 }
 
 /// Database model for CollateralEnforcement
@@ -499,7 +499,7 @@ pub struct CollateralEnforcementModel {
     #[serde(serialize_with = "serialize_enforcement_status", deserialize_with = "deserialize_enforcement_status")]
     pub status: EnforcementStatus,
     /// References PersonModel.person_id for legal counsel
-    pub legal_counsel: Option<Uuid>,
+    pub legal_counsel_person_id: Option<Uuid>,
     pub court_case_reference: Option<HeaplessString<100>>,
     pub expected_completion_date: Option<NaiveDate>,
     pub actual_completion_date: Option<NaiveDate>,
@@ -1022,5 +1022,99 @@ where
         "Dismissed" => Ok(CollateralAlertStatus::Dismissed),
         "Escalated" => Ok(CollateralAlertStatus::Escalated),
         _ => Err(serde::de::Error::custom(format!("Unknown collateral alert status: {s}"))),
+    }
+}
+
+/// Database model for CustodianDetails
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CustodianDetailsModel {
+    pub id: Uuid,
+    pub person_id: Uuid,
+    pub custodian_license_number: Option<HeaplessString<100>>,
+    pub contact_person_id: Uuid,
+    pub custody_agreement_reference: HeaplessString<100>,
+    pub custody_fees: Option<Decimal>,
+}
+
+/// Database model for ConcentrationAnalysis
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ConcentrationAnalysisModel {
+    pub id: Uuid,
+    pub collateral_portfolio_summary_id: Uuid,
+    #[serde(serialize_with = "serialize_concentration_category", deserialize_with = "deserialize_concentration_category")]
+    pub category: ConcentrationCategory,
+    pub category_value: HeaplessString<100>,
+    pub count: i32,
+    pub total_value: Decimal,
+    pub percentage_of_portfolio: Decimal,
+}
+
+/// Database model for RiskDistribution
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct RiskDistributionModel {
+    pub id: Uuid,
+    pub collateral_portfolio_summary_id: Uuid,
+    #[serde(serialize_with = "serialize_collateral_risk_rating", deserialize_with = "deserialize_collateral_risk_rating")]
+    pub risk_rating: CollateralRiskRating,
+    pub count: i32,
+    pub total_value: Decimal,
+    pub percentage_of_portfolio: Decimal,
+}
+
+/// Database model for CollateralPortfolioSummary
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CollateralPortfolioSummaryModel {
+    pub id: Uuid,
+    pub as_of_date: NaiveDate,
+    pub total_collateral_count: i32,
+    pub total_market_value: Decimal,
+    pub total_pledged_value: Decimal,
+    pub total_available_value: Decimal,
+    pub weighted_average_ltv: Decimal,
+    pub concentration_analysis_id_01: Option<Uuid>,
+    pub concentration_analysis_id_02: Option<Uuid>,
+    pub concentration_analysis_id_03: Option<Uuid>,
+    pub concentration_analysis_id_04: Option<Uuid>,
+    pub concentration_analysis_id_05: Option<Uuid>,
+    pub concentration_analysis_id_06: Option<Uuid>,
+    pub concentration_analysis_id_07: Option<Uuid>,
+    pub risk_distribution_id_01: Option<Uuid>,
+    pub risk_distribution_id_02: Option<Uuid>,
+    pub risk_distribution_id_03: Option<Uuid>,
+    pub risk_distribution_id_04: Option<Uuid>,
+    pub risk_distribution_id_05: Option<Uuid>,
+    pub risk_distribution_id_06: Option<Uuid>,
+    pub risk_distribution_id_07: Option<Uuid>,
+    pub valuation_status: serde_json::Value, // JSON field for ValuationStatusSummary
+    pub covenant_compliance_summary: serde_json::Value, // JSON field for ComplianceSummary
+}
+
+// Serialization functions for ConcentrationCategory
+fn serialize_concentration_category<S>(category: &ConcentrationCategory, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let category_str = match category {
+        ConcentrationCategory::CollateralType => "CollateralType",
+        ConcentrationCategory::GeographicLocation => "GeographicLocation",
+        ConcentrationCategory::Industry => "Industry",
+        ConcentrationCategory::Borrower => "Borrower",
+        ConcentrationCategory::CustodyLocation => "CustodyLocation",
+    };
+    serializer.serialize_str(category_str)
+}
+
+fn deserialize_concentration_category<'de, D>(deserializer: D) -> Result<ConcentrationCategory, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    match s.as_str() {
+        "CollateralType" => Ok(ConcentrationCategory::CollateralType),
+        "GeographicLocation" => Ok(ConcentrationCategory::GeographicLocation),
+        "Industry" => Ok(ConcentrationCategory::Industry),
+        "Borrower" => Ok(ConcentrationCategory::Borrower),
+        "CustodyLocation" => Ok(ConcentrationCategory::CustodyLocation),
+        _ => Err(serde::de::Error::custom(format!("Unknown concentration category: {s}"))),
     }
 }
