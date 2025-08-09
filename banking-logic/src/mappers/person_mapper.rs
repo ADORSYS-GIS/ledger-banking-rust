@@ -38,7 +38,7 @@ impl PersonMapper {
             person_type: Self::person_type_to_model(person.person_type),
             display_name: person.display_name,
             external_identifier: person.external_identifier,
-            organization: person.organization,
+            organization_person_id: person.organization_person_id,
             // Individual messaging fields
             messaging1_id: person.messaging1_id,
             messaging1_type: person.messaging1_type.map(Self::messaging_type_to_db),
@@ -51,8 +51,8 @@ impl PersonMapper {
             messaging5_id: person.messaging5_id,
             messaging5_type: person.messaging5_type.map(Self::messaging_type_to_db),
             department: person.department,
-            location: person.location,
-            duplicate_of: person.duplicate_of,
+            location_address_id: person.location_address_id,
+            duplicate_of_person_id: person.duplicate_of_person_id,
             // Note: entity_reference and entity_type fields removed from Person domain model
             is_active: person.is_active,
             created_at: person.created_at,
@@ -67,7 +67,7 @@ impl PersonMapper {
             person_type: Self::person_type_from_model(model.person_type),
             display_name: model.display_name,
             external_identifier: model.external_identifier,
-            organization: model.organization,
+            organization_person_id: model.organization_person_id,
             // Individual messaging fields
             messaging1_id: model.messaging1_id,
             messaging1_type: model.messaging1_type.map(Self::messaging_type_from_db),
@@ -80,8 +80,8 @@ impl PersonMapper {
             messaging5_id: model.messaging5_id,
             messaging5_type: model.messaging5_type.map(Self::messaging_type_from_db),
             department: model.department,
-            location: model.location,
-            duplicate_of: model.duplicate_of,
+            location_address_id: model.location_address_id,
+            duplicate_of_person_id: model.duplicate_of_person_id,
             // Note: entity_reference and entity_type fields removed from Person domain model
             is_active: model.is_active,
             created_at: model.created_at,
@@ -251,7 +251,7 @@ mod tests {
             person_type: domain::PersonType::Natural,
             display_name: HeaplessString::try_from("John Doe").unwrap(),
             external_identifier: Some(HeaplessString::try_from("EMP001").unwrap()),
-            organization: Some(Uuid::new_v4()), // Changed to UUID reference
+            organization_person_id: Some(Uuid::new_v4()), // Changed to UUID reference
             // Individual messaging fields
             messaging1_id: Some(Uuid::new_v4()),
             messaging1_type: Some(DomainMessagingType::Email),
@@ -264,8 +264,8 @@ mod tests {
             messaging5_id: None,
             messaging5_type: None,
             department: Some(HeaplessString::try_from("Engineering").unwrap()),
-            location: Some(Uuid::new_v4()), // Use correct field name for address reference
-            duplicate_of: None,
+            location_address_id: Some(Uuid::new_v4()), // Use correct field name for address reference
+            duplicate_of_person_id: None,
             // Note: entity_reference and entity_type fields removed
             is_active: true,
             created_at: now,
@@ -279,7 +279,7 @@ mod tests {
         assert_eq!(domain_person.person_type, back_to_domain.person_type);
         assert_eq!(domain_person.display_name, back_to_domain.display_name);
         assert_eq!(domain_person.external_identifier, back_to_domain.external_identifier);
-        assert_eq!(domain_person.organization, back_to_domain.organization);
+        assert_eq!(domain_person.organization_person_id, back_to_domain.organization_person_id);
         assert_eq!(domain_person.is_active, back_to_domain.is_active);
         assert_eq!(domain_person.created_at, back_to_domain.created_at);
         assert_eq!(domain_person.updated_at, back_to_domain.updated_at);

@@ -41,7 +41,7 @@ banking-db-postgres/   # PostgreSQL implementation (✅ 100% complete)
 - **Workflow**: Multi-step processes with approvals
 - **Compliance**: KYC/AML with sanctions screening
 - **Calendar**: Business day calculations
-- **Daily Collection**: Agent-mediated collection programs with route optimization
+- **Daily Collection**: Agent-mediated collection programs with route optimization. Standardized `id` field and uses `Decimal` for financial amounts.
 
 ### Memory Optimization
 - **HeaplessString<N>**: Stack-allocated bounded strings (60-70% heap reduction)
@@ -211,6 +211,11 @@ All 13 PostgreSQL repositories implemented with 298+ tests passing. Major techni
 - **ReasonAndPurposeRepositoryImpl** - Regulatory compliance (18/18 tests)
 - **ChannelRepositoryImpl** - Banking channel management (15/15 tests)
 - **PersonRepositoryImpl** - Full CRUD + business logic (10/10 tests)
+
+### ✨ Refactoring & Normalization
+- **Identifier Normalization**: Completed a comprehensive refactoring to standardize the primary identifier field to `id` across all domain models, database tables, and repositories. This eliminates legacy `*_id` patterns, improving schema consistency and developer experience.
+- **Daily Collection Model**: Standardized `id` field and migrated `amount_collected` and `expected_amount` from `f64` to `Decimal` for enhanced financial precision.
+- **Foreign Key Normalization**: Standardized the `daily_collection_id` to `daily_collection_record_id` across all transaction-related components to improve schema clarity and consistency.
 
 ## 🚀 Daily Collection Service (New Feature)
 

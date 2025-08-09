@@ -24,7 +24,7 @@ pub trait CollectionAgentRepository: Send + Sync {
     async fn find_by_id(&self, agent_id: Uuid) -> BankingResult<Option<CollectionAgentModel>>;
     
     /// Find collection agents by employee ID
-    async fn find_by_employee_id(&self, employee_id: Uuid) -> BankingResult<Option<CollectionAgentModel>>;
+    async fn find_by_person_id(&self, person_id: Uuid) -> BankingResult<Option<CollectionAgentModel>>;
     
     /// Find collection agents by status
     async fn find_by_status(&self, status: &str) -> BankingResult<Vec<CollectionAgentModel>>;
@@ -36,7 +36,7 @@ pub trait CollectionAgentRepository: Send + Sync {
     async fn find_by_territory(&self, territory_id: Uuid) -> BankingResult<Vec<CollectionAgentModel>>;
     
     /// Find collection agents by territory manager
-    async fn find_by_territory_manager(&self, manager_id: Uuid) -> BankingResult<Vec<CollectionAgentModel>>;
+    async fn find_by_territory_manager(&self, manager_person_id: Uuid) -> BankingResult<Vec<CollectionAgentModel>>;
     
     /// Find collection agents by license expiry range
     async fn find_by_license_expiry_range(
@@ -84,7 +84,7 @@ pub trait CollectionAgentRepository: Send + Sync {
         agent_id: Uuid,
         status: &str,
         reason_id: Option<Uuid>,
-        changed_by: Uuid,
+        changed_by_person_id: Uuid,
     ) -> BankingResult<()>;
     
     /// Update agent license information
@@ -176,11 +176,11 @@ pub trait CollectionAgentRepository: Send + Sync {
         territory_name: &str,
         customer_count: i32,
         route_optimization_enabled: bool,
-        manager_id: Option<Uuid>,
+        manager_person_id: Option<Uuid>,
     ) -> BankingResult<()>;
     
     /// Delete agent (soft delete by status change)
-    async fn delete(&self, agent_id: Uuid, deleted_by: Uuid, reason_id: Option<Uuid>) -> BankingResult<()>;
+    async fn delete(&self, agent_id: Uuid, deleted_by_person_id: Uuid, reason_id: Option<Uuid>) -> BankingResult<()>;
     
     /// Get agent performance statistics
     async fn get_agent_statistics(&self, agent_id: Uuid) -> BankingResult<Option<AgentStatistics>>;
@@ -193,7 +193,7 @@ pub trait CollectionAgentRepository: Send + Sync {
         &self,
         agent_ids: Vec<Uuid>,
         status: &str,
-        changed_by: Uuid,
+        changed_by_person_id: Uuid,
     ) -> BankingResult<i64>;
     
     /// Search agents by name pattern
@@ -353,7 +353,7 @@ pub trait CollectionProgramRepository: Send + Sync {
         program_id: Uuid,
         status: &str,
         reason_id: Option<Uuid>,
-        changed_by: Uuid,
+        changed_by_person_id: Uuid,
     ) -> BankingResult<()>;
     
     /// Update program end date
@@ -371,7 +371,7 @@ pub trait CollectionProgramRepository: Send + Sync {
     ) -> BankingResult<()>;
     
     /// Delete program (soft delete by status change)
-    async fn delete(&self, program_id: Uuid, deleted_by: Uuid, reason_id: Option<Uuid>) -> BankingResult<()>;
+    async fn delete(&self, program_id: Uuid, deleted_by_person_id: Uuid, reason_id: Option<Uuid>) -> BankingResult<()>;
     
     /// Get program statistics
     async fn get_program_statistics(&self, program_id: Uuid) -> BankingResult<ProgramStatistics>;
@@ -394,7 +394,7 @@ pub trait CollectionProgramRepository: Send + Sync {
         &self,
         program_ids: Vec<Uuid>,
         status: &str,
-        changed_by: Uuid,
+        changed_by_person_id: Uuid,
     ) -> BankingResult<i64>;
     
     /// Search programs by name pattern
@@ -508,14 +508,14 @@ pub trait CustomerCollectionProfileRepository: Send + Sync {
         customer_id: Uuid,
         status: &str,
         reason_id: Option<Uuid>,
-        changed_by: Uuid,
+        changed_by_person_id: Uuid,
     ) -> BankingResult<()>;
     
     /// Update daily collection amount
     async fn update_daily_amount(&self, customer_id: Uuid, daily_amount: Decimal) -> BankingResult<()>;
     
     /// Update assigned agent
-    async fn update_assigned_agent(&self, customer_id: Uuid, agent_id: Uuid) -> BankingResult<()>;
+    async fn update_assigned_agent(&self, customer_id: Uuid, agent_id: Uuid, changed_by_person_id: Uuid) -> BankingResult<()>;
     
     /// Update performance metrics
     #[allow(clippy::too_many_arguments)]
@@ -576,14 +576,14 @@ pub trait CustomerCollectionProfileRepository: Send + Sync {
     ) -> BankingResult<()>;
     
     /// Delete profile (soft delete by status change)
-    async fn delete(&self, customer_id: Uuid, deleted_by: Uuid, reason_id: Option<Uuid>) -> BankingResult<()>;
+    async fn delete(&self, customer_id: Uuid, deleted_by_person_id: Uuid, reason_id: Option<Uuid>) -> BankingResult<()>;
     
     /// Bulk update agent assignments
     async fn bulk_update_agent(
         &self,
         customer_ids: Vec<Uuid>,
         new_agent_id: Uuid,
-        changed_by: Uuid,
+        changed_by_person_id: Uuid,
     ) -> BankingResult<i64>;
     
     /// Bulk update status
@@ -591,7 +591,7 @@ pub trait CustomerCollectionProfileRepository: Send + Sync {
         &self,
         customer_ids: Vec<Uuid>,
         status: &str,
-        changed_by: Uuid,
+        changed_by_person_id: Uuid,
     ) -> BankingResult<i64>;
     
     /// Find profiles by GPS location radius
@@ -780,11 +780,11 @@ pub trait CollectionRecordRepository: Send + Sync {
         &self,
         record_id: Uuid,
         reason_id: Uuid,
-        authorized_by: Uuid,
+        authorized_by_person_id: Uuid,
     ) -> BankingResult<()>;
     
     /// Delete collection record (soft delete by status change)
-    async fn delete(&self, record_id: Uuid, deleted_by: Uuid, reason_id: Option<Uuid>) -> BankingResult<()>;
+    async fn delete(&self, record_id: Uuid, deleted_by_person_id: Uuid, reason_id: Option<Uuid>) -> BankingResult<()>;
     
     /// Get collection statistics for date range
     async fn get_collection_statistics(
@@ -879,7 +879,7 @@ pub trait CollectionRecordRepository: Send + Sync {
         actual_amount: Decimal,
         variance: Decimal,
         variance_reason: Option<&str>,
-        reconciled_by: Uuid,
+        reconciled_by_person_id: Uuid,
         adjustment_required: bool,
     ) -> BankingResult<()>;
     
@@ -892,7 +892,7 @@ pub trait CollectionRecordRepository: Send + Sync {
     ) -> BankingResult<()>;
     
     /// Delete batch (soft delete by status change)
-    async fn delete_batch(&self, batch_id: Uuid, deleted_by: Uuid) -> BankingResult<()>;
+    async fn delete_batch(&self, batch_id: Uuid, deleted_by_person_id: Uuid) -> BankingResult<()>;
 }
 
 /// Collection statistics for analysis

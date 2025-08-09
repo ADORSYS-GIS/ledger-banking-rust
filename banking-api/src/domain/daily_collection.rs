@@ -14,12 +14,12 @@ use super::collateral::AlertSeverity;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollectionAgent {
     pub id: Uuid,
-    pub person_reference: Uuid,
+    pub person_id: Uuid,
     pub license_number: HeaplessString<50>,
     pub license_expiry: NaiveDate,
     pub status: AgentStatus,
     pub assigned_territory_id: Uuid,
-    pub performance_metrics_id: Uuid,
+    pub agent_performance_metrics_id: Uuid,
     pub cash_limit: Decimal,
     pub device_information_id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -66,18 +66,18 @@ impl std::str::FromStr for AgentStatus {
 /// Territory assignment for collection agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Territory {
-    pub territory_id: Uuid,
+    pub id: Uuid,
     pub territory_name: HeaplessString<100>,
-    pub coverage_areas_id: Uuid,
+    pub coverage_area_id: Uuid,
     pub customer_count: i32,
     pub route_optimization_enabled: bool,
-    pub territory_manager_id: Option<Uuid>,
+    pub territory_manager_person_id: Option<Uuid>,
 }
 
 /// Coverage area within a territory
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverageArea {
-    pub area_id: Uuid,
+    pub id: Uuid,
     pub area_name: HeaplessString<100>,
     pub area_type: AreaType,
     pub boundary_coordinates_long_1: Option<Decimal>,
@@ -206,7 +206,7 @@ impl std::str::FromStr for TransportMode {
 /// Agent performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentPerformanceMetrics {
-    pub metrics_id: Uuid,
+    pub id: Uuid,
     pub collection_rate: Decimal,
     pub customer_satisfaction_score: Decimal,
     pub punctuality_score: Decimal,
@@ -218,11 +218,11 @@ pub struct AgentPerformanceMetrics {
     pub customer_retention_rate: Decimal,
     pub route_efficiency: Decimal,
     pub monthly_targets_id: Uuid,
-    pub performance_alert_id_1: Option<Uuid>,
-    pub performance_alert_id_2: Option<Uuid>,
-    pub performance_alert_id_3: Option<Uuid>,
-    pub performance_alert_id_4: Option<Uuid>,
-    pub performance_alert_id_5: Option<Uuid>,
+    pub performance_alert_1_id: Option<Uuid>,
+    pub performance_alert_2_id: Option<Uuid>,
+    pub performance_alert_3_id: Option<Uuid>,
+    pub performance_alert_4_id: Option<Uuid>,
+    pub performance_alert_5_id: Option<Uuid>,
 }
 
 /// Monthly targets for agent performance
@@ -240,7 +240,7 @@ pub struct MonthlyTargets {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceAlert {
     pub id: Uuid,
-    pub metrics_id: Uuid,
+    pub agent_performance_metrics_id: Uuid,
     pub alert_type: AlertType,
     pub severity: AlertSeverity,
     pub message: HeaplessString<200>,
@@ -295,7 +295,7 @@ impl std::str::FromStr for AlertType {
 /// Device information for collection agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceInformation {
-    pub device_id: Uuid,
+    pub id: Uuid,
     pub external_id: HeaplessString<100>,
     pub device_type: DeviceType,
     pub model: HeaplessString<50>,
@@ -399,7 +399,7 @@ pub struct CollectionProgram {
     pub start_date: NaiveDate,
     pub end_date: Option<NaiveDate>,
     pub collection_frequency: CollectionFrequency,
-    pub collection_time_operating_hours_id: Option<Uuid>,
+    pub operating_hours_id: Option<Uuid>,
     pub minimum_amount: Decimal,
     pub maximum_amount: Decimal,
     pub target_amount: Option<Decimal>,
@@ -582,16 +582,17 @@ impl std::str::FromStr for FeeFrequency {
 /// in a daily collection program
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomerCollectionProfile {
+    pub id: Uuid,
     pub customer_id: Uuid,
-    pub program_id: Uuid,
+    pub collection_program_id: Uuid,
     pub account_id: Uuid,
     pub enrollment_date: NaiveDate,
     pub status: CollectionStatus,
     pub daily_amount: Decimal,
     pub collection_schedule_id: Uuid,
-    pub assigned_agent_id: Uuid,
-    pub collection_location_id: Uuid,
-    pub collection_performance_metrics: Uuid,
+    pub assigned_collection_agent_id: Uuid,
+    pub collection_location_address_id: Uuid,
+    pub collection_performance_metrics_id: Uuid,
     pub graduation_progress_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -756,8 +757,8 @@ pub struct GraduationProgress {
 pub struct CollectionRecord {
     pub id: Uuid,
     pub customer_id: Uuid,
-    pub agent_id: Uuid,
-    pub program_id: Uuid,
+    pub collection_agent_id: Uuid,
+    pub collection_program_id: Uuid,
     pub account_id: Uuid,
     pub collection_date: NaiveDate,
     pub collection_time: DateTime<Utc>,
@@ -852,7 +853,7 @@ pub struct CollectionVerification {
     pub agent_verification_code: Option<HeaplessString<50>>,
     pub biometric_data_id: Option<Uuid>,
     pub photo_evidence_id: Option<Uuid>,
-    pub witness_information_person_id: Option<Uuid>,
+    pub witness_person_id: Option<Uuid>,
     pub verification_timestamp: DateTime<Utc>,
 }
 
@@ -925,8 +926,8 @@ pub struct WitnessInformation {
 /// Collection batch information for bulk processing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollectionBatch {
-    pub batch_id: Uuid,
-    pub agent_id: Uuid,
+    pub id: Uuid,
+    pub collection_agent_id: Uuid,
     pub collection_date: NaiveDate,
     pub total_collections: i32,
     pub total_amount: Decimal,
@@ -986,7 +987,7 @@ pub struct ReconciliationData {
     pub actual_amount: Decimal,
     pub variance: Decimal,
     pub variance_reason: Option<HeaplessString<500>>,
-    pub reconciled_by: Uuid,
+    pub reconciled_by_person_id: Uuid,
     pub reconciliation_timestamp: DateTime<Utc>,
     pub adjustment_required: bool,
 }
@@ -996,12 +997,12 @@ pub struct ReconciliationData {
 /// Builder for CollectionAgent
 pub struct CollectionAgentBuilder {
     id: Uuid,
-    person_reference: Option<Uuid>,
+    person_id: Option<Uuid>,
     license_number: Option<HeaplessString<50>>,
     license_expiry: Option<NaiveDate>,
     status: AgentStatus,
     assigned_territory_id: Option<Uuid>,
-    performance_metrics_id: Option<Uuid>,
+    agent_performance_metrics_id: Option<Uuid>,
     cash_limit: Option<Decimal>,
     device_information_id: Option<Uuid>,
 }
@@ -1010,12 +1011,12 @@ impl CollectionAgent {
     pub fn builder(id: Uuid) -> CollectionAgentBuilder {
         CollectionAgentBuilder {
             id,
-            person_reference: None,
+            person_id: None,
             license_number: None,
             license_expiry: None,
             status: AgentStatus::Training,
             assigned_territory_id: None,
-            performance_metrics_id: None,
+            agent_performance_metrics_id: None,
             cash_limit: None,
             device_information_id: None,
         }
@@ -1023,8 +1024,8 @@ impl CollectionAgent {
 }
 
 impl CollectionAgentBuilder {
-    pub fn person_reference(mut self, person_reference: Uuid) -> Self {
-        self.person_reference = Some(person_reference);
+    pub fn person_id(mut self, person_id: Uuid) -> Self {
+        self.person_id = Some(person_id);
         self
     }
 
@@ -1045,13 +1046,13 @@ impl CollectionAgentBuilder {
         self
     }
 
-    pub fn assigned_territory_id(mut self, territory_id: Uuid) -> Self {
-        self.assigned_territory_id = Some(territory_id);
+    pub fn assigned_territory_id(mut self, id: Uuid) -> Self {
+        self.assigned_territory_id = Some(id);
         self
     }
 
-    pub fn performance_metrics_id(mut self, metrics_id: Uuid) -> Self {
-        self.performance_metrics_id = Some(metrics_id);
+    pub fn agent_performance_metrics_id(mut self, id: Uuid) -> Self {
+        self.agent_performance_metrics_id = Some(id);
         self
     }
 
@@ -1060,8 +1061,8 @@ impl CollectionAgentBuilder {
         self
     }
 
-    pub fn device_information_id(mut self, device_id: Uuid) -> Self {
-        self.device_information_id = Some(device_id);
+    pub fn device_information_id(mut self, id: Uuid) -> Self {
+        self.device_information_id = Some(id);
         self
     }
 
@@ -1073,12 +1074,12 @@ impl CollectionAgentBuilder {
 
         Ok(CollectionAgent {
             id: self.id,
-            person_reference: self.person_reference.ok_or("Person reference is required")?,
+            person_id: self.person_id.ok_or("Person reference is required")?,
             license_number: self.license_number.ok_or("License number is required")?,
             license_expiry: self.license_expiry.ok_or("License expiry is required")?,
             status: self.status,
             assigned_territory_id: self.assigned_territory_id.ok_or("Territory assignment is required")?,
-            performance_metrics_id: self.performance_metrics_id.unwrap_or(default_metrics_id),
+            agent_performance_metrics_id: self.agent_performance_metrics_id.unwrap_or(default_metrics_id),
             cash_limit: self.cash_limit.ok_or("Cash limit is required")?,
             device_information_id: self.device_information_id.ok_or("Device information ID is required")?,
             created_at: now,
@@ -1097,7 +1098,7 @@ pub struct CollectionProgramBuilder {
     start_date: Option<NaiveDate>,
     end_date: Option<NaiveDate>,
     collection_frequency: Option<CollectionFrequency>,
-    collection_time_operating_hours_id: Option<Uuid>,
+    operating_hours_id: Option<Uuid>,
     minimum_amount: Option<Decimal>,
     maximum_amount: Option<Decimal>,
     target_amount: Option<Decimal>,
@@ -1120,7 +1121,7 @@ impl CollectionProgram {
             start_date: None,
             end_date: None,
             collection_frequency: None,
-            collection_time_operating_hours_id: None,
+            operating_hours_id: None,
             minimum_amount: None,
             maximum_amount: None,
             target_amount: None,
@@ -1167,8 +1168,8 @@ impl CollectionProgramBuilder {
         self
     }
 
-    pub fn collection_time_operating_hours_id(mut self, operating_hours_id: Uuid) -> Self {
-        self.collection_time_operating_hours_id = Some(operating_hours_id);
+    pub fn operating_hours_id(mut self, operating_hours_id: Uuid) -> Self {
+        self.operating_hours_id = Some(operating_hours_id);
         self
     }
 
@@ -1188,13 +1189,13 @@ impl CollectionProgramBuilder {
         self
     }
 
-    pub fn graduation_criteria_id(mut self, criteria_id: Uuid) -> Self {
-        self.graduation_criteria_id = Some(criteria_id);
+    pub fn graduation_criteria_id(mut self, id: Uuid) -> Self {
+        self.graduation_criteria_id = Some(id);
         self
     }
 
-    pub fn fee_structure_id(mut self, fee_structure_id: Uuid) -> Self {
-        self.fee_structure_id = Some(fee_structure_id);
+    pub fn fee_structure_id(mut self, id: Uuid) -> Self {
+        self.fee_structure_id = Some(id);
         self
     }
 
@@ -1220,7 +1221,7 @@ impl CollectionProgramBuilder {
             start_date: self.start_date.ok_or("Start date is required")?,
             end_date: self.end_date,
             collection_frequency: self.collection_frequency.ok_or("Collection frequency is required")?,
-            collection_time_operating_hours_id: self.collection_time_operating_hours_id,
+            operating_hours_id: self.operating_hours_id,
             minimum_amount: self.minimum_amount.ok_or("Minimum amount is required")?,
             maximum_amount: self.maximum_amount.ok_or("Maximum amount is required")?,
             target_amount: self.target_amount,
@@ -1238,37 +1239,40 @@ impl CollectionProgramBuilder {
 
 /// Builder for CustomerCollectionProfile
 pub struct CustomerCollectionProfileBuilder {
+    id: Uuid,
     customer_id: Uuid,
-    program_id: Uuid,
+    collection_program_id: Uuid,
     account_id: Uuid,
     enrollment_date: Option<NaiveDate>,
     status: CollectionStatus,
     daily_amount: Option<Decimal>,
     collection_schedule_id: Option<Uuid>,
-    assigned_agent_id: Option<Uuid>,
-    collection_location_id: Option<Uuid>,
-    collection_performance_metrics: Option<Uuid>,
+    assigned_collection_agent_id: Option<Uuid>,
+    collection_location_address_id: Option<Uuid>,
+    collection_performance_metrics_id: Option<Uuid>,
     graduation_progress_id: Option<Uuid>,
     reason_id: Option<Uuid>,
 }
 
 impl CustomerCollectionProfile {
     pub fn builder(
+        id: Uuid,
         customer_id: Uuid,
-        program_id: Uuid,
+        collection_program_id: Uuid,
         account_id: Uuid,
     ) -> CustomerCollectionProfileBuilder {
         CustomerCollectionProfileBuilder {
+            id,
             customer_id,
-            program_id,
+            collection_program_id,
             account_id,
             enrollment_date: None,
             status: CollectionStatus::Active,
             daily_amount: None,
             collection_schedule_id: None,
-            assigned_agent_id: None,
-            collection_location_id: None,
-            collection_performance_metrics: None,
+            assigned_collection_agent_id: None,
+            collection_location_address_id: None,
+            collection_performance_metrics_id: None,
             graduation_progress_id: None,
             reason_id: None,
         }
@@ -1291,28 +1295,28 @@ impl CustomerCollectionProfileBuilder {
         self
     }
 
-    pub fn collection_schedule_id(mut self, schedule_id: Uuid) -> Self {
-        self.collection_schedule_id = Some(schedule_id);
+    pub fn collection_schedule_id(mut self, id: Uuid) -> Self {
+        self.collection_schedule_id = Some(id);
         self
     }
 
-    pub fn assigned_agent_id(mut self, agent_id: Uuid) -> Self {
-        self.assigned_agent_id = Some(agent_id);
+    pub fn assigned_collection_agent_id(mut self, id: Uuid) -> Self {
+        self.assigned_collection_agent_id = Some(id);
         self
     }
 
-    pub fn collection_location_id(mut self, location_id: Uuid) -> Self {
-        self.collection_location_id = Some(location_id);
+    pub fn collection_location_address_id(mut self, id: Uuid) -> Self {
+        self.collection_location_address_id = Some(id);
         self
     }
 
-    pub fn collection_performance_metrics(mut self, metrics_id: Uuid) -> Self {
-        self.collection_performance_metrics = Some(metrics_id);
+    pub fn collection_performance_metrics_id(mut self, id: Uuid) -> Self {
+        self.collection_performance_metrics_id = Some(id);
         self
     }
 
-    pub fn graduation_progress_id(mut self, progress_id: Uuid) -> Self {
-        self.graduation_progress_id = Some(progress_id);
+    pub fn graduation_progress_id(mut self, id: Uuid) -> Self {
+        self.graduation_progress_id = Some(id);
         self
     }
 
@@ -1326,16 +1330,17 @@ impl CustomerCollectionProfileBuilder {
         let enrollment_date = self.enrollment_date.unwrap_or_else(|| now.date_naive());
 
         Ok(CustomerCollectionProfile {
+            id: self.id,
             customer_id: self.customer_id,
-            program_id: self.program_id,
+            collection_program_id: self.collection_program_id,
             account_id: self.account_id,
             enrollment_date,
             status: self.status,
             daily_amount: self.daily_amount.ok_or("Daily amount is required")?,
             collection_schedule_id: self.collection_schedule_id.ok_or("Collection schedule ID is required")?,
-            assigned_agent_id: self.assigned_agent_id.ok_or("Assigned agent ID is required")?,
-            collection_location_id: self.collection_location_id.ok_or("Collection location ID is required")?,
-            collection_performance_metrics: self.collection_performance_metrics.ok_or("Collection performance metrics ID is required")?,
+            assigned_collection_agent_id: self.assigned_collection_agent_id.ok_or("Assigned agent ID is required")?,
+            collection_location_address_id: self.collection_location_address_id.ok_or("Collection location ID is required")?,
+            collection_performance_metrics_id: self.collection_performance_metrics_id.ok_or("Collection performance metrics ID is required")?,
             graduation_progress_id: self.graduation_progress_id.ok_or("Graduation progress ID is required")?,
             created_at: now,
             updated_at: now,
@@ -1348,8 +1353,8 @@ impl CustomerCollectionProfileBuilder {
 pub struct CollectionRecordBuilder {
     id: Uuid,
     customer_id: Uuid,
-    agent_id: Uuid,
-    program_id: Uuid,
+    collection_agent_id: Uuid,
+    collection_program_id: Uuid,
     account_id: Uuid,
     collection_date: Option<NaiveDate>,
     collection_time: Option<DateTime<Utc>>,
@@ -1368,15 +1373,15 @@ impl CollectionRecord {
     pub fn builder(
         id: Uuid,
         customer_id: Uuid,
-        agent_id: Uuid,
-        program_id: Uuid,
+        collection_agent_id: Uuid,
+        collection_program_id: Uuid,
         account_id: Uuid,
     ) -> CollectionRecordBuilder {
         CollectionRecordBuilder {
             id,
             customer_id,
-            agent_id,
-            program_id,
+            collection_agent_id,
+            collection_program_id,
             account_id,
             collection_date: None,
             collection_time: None,
@@ -1420,8 +1425,8 @@ impl CollectionRecordBuilder {
         self
     }
 
-    pub fn location_address_id(mut self, address_id: Uuid) -> Self {
-        self.location_address_id = Some(address_id);
+    pub fn location_address_id(mut self, id: Uuid) -> Self {
+        self.location_address_id = Some(id);
         self
     }
 
@@ -1442,8 +1447,8 @@ impl CollectionRecordBuilder {
         Ok(self)
     }
 
-    pub fn collection_verification_id(mut self, verification_id: Uuid) -> Self {
-        self.collection_verification_id = Some(verification_id);
+    pub fn collection_verification_id(mut self, id: Uuid) -> Self {
+        self.collection_verification_id = Some(id);
         self
     }
 
@@ -1458,8 +1463,8 @@ impl CollectionRecordBuilder {
         Ok(CollectionRecord {
             id: self.id,
             customer_id: self.customer_id,
-            agent_id: self.agent_id,
-            program_id: self.program_id,
+            collection_agent_id: self.collection_agent_id,
+            collection_program_id: self.collection_program_id,
             account_id: self.account_id,
             collection_date: self.collection_date.unwrap_or_else(|| now.date_naive()),
             collection_time: self.collection_time.unwrap_or(now),

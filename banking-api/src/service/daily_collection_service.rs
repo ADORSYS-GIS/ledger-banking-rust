@@ -128,7 +128,7 @@ pub trait DailyCollectionService: Send + Sync {
         &self,
         collection_id: Uuid,
         reason_id: Uuid,
-        authorized_by: Uuid,
+        authorized_by_person_id: Uuid,
     ) -> BankingResult<()>;
     
     /// Reconcile collections for agent and date
@@ -138,7 +138,7 @@ pub trait DailyCollectionService: Send + Sync {
         collection_date: NaiveDate,
         expected_amount: Decimal,
         actual_amount: Decimal,
-        reconciled_by: Uuid,
+        reconciled_by_person_id: Uuid,
     ) -> BankingResult<Vec<CollectionRecord>>;
     
     /// Get collection statistics for period
