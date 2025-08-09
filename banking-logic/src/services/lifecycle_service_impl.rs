@@ -113,12 +113,12 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                 // Fail the workflow
                 self.fail_workflow(
                     workflow.id,
-                    &format!("KYC verification failed: {} missing documents", verification_result.missing_documents.len()),
+                    &format!("KYC verification failed: {} missing documents", verification_result.missing_documents_count()),
                 ).await?;
 
                 return Err(banking_api::BankingError::ValidationError {
                     field: "kyc_verification".to_string(),
-                    message: format!("KYC verification failed for account {} - {} missing documents", account_id, verification_result.missing_documents.len()),
+                    message: format!("KYC verification failed for account {} - {} missing documents", account_id, verification_result.missing_documents_count()),
                 });
             }
             banking_api::domain::KycStatus::Pending => {
@@ -165,12 +165,12 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                 // Failed is same as rejected
                 self.fail_workflow(
                     workflow.id,
-                    &format!("KYC verification failed: {} missing documents", verification_result.missing_documents.len()),
+                    &format!("KYC verification failed: {} missing documents", verification_result.missing_documents_count()),
                 ).await?;
 
                 return Err(banking_api::BankingError::ValidationError {
                     field: "kyc_verification".to_string(),
-                    message: format!("KYC verification failed for account {} - {} missing documents", account_id, verification_result.missing_documents.len()),
+                    message: format!("KYC verification failed for account {} - {} missing documents", account_id, verification_result.missing_documents_count()),
                 });
             }
         }
@@ -373,12 +373,12 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
                 self.fail_workflow(
                     workflow.id,
-                    &format!("Mini-KYC failed: {} missing documents", verification_result.missing_documents.len()),
+                    &format!("Mini-KYC failed: {} missing documents", verification_result.missing_documents_count()),
                 ).await?;
 
                 return Err(banking_api::BankingError::ValidationError {
                     field: "mini_kyc_verification".to_string(),
-                    message: format!("Mini-KYC verification failed for account {} - {} missing documents", account_id, verification_result.missing_documents.len()),
+                    message: format!("Mini-KYC verification failed for account {} - {} missing documents", account_id, verification_result.missing_documents_count()),
                 });
             }
             banking_api::domain::KycStatus::Pending => {
@@ -423,11 +423,11 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
                     .await?;
                 self.fail_workflow(
                     workflow.id,
-                    &format!("Mini-KYC failed: {} missing documents", verification_result.missing_documents.len()),
+                    &format!("Mini-KYC failed: {} missing documents", verification_result.missing_documents_count()),
                 ).await?;
                 return Err(banking_api::BankingError::ValidationError {
                     field: "mini_kyc_verification".to_string(),
-                    message: format!("Mini-KYC verification failed for account {} - {} missing documents", account_id, verification_result.missing_documents.len()),
+                    message: format!("Mini-KYC verification failed for account {} - {} missing documents", account_id, verification_result.missing_documents_count()),
                 });
             }
         }

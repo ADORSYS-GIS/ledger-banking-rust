@@ -9,10 +9,56 @@ use uuid::Uuid;
 pub struct KycResult {
     pub customer_id: Uuid,
     pub status: super::customer::KycStatus,
-    pub completed_checks: Vec<KycCheck>,
-    pub missing_documents: Vec<HeaplessString<100>>,
+    pub completed_check_01: Option<KycCheck>,
+    pub completed_check_02: Option<KycCheck>,
+    pub completed_check_03: Option<KycCheck>,
+    pub completed_check_04: Option<KycCheck>,
+    pub completed_check_05: Option<KycCheck>,
+    pub completed_check_06: Option<KycCheck>,
+    pub completed_check_07: Option<KycCheck>,
+    pub missing_required_document_id_01: Option<Uuid>,
+    pub missing_required_document_id_02: Option<Uuid>,
+    pub missing_required_document_id_03: Option<Uuid>,
+    pub missing_required_document_id_04: Option<Uuid>,
+    pub missing_required_document_id_05: Option<Uuid>,
+    pub missing_required_document_id_06: Option<Uuid>,
+    pub missing_required_document_id_07: Option<Uuid>,
     pub risk_score: Option<Decimal>,
     pub verified_at: Option<DateTime<Utc>>,
+}
+
+impl KycResult {
+    /// Count the number of missing required documents
+    pub fn missing_documents_count(&self) -> usize {
+        [
+            &self.missing_required_document_id_01,
+            &self.missing_required_document_id_02,
+            &self.missing_required_document_id_03,
+            &self.missing_required_document_id_04,
+            &self.missing_required_document_id_05,
+            &self.missing_required_document_id_06,
+            &self.missing_required_document_id_07,
+        ]
+        .iter()
+        .filter(|id| id.is_some())
+        .count()
+    }
+
+    /// Count the number of completed checks
+    pub fn completed_checks_count(&self) -> usize {
+        [
+            &self.completed_check_01,
+            &self.completed_check_02,
+            &self.completed_check_03,
+            &self.completed_check_04,
+            &self.completed_check_05,
+            &self.completed_check_06,
+            &self.completed_check_07,
+        ]
+        .iter()
+        .filter(|check| check.is_some())
+        .count()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,7 +103,9 @@ pub enum CheckResult {
 pub struct ScreeningResult {
     pub customer_id: Uuid,
     pub screening_type: ScreeningType,
-    pub matches_found: Vec<SanctionsMatch>,
+    pub found_sanctions_match_01: Option<SanctionsMatch>,
+    pub found_sanctions_match_02: Option<SanctionsMatch>,
+    pub found_sanctions_match_03: Option<SanctionsMatch>,
     pub risk_level: RiskLevel,
     pub screened_at: DateTime<Utc>,
     pub requires_manual_review: bool,
@@ -90,7 +138,9 @@ pub enum RiskLevel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitoringResult {
     pub transaction_id: Uuid,
-    pub alerts_triggered: Vec<ComplianceAlert>,
+    pub triggered_compliance_alert_id_01: Option<Uuid>,
+    pub triggered_compliance_alert_id_02: Option<Uuid>,
+    pub triggered_compliance_alert_id_03: Option<Uuid>,
     pub risk_score: Decimal,
     pub requires_investigation: bool,
     pub auto_approved: bool,
@@ -141,7 +191,26 @@ pub struct SarData {
     pub reason_id: Uuid,
     /// Additional context for SAR
     pub additional_details: Option<HeaplessString<500>>,
-    pub supporting_transactions: Vec<Uuid>,
+    /// References Transaction.id
+    pub supporting_transaction_id_01: Option<Uuid>,
+    pub supporting_transaction_id_02: Option<Uuid>,
+    pub supporting_transaction_id_03: Option<Uuid>,
+    pub supporting_transaction_id_04: Option<Uuid>,
+    pub supporting_transaction_id_05: Option<Uuid>,
+    pub supporting_transaction_id_06: Option<Uuid>,
+    pub supporting_transaction_id_07: Option<Uuid>,
+    pub supporting_transaction_id_08: Option<Uuid>,
+    pub supporting_transaction_id_09: Option<Uuid>,
+    pub supporting_transaction_id_10: Option<Uuid>,
+    pub supporting_transaction_id_11: Option<Uuid>,
+    pub supporting_transaction_id_12: Option<Uuid>,
+    pub supporting_transaction_id_13: Option<Uuid>,
+    pub supporting_transaction_id_14: Option<Uuid>,
+    pub supporting_transaction_id_15: Option<Uuid>,
+    pub supporting_transaction_id_16: Option<Uuid>,
+    pub supporting_transaction_id_17: Option<Uuid>,
+    pub supporting_transaction_id_18: Option<Uuid>,
+    pub supporting_transaction_id_19: Option<Uuid>,
     pub generated_at: DateTime<Utc>,
     pub status: SarStatus,
 }
@@ -187,8 +256,20 @@ pub struct ComplianceResult {
     pub check_type: CheckType,
     pub status: ComplianceStatus,
     pub risk_score: Option<Decimal>,
-    pub findings: Vec<HeaplessString<300>>,
-    pub recommendations: Vec<HeaplessString<300>>,
+    pub findings_01: Option<HeaplessString<300>>,
+    pub findings_02: Option<HeaplessString<300>>,
+    pub findings_03: Option<HeaplessString<300>>,
+    pub findings_04: Option<HeaplessString<300>>,
+    pub findings_05: Option<HeaplessString<300>>,
+    pub findings_06: Option<HeaplessString<300>>,
+    pub findings_07: Option<HeaplessString<300>>,
+    pub recommendations_01: Option<HeaplessString<300>>,
+    pub recommendations_02: Option<HeaplessString<300>>,
+    pub recommendations_03: Option<HeaplessString<300>>,
+    pub recommendations_04: Option<HeaplessString<300>>,
+    pub recommendations_05: Option<HeaplessString<300>>,
+    pub recommendations_06: Option<HeaplessString<300>>,
+    pub recommendations_07: Option<HeaplessString<300>>,
     pub checked_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
