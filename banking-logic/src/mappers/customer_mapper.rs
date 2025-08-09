@@ -164,7 +164,11 @@ impl CustomerMapper {
         RiskSummary {
             current_rating: Self::db_to_risk_rating(model.current_rating),
             last_assessment_date: model.last_assessment_date,
-            flags: model.flags,
+            flags_01: model.flags_01,
+            flags_02: model.flags_02,
+            flags_03: model.flags_03,
+            flags_04: model.flags_04,
+            flags_05: model.flags_05,
         }
     }
 
@@ -173,7 +177,11 @@ impl CustomerMapper {
         RiskSummaryModel {
             current_rating: Self::risk_rating_to_db(summary.current_rating),
             last_assessment_date: summary.last_assessment_date,
-            flags: summary.flags,
+            flags_01: summary.flags_01,
+            flags_02: summary.flags_02,
+            flags_03: summary.flags_03,
+            flags_04: summary.flags_04,
+            flags_05: summary.flags_05,
         }
     }
 

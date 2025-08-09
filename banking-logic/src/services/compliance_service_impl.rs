@@ -197,9 +197,17 @@ impl ComplianceService for ComplianceServiceImpl {
         // Simulate UBO verification
         let ubo_result = UboVerificationResult {
             corporate_customer_id,
-            ubo_chain: vec![], // Would be populated with actual UBO links
+            ubo_chain_link_id_01: None,
+            ubo_chain_link_id_02: None,
+            ubo_chain_link_id_03: None,
+            ubo_chain_link_id_04: None,
+            ubo_chain_link_id_05: None,
             verification_complete: false,
-            requires_update: vec![], // Would be populated with required updates
+            requires_update_01: None,
+            requires_update_02: None,
+            requires_update_03: None,
+            requires_update_04: None,
+            requires_update_05: None,
         };
 
         Ok(ubo_result)

@@ -131,11 +131,17 @@ impl ComplianceMapper {
     pub fn ubo_verification_result_to_model(ubo_result: UboVerificationResult) -> UboVerificationResultModel {
         UboVerificationResultModel {
             corporate_customer_id: ubo_result.corporate_customer_id,
-            ubo_chain: ubo_result.ubo_chain.into_iter()
-                .map(Self::ubo_link_to_model)
-                .collect(),
+            ubo_chain_link_id_01: ubo_result.ubo_chain_link_id_01,
+            ubo_chain_link_id_02: ubo_result.ubo_chain_link_id_02,
+            ubo_chain_link_id_03: ubo_result.ubo_chain_link_id_03,
+            ubo_chain_link_id_04: ubo_result.ubo_chain_link_id_04,
+            ubo_chain_link_id_05: ubo_result.ubo_chain_link_id_05,
             verification_complete: ubo_result.verification_complete,
-            requires_update: ubo_result.requires_update,
+            requires_update_01: ubo_result.requires_update_01,
+            requires_update_02: ubo_result.requires_update_02,
+            requires_update_03: ubo_result.requires_update_03,
+            requires_update_04: ubo_result.requires_update_04,
+            requires_update_05: ubo_result.requires_update_05,
         }
     }
 

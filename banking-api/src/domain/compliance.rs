@@ -225,9 +225,17 @@ pub enum SarStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UboVerificationResult {
     pub corporate_customer_id: Uuid,
-    pub ubo_chain: Vec<UboLink>,
+    pub ubo_chain_link_id_01: Option<Uuid>,
+    pub ubo_chain_link_id_02: Option<Uuid>,
+    pub ubo_chain_link_id_03: Option<Uuid>,
+    pub ubo_chain_link_id_04: Option<Uuid>,
+    pub ubo_chain_link_id_05: Option<Uuid>,
     pub verification_complete: bool,
-    pub requires_update: Vec<HeaplessString<100>>,
+    pub requires_update_01: Option<HeaplessString<100>>,
+    pub requires_update_02: Option<HeaplessString<100>>,
+    pub requires_update_03: Option<HeaplessString<100>>,
+    pub requires_update_04: Option<HeaplessString<100>>,
+    pub requires_update_05: Option<HeaplessString<100>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

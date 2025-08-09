@@ -208,7 +208,11 @@ pub struct CustomerPortfolio {
 pub struct RiskSummary {
     pub current_rating: RiskRating,
     pub last_assessment_date: DateTime<Utc>,
-    pub flags: Vec<HeaplessString<200>>,
+    pub flags_01: HeaplessString<200>,
+    pub flags_02: HeaplessString<200>,
+    pub flags_03: HeaplessString<200>,
+    pub flags_04: HeaplessString<200>,
+    pub flags_05: HeaplessString<200>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

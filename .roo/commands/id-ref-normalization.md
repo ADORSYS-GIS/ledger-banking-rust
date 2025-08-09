@@ -46,7 +46,7 @@ Fields that already follow the explicit entity reference pattern should not be m
    - Proposed new field name (if applicable)
 
 ### Step 2: Proposal Generation
-Create/update `workbook.md` with:
+Create/update `target/workbook.md` with:
 
 ```markdown
 # Foreign Key Reference Analysis: {EntityName}

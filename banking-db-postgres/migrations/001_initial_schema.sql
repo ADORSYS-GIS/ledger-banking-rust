@@ -2295,12 +2295,12 @@ BEGIN
                 -- Log significant field changes
                 IF OLD.risk_rating != NEW.risk_rating THEN
                     INSERT INTO customer_audit_trail (id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason)
-                    VALUES (uuid_generate_v4(), NEW.id, 'risk_rating', OLD.risk_rating, NEW.risk_rating, NOW(), NEW.updated_by_person_id, 'Risk rating change');
+                    VALUES (uuid_generate_v4(), NEW.id, 'risk_rating', OLD.risk_rating::text, NEW.risk_rating::text, NOW(), NEW.updated_by_person_id, 'Risk rating change');
                 END IF;
                 
                 IF OLD.status != NEW.status THEN
                     INSERT INTO customer_audit_trail (id, customer_id, field_name, old_value, new_value, changed_at, changed_by, reason)
-                    VALUES (uuid_generate_v4(), NEW.id, 'status', OLD.status, NEW.status, NOW(), NEW.updated_by_person_id, 'Status change');
+                    VALUES (uuid_generate_v4(), NEW.id, 'status', OLD.status::text, NEW.status::text, NOW(), NEW.updated_by_person_id, 'Status change');
                 END IF;
             END IF;
         ELSE
