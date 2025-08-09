@@ -738,7 +738,7 @@ CREATE TABLE transactions (
     -- Multi-channel processing support
     channel_id VARCHAR(50) NOT NULL, -- 'BranchTeller', 'ATM', 'OnlineBanking', 'MobileBanking', 'AgentBanking'
     terminal_id UUID, -- For ATM/POS transactions, references terminals table
-    agent_user_id UUID, -- For agent banking transactions
+    agent_person_id UUID, -- For agent banking transactions
     
     -- Transaction timing
     transaction_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -772,7 +772,7 @@ CREATE TABLE transaction_audit_trail (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_id UUID NOT NULL REFERENCES transactions(id),
     action_type transaction_audit_action NOT NULL,
-    performed_by UUID NOT NULL REFERENCES persons(id),
+    performed_by_person_id UUID NOT NULL REFERENCES persons(id),
     performed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     old_status transaction_status,
     new_status transaction_status,  
@@ -811,7 +811,7 @@ CREATE TABLE transaction_requests (
     description VARCHAR(200) NOT NULL,
     channel VARCHAR(20) NOT NULL CHECK (channel IN ('MobileApp', 'AgentTerminal', 'ATM', 'InternetBanking', 'BranchTeller', 'USSD', 'ApiGateway')),
     terminal_id UUID,
-    initiator_id UUID NOT NULL REFERENCES persons(id),
+    initiator_person_id UUID NOT NULL REFERENCES persons(id),
     external_reference VARCHAR(100),
     metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -842,7 +842,7 @@ CREATE TABLE validation_results (
 CREATE TABLE approvals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_id UUID NOT NULL REFERENCES transactions(id),
-    approver_id UUID NOT NULL REFERENCES persons(id),
+    approver_person_id UUID NOT NULL REFERENCES persons(id),
     approved_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -853,11 +853,11 @@ CREATE INDEX idx_gl_entries_transaction ON gl_entries(transaction_id);
 CREATE INDEX idx_gl_entries_account_code ON gl_entries(account_code);
 CREATE INDEX idx_gl_entries_posting_date ON gl_entries(posting_date);
 CREATE INDEX idx_transaction_requests_account ON transaction_requests(account_id);
-CREATE INDEX idx_transaction_requests_initiator ON transaction_requests(initiator_id);
+CREATE INDEX idx_transaction_requests_initiator ON transaction_requests(initiator_person_id);
 CREATE INDEX idx_transaction_results_transaction ON transaction_results(transaction_id);
 CREATE INDEX idx_validation_results_transaction ON validation_results(transaction_id);
 CREATE INDEX idx_approvals_transaction ON approvals(transaction_id);
-CREATE INDEX idx_approvals_approver ON approvals(approver_id);
+CREATE INDEX idx_approvals_approver ON approvals(approver_person_id);
 
 -- =============================================================================
 -- AGENT BANKING NETWORK MANAGEMENT
@@ -1372,7 +1372,7 @@ CREATE TABLE transaction_approvals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workflow_id UUID NOT NULL REFERENCES account_workflows(id),
     transaction_id UUID NOT NULL REFERENCES transactions(id),
-    approver_id UUID NOT NULL,
+    approver_person_id UUID NOT NULL,
     approval_action transaction_approval_status NOT NULL,
     approved_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     approval_notes VARCHAR(512),

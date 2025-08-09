@@ -213,7 +213,9 @@ All 13 PostgreSQL repositories implemented with 298+ tests passing. Major techni
 - **PersonRepositoryImpl** - Full CRUD + business logic (10/10 tests)
 
 ### ✨ Refactoring & Normalization
+- **Identifier Normalization**: Completed a comprehensive refactoring to standardize the primary identifier field to `id` across all domain models, database tables, and repositories. This eliminates legacy `*_id` patterns, improving schema consistency and developer experience.
 - **Daily Collection Model**: Standardized `id` field and migrated `amount_collected` and `expected_amount` from `f64` to `Decimal` for enhanced financial precision.
+- **Foreign Key Normalization**: Standardized the `daily_collection_id` to `daily_collection_record_id` across all transaction-related components to improve schema clarity and consistency.
 
 ## 🚀 Daily Collection Service (New Feature)
 

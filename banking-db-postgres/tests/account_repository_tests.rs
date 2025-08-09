@@ -1,7 +1,7 @@
 use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
 use banking_db::models::AccountModel;
 use banking_db::repository::AccountRepository;
-use banking_db_postgres::repository::AccountRepositoryImpl;
+use banking_db_postgres::AccountRepositoryImpl;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
