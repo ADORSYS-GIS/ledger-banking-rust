@@ -176,7 +176,7 @@ impl TransactionService for TransactionServiceImpl {
                 message: "Channel ID too long".to_string(),
             })?,
             terminal_id: None,
-            agent_user_id: None,
+            agent_person_id: None,
             transaction_date: Utc::now(),
             value_date: original.value_date,
             status: TransactionStatus::Posted,
@@ -288,7 +288,7 @@ impl TransactionService for TransactionServiceImpl {
     }
 
     /// Approve a transaction in the approval workflow
-    async fn approve_transaction(&self, transaction_id: Uuid, approver_id: Uuid) -> BankingResult<()> {
+    async fn approve_transaction(&self, transaction_id: Uuid, approver_person_id: Uuid) -> BankingResult<()> {
         // Find transaction
         let transaction = self.transaction_repository
             .find_by_id(transaction_id)
@@ -310,7 +310,7 @@ impl TransactionService for TransactionServiceImpl {
 
         tracing::info!(
             "Approval recorded for transaction {} by approver {}",
-            transaction_id, approver_id
+            transaction_id, approver_person_id
         );
 
         Ok(())

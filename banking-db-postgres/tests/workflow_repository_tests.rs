@@ -1,6 +1,6 @@
 use banking_db::models::{AccountWorkflowModel, WorkflowTypeModel, WorkflowStepModel, WorkflowStatusModel};
 use banking_db::repository::WorkflowRepository;
-use banking_db_postgres::WorkflowRepositoryImpl;
+use banking_db_postgres::repository::workflow_repository_impl::WorkflowRepositoryImpl;
 use chrono::Utc;
 use heapless::String as HeaplessString;
 use sqlx::PgPool;

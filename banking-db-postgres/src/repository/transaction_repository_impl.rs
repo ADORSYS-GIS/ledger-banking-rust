@@ -104,7 +104,7 @@ fn extract_transaction_from_row(row: &sqlx::postgres::PgRow) -> BankingResult<Tr
             message: "Channel ID too long".to_string(),
         })?,
         terminal_id: row.get("terminal_id"),
-        agent_user_id: row.get("agent_user_id"),
+        agent_person_id: row.get("agent_person_id"),
         transaction_date: row.get("transaction_date"),
         value_date: row.get("value_date"),
         status: parse_transaction_status(&row.get::<String, _>("status"))?,
@@ -146,7 +146,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
             r#"
             INSERT INTO transactions (
                 id, account_id, transaction_code, transaction_type, amount, currency,
-                description, channel_id, terminal_id, agent_user_id, transaction_date, value_date,
+                description, channel_id, terminal_id, agent_person_id, transaction_date, value_date,
                 status, reference_number, external_reference, gl_code, requires_approval,
                 approval_status, risk_score
             )
@@ -155,7 +155,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
                 $13::transaction_status, $14, $15, $16, $17, $18::transaction_approval_status, $19
             )
             RETURNING id, account_id, transaction_code, transaction_type::text as transaction_type,
-                     amount, currency, description, channel_id, terminal_id, agent_user_id,
+                     amount, currency, description, channel_id, terminal_id, agent_person_id,
                      transaction_date, value_date, status::text as status, reference_number,
                      external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                      risk_score, created_at
@@ -170,7 +170,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         .bind(transaction.description.as_str())
         .bind(transaction.channel_id.as_str())
         .bind(transaction.terminal_id)
-        .bind(transaction.agent_user_id)
+        .bind(transaction.agent_person_id)
         .bind(transaction.transaction_date)
         .bind(transaction.value_date)
         .bind(transaction.status.to_string())
@@ -192,13 +192,13 @@ impl TransactionRepository for TransactionRepositoryImpl {
             UPDATE transactions SET
                 account_id = $2, transaction_code = $3, transaction_type = $4::transaction_type,
                 amount = $5, currency = $6, description = $7, channel_id = $8, terminal_id = $9,
-                agent_user_id = $10, transaction_date = $11, value_date = $12,
+                agent_person_id = $10, transaction_date = $11, value_date = $12,
                 status = $13::transaction_status, reference_number = $14, external_reference = $15,
                 gl_code = $16, requires_approval = $17, approval_status = $18::transaction_approval_status,
                 risk_score = $19
             WHERE id = $1
             RETURNING id, account_id, transaction_code, transaction_type::text as transaction_type,
-                     amount, currency, description, channel_id, terminal_id, agent_user_id,
+                     amount, currency, description, channel_id, terminal_id, agent_person_id,
                      transaction_date, value_date, status::text as status, reference_number,
                      external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                      risk_score, created_at
@@ -213,7 +213,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         .bind(transaction.description.as_str())
         .bind(transaction.channel_id.as_str())
         .bind(transaction.terminal_id)
-        .bind(transaction.agent_user_id)
+        .bind(transaction.agent_person_id)
         .bind(transaction.transaction_date)
         .bind(transaction.value_date)
         .bind(transaction.status.to_string())
@@ -233,7 +233,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let result = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -255,7 +255,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let mut query = String::from(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -304,7 +304,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let results = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -331,7 +331,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let result = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -353,7 +353,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let results = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -378,7 +378,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let results = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -403,7 +403,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let results = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -427,7 +427,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let mut query = String::from(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -472,16 +472,16 @@ impl TransactionRepository for TransactionRepositoryImpl {
         Ok(transactions)
     }
 
-    async fn find_by_agent_user_id(&self, agent_user_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>> {
+    async fn find_by_agent_person_id(&self, agent_person_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>> {
         let mut query = String::from(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
             FROM transactions
-            WHERE agent_user_id = $1
+            WHERE agent_person_id = $1
             "#
         );
 
@@ -499,7 +499,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         
         query.push_str(" ORDER BY transaction_date DESC");
 
-        let mut db_query = sqlx::query(&query).bind(agent_user_id);
+        let mut db_query = sqlx::query(&query).bind(agent_person_id);
         
         if let Some(from) = from_date {
             db_query = db_query.bind(from);
@@ -525,7 +525,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let mut query = String::from(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -606,7 +606,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let result = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -694,7 +694,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
             r#"
             INSERT INTO transactions (
                 id, account_id, transaction_code, transaction_type, amount, currency,
-                description, channel_id, terminal_id, agent_user_id, transaction_date, value_date,
+                description, channel_id, terminal_id, agent_person_id, transaction_date, value_date,
                 status, reference_number, external_reference, gl_code, requires_approval,
                 approval_status, risk_score
             )
@@ -703,7 +703,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
                 $13::transaction_status, $14, $15, $16, $17, $18::transaction_approval_status, $19
             )
             RETURNING id, account_id, transaction_code, transaction_type::text as transaction_type,
-                     amount, currency, description, channel_id, terminal_id, agent_user_id,
+                     amount, currency, description, channel_id, terminal_id, agent_person_id,
                      transaction_date, value_date, status::text as status, reference_number,
                      external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                      risk_score, created_at
@@ -718,7 +718,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         .bind(reversal_transaction.description.as_str())
         .bind(reversal_transaction.channel_id.as_str())
         .bind(reversal_transaction.terminal_id)
-        .bind(reversal_transaction.agent_user_id)
+        .bind(reversal_transaction.agent_person_id)
         .bind(reversal_transaction.transaction_date)
         .bind(reversal_transaction.value_date)
         .bind(reversal_transaction.status.to_string())
@@ -740,7 +740,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let results = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at
@@ -973,18 +973,18 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO transaction_approvals (
-                id, workflow_id, transaction_id, approver_id, approval_action,
+                id, workflow_id, transaction_id, approver_person_id, approval_action,
                 approved_at, approval_notes
             )
             VALUES ($1, $2, $3, $4, $5::transaction_approval_status, $6, $7)
-            RETURNING id, workflow_id, transaction_id, approver_id,
+            RETURNING id, workflow_id, transaction_id, approver_person_id,
                      approval_action::text as approval_action, approved_at, approval_notes, created_at
             "#
         )
         .bind(approval.id)
         .bind(approval.workflow_id)
         .bind(approval.transaction_id)
-        .bind(approval.approver_id)
+        .bind(approval.approver_person_id)
         .bind(approval.approval_action.as_str())
         .bind(approval.approved_at)
         .bind(approval.approval_notes.as_ref().map(|s| s.as_str()))
@@ -995,7 +995,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
             id: result.get("id"),
             workflow_id: result.get("workflow_id"),
             transaction_id: result.get("transaction_id"),
-            approver_id: result.get("approver_id"),
+            approver_person_id: result.get("approver_person_id"),
             approval_action: HeaplessString::try_from(
                 result.get::<String, _>("approval_action").as_str()
             ).unwrap(),
@@ -1010,7 +1010,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
     async fn find_approvals_by_workflow(&self, workflow_id: Uuid) -> BankingResult<Vec<WorkflowTransactionApprovalModel>> {
         let results = sqlx::query(
             r#"
-            SELECT id, workflow_id, transaction_id, approver_id,
+            SELECT id, workflow_id, transaction_id, approver_person_id,
                    approval_action::text as approval_action, approved_at, approval_notes, created_at
             FROM transaction_approvals
             WHERE workflow_id = $1
@@ -1027,7 +1027,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
                 id: row.get("id"),
                 workflow_id: row.get("workflow_id"),
                 transaction_id: row.get("transaction_id"),
-                approver_id: row.get("approver_id"),
+                approver_person_id: row.get("approver_person_id"),
                 approval_action: HeaplessString::try_from(
                     row.get::<String, _>("approval_action").as_str()
                 ).unwrap(),
@@ -1042,17 +1042,17 @@ impl TransactionRepository for TransactionRepositoryImpl {
         Ok(approvals)
     }
 
-    async fn find_approvals_by_approver(&self, approver_id: Uuid) -> BankingResult<Vec<WorkflowTransactionApprovalModel>> {
+    async fn find_approvals_by_approver(&self, approver_person_id: Uuid) -> BankingResult<Vec<WorkflowTransactionApprovalModel>> {
         let results = sqlx::query(
             r#"
-            SELECT id, workflow_id, transaction_id, approver_id,
+            SELECT id, workflow_id, transaction_id, approver_person_id,
                    approval_action::text as approval_action, approved_at, approval_notes, created_at
             FROM transaction_approvals
-            WHERE approver_id = $1
+            WHERE approver_person_id = $1
             ORDER BY approved_at DESC
             "#
         )
-        .bind(approver_id)
+        .bind(approver_person_id)
         .fetch_all(&self.pool)
         .await?;
 
@@ -1062,7 +1062,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
                 id: row.get("id"),
                 workflow_id: row.get("workflow_id"),
                 transaction_id: row.get("transaction_id"),
-                approver_id: row.get("approver_id"),
+                approver_person_id: row.get("approver_person_id"),
                 approval_action: HeaplessString::try_from(
                     row.get::<String, _>("approval_action").as_str()
                 ).unwrap(),
@@ -1139,7 +1139,7 @@ impl TransactionRepository for TransactionRepositoryImpl {
         let results = sqlx::query(
             r#"
             SELECT id, account_id, transaction_code, transaction_type::text as transaction_type,
-                   amount, currency, description, channel_id, terminal_id, agent_user_id,
+                   amount, currency, description, channel_id, terminal_id, agent_person_id,
                    transaction_date, value_date, status::text as status, reference_number,
                    external_reference, gl_code, requires_approval, approval_status::text as approval_status,
                    risk_score, created_at

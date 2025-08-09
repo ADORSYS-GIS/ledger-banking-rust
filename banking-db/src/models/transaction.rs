@@ -27,7 +27,7 @@ pub struct TransactionModel {
     pub description: HeaplessString<200>,
     pub channel_id: HeaplessString<50>,
     pub terminal_id: Option<Uuid>,
-    pub agent_user_id: Option<Uuid>,
+    pub agent_person_id: Option<Uuid>,
     pub transaction_date: DateTime<Utc>,
     pub value_date: NaiveDate,
     #[serde(
@@ -54,7 +54,7 @@ pub struct TransactionModel {
 pub struct TransactionApprovalModel {
     pub id: Uuid,
     pub transaction_id: Uuid,
-    pub approver_id: Uuid,
+    pub approver_person_id: Uuid,
     #[serde(
         serialize_with = "serialize_transaction_approval_status",
         deserialize_with = "deserialize_transaction_approval_status"
@@ -110,7 +110,7 @@ pub struct TransactionAuditModel {
     )]
     pub action_type: TransactionAuditAction,
     /// References Person.person_id
-    pub performed_by: Uuid,
+    pub performed_by_person_id: Uuid,
     pub performed_at: DateTime<Utc>,
     #[serde(
         serialize_with = "serialize_transaction_status_option",
@@ -152,7 +152,7 @@ pub struct TransactionRequestModel {
     )]
     pub channel: ChannelType,
     pub terminal_id: Option<Uuid>,
-    pub initiator_id: Uuid, // References Person.person_id
+    pub initiator_person_id: Uuid, // References Person.person_id
     pub external_reference: Option<HeaplessString<100>>,
     pub metadata: String, // JSON-serialized HashMap
     pub created_at: DateTime<Utc>,
@@ -187,7 +187,7 @@ pub struct ValidationResultModel {
 pub struct ApprovalModel {
     pub id: Uuid,
     pub transaction_id: Uuid,
-    pub approver_id: Uuid,
+    pub approver_person_id: Uuid,
     pub approved_at: DateTime<Utc>,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,

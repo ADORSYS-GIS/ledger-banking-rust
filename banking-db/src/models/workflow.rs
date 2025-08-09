@@ -247,7 +247,7 @@ pub struct WorkflowTransactionApprovalModel {
     pub id: Uuid,
     pub workflow_id: Uuid,
     pub transaction_id: Uuid,
-    pub approver_id: Uuid,
+    pub approver_person_id: Uuid,
     pub approval_action: HeaplessString<20>, // Approved, Rejected, Delegated
     pub approved_at: DateTime<Utc>,
     pub approval_notes: Option<HeaplessString<512>>,

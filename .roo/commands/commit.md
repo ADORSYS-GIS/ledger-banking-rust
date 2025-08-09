@@ -106,9 +106,10 @@ Co-Authored-By: Qwen <noreply@alibaba.com>
 
 ## Signing Requirements
 
+store commit message in a file target/commit.md
 Always commit with both flags:
 ```bash
-git commit -s -S -m "commit message"
+git commit -s -S -F target/commit.md
 ```
 
 - `-s`: Adds Signed-off-by line for DCO compliance

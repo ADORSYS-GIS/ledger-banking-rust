@@ -30,7 +30,7 @@ pub trait TransactionService: Send + Sync {
     
     /// Multi-party authorization workflow
     async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<ApprovalWorkflow>;
-    async fn approve_transaction(&self, transaction_id: Uuid, approver_id: Uuid) -> BankingResult<()>;
+    async fn approve_transaction(&self, transaction_id: Uuid, approver_person_id: Uuid) -> BankingResult<()>;
 
     /// Status-aware transaction validation (from enhancements)
     async fn validate_account_transactional_status(&self, account_id: Uuid, transaction_type: TransactionType) -> BankingResult<ValidationResult>;
@@ -68,7 +68,7 @@ pub struct TransactionAuditEntry {
     pub audit_id: Uuid,
     pub transaction_id: Uuid,
     pub action: String,
-    pub performed_by: String,
+    pub performed_by_person_id: String,
     pub performed_at: chrono::DateTime<chrono::Utc>,
     pub details: Option<String>,
 }

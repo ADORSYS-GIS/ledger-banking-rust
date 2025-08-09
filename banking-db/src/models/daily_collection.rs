@@ -4,6 +4,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::collateral::AlertSeverity;
+
 // Re-define enums with sqlx::Type support
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "agent_status", rename_all = "lowercase")]
@@ -181,15 +183,6 @@ pub enum FeeFrequency {
     OneTime,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "alert_severity", rename_all = "lowercase")]
-pub enum AlertSeverity {
-    Low,
-    Medium,
-    High,
-    Critical,
-}
-
 // ======== Collection Agent Database Models ========
 
 /// Database model for Collection Agent
@@ -197,7 +190,7 @@ pub enum AlertSeverity {
 #[derive(sqlx::FromRow)]
 pub struct CollectionAgentModel {
     pub id: Uuid,
-    pub person_reference: Uuid,
+    pub person_id: Uuid,
     pub license_number: HeaplessString<50>,
     pub license_expiry: NaiveDate,
     pub status: AgentStatus,
@@ -261,12 +254,37 @@ pub struct CoverageAreaModel {
     pub created_at: DateTime<Utc>,
 }
 
+/// Database model for Collection Operating Hours
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(sqlx::FromRow)]
+pub struct CollectionOperatingHoursModel {
+    pub id: Uuid,
+    pub program_id: Uuid,
+    pub monday_open: Option<NaiveTime>,
+    pub monday_close: Option<NaiveTime>,
+    pub tuesday_open: Option<NaiveTime>,
+    pub tuesday_close: Option<NaiveTime>,
+    pub wednesday_open: Option<NaiveTime>,
+    pub wednesday_close: Option<NaiveTime>,
+    pub thursday_open: Option<NaiveTime>,
+    pub thursday_close: Option<NaiveTime>,
+    pub friday_open: Option<NaiveTime>,
+    pub friday_close: Option<NaiveTime>,
+    pub saturday_open: Option<NaiveTime>,
+    pub saturday_close: Option<NaiveTime>,
+    pub sunday_open: Option<NaiveTime>,
+    pub sunday_close: Option<NaiveTime>,
+    pub timezone: HeaplessString<50>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 /// Database model for Performance Alerts
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(sqlx::FromRow)]
 pub struct PerformanceAlertModel {
     pub id: Uuid,
-    pub agent_id: Uuid,
+    pub agent_performance_metrics_id: Uuid,
     pub alert_type: AlertType,
     pub severity: AlertSeverity,
     pub message: HeaplessString<200>,
@@ -291,6 +309,7 @@ pub struct CollectionProgramModel {
     pub start_date: NaiveDate,
     pub end_date: Option<NaiveDate>,
     pub collection_frequency: CollectionFrequency,
+    pub operating_hours_id: Option<Uuid>,
     pub minimum_amount: Decimal,
     pub maximum_amount: Decimal,
     pub target_amount: Option<Decimal>,
@@ -325,8 +344,9 @@ pub struct CollectionProgramModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(sqlx::FromRow)]
 pub struct CustomerCollectionProfileModel {
+    pub id: Uuid,
     pub customer_id: Uuid,
-    pub program_id: Uuid,
+    pub collection_program_id: Uuid,
     pub account_id: Uuid,
     pub enrollment_date: NaiveDate,
     pub status: CollectionStatus,
@@ -338,8 +358,8 @@ pub struct CustomerCollectionProfileModel {
     pub schedule_timezone: HeaplessString<50>,
     pub schedule_holiday_handling: HolidayHandling,
     
-    pub assigned_agent_id: Uuid,
-    pub collection_location_id: Uuid,
+    pub assigned_collection_agent_id: Uuid,
+    pub collection_location_address_id: Uuid,
     
     // Performance metrics fields (flattened)
     pub performance_collection_rate: Decimal,
@@ -376,17 +396,15 @@ pub struct CustomerCollectionProfileModel {
 pub struct CollectionRecordModel {
     pub id: Uuid,
     pub customer_id: Uuid,
-    pub agent_id: Uuid,
-    pub program_id: Uuid,
+    pub collection_agent_id: Uuid,
+    pub collection_program_id: Uuid,
     pub account_id: Uuid,
     pub collection_date: NaiveDate,
     pub collection_time: DateTime<Utc>,
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
     pub collection_method: CollectionMethod,
-    pub location_latitude: Option<f64>,
-    pub location_longitude: Option<f64>,
-    pub location_accuracy_meters: Option<f32>,
+    pub location_address_id: Option<Uuid>,
     pub receipt_number: HeaplessString<50>,
     pub status: CollectionRecordStatus,
     pub notes: Option<HeaplessString<500>>,
@@ -418,19 +436,20 @@ pub struct CollectionRecordModel {
 #[derive(sqlx::FromRow)]
 pub struct CollectionBatchModel {
     pub id: Uuid,
-    pub agent_id: Uuid,
+    pub collection_agent_id: Uuid,
     pub collection_date: NaiveDate,
     pub total_collections: i32,
     pub total_amount: Decimal,
     pub currency: HeaplessString<3>,
     pub status: BatchStatus,
+    pub collection_records: Vec<Uuid>,
     
     // Reconciliation data fields (flattened)
     pub reconciliation_expected_amount: Option<Decimal>,
     pub reconciliation_actual_amount: Option<Decimal>,
     pub reconciliation_variance: Option<Decimal>,
     pub reconciliation_variance_reason: Option<HeaplessString<500>>,
-    pub reconciliation_reconciled_by: Option<Uuid>,
+    pub reconciled_by_person_id: Option<Uuid>,
     pub reconciliation_timestamp: Option<DateTime<Utc>>,
     pub reconciliation_adjustment_required: Option<bool>,
     

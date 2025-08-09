@@ -17,7 +17,8 @@ pub struct Transaction {
     pub description: HeaplessString<200>,
     pub channel_id: HeaplessString<50>,
     pub terminal_id: Option<Uuid>,
-    pub agent_user_id: Option<Uuid>,
+    /// References Person.person_id
+    pub agent_person_id: Option<Uuid>,
     pub transaction_date: DateTime<Utc>,
     pub value_date: NaiveDate,
     pub status: TransactionStatus,
@@ -256,7 +257,7 @@ pub struct TransactionRequest {
     pub description: HeaplessString<200>,
     pub channel: ChannelType,
     pub terminal_id: Option<Uuid>,
-    pub initiator_id: Uuid, // References Person.person_id
+    pub initiator_person_id: Uuid, // References Person.person_id
     pub external_reference: Option<HeaplessString<100>>,
     pub metadata: HashMap<String, String>,
 }
@@ -340,7 +341,7 @@ pub struct ApprovalWorkflow {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Approval {
     pub id: Uuid,
-    pub approver_id: Uuid,
+    pub approver_person_id: Uuid,
     pub approved_at: DateTime<Utc>,
     pub notes: Option<String>,
 }
@@ -391,7 +392,7 @@ pub struct TransactionAudit {
     pub transaction_id: Uuid,
     pub action_type: TransactionAuditAction,
     /// References Person.person_id
-    pub performed_by: Uuid,
+    pub performed_by_person_id: Uuid,
     pub performed_at: DateTime<Utc>,
     pub old_status: Option<TransactionStatus>,
     pub new_status: Option<TransactionStatus>,
@@ -405,7 +406,7 @@ impl TransactionAudit {
     pub fn new(
         transaction_id: Uuid,
         action_type: TransactionAuditAction,
-        performed_by: Uuid,
+        performed_by_person_id: Uuid,
         old_status: Option<TransactionStatus>,
         new_status: Option<TransactionStatus>,
         reason_id: Option<Uuid>,
@@ -415,7 +416,7 @@ impl TransactionAudit {
             id: Uuid::new_v4(),
             transaction_id,
             action_type,
-            performed_by,
+            performed_by_person_id,
             performed_at: Utc::now(),
             old_status,
             new_status,

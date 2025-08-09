@@ -156,7 +156,7 @@ async fn test_simple_workflow_operations() {
     // Test workflow queries
     let workflow_id = Uuid::new_v4();
     let transaction_id = Uuid::new_v4();
-    let approver_id = Uuid::new_v4();
+    let approver_person_id = Uuid::new_v4();
     
     let workflow = repo.find_workflow_by_id(workflow_id).await
         .expect("Failed to find workflow by id");
@@ -174,7 +174,7 @@ async fn test_simple_workflow_operations() {
         .expect("Failed to find approvals by workflow");
     assert!(approvals.is_empty());
     
-    let approvals = repo.find_approvals_by_approver(approver_id).await
+    let approvals = repo.find_approvals_by_approver(approver_person_id).await
         .expect("Failed to find approvals by approver");
     assert!(approvals.is_empty());
     

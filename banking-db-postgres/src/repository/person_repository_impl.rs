@@ -59,7 +59,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for PersonModel {
                 })?),
                 None => None,
             },
-            organization: row.get("organization"),
+            organization_person_id: row.get("organization_person_id"),
             messaging1_id: row.get("messaging1_id"),
             messaging1_type: row.get("messaging1_type"),
             messaging2_id: row.get("messaging2_id"),
@@ -79,8 +79,8 @@ impl TryFromRow<sqlx::postgres::PgRow> for PersonModel {
                 })?),
                 None => None,
             },
-            location: row.get("location"),
-            duplicate_of: row.get("duplicate_of"),
+            location_address_id: row.get("location_address_id"),
+            duplicate_of_person_id: row.get("duplicate_of_person_id"),
             is_active: row.get("is_active"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
@@ -94,25 +94,25 @@ impl PersonRepository for PersonRepositoryImpl {
         let result = sqlx::query(
             r#"
             INSERT INTO persons (
-                id, person_type, display_name, external_identifier, organization,
+                id, person_type, display_name, external_identifier, organization_person_id,
                 messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                 messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                department, location, duplicate_of, is_active, created_at, updated_at
+                department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
             )
             VALUES (
                 $1, $2::person_type, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
             )
-            RETURNING id, person_type::text as person_type, display_name, external_identifier, organization,
+            RETURNING id, person_type::text as person_type, display_name, external_identifier, organization_person_id,
                      messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                      messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                     department, location, duplicate_of, is_active, created_at, updated_at
+                     department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
             "#
         )
         .bind(person.id)
         .bind(person.person_type.to_string())
         .bind(person.display_name.as_str())
         .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
-        .bind(person.organization)
+        .bind(person.organization_person_id)
         .bind(person.messaging1_id)
         .bind(person.messaging1_type)
         .bind(person.messaging2_id)
@@ -124,8 +124,8 @@ impl PersonRepository for PersonRepositoryImpl {
         .bind(person.messaging5_id)
         .bind(person.messaging5_type)
         .bind(person.department.as_ref().map(|s| s.as_str()))
-        .bind(person.location)
-        .bind(person.duplicate_of)
+        .bind(person.location_address_id)
+        .bind(person.duplicate_of_person_id)
         .bind(person.is_active)
         .bind(person.created_at)
         .bind(person.updated_at)
@@ -138,10 +138,10 @@ impl PersonRepository for PersonRepositoryImpl {
     async fn get_by_id(&self, id: Uuid) -> Result<Option<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
         let result = sqlx::query(
             r#"
-            SELECT id, person_type::text as person_type, display_name, external_identifier, organization,
+            SELECT id, person_type::text as person_type, display_name, external_identifier, organization_person_id,
                    messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                   department, location, duplicate_of, is_active, created_at, updated_at
+                   department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
             FROM persons 
             WHERE id = $1
             "#
@@ -162,10 +162,10 @@ impl PersonRepository for PersonRepositoryImpl {
     async fn get_by_external_identifier(&self, identifier: &str) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
         let results = sqlx::query(
             r#"
-            SELECT id, person_type::text as person_type, display_name, external_identifier, organization,
+            SELECT id, person_type::text as person_type, display_name, external_identifier, organization_person_id,
                    messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                   department, location, duplicate_of, is_active, created_at, updated_at
+                   department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
             FROM persons 
             WHERE external_identifier = $1 AND is_active = true
             ORDER BY created_at DESC
@@ -186,10 +186,10 @@ impl PersonRepository for PersonRepositoryImpl {
     async fn get_by_entity_reference(&self, entity_id: Uuid, entity_type: &str) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
         let results = sqlx::query(
             r#"
-            SELECT p.id, p.person_type::text as person_type, p.display_name, p.external_identifier, p.organization,
+            SELECT p.id, p.person_type::text as person_type, p.display_name, p.external_identifier, p.organization_person_id,
                    p.messaging1_id, p.messaging1_type, p.messaging2_id, p.messaging2_type, p.messaging3_id, p.messaging3_type,
                    p.messaging4_id, p.messaging4_type, p.messaging5_id, p.messaging5_type,
-                   p.department, p.location, p.duplicate_of, p.is_active, p.created_at, p.updated_at
+                   p.department, p.location_address_id, p.duplicate_of_person_id, p.is_active, p.created_at, p.updated_at
             FROM persons p
             INNER JOIN entity_references er ON p.id = er.person_id
             WHERE er.reference_external_id = $1 AND er.entity_role = $2 AND er.is_active = true AND p.is_active = true
@@ -236,7 +236,7 @@ impl PersonRepository for PersonRepositoryImpl {
                     }
                 })
             }).transpose()?,
-            organization: None,
+            organization_person_id: None,
             messaging1_id: None,
             messaging1_type: None,
             messaging2_id: None,
@@ -248,8 +248,8 @@ impl PersonRepository for PersonRepositoryImpl {
             messaging5_id: None,
             messaging5_type: None,
             department: None,
-            location: None,
-            duplicate_of: None,
+            location_address_id: None,
+            duplicate_of_person_id: None,
             is_active: true,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
@@ -265,7 +265,7 @@ impl PersonRepository for PersonRepositoryImpl {
                 person_type = $2::person_type,
                 display_name = $3,
                 external_identifier = $4,
-                organization = $5,
+                organization_person_id = $5,
                 messaging1_id = $6,
                 messaging1_type = $7,
                 messaging2_id = $8,
@@ -277,22 +277,22 @@ impl PersonRepository for PersonRepositoryImpl {
                 messaging5_id = $14,
                 messaging5_type = $15,
                 department = $16,
-                location = $17,
-                duplicate_of = $18,
+                location_address_id = $17,
+                duplicate_of_person_id = $18,
                 is_active = $19,
                 updated_at = $20
             WHERE id = $1
-            RETURNING id, person_type::text as person_type, display_name, external_identifier, organization,
+            RETURNING id, person_type::text as person_type, display_name, external_identifier, organization_person_id,
                      messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                      messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                     department, location, duplicate_of, is_active, created_at, updated_at
+                     department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
             "#
         )
         .bind(person.id)
         .bind(person.person_type.to_string())
         .bind(person.display_name.as_str())
         .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
-        .bind(person.organization)
+        .bind(person.organization_person_id)
         .bind(person.messaging1_id)
         .bind(person.messaging1_type)
         .bind(person.messaging2_id)
@@ -304,8 +304,8 @@ impl PersonRepository for PersonRepositoryImpl {
         .bind(person.messaging5_id)
         .bind(person.messaging5_type)
         .bind(person.department.as_ref().map(|s| s.as_str()))
-        .bind(person.location)
-        .bind(person.duplicate_of)
+        .bind(person.location_address_id)
+        .bind(person.duplicate_of_person_id)
         .bind(person.is_active)
         .bind(person.updated_at)
         .fetch_one(&self.pool)
@@ -314,18 +314,18 @@ impl PersonRepository for PersonRepositoryImpl {
         PersonModel::try_from_row(&result).map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
     }
 
-    async fn mark_as_duplicate(&self, id: Uuid, duplicate_of: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn mark_as_duplicate(&self, id: Uuid, duplicate_of_person_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         sqlx::query(
             r#"
             UPDATE persons SET
-                duplicate_of = $2,
+                duplicate_of_person_id = $2,
                 is_active = false,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $1
             "#
         )
         .bind(id)
-        .bind(duplicate_of)
+        .bind(duplicate_of_person_id)
         .execute(&self.pool)
         .await?;
 
@@ -335,12 +335,12 @@ impl PersonRepository for PersonRepositoryImpl {
     async fn get_all_active(&self) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>> {
         let results = sqlx::query(
             r#"
-            SELECT id, person_type::text as person_type, display_name, external_identifier, organization,
+            SELECT id, person_type::text as person_type, display_name, external_identifier, organization_person_id,
                    messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                   department, location, duplicate_of, is_active, created_at, updated_at
+                   department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
             FROM persons 
-            WHERE is_active = true AND duplicate_of IS NULL
+            WHERE is_active = true AND duplicate_of_person_id IS NULL
             ORDER BY display_name
             "#
         )
@@ -359,12 +359,12 @@ impl PersonRepository for PersonRepositoryImpl {
         let search_pattern = format!("%{query}%");
         let results = sqlx::query(
             r#"
-            SELECT id, person_type::text as person_type, display_name, external_identifier, organization,
+            SELECT id, person_type::text as person_type, display_name, external_identifier, organization_person_id,
                    messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                   department, location, duplicate_of, is_active, created_at, updated_at
+                   department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
             FROM persons 
-            WHERE display_name ILIKE $1 AND is_active = true AND duplicate_of IS NULL
+            WHERE display_name ILIKE $1 AND is_active = true AND duplicate_of_person_id IS NULL
             ORDER BY display_name
             LIMIT 50
             "#
@@ -412,7 +412,7 @@ mod tests {
             person_type: PersonType::Natural,
             display_name: HeaplessString::try_from("John Doe").unwrap(),
             external_identifier: Some(HeaplessString::try_from("EXT001").unwrap()),
-            organization: None,
+            organization_person_id: None,
             messaging1_id: None,
             messaging1_type: None,
             messaging2_id: None,
@@ -424,8 +424,8 @@ mod tests {
             messaging5_id: None,
             messaging5_type: None,
             department: Some(HeaplessString::try_from("IT").unwrap()),
-            location: None,
-            duplicate_of: None,
+            location_address_id: None,
+            duplicate_of_person_id: None,
             is_active: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -572,7 +572,7 @@ mod tests {
         let retrieved = repo.get_by_id(created2.id).await.expect("Failed to get person");
         assert!(retrieved.is_some());
         let person = retrieved.unwrap();
-        assert_eq!(person.duplicate_of, Some(created1.id));
+        assert_eq!(person.duplicate_of_person_id, Some(created1.id));
         assert!(!person.is_active);
     }
 
@@ -611,7 +611,7 @@ mod tests {
         // Should return only active persons that are not duplicates
         for person in persons {
             assert!(person.is_active);
-            assert!(person.duplicate_of.is_none());
+            assert!(person.duplicate_of_person_id.is_none());
         }
     }
 

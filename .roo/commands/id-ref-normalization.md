@@ -1,6 +1,6 @@
 ---
 description: Refactor foreign key field names to include target entity names for clarity
-argument-hint: <entity name to process>
+argument-hint: <entity>
 ---
 
 # Foreign Key Reference Alignment
@@ -8,9 +8,14 @@ argument-hint: <entity name to process>
 ## Naming Convention Rules
 
 ### 1. Explicit Entity Reference Required
-When the field name doesn't clearly indicate the target entity, include the target struct name:
+When the field name doesn't clearly indicate the target rust file, include the target struct name:
 - `domicile_branch_id: Uuid` → `domicile_agency_branch_id: Uuid` (target: `AgencyBranch`)
 - `updated_by_person_id: Uuid` → `updated_by_person_id: Uuid` (target: `Person`)
+- `controlled_by`  → `controlled_by_person_id: Uuid` (target: `Person`)
+The method comment might indicate the tartget struct:
+-     /// References Person.person_id
+-     `agent_user_id`   → `agent_person_id: Uuid` (target: `Person`)
+
 
 ### 2. Keep Existing When Clear
 When the field name already matches or clearly indicates the target entity:
@@ -36,7 +41,7 @@ Fields that already follow the explicit entity reference pattern should not be m
 ## Workflow Steps
 
 ### Step 1: Analysis Phase
-1. Analyze the domain struct file: `banking-api/src/domain/{entity}.rs`
+1. Analyze the domain struct file: `banking-api/src/domain/{entity}.rs`. Do not process other files if not explicitely requested.
 2. Identify all fields ending with `_id: Uuid` or `_id: Option<Uuid>`
 3. Identify all fields ending with `_by: Uuid` or `_by: Option<Uuid>`
 4. For each field, determine:
@@ -52,14 +57,14 @@ Create/update `target/workbook.md` with:
 # Foreign Key Reference Analysis: {EntityName}
 
 ## Fields Requiring Changes
-| Current Field | Target Struct | Target Location | Proposed Field | Reason |
-|---------------|---------------|-----------------|----------------|---------|
-| field_name | TargetStruct | path/to/struct.rs | new_field_name | Rule explanation |
+| Current Field | Source Struct |Target Struct | Target Location | Proposed Field | Reason |
+|---------------|---------------|--------------|-----------------|----------------|---------|
+| field_name | SourceStruct | TargetStruct | path/to/struct.rs | new_field_name | Rule explanation |
 
 ## Fields Keeping Current Names
-| Current Field | Target Struct | Target Location | Reason to Keep |
-|---------------|---------------|-----------------|----------------|
-| field_name | TargetStruct | path/to/struct.rs | Explanation |
+| Current Field | Source Struct | Target Struct | Target Location | Reason to Keep |
+|---------------|---------------|---------------|-----------------|----------------|
+| field_name | SourceStruct | TargetStruct | path/to/struct.rs | Explanation |
 
 ## Summary
 - Total fields analyzed: X
@@ -68,7 +73,7 @@ Create/update `target/workbook.md` with:
 ```
 
 ### Step 3: Review and Approval
-1. Open `workbook.md` in editor for user review
+1. Open `target/workbook.md` in editor for user review
 2. Wait for user confirmation/corrections
 3. Proceed only after explicit approval
 

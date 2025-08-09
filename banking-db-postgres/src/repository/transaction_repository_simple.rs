@@ -113,7 +113,7 @@ impl TransactionRepository for SimpleTransactionRepositoryImpl {
     }
     
     /// Find transactions by agent user ID
-    async fn find_by_agent_user_id(&self, _agent_user_id: Uuid, _from_date: Option<NaiveDate>, _to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>> {
+    async fn find_by_agent_person_id(&self, _agent_person_id: Uuid, _from_date: Option<NaiveDate>, _to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>> {
         Ok(vec![])
     }
     
@@ -258,7 +258,7 @@ impl SimpleTransactionRepositoryImpl {
             description: HeaplessString::try_from("Test transaction").unwrap(),
             channel_id: HeaplessString::try_from("MobileBanking").unwrap(),
             terminal_id: None,
-            agent_user_id: None,
+            agent_person_id: None,
             transaction_date: Utc::now(),
             value_date: chrono::Utc::now().date_naive(),
             status: TransactionStatus::Posted,
