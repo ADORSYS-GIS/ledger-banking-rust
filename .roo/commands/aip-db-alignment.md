@@ -1,3 +1,8 @@
+---
+description: This template provides a structured approach for aligning domain models between the API layer and database layer in the ledger-banking-rust project.
+argument-hint: <model_name to process>
+---
+
 # API-Database Alignment Template
 
 This template provides a structured approach for aligning domain models between the API layer and database layer in the ledger-banking-rust project.

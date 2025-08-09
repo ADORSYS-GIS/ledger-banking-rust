@@ -84,8 +84,20 @@ impl ComplianceService for ComplianceServiceImpl {
             } else {
                 KycStatus::Pending
             },
-            completed_checks: vec![], // Would be populated with actual checks
-            missing_documents: vec![], // Would be populated based on requirements
+            completed_check_01: None, // Would be populated with actual checks
+            completed_check_02: None,
+            completed_check_03: None,
+            completed_check_04: None,
+            completed_check_05: None,
+            completed_check_06: None,
+            completed_check_07: None,
+            missing_required_document_id_01: None, // Would be populated based on requirements
+            missing_required_document_id_02: None,
+            missing_required_document_id_03: None,
+            missing_required_document_id_04: None,
+            missing_required_document_id_05: None,
+            missing_required_document_id_06: None,
+            missing_required_document_id_07: None,
             risk_score: Some(rust_decimal::Decimal::from_f64(self.calculate_risk_score(customer))
                 .unwrap_or_default()),
             verified_at: Some(Utc::now()),
@@ -104,7 +116,9 @@ impl ComplianceService for ComplianceServiceImpl {
         let screening_result = ScreeningResult {
             customer_id: customer.id,
             screening_type: ScreeningType::Sanctions,
-            matches_found: vec![], // Would be populated with actual matches
+            found_sanctions_match_01: None, // Would be populated with actual matches
+            found_sanctions_match_02: None,
+            found_sanctions_match_03: None,
             risk_level: RiskLevel::Low, // Default to low risk
             screened_at: Utc::now(),
             requires_manual_review: false,
@@ -122,7 +136,9 @@ impl ComplianceService for ComplianceServiceImpl {
         // Simulate transaction monitoring
         let monitoring_result = MonitoringResult {
             transaction_id: transaction.id,
-            alerts_triggered: vec![], // Would be populated with actual alerts
+            triggered_compliance_alert_id_01: None, // Would be populated with actual alerts
+            triggered_compliance_alert_id_02: None,
+            triggered_compliance_alert_id_03: None,
             risk_score: rust_decimal::Decimal::from_f64(25.0).unwrap_or_default(),
             requires_investigation: false,
             auto_approved: true,
@@ -138,7 +154,25 @@ impl ComplianceService for ComplianceServiceImpl {
             customer_id,
             reason_id,
             additional_details,
-            supporting_transactions: vec![], // Would be populated with relevant transactions
+            supporting_transaction_id_01: None, // Would be populated with relevant transactions
+            supporting_transaction_id_02: None,
+            supporting_transaction_id_03: None,
+            supporting_transaction_id_04: None,
+            supporting_transaction_id_05: None,
+            supporting_transaction_id_06: None,
+            supporting_transaction_id_07: None,
+            supporting_transaction_id_08: None,
+            supporting_transaction_id_09: None,
+            supporting_transaction_id_10: None,
+            supporting_transaction_id_11: None,
+            supporting_transaction_id_12: None,
+            supporting_transaction_id_13: None,
+            supporting_transaction_id_14: None,
+            supporting_transaction_id_15: None,
+            supporting_transaction_id_16: None,
+            supporting_transaction_id_17: None,
+            supporting_transaction_id_18: None,
+            supporting_transaction_id_19: None,
             generated_at: Utc::now(),
             status: banking_api::domain::SarStatus::Draft,
         };
@@ -196,7 +230,9 @@ impl ComplianceService for ComplianceServiceImpl {
             let screening_result = ScreeningResult {
                 customer_id,
                 screening_type: ScreeningType::Sanctions,
-                matches_found: vec![],
+                found_sanctions_match_01: None,
+                found_sanctions_match_02: None,
+                found_sanctions_match_03: None,
                 risk_level: RiskLevel::Low,
                 screened_at: Utc::now(),
                 requires_manual_review: false,

@@ -1470,8 +1470,25 @@ CREATE TABLE compliance_results (
     )),
     status VARCHAR(50) NOT NULL CHECK (status IN ('Passed', 'Failed', 'RequiresReview', 'Pending')),
     risk_score DECIMAL(5,2) CHECK (risk_score >= 0 AND risk_score <= 100),
-    findings TEXT[], -- Array of findings (up to 300 chars each)
-    recommendations TEXT[], -- Array of recommendations (up to 300 chars each)  
+    
+    -- Individual findings (normalized from Vec<String> - up to 300 chars each)
+    findings_01 VARCHAR(300),
+    findings_02 VARCHAR(300),
+    findings_03 VARCHAR(300),
+    findings_04 VARCHAR(300),
+    findings_05 VARCHAR(300),
+    findings_06 VARCHAR(300),
+    findings_07 VARCHAR(300),
+    
+    -- Individual recommendations (normalized from Vec<String> - up to 300 chars each)
+    recommendations_01 VARCHAR(300),
+    recommendations_02 VARCHAR(300),
+    recommendations_03 VARCHAR(300),
+    recommendations_04 VARCHAR(300),
+    recommendations_05 VARCHAR(300),
+    recommendations_06 VARCHAR(300),
+    recommendations_07 VARCHAR(300),
+    
     checked_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -1483,7 +1500,132 @@ CREATE TABLE suspicious_activity_reports (
     customer_id UUID NOT NULL REFERENCES customers(id),
     reason_id UUID NOT NULL REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for SAR reason  
     additional_details VARCHAR(500), -- Additional context for SAR
-    supporting_transactions UUID[] NOT NULL, -- Array of transaction IDs
+    
+    -- Individual supporting transaction IDs (normalized from Vec<Uuid> - 19 fields as specified)
+    supporting_transaction_id_01 UUID NOT NULL,
+    supporting_transaction_id_02 UUID,
+    supporting_transaction_id_03 UUID,
+    supporting_transaction_id_04 UUID,
+    supporting_transaction_id_05 UUID,
+    supporting_transaction_id_06 UUID,
+    supporting_transaction_id_07 UUID,
+    supporting_transaction_id_08 UUID,
+    supporting_transaction_id_09 UUID,
+    supporting_transaction_id_10 UUID,
+    supporting_transaction_id_11 UUID,
+    supporting_transaction_id_12 UUID,
+    supporting_transaction_id_13 UUID,
+    supporting_transaction_id_14 UUID,
+    supporting_transaction_id_15 UUID,
+    supporting_transaction_id_16 UUID,
+    supporting_transaction_id_17 UUID,
+    supporting_transaction_id_18 UUID,
+    supporting_transaction_id_19 UUID,
+    
+    generated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    generated_by UUID NOT NULL REFERENCES persons(id),
+    status VARCHAR(20) NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Filed', 'Acknowledged')),
+    filed_at TIMESTAMP WITH TIME ZONE,
+    acknowledgment_received_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Normalized KYC results with individual check and document fields
+CREATE TABLE normalized_kyc_results (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    
+    -- Individual completed checks (normalized from Vec<String>)
+    completed_check_01 VARCHAR(100),
+    completed_check_02 VARCHAR(100),
+    completed_check_03 VARCHAR(100),
+    completed_check_04 VARCHAR(100),
+    completed_check_05 VARCHAR(100),
+    completed_check_06 VARCHAR(100),
+    completed_check_07 VARCHAR(100),
+    
+    -- Individual missing document IDs (normalized from Vec<Uuid>)
+    missing_required_document_id_01 UUID,
+    missing_required_document_id_02 UUID,
+    missing_required_document_id_03 UUID,
+    missing_required_document_id_04 UUID,
+    missing_required_document_id_05 UUID,
+    missing_required_document_id_06 UUID,
+    missing_required_document_id_07 UUID,
+    
+    -- Common fields
+    status VARCHAR(20) NOT NULL CHECK (status IN ('Passed', 'Failed', 'Pending', 'RequiresManualReview')),
+    risk_score DECIMAL(5,2) CHECK (risk_score >= 0 AND risk_score <= 100),
+    performed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    performed_by UUID NOT NULL REFERENCES persons(id),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Normalized screening results with individual sanctions matches
+CREATE TABLE normalized_screening_results (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    
+    -- Individual sanctions matches (normalized from Vec<String>)
+    found_sanctions_match_01 VARCHAR(200),
+    found_sanctions_match_02 VARCHAR(200),
+    found_sanctions_match_03 VARCHAR(200),
+    
+    -- Common fields
+    screening_result VARCHAR(20) NOT NULL CHECK (screening_result IN ('Clear', 'PotentialMatch', 'ConfirmedMatch')),
+    screened_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    screened_by UUID NOT NULL REFERENCES persons(id),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Normalized monitoring results with individual alert IDs
+CREATE TABLE normalized_monitoring_results (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_id UUID REFERENCES customers(id),
+    account_id UUID REFERENCES accounts(id),
+    
+    -- Individual triggered alert IDs (normalized from Vec<Uuid>)
+    triggered_compliance_alert_id_01 UUID,
+    triggered_compliance_alert_id_02 UUID,
+    triggered_compliance_alert_id_03 UUID,
+    
+    -- Common fields
+    monitoring_type VARCHAR(50) NOT NULL,
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('Low', 'Medium', 'High', 'Critical')),
+    monitored_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    monitored_by UUID NOT NULL REFERENCES persons(id),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+-- Normalized SAR data with individual supporting transaction IDs
+CREATE TABLE normalized_sar_data (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    reason_id UUID NOT NULL REFERENCES reason_and_purpose(id),
+    
+    -- Individual supporting transaction IDs (normalized from Vec<Uuid> - 19 fields as specified)
+    supporting_transaction_id_01 UUID,
+    supporting_transaction_id_02 UUID,
+    supporting_transaction_id_03 UUID,
+    supporting_transaction_id_04 UUID,
+    supporting_transaction_id_05 UUID,
+    supporting_transaction_id_06 UUID,
+    supporting_transaction_id_07 UUID,
+    supporting_transaction_id_08 UUID,
+    supporting_transaction_id_09 UUID,
+    supporting_transaction_id_10 UUID,
+    supporting_transaction_id_11 UUID,
+    supporting_transaction_id_12 UUID,
+    supporting_transaction_id_13 UUID,
+    supporting_transaction_id_14 UUID,
+    supporting_transaction_id_15 UUID,
+    supporting_transaction_id_16 UUID,
+    supporting_transaction_id_17 UUID,
+    supporting_transaction_id_18 UUID,
+    supporting_transaction_id_19 UUID,
+    
+    -- Common fields
+    additional_details VARCHAR(500),
     generated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     generated_by UUID NOT NULL REFERENCES persons(id),
     status VARCHAR(20) NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Filed', 'Acknowledged')),
