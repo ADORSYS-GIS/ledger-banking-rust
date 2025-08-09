@@ -1,7 +1,9 @@
-# Foreign Key Reference Alignment Workflow
+---
+description: Refactor foreign key field names to include target entity names for clarity
+argument-hint: <entity name to process>
+---
 
-## Objective
-Refactor foreign key field names in domain structs to consistently include the target entity name before `_id`, improving code readability and making entity relationships explicit.
+# Foreign Key Reference Alignment
 
 ## Naming Convention Rules
 
@@ -34,22 +36,19 @@ Fields that already follow the explicit entity reference pattern should not be m
 ## Workflow Steps
 
 ### Step 1: Analysis Phase
-```
-Analyze the domain struct file: banking-api/src/domain/{entity}.rs
-
-1. Identify all fields ending with `_id: Uuid` or `_id: Option<Uuid>`
-2. Identify all fields ending with `_by: Uuid` or `_by: Option<Uuid>`
-3. For each field, determine:
+1. Analyze the domain struct file: `banking-api/src/domain/{entity}.rs`
+2. Identify all fields ending with `_id: Uuid` or `_id: Option<Uuid>`
+3. Identify all fields ending with `_by: Uuid` or `_by: Option<Uuid>`
+4. For each field, determine:
    - Current field name
    - Target struct name and location
    - Whether renaming is needed based on rules above
    - Proposed new field name (if applicable)
-```
 
 ### Step 2: Proposal Generation
-```
-Create/update workbook.md with:
+Create/update `workbook.md` with:
 
+```markdown
 # Foreign Key Reference Analysis: {EntityName}
 
 ## Fields Requiring Changes
@@ -69,11 +68,9 @@ Create/update workbook.md with:
 ```
 
 ### Step 3: Review and Approval
-```
-1. Open workbook.md in editor for user review
+1. Open `workbook.md` in editor for user review
 2. Wait for user confirmation/corrections
 3. Proceed only after explicit approval
-```
 
 ### Step 4: Implementation Phase
 For each approved field change, update in this order:
@@ -130,49 +127,16 @@ For each approved field change, update in this order:
 - Update assertions and validations
 
 ### Step 5: Validation
-```
-After all changes:
-1. Run cargo check to ensure compilation
-2. Run cargo clippy to check for warnings
-3. Run tests: cargo test --features postgres_tests -- --test-threads=1
+1. Run `cargo check` to ensure compilation
+2. Run `cargo clippy` to check for warnings
+3. Run tests: `cargo test --features postgres_tests -- --test-threads=1`
 4. Verify database schema is consistent
 5. Check that all foreign key relationships are preserved
-```
-
-## Usage Example
-
-To use this workflow for the `Account` struct:
-
-```
-Please help me refactor foreign key references in the Account domain struct using the foreign key reference alignment workflow. Start with analyzing banking-api/src/domain/account.rs and create the proposal workbook.
-```
 
 ## Important Notes
-
 1. **Preserve Relationships**: Ensure all foreign key relationships remain intact after renaming
 2. **Database Consistency**: Column renames must be reflected in both schema and queries
 3. **Test Coverage**: All tests must pass after changes to ensure functionality is preserved
 4. **Incremental Approach**: Process one entity at a time to minimize complexity
 5. **Backup Strategy**: Consider creating a branch before starting major refactoring
 6. **Documentation**: Update any documentation that references the old field names
-
-## Files That May Require Updates
-
-### Core Files (Always check)
-- `banking-api/src/domain/*.rs` - Domain structs
-- `banking-db/src/models/*.rs` - Database models  
-- `banking-logic/src/mappers/*.rs` - Model mappers
-- `banking-db-postgres/migrations/001_initial_schema.sql` - Schema
-
-### Implementation Files (Check if entity has implementations)
-- `banking-api/src/service/*.rs` - Service traits
-- `banking-logic/src/services/*_service_impl.rs` - Service implementations
-- `banking-db/src/repository/*_repository.rs` - Repository traits
-- `banking-db-postgres/src/repository/*_repository_impl.rs` - Repository implementations
-
-### Test Files (Always update)
-- `banking-logic/src/services/tests/*.rs`
-- `banking-db-postgres/tests/*.rs`
-- Any files in `tests/` directory
-
-This workflow ensures systematic and thorough refactoring of foreign key references while maintaining code integrity and database consistency.
