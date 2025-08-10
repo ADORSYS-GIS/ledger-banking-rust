@@ -14,27 +14,26 @@ use banking_api::{
         FeeWaiver, FeeCategory, FeeCalculationMethod
     },
 };
-use banking_db::repository::{FeeRepository, AccountRepository};
-use crate::integration::ProductCatalogClient;
+use banking_db::repository::{FeeRepository, AccountRepository, ProductRepository};
 
 /// Production implementation of FeeService
 /// Handles both event-based and batch-based fee processing with Product Catalog integration
 pub struct FeeServiceImpl {
     fee_repository: Arc<dyn FeeRepository>,
     account_repository: Arc<dyn AccountRepository>,
-    product_catalog: Arc<ProductCatalogClient>,
+    product_repository: Arc<dyn ProductRepository>,
 }
 
 impl FeeServiceImpl {
     pub fn new(
         fee_repository: Arc<dyn FeeRepository>,
         account_repository: Arc<dyn AccountRepository>,
-        product_catalog: Arc<ProductCatalogClient>,
+        product_repository: Arc<dyn ProductRepository>,
     ) -> Self {
         Self {
             fee_repository,
             account_repository,
-            product_catalog,
+            product_repository,
         }
     }
 }
@@ -64,7 +63,7 @@ impl FeeService for FeeServiceImpl {
 
         // Get applicable fees from Product Catalog
         let applicable_fees = self.get_applicable_fees(
-            account.product_code.to_string(),
+            account.product_id,
             trigger_event.clone(),
         ).await?;
 
@@ -99,7 +98,7 @@ impl FeeService for FeeServiceImpl {
                 transaction_id: Some(transaction_id),
                 fee_type: FeeType::EventBased,
                 fee_category: product_fee.fee_category.clone(),
-                product_code: account.product_code.clone(),
+                product_id: account.product_id,
                 fee_code: product_fee.fee_code.clone(),
                 description: product_fee.description.clone(),
                 amount: fee_amount,
@@ -147,7 +146,7 @@ impl FeeService for FeeServiceImpl {
 
         // Get applicable fees from Product Catalog
         let applicable_fees = self.get_applicable_fees(
-            account.product_code.to_string(),
+            account.product_id,
             trigger_event.clone(),
         ).await?;
 
@@ -182,7 +181,7 @@ impl FeeService for FeeServiceImpl {
                 transaction_id: None,
                 fee_type: FeeType::EventBased,
                 fee_category: product_fee.fee_category.clone(),
-                product_code: account.product_code.clone(),
+                product_id: account.product_id,
                 fee_code: product_fee.fee_code.clone(),
                 description: product_fee.description.clone(),
                 amount: fee_amount,
@@ -246,16 +245,36 @@ impl FeeService for FeeServiceImpl {
         &self,
         job_type: FeeJobType,
         processing_date: NaiveDate,
-        target_products: Option<Vec<String>>,
+        target_products: Option<Vec<Uuid>>,
         target_categories: Vec<FeeCategory>,
     ) -> BankingResult<FeeProcessingJob> {
+        let mut target_cats: [FeeCategory; 5] = Default::default();
+        for (i, cat) in target_categories.into_iter().take(5).enumerate() {
+            target_cats[i] = cat;
+        }
+
+        let mut target_prods: [Option<Uuid>; 5] = Default::default();
+        if let Some(products) = target_products {
+            for (i, prod_id) in products.into_iter().take(5).enumerate() {
+                target_prods[i] = Some(prod_id);
+            }
+        }
+
         let job = FeeProcessingJob {
             id: Uuid::new_v4(),
             job_type,
             job_name: format!("Batch Fee Processing - {processing_date:?}"),
-            schedule_expression: "0 2 * * *".to_string(), // 2 AM daily
-            target_fee_categories: target_categories,
-            target_products,
+            schedule_expression: HeaplessString::try_from("0 2 * * *").unwrap(), // 2 AM daily
+            target_fee_categories_01: target_cats[0].clone(),
+            target_fee_categories_02: target_cats[1].clone(),
+            target_fee_categories_03: target_cats[2].clone(),
+            target_fee_categories_04: target_cats[3].clone(),
+            target_fee_categories_05: target_cats[4].clone(),
+            target_product_id_01: target_prods[0],
+            target_product_id_02: target_prods[1],
+            target_product_id_03: target_prods[2],
+            target_product_id_04: target_prods[3],
+            target_product_id_05: target_prods[4],
             processing_date,
             status: banking_api::domain::FeeJobStatus::Scheduled,
             started_at: None,
@@ -263,7 +282,11 @@ impl FeeService for FeeServiceImpl {
             accounts_processed: 0,
             fees_applied: 0,
             total_amount: Decimal::ZERO,
-            errors: Vec::new(),
+            errors_01: HeaplessString::new(),
+            errors_02: HeaplessString::new(),
+            errors_03: HeaplessString::new(),
+            errors_04: HeaplessString::new(),
+            errors_05: HeaplessString::new(),
         };
 
         let job_model = crate::mappers::FeeMapper::fee_processing_job_to_model(job.clone());
@@ -299,9 +322,9 @@ impl FeeService for FeeServiceImpl {
 
         // Get eligible accounts
         let eligible_accounts = self.get_eligible_accounts_for_fees(
-            job.target_fee_categories.clone(),
+            vec![job.target_fee_categories_01.clone(), job.target_fee_categories_02.clone(), job.target_fee_categories_03.clone(), job.target_fee_categories_04.clone(), job.target_fee_categories_05.clone()],
             job.processing_date,
-            job.target_products.clone(),
+            Some([job.target_product_id_01, job.target_product_id_02, job.target_product_id_03, job.target_product_id_04, job.target_product_id_05].iter().filter_map(|p| *p).collect()),
         ).await?;
 
         let mut accounts_processed = 0u32;
@@ -314,7 +337,7 @@ impl FeeService for FeeServiceImpl {
             match self.apply_periodic_fees_for_account(
                 account_id,
                 job.processing_date,
-                job.target_fee_categories.clone(),
+                vec![job.target_fee_categories_01.clone(), job.target_fee_categories_02.clone(), job.target_fee_categories_03.clone(), job.target_fee_categories_04.clone(), job.target_fee_categories_05.clone()],
             ).await {
                 Ok(applied_fees) => {
                     accounts_processed += 1;
@@ -338,7 +361,12 @@ impl FeeService for FeeServiceImpl {
         job.accounts_processed = accounts_processed;
         job.fees_applied = fees_applied;
         job.total_amount = total_amount;
-        job.errors = errors;
+        let mut error_iter = errors.into_iter();
+        job.errors_01 = HeaplessString::try_from(error_iter.next().unwrap_or_default().as_str()).unwrap_or_default();
+        job.errors_02 = HeaplessString::try_from(error_iter.next().unwrap_or_default().as_str()).unwrap_or_default();
+        job.errors_03 = HeaplessString::try_from(error_iter.next().unwrap_or_default().as_str()).unwrap_or_default();
+        job.errors_04 = HeaplessString::try_from(error_iter.next().unwrap_or_default().as_str()).unwrap_or_default();
+        job.errors_05 = HeaplessString::try_from(error_iter.next().unwrap_or_default().as_str()).unwrap_or_default();
 
         let final_job_model = crate::mappers::FeeMapper::fee_processing_job_to_model(job.clone());
         let final_updated = self.fee_repository.update_fee_processing_job(final_job_model).await?;
@@ -357,7 +385,7 @@ impl FeeService for FeeServiceImpl {
         &self,
         fee_categories: Vec<FeeCategory>,
         processing_date: NaiveDate,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
     ) -> BankingResult<Vec<Uuid>> {
         // This would typically involve complex business logic to determine eligibility
         // For now, returning a placeholder implementation
@@ -366,7 +394,7 @@ impl FeeService for FeeServiceImpl {
             .collect();
             
         self.fee_repository.get_accounts_eligible_for_fees(
-            product_codes,
+            product_ids,
             category_strings,
             processing_date,
             0,    // offset
@@ -387,7 +415,7 @@ impl FeeService for FeeServiceImpl {
             .ok_or(BankingError::AccountNotFound(account_id))?;
 
         // Get product fee schedule
-        let fee_schedule = self.get_product_fee_schedule(account.product_code.as_str().to_string()).await?;
+        let fee_schedule = self.get_product_fee_schedule(account.product_id).await?;
         
         let mut applied_fees = Vec::new();
 
@@ -411,7 +439,7 @@ impl FeeService for FeeServiceImpl {
                         transaction_id: None,
                         fee_type: FeeType::Periodic,
                         fee_category: product_fee.fee_category.clone(),
-                        product_code: account.product_code.clone(),
+                        product_id: account.product_id,
                         fee_code: product_fee.fee_code.clone(),
                         description: product_fee.description.clone(),
                         amount: fee_amount,
@@ -458,45 +486,18 @@ impl FeeService for FeeServiceImpl {
         todo!("Implement automatic fee waivers")
     }
 
-    async fn get_product_fee_schedule(&self, product_code: String) -> BankingResult<ProductFeeSchedule> {
-        // Get from Product Catalog via HTTP client
-        let fee_schedule = self.product_catalog.get_fee_schedule(&product_code).await?;
-        
-        // Convert to domain object
-        Ok(ProductFeeSchedule {
-            product_code: HeaplessString::try_from(product_code.as_str()).map_err(|_| BankingError::ValidationError {
-                field: "product_code".to_string(),
-                message: "Product code too long".to_string(),
-            })?,
-            fees: fee_schedule.fees.into_iter().map(|fee| ProductFee {
-                fee_code: HeaplessString::try_from(fee.fee_type.as_str()).unwrap_or_default(),
-                description: HeaplessString::try_from(format!("Fee for {}", fee.fee_type).as_str()).unwrap_or_default(),
-                fee_category: FeeCategory::Transaction, // Map appropriately
-                trigger_event: FeeTriggerEvent::AtmWithdrawal, // Map appropriately
-                calculation_method: FeeCalculationMethod::Fixed,
-                fixed_amount: Some(fee.amount),
-                percentage_rate: None,
-                minimum_amount: None,
-                maximum_amount: None,
-                currency: HeaplessString::try_from(fee.currency.as_str()).unwrap_or_default(),
-                frequency: banking_api::domain::FeeFrequency::PerEvent,
-                tier_schedule: None,
-                conditions: Vec::new(),
-                gl_code: HeaplessString::try_from("FEE_INCOME").unwrap_or_default(),
-                waivable: true,
-                active: true,
-            }).collect(),
-            effective_from: chrono::Utc::now().date_naive(),
-            effective_to: None,
-        })
+    async fn get_product_fee_schedule(&self, product_id: Uuid) -> BankingResult<ProductFeeSchedule> {
+        let fee_schedule_model = self.product_repository.find_fee_schedule_by_product_id(product_id).await?;
+        let fee_schedule = crate::mappers::FeeMapper::product_fee_schedule_from_model(fee_schedule_model.ok_or(BankingError::ProductNotFound(product_id))?)?;
+        Ok(fee_schedule)
     }
 
-    async fn refresh_fee_rules_cache(&self, _product_code: Option<String>) -> BankingResult<()> {
+    async fn refresh_fee_rules_cache(&self, _product_id: Option<Uuid>) -> BankingResult<()> {
         todo!("Implement fee rules cache refresh")
     }
 
-    async fn get_applicable_fees(&self, product_code: String, trigger_event: FeeTriggerEvent) -> BankingResult<Vec<ProductFee>> {
-        let fee_schedule = self.get_product_fee_schedule(product_code).await?;
+    async fn get_applicable_fees(&self, product_id: Uuid, trigger_event: FeeTriggerEvent) -> BankingResult<Vec<ProductFee>> {
+        let fee_schedule = self.get_product_fee_schedule(product_id).await?;
         
         // Filter fees by trigger event
         let applicable_fees = fee_schedule.fees.into_iter()
@@ -547,7 +548,7 @@ impl FeeService for FeeServiceImpl {
         todo!("Implement fee job status")
     }
 
-    async fn get_fee_revenue_summary(&self, _from_date: NaiveDate, _to_date: NaiveDate, _fee_categories: Option<Vec<FeeCategory>>, _product_codes: Option<Vec<String>>) -> BankingResult<FeeRevenueSummary> {
+    async fn get_fee_revenue_summary(&self, _from_date: NaiveDate, _to_date: NaiveDate, _fee_categories: Option<Vec<FeeCategory>>, _product_ids: Option<Vec<Uuid>>) -> BankingResult<FeeRevenueSummary> {
         todo!("Implement fee revenue summary")
     }
 

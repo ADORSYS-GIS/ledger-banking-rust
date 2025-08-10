@@ -1,5 +1,6 @@
 pub mod customer;
 pub mod account;
+pub mod account_hold;
 pub mod agent_network;
 pub mod transaction;
 pub mod calendar;
@@ -18,6 +19,7 @@ pub mod product;
 
 pub use customer::*;
 pub use account::*;
+pub use account_hold::*;
 pub use agent_network::*;
 pub use transaction::*;
 pub use calendar::*;

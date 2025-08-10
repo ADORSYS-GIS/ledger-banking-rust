@@ -74,7 +74,7 @@ impl WorkflowMapper {
     pub fn opening_request_to_model(request: AccountOpeningRequest) -> AccountOpeningRequestModel {
         AccountOpeningRequestModel {
             customer_id: request.customer_id,
-            product_code: request.product_code,
+            product_id: request.product_id,
             initial_deposit: request.initial_deposit,
             channel: request.channel,
             initiated_by: request.initiated_by,
@@ -89,7 +89,7 @@ impl WorkflowMapper {
     pub fn opening_request_from_model(model: AccountOpeningRequestModel) -> AccountOpeningRequest {
         AccountOpeningRequest {
             customer_id: model.customer_id,
-            product_code: model.product_code,
+            product_id: model.product_id,
             initial_deposit: model.initial_deposit,
             channel: model.channel,
             initiated_by: model.initiated_by,

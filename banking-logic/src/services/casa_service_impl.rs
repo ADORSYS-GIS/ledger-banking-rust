@@ -18,25 +18,24 @@ use banking_api::{
         CreateOverdraftFacilityRequest
     },
 };
-use banking_db::repository::AccountRepository;
-use crate::integration::ProductCatalogClient;
+use banking_db::repository::{AccountRepository, ProductRepository};
 
 /// Production implementation of CasaService
 /// Handles CASA (Current & Savings Account) specialized functionality
 /// Integrates overdraft management with transaction validation framework (Section 3.1)
 pub struct CasaServiceImpl {
     account_repository: Arc<dyn AccountRepository>,
-    product_catalog: Arc<ProductCatalogClient>,
+    product_repository: Arc<dyn ProductRepository>,
 }
 
 impl CasaServiceImpl {
     pub fn new(
         account_repository: Arc<dyn AccountRepository>,
-        product_catalog: Arc<ProductCatalogClient>,
+        product_repository: Arc<dyn ProductRepository>,
     ) -> Self {
         Self {
             account_repository,
-            product_catalog,
+            product_repository,
         }
     }
 }
@@ -304,7 +303,7 @@ impl CasaService for CasaServiceImpl {
         let estimated_daily_interest_cost = if let Some(amount) = overdraft_amount {
             // Get overdraft rate from Product Catalog
             #[allow(unused_variables)]
-            let product_rules = self.product_catalog.get_product_rules(&account.product_code).await?;
+            let product_rules = self.product_repository.find_rules_by_product_id(account.product_id).await?.unwrap();
             let daily_rate = Decimal::from_str("0.15").unwrap() / Decimal::from(365); // 15% annual rate
             Some(amount * daily_rate)
         } else {

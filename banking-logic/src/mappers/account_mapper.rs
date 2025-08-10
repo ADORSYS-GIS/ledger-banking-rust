@@ -1,12 +1,15 @@
 use banking_api::domain::{
-    Account, AccountOwnership, AccountRelationship, AccountMandate, UltimateBeneficiary,
-    AccountHold, StatusChangeRecord
+    Account, AccountBalanceCalculation, AccountHold, AccountHoldExpiryJob, AccountHoldReleaseRequest,
+    AccountHoldSummary, AccountMandate, AccountOwnership, AccountRelationship,
+    AccountStatusChangeRecord, PlaceHoldRequest, UltimateBeneficiary,
+};
+use banking_db::models::{
+    AccountBalanceCalculationModel, AccountHoldExpiryJobModel, AccountHoldModel,
+    AccountHoldReleaseRequestModel, AccountHoldSummaryModel, AccountMandateModel, AccountModel,
+    AccountOwnershipModel, AccountRelationshipModel, AccountStatusChangeRecordModel,
+    PlaceHoldRequestModel, UltimateBeneficiaryModel,
 };
 use heapless::{String as HeaplessString};
-use banking_db::models::{
-    AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel,
-    UltimateBeneficiaryModel, AccountHoldModel, AccountStatusHistoryModel
-};
 
 pub struct AccountMapper;
 
@@ -15,7 +18,7 @@ impl AccountMapper {
     pub fn to_model(account: Account) -> AccountModel {
         AccountModel {
             id: account.id,
-            product_code: account.product_code,
+            product_id: account.product_id,
             account_type: account.account_type,
             account_status: account.account_status,
             signing_condition: account.signing_condition,
@@ -82,7 +85,7 @@ impl AccountMapper {
     pub fn from_model(model: AccountModel) -> banking_api::BankingResult<Account> {
         Ok(Account {
             id: model.id,
-            product_code: model.product_code,
+            product_id: model.product_id,
             account_type: model.account_type,
             account_status: model.account_status,
             signing_condition: model.signing_condition,
@@ -151,7 +154,7 @@ impl AccountMapper {
     pub fn account_ownership_to_model(ownership: AccountOwnership) -> AccountOwnershipModel {
         AccountOwnershipModel {
             id: ownership.id,
-            account_id: ownership.id,
+            account_id: ownership.account_id,
             customer_id: ownership.customer_id,
             ownership_type: ownership.ownership_type,
             ownership_percentage: ownership.ownership_percentage,
@@ -162,7 +165,7 @@ impl AccountMapper {
     pub fn account_ownership_from_model(model: AccountOwnershipModel) -> AccountOwnership {
         AccountOwnership {
             id: model.id,
-            account_id: model.id,
+            account_id: model.account_id,
             customer_id: model.customer_id,
             ownership_type: model.ownership_type,
             ownership_percentage: model.ownership_percentage,
@@ -171,10 +174,12 @@ impl AccountMapper {
     }
 
     // Account Relationship mappers
-    pub fn account_relationship_to_model(relationship: AccountRelationship) -> AccountRelationshipModel {
+    pub fn account_relationship_to_model(
+        relationship: AccountRelationship,
+    ) -> AccountRelationshipModel {
         AccountRelationshipModel {
             id: relationship.id,
-            account_id: relationship.id,
+            account_id: relationship.account_id,
             person_id: relationship.person_id,
             entity_type: relationship.entity_type,
             relationship_type: relationship.relationship_type,
@@ -187,7 +192,7 @@ impl AccountMapper {
     pub fn account_relationship_from_model(model: AccountRelationshipModel) -> AccountRelationship {
         AccountRelationship {
             id: model.id,
-            account_id: model.id,
+            account_id: model.account_id,
             person_id: model.person_id,
             entity_type: model.entity_type,
             relationship_type: model.relationship_type,
@@ -275,57 +280,17 @@ impl AccountMapper {
         }
     }
 
-    // Account Hold mappers
-    pub fn account_hold_to_model(hold: AccountHold) -> AccountHoldModel {
-        AccountHoldModel {
-            id: hold.id,
-            account_id: hold.account_id,
-            amount: hold.amount,
-            hold_type: hold.hold_type,
-            reason_id: hold.reason_id,
-            additional_details: hold.additional_details,
-            placed_by_person_id: hold.placed_by_person_id,
-            placed_at: hold.placed_at,
-            expires_at: hold.expires_at,
-            status: hold.status,
-            released_at: hold.released_at,
-            released_by_person_id: hold.released_by_person_id,
-            priority: hold.priority,
-            source_reference: hold.source_reference,
-            automatic_release: hold.automatic_release,
-            created_at: chrono::Utc::now(), // Database audit field
-            updated_at: chrono::Utc::now(), // Database audit field
-        }
-    }
-
-    pub fn account_hold_from_model(model: AccountHoldModel) -> AccountHold {
-        AccountHold {
-            id: model.id,
-            account_id: model.account_id,
-            amount: model.amount,
-            hold_type: model.hold_type,
-            reason_id: model.reason_id,
-            additional_details: model.additional_details,
-            placed_by_person_id: model.placed_by_person_id,
-            placed_at: model.placed_at,
-            expires_at: model.expires_at,
-            status: model.status,
-            released_at: model.released_at,
-            released_by_person_id: model.released_by_person_id,
-            priority: model.priority,
-            source_reference: model.source_reference,
-            automatic_release: model.automatic_release,
-        }
-    }
 
     // Status Change Record mappers
-    pub fn status_change_record_to_model(record: StatusChangeRecord) -> AccountStatusHistoryModel {
-        AccountStatusHistoryModel {
+    pub fn status_change_record_to_model(
+        record: AccountStatusChangeRecord,
+    ) -> AccountStatusChangeRecordModel {
+        AccountStatusChangeRecordModel {
             id: record.id,
-            account_id: record.id,
+            account_id: record.account_id,
             old_status: record.old_status,
             new_status: record.new_status,
-            change_reason_id: record.reason_id,
+            reason_id: record.reason_id,
             additional_context: record.additional_context,
             changed_by_person_id: record.changed_by_person_id,
             changed_at: record.changed_at,
@@ -334,17 +299,51 @@ impl AccountMapper {
         }
     }
 
-    pub fn status_change_record_from_model(model: AccountStatusHistoryModel) -> StatusChangeRecord {
-        StatusChangeRecord {
+    pub fn status_change_record_from_model(
+        model: AccountStatusChangeRecordModel,
+    ) -> AccountStatusChangeRecord {
+        AccountStatusChangeRecord {
             id: model.id,
-            account_id: model.id,
+            account_id: model.account_id,
             old_status: model.old_status,
             new_status: model.new_status,
-            reason_id: model.change_reason_id,
+            reason_id: model.reason_id,
             additional_context: model.additional_context,
             changed_by_person_id: model.changed_by_person_id,
             changed_at: model.changed_at,
             system_triggered: model.system_triggered,
         }
     }
+
+    // AccountBalanceCalculation mappers
+    pub fn balance_calculation_to_model(
+        calc: AccountBalanceCalculation,
+    ) -> AccountBalanceCalculationModel {
+        AccountBalanceCalculationModel {
+            id: calc.id,
+            account_id: calc.account_id,
+            current_balance: calc.current_balance,
+            available_balance: calc.available_balance,
+            overdraft_limit: calc.overdraft_limit,
+            total_holds: calc.total_holds,
+            active_hold_count: calc.active_hold_count as i32,
+            calculation_timestamp: calc.calculation_timestamp,
+        }
+    }
+
+    pub fn balance_calculation_from_model(
+        model: AccountBalanceCalculationModel,
+    ) -> AccountBalanceCalculation {
+        AccountBalanceCalculation {
+            id: model.id,
+            account_id: model.account_id,
+            current_balance: model.current_balance,
+            available_balance: model.available_balance,
+            overdraft_limit: model.overdraft_limit,
+            total_holds: model.total_holds,
+            active_hold_count: model.active_hold_count as u32,
+            calculation_timestamp: model.calculation_timestamp,
+        }
+    }
+
 }

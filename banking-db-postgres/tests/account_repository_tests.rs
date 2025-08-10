@@ -1,7 +1,7 @@
 use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
 use banking_db::models::AccountModel;
 use banking_db::repository::AccountRepository;
-use banking_db_postgres::repository::AccountRepositoryImpl;
+use banking_db_postgres::repository::account_repository_impl::AccountRepositoryImpl;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
@@ -18,7 +18,7 @@ fn create_test_account() -> AccountModel {
     
     AccountModel {
         id: account_id,
-        product_code: HeaplessString::try_from("SAV01").unwrap(),
+        product_id: Uuid::new_v4(),
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,
         signing_condition: SigningCondition::AnyOwner,
@@ -88,7 +88,7 @@ fn create_test_loan_account() -> AccountModel {
     
     AccountModel {
         id: account_id,
-        product_code: HeaplessString::try_from("LON01").unwrap(),
+        product_id: Uuid::new_v4(),
         account_type: AccountType::Loan,
         account_status: AccountStatus::Active,
         signing_condition: SigningCondition::None,
@@ -192,7 +192,7 @@ async fn test_account_crud_operations() {
     let created_account = repo.create(account.clone()).await
         .expect("Failed to create account");
     assert_eq!(created_account.id, account.id);
-    assert_eq!(created_account.product_code, account.product_code);
+    assert_eq!(created_account.product_id, account.product_id);
     assert_eq!(created_account.account_type, account.account_type);
     
     // Test READ
@@ -318,10 +318,10 @@ async fn test_find_operations() {
     let product_code_2 = format!("FE{}", &unique_id.to_string()[0..6]); // FE + first 6 chars of UUID
     
     let mut account1 = create_test_account();
-    account1.product_code = HeaplessString::try_from(product_code_1.as_str()).unwrap();
+    account1.product_id = Uuid::new_v4();
     let mut account2 = create_test_account();
     account2.id = Uuid::new_v4();
-    account2.product_code = HeaplessString::try_from(product_code_2.as_str()).unwrap();
+    account2.product_id = Uuid::new_v4();
     account2.account_status = AccountStatus::Dormant;
     
     // Create accounts
@@ -411,7 +411,7 @@ async fn test_count_operations() {
     let account1 = create_test_account();
     let mut account2 = create_test_account();
     account2.id = Uuid::new_v4();
-    account2.product_code = HeaplessString::try_from("SAV02").unwrap();
+    account2.product_id = Uuid::new_v4();
     
     repo.create(account1.clone()).await.expect("Failed to create account1");
     repo.create(account2.clone()).await.expect("Failed to create account2");

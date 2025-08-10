@@ -75,7 +75,7 @@ pub struct WorkflowStepRecord {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountOpeningRequest {
     pub customer_id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub initial_deposit: Option<Decimal>,
     pub channel: HeaplessString<50>,
     /// References Person.person_id

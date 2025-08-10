@@ -8,7 +8,7 @@ use validator::Validate;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub account_type: AccountType,
     pub account_status: AccountStatus,
     pub signing_condition: SigningCondition,
@@ -186,125 +186,11 @@ pub enum DisbursementStatus {
     PartiallyExecuted,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountHold {
-    pub id: Uuid,
-    pub account_id: Uuid,
-    pub amount: Decimal,
-    pub hold_type: HoldType,
-    /// References ReasonAndPurpose.id - required field
-    pub reason_id: Uuid,
-    /// Additional context beyond the standard reason
-    pub additional_details: Option<HeaplessString<200>>,
-    /// References Person.person_id
-    pub placed_by_person_id: Uuid,
-    pub placed_at: DateTime<Utc>,
-    pub expires_at: Option<DateTime<Utc>>,
-    pub status: HoldStatus,
-    pub released_at: Option<DateTime<Utc>>,
-    /// References Person.person_id
-    pub released_by_person_id: Option<Uuid>,
-    pub priority: HoldPriority,
-    pub source_reference: Option<HeaplessString<100>>, // External reference for judicial holds, etc.
-    pub automatic_release: bool,
-}
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum HoldType {
-    /// Funds pending clearance
-    UnclearedFunds,
-    /// Court-ordered judicial lien
-    JudicialLien,
-    /// Loan collateral pledge
-    LoanPledge,
-    /// Regulatory compliance hold
-    ComplianceHold,
-    /// Administrative hold by bank staff
-    AdministrativeHold,
-    /// Fraud investigation hold
-    FraudHold,
-    /// Pending transaction authorization
-    PendingAuthorization,
-    /// Overdraft protection reserve
-    OverdraftReserve,
-    /// Card authorization hold
-    CardAuthorization,
-    /// Other types
-    Other,
-}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum HoldStatus {
-    Active,
-    Released,
-    Expired,
-    Cancelled,
-    PartiallyReleased,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum HoldPriority {
-    /// Must be honored first (judicial, regulatory)
-    Critical,
-    /// Standard business hold
-    High,
-    /// Standard priority hold
-    Standard,
-    /// Lower priority administrative hold
-    Medium,
-    /// Lowest priority, can be overridden
-    Low,
-}
-
-/// Real-time balance calculation result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BalanceCalculation {
-    pub account_id: Uuid,
-    pub current_balance: Decimal,
-    pub available_balance: Decimal,
-    pub overdraft_limit: Option<Decimal>,
-    pub total_holds: Decimal,
-    pub active_hold_count: u32,
-    pub calculation_timestamp: DateTime<Utc>,
-    pub hold_breakdown: Vec<HoldSummary>,
-}
-
-/// Summary of hold amounts by type for balance calculation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HoldSummary {
-    pub hold_type: HoldType,
-    pub total_amount: Decimal,
-    pub hold_count: u32,
-    pub priority: HoldPriority,
-}
-
-/// Hold release request
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HoldReleaseRequest {
-    pub hold_id: Uuid,
-    pub release_amount: Option<Decimal>, // For partial releases
-    /// References ReasonAndPurpose.id for release
-    pub release_reason_id: Uuid,
-    /// Additional context for release
-    pub release_additional_details: Option<HeaplessString<200>>,
-    /// References Person.person_id
-    pub released_by_person_id: Uuid,
-    pub override_authorization: bool,
-}
-
-/// Batch hold processing for expired holds
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HoldExpiryJob {
-    pub id: Uuid,
-    pub processing_date: NaiveDate,
-    pub expired_holds_count: u32,
-    pub total_released_amount: Decimal,
-    pub processed_at: DateTime<Utc>,
-    pub errors: Vec<HeaplessString<100>>,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StatusChangeRecord {
+pub struct AccountStatusChangeRecord {
     pub id: Uuid,
     pub account_id: Uuid,
     pub old_status: Option<AccountStatus>,
@@ -319,30 +205,13 @@ pub struct StatusChangeRecord {
     pub system_triggered: bool,
 }
 
-/// Request parameters for placing a hold on an account
-#[derive(Debug, Clone)]
-pub struct PlaceHoldRequest {
-    pub account_id: Uuid,
-    pub hold_type: HoldType,
-    pub amount: Decimal,
-    /// References ReasonAndPurpose.id - required field
-    pub reason_id: Uuid,
-    /// Additional context beyond the standard reason
-    pub additional_details: Option<HeaplessString<200>>,
-    /// References Person.person_id
-    pub placed_by_person_id: Uuid,
-    pub expires_at: Option<DateTime<Utc>>,
-    pub priority: HoldPriority,
-    pub source_reference: Option<HeaplessString<100>>,
-}
 
 
 
 impl Account {
-    /// Set product code from string with validation
-    pub fn set_product_code(&mut self, product_code: &str) -> Result<(), &'static str> {
-        self.product_code = HeaplessString::try_from(product_code).map_err(|_| "Product code too long")?;
-        Ok(())
+    /// Set product id
+    pub fn set_product_id(&mut self, product_id: Uuid) {
+        self.product_id = product_id;
     }
     
     /// Set the last disbursement instruction for the account
@@ -381,9 +250,9 @@ mod tests {
         assert_eq!(mem::size_of_val(&heapless_product), 24); // HeaplessString<12> with capacity info
         
         // Test conversion functions
-        let mut account = Account {
+        let _account = Account {
             id: uuid::Uuid::new_v4(),
-            product_code: heapless_product,
+            product_id: Uuid::new_v4(),
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
@@ -443,11 +312,12 @@ mod tests {
         };
         
         // Test string access
-        assert_eq!(account.product_code.as_str(), "SAVP0001");
+        // The following test is commented out because the type has changed to Uuid and the test is no longer valid.
+        // assert_eq!(account.product_code.as_str(), "SAVP0001");
         
         // Test setting from string
-        account.set_product_code("LNST0123").unwrap();
-        assert_eq!(account.product_code.as_str(), "LNST0123");
+        // account.set_product_code("LNST0123").unwrap();
+        // assert_eq!(account.product_code.as_str(), "LNST0123");
     }
 
     #[test]
@@ -509,7 +379,7 @@ mod tests {
     fn test_disbursement_instruction_management() {
         let mut account = Account {
             id: uuid::Uuid::new_v4(),
-            product_code: HeaplessString::try_from("LNST0001").unwrap(),
+            product_id: Uuid::new_v4(),
             account_type: AccountType::Loan,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
@@ -771,46 +641,6 @@ impl std::fmt::Display for DisbursementMethod {
     }
 }
 
-impl std::fmt::Display for HoldType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            HoldType::UnclearedFunds => write!(f, "UnclearedFunds"),
-            HoldType::JudicialLien => write!(f, "JudicialLien"),
-            HoldType::LoanPledge => write!(f, "LoanPledge"),
-            HoldType::ComplianceHold => write!(f, "ComplianceHold"),
-            HoldType::AdministrativeHold => write!(f, "AdministrativeHold"),
-            HoldType::FraudHold => write!(f, "FraudHold"),
-            HoldType::PendingAuthorization => write!(f, "PendingAuthorization"),
-            HoldType::OverdraftReserve => write!(f, "OverdraftReserve"),
-            HoldType::CardAuthorization => write!(f, "CardAuthorization"),
-            HoldType::Other => write!(f, "Other"),
-        }
-    }
-}
-
-impl std::fmt::Display for HoldStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            HoldStatus::Active => write!(f, "Active"),
-            HoldStatus::Released => write!(f, "Released"),
-            HoldStatus::Expired => write!(f, "Expired"),
-            HoldStatus::Cancelled => write!(f, "Cancelled"),
-            HoldStatus::PartiallyReleased => write!(f, "PartiallyReleased"),
-        }
-    }
-}
-
-impl std::fmt::Display for HoldPriority {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            HoldPriority::Critical => write!(f, "Critical"),
-            HoldPriority::High => write!(f, "High"),
-            HoldPriority::Standard => write!(f, "Standard"),
-            HoldPriority::Medium => write!(f, "Medium"),
-            HoldPriority::Low => write!(f, "Low"),
-        }
-    }
-}
 
 impl std::fmt::Display for OwnershipType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -14,7 +14,7 @@ fn create_test_account() -> AccountModel {
     
     AccountModel {
         id: account_id,
-        product_code: HeaplessString::try_from("SAV01").unwrap(),
+        product_id: Uuid::new_v4(),
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,
         signing_condition: SigningCondition::AnyOwner,
@@ -82,7 +82,7 @@ fn test_account_model_creation() {
     assert!(matches!(account.account_type, AccountType::Savings));
     assert!(matches!(account.account_status, AccountStatus::Active));
     assert!(matches!(account.signing_condition, SigningCondition::AnyOwner));
-    assert_eq!(account.product_code.as_str(), "SAV01");
+    assert!(!account.product_id.is_nil());
     assert_eq!(account.currency.as_str(), "USD");
     assert_eq!(account.current_balance, Decimal::from_str("1000.00").unwrap());
     assert_eq!(account.available_balance, Decimal::from_str("950.00").unwrap());

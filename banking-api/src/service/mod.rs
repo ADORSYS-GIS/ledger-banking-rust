@@ -1,5 +1,6 @@
 pub mod customer_service;
 pub mod account_service;
+pub mod account_hold_service;
 pub mod transaction_service;
 pub mod interest_service;
 pub mod calendar_service;

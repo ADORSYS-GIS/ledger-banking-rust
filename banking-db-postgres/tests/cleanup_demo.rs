@@ -6,7 +6,7 @@ mod commons;
 use commons::{setup_test_db, cleanup_database, create_test_person, create_test_account};
 use banking_db::models::{AccountWorkflowModel, WorkflowTypeModel, WorkflowStepModel, WorkflowStatusModel};
 use banking_db::repository::WorkflowRepository;
-use banking_db_postgres::WorkflowRepositoryImpl;
+use banking_db_postgres::repository::WorkflowRepositoryImpl;
 use chrono::Utc;
 use heapless::String as HeaplessString;
 use uuid::Uuid;

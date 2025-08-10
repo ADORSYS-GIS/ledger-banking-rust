@@ -4,6 +4,7 @@ pub mod agent_network_repository_impl;
 pub mod calendar_repository_impl;
 #[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
 pub mod account_repository_impl;
+pub mod account_hold_repository_impl;
 #[cfg(any(feature = "full_sqlx", feature = "postgres_tests"))]
 pub mod transaction_repository_impl;
 pub mod transaction_repository_simple;

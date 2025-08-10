@@ -2,7 +2,7 @@ use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
 use banking_db::models::{TransactionModel, TransactionType, TransactionStatus, TransactionApprovalStatus, AccountModel};
 use banking_db::models::workflow::{ApprovalWorkflowModel, WorkflowTransactionApprovalModel, WorkflowStatusModel};
 use banking_db::repository::TransactionRepository;
-use banking_db_postgres::TransactionRepositoryImpl;
+use banking_db_postgres::repository::transaction_repository_impl::TransactionRepositoryImpl;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
@@ -57,7 +57,7 @@ fn create_test_account() -> AccountModel {
     
     AccountModel {
         id: account_id,
-        product_code: HeaplessString::try_from("SAV01").unwrap(),
+        product_id: Uuid::new_v4(),
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,
         signing_condition: SigningCondition::AnyOwner,
@@ -170,7 +170,7 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
         "#
     )
     .bind(account.id)
-    .bind(account.product_code.as_str())
+    .bind(account.product_id)
     .bind(account.account_type.to_string())
     .bind(account.account_status.to_string())
     .bind(account.signing_condition.to_string())

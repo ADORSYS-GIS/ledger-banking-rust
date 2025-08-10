@@ -1,5 +1,6 @@
 pub mod customer_service_impl;
 pub mod account_service_impl;
+pub mod account_hold_service_impl;
 pub mod hierarchy_service_impl;
 pub mod transaction_service_impl;
 pub mod interest_service_impl;
@@ -13,6 +14,7 @@ pub mod collateral_service_impl;
 pub mod fee_service_impl;
 pub mod eod_service_impl;
 pub mod daily_collection_service_impl;
+pub mod product_service_impl;
 
 pub use customer_service_impl::*;
 pub use account_service_impl::*;
@@ -29,3 +31,4 @@ pub use collateral_service_impl::*;
 pub use fee_service_impl::*;
 pub use eod_service_impl::*;
 pub use daily_collection_service_impl::*;
+pub use product_service_impl::*;

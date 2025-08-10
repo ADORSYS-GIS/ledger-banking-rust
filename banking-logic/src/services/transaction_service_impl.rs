@@ -14,15 +14,15 @@ use banking_api::{
 use banking_db::repository::{TransactionRepository, AccountRepository};
 use crate::{
     mappers::{TransactionMapper, AccountMapper},
-    integration::ProductCatalogClient,
 };
+use banking_db::repository::ProductRepository;
 
 /// Production implementation of TransactionService
 /// Provides multi-level validation and processing with approval workflows
 pub struct TransactionServiceImpl {
     transaction_repository: Arc<dyn TransactionRepository>,
     account_repository: Arc<dyn AccountRepository>,
-    product_catalog_client: Arc<ProductCatalogClient>,
+    product_repository: Arc<dyn ProductRepository>,
     validation_cache: ValidationCache,
 }
 
@@ -30,12 +30,12 @@ impl TransactionServiceImpl {
     pub fn new(
         transaction_repository: Arc<dyn TransactionRepository>,
         account_repository: Arc<dyn AccountRepository>,
-        product_catalog_client: Arc<ProductCatalogClient>,
+        product_repository: Arc<dyn ProductRepository>,
     ) -> Self {
         Self {
             transaction_repository,
             account_repository,
-            product_catalog_client,
+            product_repository,
             validation_cache: ValidationCache::new(),
         }
     }
@@ -468,7 +468,7 @@ impl TransactionServiceImpl {
             .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
 
         // Get product rules from catalog
-        match self.product_catalog_client.get_product_rules(account.product_code.as_str()).await {
+        match self.product_repository.find_rules_by_product_id(account.product_id).await {
             Ok(product_rules) => {
                 // Check per-transaction limits
                 if let Some(per_txn_limit) = product_rules.per_transaction_limit {

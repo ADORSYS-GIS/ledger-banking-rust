@@ -1,8 +1,10 @@
 use async_trait::async_trait;
+use rust_decimal::Decimal;
 use uuid::Uuid;
 use crate::{
     error::BankingResult,
-    domain::{Product, ProductType},
+    domain::{Product, ProductRules, InterestRateTier, GlMapping, ProductType},
+    domain::fee::ProductFeeSchedule,
 };
 
 /// Service for managing the product catalogue.
@@ -28,4 +30,19 @@ pub trait ProductService: Send + Sync {
 
     /// Find products by type.
     async fn find_products_by_type(&self, product_type: ProductType) -> BankingResult<Vec<Product>>;
+
+    /// Get the rules for a specific product.
+    async fn get_product_rules(&self, product_id: Uuid) -> BankingResult<ProductRules>;
+
+    /// Get the interest rate for a product based on a balance tier.
+    async fn get_interest_rate(&self, product_id: Uuid, balance_tier: Decimal) -> BankingResult<Decimal>;
+
+    /// Get the interest rate tiers for a product.
+    async fn get_interest_rate_tiers(&self, product_id: Uuid) -> BankingResult<Vec<InterestRateTier>>;
+
+    /// Get the fee schedule for a product.
+    async fn get_fee_schedule(&self, product_id: Uuid) -> BankingResult<ProductFeeSchedule>;
+
+    /// Get the GL mapping for a product.
+    async fn get_gl_mapping(&self, product_id: Uuid) -> BankingResult<GlMapping>;
 }
