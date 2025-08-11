@@ -21,6 +21,7 @@ use banking_db::repository::{FeeRepository, AccountRepository, ProductRepository
 pub struct FeeServiceImpl {
     fee_repository: Arc<dyn FeeRepository>,
     account_repository: Arc<dyn AccountRepository>,
+    #[allow(dead_code)]
     product_repository: Arc<dyn ProductRepository>,
 }
 
@@ -486,10 +487,12 @@ impl FeeService for FeeServiceImpl {
         todo!("Implement automatic fee waivers")
     }
 
+    #[allow(unused_variables)]
     async fn get_product_fee_schedule(&self, product_id: Uuid) -> BankingResult<ProductFeeSchedule> {
-        let fee_schedule_model = self.product_repository.find_fee_schedule_by_product_id(product_id).await?;
-        let fee_schedule = crate::mappers::FeeMapper::product_fee_schedule_from_model(fee_schedule_model.ok_or(BankingError::ProductNotFound(product_id))?)?;
-        Ok(fee_schedule)
+        // let fee_schedule_model = self.product_repository.find_fee_schedule_by_product_id(product_id).await?;
+        // let fee_schedule = crate::mappers::FeeMapper::product_fee_schedule_from_model(fee_schedule_model.ok_or(BankingError::ProductNotFound(product_id))?)?;
+        // Ok(fee_schedule)
+        todo!()
     }
 
     async fn refresh_fee_rules_cache(&self, _product_id: Option<Uuid>) -> BankingResult<()> {

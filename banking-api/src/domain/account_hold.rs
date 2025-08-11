@@ -3,6 +3,7 @@ use heapless::{String as HeaplessString};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountHold {
@@ -179,4 +180,55 @@ pub struct AccountHoldSummary {
     pub total_amount: Decimal,
     pub hold_count: u32,
     pub priority: HoldPriority,
+}
+
+
+impl FromStr for HoldType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "UnclearedFunds" => Ok(HoldType::UnclearedFunds),
+            "JudicialLien" => Ok(HoldType::JudicialLien),
+            "LoanPledge" => Ok(HoldType::LoanPledge),
+            "ComplianceHold" => Ok(HoldType::ComplianceHold),
+            "AdministrativeHold" => Ok(HoldType::AdministrativeHold),
+            "FraudHold" => Ok(HoldType::FraudHold),
+            "PendingAuthorization" => Ok(HoldType::PendingAuthorization),
+            "OverdraftReserve" => Ok(HoldType::OverdraftReserve),
+            "CardAuthorization" => Ok(HoldType::CardAuthorization),
+            "Other" => Ok(HoldType::Other),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for HoldStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(HoldStatus::Active),
+            "Released" => Ok(HoldStatus::Released),
+            "Expired" => Ok(HoldStatus::Expired),
+            "Cancelled" => Ok(HoldStatus::Cancelled),
+            "PartiallyReleased" => Ok(HoldStatus::PartiallyReleased),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for HoldPriority {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Critical" => Ok(HoldPriority::Critical),
+            "High" => Ok(HoldPriority::High),
+            "Standard" => Ok(HoldPriority::Standard),
+            "Medium" => Ok(HoldPriority::Medium),
+            "Low" => Ok(HoldPriority::Low),
+            _ => Err(()),
+        }
+    }
 }

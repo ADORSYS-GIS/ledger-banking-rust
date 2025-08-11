@@ -254,7 +254,7 @@ impl CustomerService for CustomerServiceImpl {
     }
 
     /// Validate customer can open new account
-    async fn validate_account_eligibility(&self, customer_id: Uuid, product_code: &str) -> BankingResult<bool> {
+    async fn validate_account_eligibility(&self, customer_id: Uuid, product_id: Uuid) -> BankingResult<bool> {
         // Check if customer exists and is active
         let customer_model = self.customer_repository
             .find_by_id(customer_id)
@@ -272,7 +272,7 @@ impl CustomerService for CustomerServiceImpl {
         // Additional product-specific validation can be added here
         tracing::info!(
             "Customer {} eligibility validated for product {}",
-            customer_id, product_code
+            customer_id, product_id
         );
         
         Ok(true)

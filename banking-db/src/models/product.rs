@@ -7,7 +7,6 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductModel {
     pub id: Uuid,
-    pub product_code: heapless::String<50>,
     pub name_l1: heapless::String<100>,
     pub name_l2: heapless::String<100>,
     pub name_l3: heapless::String<100>,

@@ -195,7 +195,7 @@ The system includes comprehensive migration files for both PostgreSQL and MariaD
 ### Enhanced Tables (From Enhancements)
 - `account_workflows` - Workflow tracking
 - `workflow_step_records` - Step-by-step audit
-- `account_status_history` - Immutable status audit
+- `account_status_change_records` - Immutable status audit
 - `account_final_settlements` - Closure records
 - `ultimate_beneficiaries` - UBO compliance
 - `bank_holidays` - Business calendar

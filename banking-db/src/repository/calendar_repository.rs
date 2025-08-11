@@ -42,7 +42,7 @@ pub trait CalendarRepository: Send + Sync {
     /// Date Shift Rule Operations
     async fn apply_date_shift_rule(&self, date: NaiveDate, jurisdiction: &str, shift_rule: &str) -> BankingResult<NaiveDate>;
     async fn get_maturity_date(&self, start_date: NaiveDate, term_months: i32, jurisdiction: &str) -> BankingResult<NaiveDate>;
-    async fn get_payment_due_date(&self, original_date: NaiveDate, jurisdiction: &str, product_code: Option<&str>) -> BankingResult<NaiveDate>;
+    async fn get_payment_due_date(&self, original_date: NaiveDate, jurisdiction: &str, product_id: Option<Uuid>) -> BankingResult<NaiveDate>;
     
     /// Calendar Maintenance
     async fn bulk_create_holidays(&self, holidays: Vec<BankHolidayModel>) -> BankingResult<i64>;

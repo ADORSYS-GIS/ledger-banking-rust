@@ -3,15 +3,13 @@
 
 mod commons;
 
-use commons::{setup_test_db, cleanup_database};
 use banking_db::models::{AccountWorkflowModel, WorkflowTypeModel, WorkflowStepModel, WorkflowStatusModel};
-use banking_db::repository::WorkflowRepository;
-use banking_db_postgres::WorkflowRepositoryImpl;
 use chrono::Utc;
 use heapless::String as HeaplessString;
 use uuid::Uuid;
 
 /// Create a test workflow with provided IDs
+#[allow(dead_code)]
 fn create_workflow_for_test(workflow_id: Uuid, account_id: Uuid, person_id: Uuid) -> AccountWorkflowModel {
     AccountWorkflowModel {
         id: workflow_id,
@@ -33,6 +31,10 @@ fn create_workflow_for_test(workflow_id: Uuid, account_id: Uuid, person_id: Uuid
 #[tokio::test]
 async fn test_workflow_crud_with_cleanup() {
     // Setup database 
+
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+    use crate::commons::{cleanup_database, setup_test_db};
     let (pool, person_id, account_id) = setup_test_db().await;
     
     let repo = WorkflowRepositoryImpl::new(pool.clone());
@@ -67,8 +69,13 @@ async fn test_workflow_crud_with_cleanup() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_multiple_workflows_isolated() {
+    use banking_db::WorkflowRepository;
+    use banking_db_postgres::WorkflowRepositoryImpl;
+
     // Clean database first, then setup test data
-    let (pool, _person_id, _account_id) = setup_test_db().await;
+
+    use crate::commons::cleanup_database;
+    let (pool, _person_id, _account_id) = crate::commons::setup_test_db().await;
     cleanup_database(&pool).await; // Start with clean state
     
     // Recreate test prerequisites after cleanup
@@ -102,6 +109,10 @@ async fn test_multiple_workflows_isolated() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_workflow_pagination_isolated() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+    use crate::commons::{cleanup_database, setup_test_db};
+
     let (pool, _person_id, _account_id) = setup_test_db().await;
     cleanup_database(&pool).await; // Start with clean state
     
@@ -142,6 +153,11 @@ async fn test_workflow_pagination_isolated() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_workflow_count_operations_isolated() {
+    use banking_db::WorkflowRepository;
+    use banking_db_postgres::WorkflowRepositoryImpl;
+
+    use crate::commons::{cleanup_database, setup_test_db};
+
     let (pool, _person_id, _account_id) = setup_test_db().await;
     cleanup_database(&pool).await; // Start with clean state
     

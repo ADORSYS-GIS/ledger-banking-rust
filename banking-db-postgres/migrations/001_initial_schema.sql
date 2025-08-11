@@ -598,6 +598,7 @@ CREATE TABLE accounts (
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     open_date DATE NOT NULL DEFAULT CURRENT_DATE,
     domicile_agency_branch_id UUID NOT NULL,
+    gl_code_suffix VARCHAR(10),
     
     -- Balance fields - core to all account types
     current_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
@@ -1472,11 +1473,15 @@ CREATE TABLE compliance_alerts (
     alert_type alert_type NOT NULL,
     severity severity NOT NULL,
     description VARCHAR(500) NOT NULL,
+    triggered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     status alert_status NOT NULL DEFAULT 'New',
-    assigned_to UUID REFERENCES persons(id),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    resolved_at TIMESTAMP WITH TIME ZONE,
-    resolution_notes VARCHAR(500)
+    assigned_to_person_id UUID REFERENCES persons(id),
+    resolved_at TIMESTAMPTZ,
+    resolved_by_person_id UUID REFERENCES persons(id),
+    resolution_notes VARCHAR(500),
+    metadata VARCHAR(1000),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Risk scoring for customers
@@ -3113,10 +3118,10 @@ CREATE TABLE "AccountBalanceCalculation" (
 CREATE TABLE "AccountHoldSummary" (
     "id" UUID NOT NULL,
     "account_balance_calculation_id" UUID NOT NULL,
-    "hold_type" TEXT NOT NULL,
+    "hold_type" hold_type NOT NULL,
     "total_amount" DECIMAL NOT NULL,
     "hold_count" INTEGER NOT NULL,
-    "priority" TEXT NOT NULL,
+    "priority" hold_priority NOT NULL,
 
     CONSTRAINT "AccountHoldSummary_pkey" PRIMARY KEY ("id")
 );
@@ -3141,7 +3146,7 @@ CREATE TABLE "AccountHoldExpiryJob" (
     "expired_holds_count" INTEGER NOT NULL,
     "total_released_amount" DECIMAL NOT NULL,
     "processed_at" TIMESTAMPTZ NOT NULL,
-    "errors" TEXT[],
+    "errors" VARCHAR(100)[],
 
     CONSTRAINT "AccountHoldExpiryJob_pkey" PRIMARY KEY ("id")
 );
@@ -3150,13 +3155,13 @@ CREATE TABLE "AccountHoldExpiryJob" (
 CREATE TABLE "PlaceHoldRequest" (
     "id" UUID NOT NULL,
     "account_id" UUID NOT NULL,
-    "hold_type" TEXT NOT NULL,
+    "hold_type" hold_type NOT NULL,
     "amount" DECIMAL NOT NULL,
     "reason_id" UUID NOT NULL,
     "additional_details" VARCHAR(200),
     "placed_by_person_id" UUID NOT NULL,
     "expires_at" TIMESTAMPTZ,
-    "priority" TEXT NOT NULL,
+    "priority" hold_priority NOT NULL,
     "source_reference" VARCHAR(100),
 
     CONSTRAINT "PlaceHoldRequest_pkey" PRIMARY KEY ("id")

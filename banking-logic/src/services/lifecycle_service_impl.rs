@@ -226,7 +226,9 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         let account = AccountMapper::from_model(account_model)?;
 
         // Get product-specific dormancy rules
-        let product_rules = self.product_repository.find_rules_by_product_id(account.product_id).await?.unwrap();
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(banking_api::BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
         let threshold_days = account.dormancy_threshold_days
             .unwrap_or(product_rules.default_dormancy_days.unwrap_or(90));
 
@@ -249,7 +251,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             days_inactive,
             threshold_days,
             product_specific_rules: vec![
-                heapless::String::try_from(format!("Product: {}", account.product_code.as_str()).as_str())
+                heapless::String::try_from(format!("Product: {}", account.product_id).as_str())
                     .unwrap_or_else(|_| heapless::String::new()),
                 heapless::String::try_from(format!("Threshold: {threshold_days} days").as_str())
                     .unwrap_or_else(|_| heapless::String::new()),
@@ -506,7 +508,9 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         };
 
         // Get closure fees from product catalog
-        let product_rules = self.product_repository.find_rules_by_product_id(account.product_id).await?.unwrap();
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(banking_api::BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
         let closure_fees = product_rules.closure_fee;
 
         // Calculate final amount
@@ -750,9 +754,9 @@ impl AccountLifecycleServiceImpl {
     async fn validate_product_eligibility(&self, request: &AccountOpeningRequest) -> BankingResult<()> {
         // Check if product exists
         let _product_rules = self.product_repository
-            .find_rules_by_product_id(request.product_id)
+            .find_product_by_id(request.product_id)
             .await?
-            .ok_or(banking_api::BankingError::InvalidProductCode(request.product_id.to_string()))?;
+            .ok_or(banking_api::BankingError::InvalidProductId(request.product_id))?;
 
         // Additional eligibility checks would go here
         // (customer type compatibility, minimum deposits, etc.)

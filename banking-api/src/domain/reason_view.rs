@@ -35,7 +35,7 @@ impl ReasonView {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountView {
     pub account_id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub account_type: HeaplessString<50>,
     pub account_status: HeaplessString<50>,
     pub currency: HeaplessString<3>,

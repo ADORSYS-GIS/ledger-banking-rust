@@ -110,7 +110,7 @@ Use the provided script for automated setup:
 ### Savings Account
 ```rust
 AccountModel {
-    product_code: "SAV01",
+    product_id: Uuid::new_v4(),
     account_type: AccountType::Savings,
     current_balance: Decimal::from_str("1000.00"),
     available_balance: Decimal::from_str("950.00"),
@@ -123,7 +123,7 @@ AccountModel {
 ### Loan Account
 ```rust
 AccountModel {
-    product_code: "LON01", 
+    product_id: Uuid::new_v4(), 
     account_type: AccountType::Loan,
     current_balance: Decimal::from_str("-5000.00"), // Negative
     original_principal: Some(Decimal::from_str("10000.00")),
@@ -137,7 +137,7 @@ AccountModel {
 ### Current Account with Overdraft
 ```rust
 AccountModel {
-    product_code: "CUR01",
+    product_id: Uuid::new_v4(),
     account_type: AccountType::Current,
     current_balance: Decimal::from_str("-100.00"), // Overdrawn
     available_balance: Decimal::from_str("400.00"), // From overdraft

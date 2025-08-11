@@ -120,21 +120,6 @@ pub struct FeeAccountHoldModel {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Database model for hold release records
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HoldReleaseRecordModel {
-    pub id: Uuid,
-    pub hold_id: Uuid,
-    pub release_amount: Decimal,
-    /// References ReasonAndPurpose.id for release reason
-    pub release_reason_id: Uuid,
-    /// Additional context for release
-    pub release_additional_details: Option<HeaplessString<200>>,
-    pub released_by: Uuid,
-    pub released_at: DateTime<Utc>,
-    pub is_partial_release: bool,
-    pub remaining_amount: Decimal,
-}
 
 /// Database model for hold expiry jobs
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,7 +150,7 @@ pub struct BalanceCalculationModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductFeeScheduleModel {
     pub id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub fee_schedule_data: String, // JSON serialized fee schedule
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
@@ -177,7 +162,7 @@ pub struct ProductFeeScheduleModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeCalculationCacheModel {
     pub id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub fee_code: HeaplessString<12>,
     pub calculation_key: String, // Hash of calculation parameters
     pub calculated_amount: Decimal,

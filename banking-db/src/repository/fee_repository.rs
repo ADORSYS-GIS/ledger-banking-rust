@@ -124,7 +124,7 @@ pub trait FeeRepository: Send + Sync {
     /// Get accounts eligible for periodic fee processing
     async fn get_accounts_eligible_for_fees(
         &self,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
         fee_categories: Vec<String>,
         processing_date: NaiveDate,
         offset: i32,
@@ -144,14 +144,14 @@ pub trait FeeRepository: Send + Sync {
     /// Get cached product fee schedule
     async fn get_cached_product_fee_schedule(
         &self,
-        product_code: String,
+        product_id: Uuid,
         effective_date: NaiveDate,
     ) -> BankingResult<Option<ProductFeeScheduleModel>>;
     
     /// Invalidate cached fee schedule for product
     async fn invalidate_fee_schedule_cache(
         &self,
-        product_code: String,
+        product_id: Uuid,
     ) -> BankingResult<()>;
     
     // ============================================================================
@@ -185,7 +185,7 @@ pub trait FeeRepository: Send + Sync {
         &self,
         from_date: NaiveDate,
         to_date: NaiveDate,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
         fee_categories: Option<Vec<String>>,
     ) -> BankingResult<FeeRevenueSummary>;
     
@@ -236,7 +236,7 @@ pub struct FeeRevenueSummary {
     pub waived_amount: Decimal,
     pub reversed_amount: Decimal,
     pub revenue_by_category: std::collections::HashMap<String, Decimal>,
-    pub revenue_by_product: std::collections::HashMap<String, Decimal>,
+    pub revenue_by_product: std::collections::HashMap<Uuid, Decimal>,
 }
 
 /// Top fee account for reporting
@@ -246,7 +246,7 @@ pub struct TopFeeAccount {
     pub total_fees: Decimal,
     pub fee_count: u32,
     pub avg_fee_amount: Decimal,
-    pub product_code: String,
+    pub product_id: Uuid,
 }
 
 /// Fee statistics for analytics

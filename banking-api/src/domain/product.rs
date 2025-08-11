@@ -8,7 +8,6 @@ use heapless::String as HeaplessString;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Product {
     pub id: Uuid,
-    pub product_code: HeaplessString<50>,
     pub name_l1: HeaplessString<100>,
     pub name_l2: HeaplessString<100>,
     pub name_l3: HeaplessString<100>,
@@ -25,8 +24,8 @@ pub struct Product {
 
 impl Product {
     /// Creates a new product builder.
-    pub fn builder(id: Uuid, product_code: &str, name_l1: &str, name_l2: &str, name_l3: &str, product_type: ProductType, updated_by: Uuid) -> Result<ProductBuilder, &'static str> {
-        ProductBuilder::new(id, product_code, name_l1, name_l2, name_l3, product_type, updated_by)
+    pub fn builder(id: Uuid, name_l1: &str, name_l2: &str, name_l3: &str, product_type: ProductType, updated_by: Uuid) -> Result<ProductBuilder, &'static str> {
+        ProductBuilder::new(id, name_l1, name_l2, name_l3, product_type, updated_by)
     }
 }
 
@@ -108,7 +107,6 @@ impl std::fmt::Display for ProductType {
 /// Builder for creating `Product` instances.
 pub struct ProductBuilder {
     id: Uuid,
-    product_code: HeaplessString<50>,
     name_l1: HeaplessString<100>,
     name_l2: HeaplessString<100>,
     name_l3: HeaplessString<100>,
@@ -123,14 +121,12 @@ pub struct ProductBuilder {
 
 impl ProductBuilder {
     /// Creates a new `ProductBuilder`.
-    pub fn new(id: Uuid, product_code: &str, name_l1: &str, name_l2: &str, name_l3: &str, product_type: ProductType, updated_by: Uuid) -> Result<Self, &'static str> {
+    pub fn new(id: Uuid, name_l1: &str, name_l2: &str, name_l3: &str, product_type: ProductType, updated_by: Uuid) -> Result<Self, &'static str> {
         let name_l1_heapless = HeaplessString::try_from(name_l1).map_err(|_| "Product name_l1 is too long")?;
         let name_l2_heapless = HeaplessString::try_from(name_l2).map_err(|_| "Product name_l2 is too long")?;
         let name_l3_heapless = HeaplessString::try_from(name_l3).map_err(|_| "Product name_l3 is too long")?;
-        let code_heapless = HeaplessString::try_from(product_code).map_err(|_| "Product code is too long")?;
         Ok(Self {
             id,
-            product_code: code_heapless,
             product_type,
             name_l1: name_l1_heapless,
             name_l2: name_l2_heapless,
@@ -173,7 +169,6 @@ impl ProductBuilder {
         let now = Utc::now();
         Ok(Product {
             id: self.id,
-            product_code: self.product_code,
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,

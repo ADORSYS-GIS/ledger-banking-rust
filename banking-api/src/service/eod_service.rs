@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::{
     error::BankingResult,
@@ -46,6 +47,10 @@ pub trait EodService: Send + Sync {
 
     /// Account maintenance job
     async fn run_account_maintenance(&self, processing_date: NaiveDate) -> BankingResult<MaintenanceReport>;
+    
+    async fn get_dormancy_threshold(&self, product_id: Uuid) -> BankingResult<i32>;
+    
+    async fn calculate_inactivity_period(&self, account_id: Uuid, reference_date: NaiveDate) -> BankingResult<i32>;
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

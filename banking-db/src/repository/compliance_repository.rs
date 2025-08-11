@@ -3,21 +3,12 @@ use banking_api::BankingResult;
 use uuid::Uuid;
 use chrono::{DateTime, Utc, NaiveDate};
 
-use crate::models::{KycRecordModel, SanctionsScreeningModel, ComplianceAlertModel, ComplianceRiskScoreModel, ComplianceResultModel, SarDataModel};
+use crate::models::{SanctionsScreeningModel, ComplianceAlertModel, ComplianceRiskScoreModel, ComplianceResultModel, SarDataModel};
 use crate::models::account::UltimateBeneficiaryModel;
+use crate::AlertType;
 
 #[async_trait]
 pub trait ComplianceRepository: Send + Sync {
-    /// KYC Record Operations
-    async fn create_kyc_record(&self, kyc_record: KycRecordModel) -> BankingResult<KycRecordModel>;
-    async fn update_kyc_record(&self, kyc_record: KycRecordModel) -> BankingResult<KycRecordModel>;
-    async fn find_kyc_by_id(&self, kyc_id: Uuid) -> BankingResult<Option<KycRecordModel>>;
-    async fn find_kyc_by_customer(&self, customer_id: Uuid) -> BankingResult<Option<KycRecordModel>>;
-    async fn find_kyc_requiring_review(&self) -> BankingResult<Vec<KycRecordModel>>;
-    async fn find_kyc_by_status(&self, status: &str) -> BankingResult<Vec<KycRecordModel>>;
-    async fn update_kyc_status(&self, kyc_id: Uuid, status: &str, reviewed_by: &str) -> BankingResult<()>;
-    async fn find_expired_kyc_records(&self, reference_date: NaiveDate) -> BankingResult<Vec<KycRecordModel>>;
-    
     /// Sanctions Screening Operations
     async fn create_sanctions_screening(&self, screening: SanctionsScreeningModel) -> BankingResult<SanctionsScreeningModel>;
     async fn find_screening_by_id(&self, screening_id: Uuid) -> BankingResult<Option<SanctionsScreeningModel>>;
@@ -33,10 +24,10 @@ pub trait ComplianceRepository: Send + Sync {
     async fn find_alert_by_id(&self, alert_id: Uuid) -> BankingResult<Option<ComplianceAlertModel>>;
     async fn find_alerts_by_customer(&self, customer_id: Uuid) -> BankingResult<Vec<ComplianceAlertModel>>;
     async fn find_alerts_by_transaction(&self, transaction_id: Uuid) -> BankingResult<Vec<ComplianceAlertModel>>;
-    async fn find_alerts_by_type(&self, alert_type: &str) -> BankingResult<Vec<ComplianceAlertModel>>;
+    async fn find_alerts_by_type(&self, alert_type: AlertType) -> BankingResult<Vec<ComplianceAlertModel>>;
     async fn find_alerts_by_status(&self, status: &str) -> BankingResult<Vec<ComplianceAlertModel>>;
     async fn find_open_alerts(&self) -> BankingResult<Vec<ComplianceAlertModel>>;
-    async fn update_alert_status(&self, alert_id: Uuid, status: &str, resolved_by: Option<&str>) -> BankingResult<()>;
+    async fn update_alert_status(&self, alert_id: Uuid, status: &str, resolved_by_person_id: Option<Uuid>) -> BankingResult<()>;
     async fn find_alerts_by_severity(&self, severity: &str) -> BankingResult<Vec<ComplianceAlertModel>>;
     
     /// Ultimate Beneficial Owner Operations
@@ -79,12 +70,10 @@ pub trait ComplianceRepository: Send + Sync {
     
     /// Reporting Operations
     async fn generate_compliance_summary(&self, from_date: NaiveDate, to_date: NaiveDate) -> BankingResult<ComplianceSummaryReport>;
-    async fn generate_kyc_report(&self, from_date: NaiveDate, to_date: NaiveDate) -> BankingResult<KycComplianceReport>;
     async fn generate_sanctions_report(&self, from_date: NaiveDate, to_date: NaiveDate) -> BankingResult<SanctionsComplianceReport>;
     async fn generate_alert_summary(&self, from_date: NaiveDate, to_date: NaiveDate) -> BankingResult<AlertSummaryReport>;
     
     /// Utility Operations
-    async fn count_kyc_records(&self) -> BankingResult<i64>;
     async fn count_sanctions_screenings(&self) -> BankingResult<i64>;
     async fn count_compliance_alerts(&self) -> BankingResult<i64>;
     async fn count_ubo_links(&self) -> BankingResult<i64>;

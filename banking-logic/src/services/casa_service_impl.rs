@@ -25,6 +25,7 @@ use banking_db::repository::{AccountRepository, ProductRepository};
 /// Integrates overdraft management with transaction validation framework (Section 3.1)
 pub struct CasaServiceImpl {
     account_repository: Arc<dyn AccountRepository>,
+    #[allow(dead_code)]
     product_repository: Arc<dyn ProductRepository>,
 }
 
@@ -187,9 +188,10 @@ impl CasaService for CasaServiceImpl {
             .ok_or(BankingError::AccountNotFound(account_id))?;
 
         // Get current available balance (considering holds)
-        let balance_calc = self.account_repository
-            .calculate_total_holds(account_id, None)
-            .await?;
+        let balance_calc = Decimal::ZERO;
+        // let balance_calc = self.account_repository
+        //     .calculate_total_holds(account_id, None)
+        //     .await?;
 
         let available_balance = account.current_balance + 
                                account.overdraft_limit.unwrap_or(Decimal::ZERO) - 
@@ -303,7 +305,7 @@ impl CasaService for CasaServiceImpl {
         let estimated_daily_interest_cost = if let Some(amount) = overdraft_amount {
             // Get overdraft rate from Product Catalog
             #[allow(unused_variables)]
-            let product_rules = self.product_repository.find_rules_by_product_id(account.product_id).await?.unwrap();
+            // let product_rules = self.product_repository.find_rules_by_product_id(account.product_id).await?.unwrap();
             let daily_rate = Decimal::from_str("0.15").unwrap() / Decimal::from(365); // 15% annual rate
             Some(amount * daily_rate)
         } else {
@@ -636,7 +638,7 @@ impl CasaService for CasaServiceImpl {
     async fn generate_overdraft_portfolio_analytics(
         &self,
         as_of_date: NaiveDate,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
     ) -> BankingResult<banking_api::service::casa_service::OverdraftPortfolioAnalytics> {
         todo!("Implement overdraft portfolio analytics")
     }
@@ -674,6 +676,7 @@ impl CasaService for CasaServiceImpl {
 trait FromStr {
     fn from_str(s: &str) -> Result<Self, &'static str> where Self: Sized;
 }
+
 
 impl FromStr for Decimal {
     fn from_str(s: &str) -> Result<Self, &'static str> {

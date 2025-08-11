@@ -253,7 +253,7 @@ pub trait CasaService: Send + Sync {
     async fn generate_overdraft_portfolio_analytics(
         &self,
         as_of_date: NaiveDate,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
     ) -> BankingResult<OverdraftPortfolioAnalytics>;
     
     /// Get overdraft revenue summary
@@ -337,7 +337,7 @@ pub struct OverdraftProcessingReport {
 /// Product-wise overdraft summary
 #[derive(Debug, Clone)]
 pub struct ProductOverdraftSummary {
-    pub product_code: String,
+    pub product_id: Uuid,
     pub account_count: u32,
     pub total_overdraft_amount: Decimal,
     pub total_interest_calculated: Decimal,

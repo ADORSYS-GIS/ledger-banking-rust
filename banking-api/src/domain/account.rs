@@ -2,6 +2,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use heapless::{String as HeaplessString};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -35,8 +36,9 @@ pub struct Account {
     pub collateral_id: Option<Uuid>,
     /// References ReasonAndPurpose.id for loan purpose
     pub loan_purpose_id: Option<Uuid>,
-
-    // Account lifecycle management (from enhancements)
+    pub gl_code_suffix: Option<HeaplessString<10>>,
+ 
+     // Account lifecycle management (from enhancements)
     pub close_date: Option<NaiveDate>,
     pub last_activity_date: Option<NaiveDate>,
     pub dormancy_threshold_days: Option<i32>,
@@ -186,10 +188,7 @@ pub enum DisbursementStatus {
     PartiallyExecuted,
 }
 
-
-
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AccountStatusChangeRecord {
     pub id: Uuid,
     pub account_id: Uuid,
@@ -197,16 +196,32 @@ pub struct AccountStatusChangeRecord {
     pub new_status: AccountStatus,
     /// References ReasonAndPurpose.id
     pub reason_id: Uuid,
-    /// Additional context beyond the standard reason
+    /// Additional context for status change
     pub additional_context: Option<HeaplessString<200>>,
     /// References Person.person_id
     pub changed_by_person_id: Uuid,
     pub changed_at: DateTime<Utc>,
     pub system_triggered: bool,
+    pub created_at: DateTime<Utc>,
 }
 
-
-
+impl Default for AccountStatusChangeRecord {
+    fn default() -> Self {
+        let now = Utc::now();
+        Self {
+            id: Uuid::new_v4(),
+            account_id: Uuid::nil(),
+            old_status: None,
+            new_status: AccountStatus::PendingApproval,
+            reason_id: Uuid::nil(),
+            additional_context: None,
+            changed_by_person_id: Uuid::nil(),
+            changed_at: now,
+            system_triggered: false,
+            created_at: now,
+        }
+    }
+}
 
 impl Account {
     /// Set product id
@@ -235,24 +250,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_product_code_heapless_efficiency() {
+    fn test_product_id_efficiency() {
         use std::mem;
         
-        // Compare memory sizes between HeaplessString and String
+        // Compare memory sizes between Uuid and String
         let string_product = String::from("SAVP0001");
-        let heapless_product: HeaplessString<12> = HeaplessString::try_from("SAVP0001").unwrap();
+        let product_id = Uuid::new_v4();
         
         println!("String product code size: {} bytes", mem::size_of_val(&string_product));
-        println!("HeaplessString product code size: {} bytes", mem::size_of_val(&heapless_product));
+        println!("Uuid product id size: {} bytes", mem::size_of_val(&product_id));
         
-        // HeaplessString may be similar size to String for longer strings but provides stack allocation
-        // The benefit is predictable memory layout and no heap allocation
-        assert_eq!(mem::size_of_val(&heapless_product), 24); // HeaplessString<12> with capacity info
+        // Uuid should be smaller than a typical string representation on the heap
+        assert!(mem::size_of_val(&product_id) < mem::size_of_val(&string_product));
+        assert_eq!(mem::size_of_val(&product_id), 16); // Uuid is 16 bytes
         
-        // Test conversion functions
+        // Test account creation with product_id
         let _account = Account {
             id: uuid::Uuid::new_v4(),
-            product_id: Uuid::new_v4(),
+            product_id,
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
@@ -274,6 +289,7 @@ mod tests {
             penalty_rate: None,
             collateral_id: None,
             loan_purpose_id: None,
+            gl_code_suffix: None,
             close_date: None,
             last_activity_date: None,
             dormancy_threshold_days: None,
@@ -310,14 +326,6 @@ mod tests {
             last_updated_at: chrono::Utc::now(),
             updated_by_person_id: Uuid::new_v4(), // References Person.person_id
         };
-        
-        // Test string access
-        // The following test is commented out because the type has changed to Uuid and the test is no longer valid.
-        // assert_eq!(account.product_code.as_str(), "SAVP0001");
-        
-        // Test setting from string
-        // account.set_product_code("LNST0123").unwrap();
-        // assert_eq!(account.product_code.as_str(), "LNST0123");
     }
 
     #[test]
@@ -401,6 +409,7 @@ mod tests {
             penalty_rate: Some(rust_decimal::Decimal::new(200, 2)),
             collateral_id: Some(Uuid::new_v4()),
             loan_purpose_id: Some(Uuid::new_v4()),
+            gl_code_suffix: None,
             close_date: None,
             last_activity_date: None,
             dormancy_threshold_days: None,
@@ -641,6 +650,19 @@ impl std::fmt::Display for DisbursementMethod {
     }
 }
 
+impl std::fmt::Display for DisbursementStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DisbursementStatus::Pending => write!(f, "Pending"),
+            DisbursementStatus::Approved => write!(f, "Approved"),
+            DisbursementStatus::Executed => write!(f, "Executed"),
+            DisbursementStatus::Cancelled => write!(f, "Cancelled"),
+            DisbursementStatus::Failed => write!(f, "Failed"),
+            DisbursementStatus::PartiallyExecuted => write!(f, "PartiallyExecuted"),
+        }
+    }
+}
+
 
 impl std::fmt::Display for OwnershipType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -704,6 +726,148 @@ impl std::fmt::Display for MandateStatus {
             MandateStatus::Suspended => write!(f, "Suspended"),
             MandateStatus::Revoked => write!(f, "Revoked"),
             MandateStatus::Expired => write!(f, "Expired"),
+        }
+    }
+}
+
+impl FromStr for AccountType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Savings" => Ok(AccountType::Savings),
+            "Current" => Ok(AccountType::Current),
+            "Loan" => Ok(AccountType::Loan),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for AccountStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "PendingApproval" => Ok(AccountStatus::PendingApproval),
+            "Active" => Ok(AccountStatus::Active),
+            "Dormant" => Ok(AccountStatus::Dormant),
+            "Frozen" => Ok(AccountStatus::Frozen),
+            "PendingClosure" => Ok(AccountStatus::PendingClosure),
+            "Closed" => Ok(AccountStatus::Closed),
+            "PendingReactivation" => Ok(AccountStatus::PendingReactivation),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for SigningCondition {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "None" => Ok(SigningCondition::None),
+            "AnyOwner" => Ok(SigningCondition::AnyOwner),
+            "AllOwners" => Ok(SigningCondition::AllOwners),
+            _ => Err(()),
+        }
+    }
+}
+impl FromStr for DisbursementMethod {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Transfer" => Ok(DisbursementMethod::Transfer),
+            "CashWithdrawal" => Ok(DisbursementMethod::CashWithdrawal),
+            "Check" => Ok(DisbursementMethod::Check),
+            "HoldFunds" => Ok(DisbursementMethod::HoldFunds),
+            "OverdraftFacility" => Ok(DisbursementMethod::OverdraftFacility),
+            "StagedRelease" => Ok(DisbursementMethod::StagedRelease),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for OwnershipType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Single" => Ok(OwnershipType::Single),
+            "Joint" => Ok(OwnershipType::Joint),
+            "Corporate" => Ok(OwnershipType::Corporate),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for EntityType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Branch" => Ok(EntityType::Branch),
+            "Agent" => Ok(EntityType::Agent),
+            "RiskManager" => Ok(EntityType::RiskManager),
+            "ComplianceOfficer" => Ok(EntityType::ComplianceOfficer),
+            "CustomerService" => Ok(EntityType::CustomerService),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for RelationshipType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "PrimaryHandler" => Ok(RelationshipType::PrimaryHandler),
+            "BackupHandler" => Ok(RelationshipType::BackupHandler),
+            "RiskOversight" => Ok(RelationshipType::RiskOversight),
+            "ComplianceOversight" => Ok(RelationshipType::ComplianceOversight),
+            "Accountant" => Ok(RelationshipType::Accountant),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for RelationshipStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(RelationshipStatus::Active),
+            "Inactive" => Ok(RelationshipStatus::Inactive),
+            "Suspended" => Ok(RelationshipStatus::Suspended),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for PermissionType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ViewOnly" => Ok(PermissionType::ViewOnly),
+            "LimitedWithdrawal" => Ok(PermissionType::LimitedWithdrawal),
+            "JointApproval" => Ok(PermissionType::JointApproval),
+            "FullAccess" => Ok(PermissionType::FullAccess),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for MandateStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(MandateStatus::Active),
+            "Suspended" => Ok(MandateStatus::Suspended),
+            "Revoked" => Ok(MandateStatus::Revoked),
+            "Expired" => Ok(MandateStatus::Expired),
+            _ => Err(()),
         }
     }
 }

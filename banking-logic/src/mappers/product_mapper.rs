@@ -16,7 +16,6 @@ impl DBMapper<ApiProduct, DbProduct> for ProductMapper {
     fn to_db(api_model: ApiProduct) -> DbProduct {
         DbProduct {
             id: api_model.id,
-            product_code: api_model.product_code,
             name_l1: api_model.name_l1,
             name_l2: api_model.name_l2,
             name_l3: api_model.name_l3,
@@ -40,7 +39,6 @@ impl ApiMapper<DbProduct, ApiProduct> for ProductMapper {
     fn from_db(db_model: DbProduct) -> ApiProduct {
         ApiProduct {
             id: db_model.id,
-            product_code: db_model.product_code,
             name_l1: db_model.name_l1,
             name_l2: db_model.name_l2,
             name_l3: db_model.name_l3,

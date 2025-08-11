@@ -4,7 +4,7 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::models::{
-    CollateralModel, CollateralEnforcementModel
+    CollateralAlertType, CollateralEnforcementModel, CollateralModel
 };
 
 /// Repository trait for collateral data persistence operations
@@ -115,7 +115,7 @@ pub trait CollateralRepository: Send + Sync {
     async fn find_alerts_by_severity(&self, severity: String) -> Result<Vec<String>, String>;
     
     /// Find alerts by type (returns JSON data)
-    async fn find_alerts_by_type(&self, alert_type: String) -> Result<Vec<String>, String>;
+    async fn find_alerts_by_type(&self, alert_type: CollateralAlertType) -> Result<Vec<String>, String>;
     
     /// Find alerts assigned to a person (returns JSON data)
     async fn find_alerts_by_assignee(&self, assigned_to: Uuid) -> Result<Vec<String>, String>;

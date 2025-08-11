@@ -34,7 +34,7 @@ pub trait CustomerService: Send + Sync {
     async fn find_customer_by_identity(&self, id_type: crate::domain::IdentityType, id_number: &str) -> BankingResult<Option<Customer>>;
 
     /// Validate customer can open new account
-    async fn validate_account_eligibility(&self, customer_id: Uuid, product_code: &str) -> BankingResult<bool>;
+    async fn validate_account_eligibility(&self, customer_id: Uuid, product_id: Uuid) -> BankingResult<bool>;
 
     /// Get all customers for a given risk rating
     async fn find_customers_by_risk_rating(&self, risk_rating: RiskRating) -> BankingResult<Vec<Customer>>;

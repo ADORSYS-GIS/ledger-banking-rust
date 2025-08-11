@@ -7,7 +7,6 @@ use banking_db::models::{
     AccountHoldReleaseRequestModel, AccountHoldSummaryModel,
     PlaceHoldRequestModel,
 };
-use heapless::{String as HeaplessString};
 
 pub struct AccountHoldMapper;
 
@@ -42,7 +41,7 @@ impl AccountHoldMapper {
             amount: model.amount,
             hold_type: model.hold_type,
             reason_id: model.reason_id,
-            additional_details: model.additional_details,
+            additional_details: model.additional_details.map(|s| s.as_str().try_into().unwrap()),
             placed_by_person_id: model.placed_by_person_id,
             placed_at: model.placed_at,
             expires_at: model.expires_at,
@@ -50,7 +49,7 @@ impl AccountHoldMapper {
             released_at: model.released_at,
             released_by_person_id: model.released_by_person_id,
             priority: model.priority,
-            source_reference: model.source_reference,
+            source_reference: model.source_reference.map(|s| s.as_str().try_into().unwrap()),
             automatic_release: model.automatic_release,
         }
     }
@@ -62,7 +61,7 @@ impl AccountHoldMapper {
             account_balance_calculation_id: summary.account_balance_calculation_id,
             hold_type: summary.hold_type,
             total_amount: summary.total_amount,
-            hold_count: summary.hold_count as i32,
+            hold_count: summary.hold_count,
             priority: summary.priority,
         }
     }
@@ -73,7 +72,7 @@ impl AccountHoldMapper {
             account_balance_calculation_id: model.account_balance_calculation_id,
             hold_type: model.hold_type,
             total_amount: model.total_amount,
-            hold_count: model.hold_count as u32,
+            hold_count: model.hold_count,
             priority: model.priority,
         }
     }
@@ -101,7 +100,7 @@ impl AccountHoldMapper {
             hold_id: model.hold_id,
             release_amount: model.release_amount,
             release_reason_id: model.release_reason_id,
-            release_additional_details: model.release_additional_details,
+            release_additional_details: model.release_additional_details.map(|s| s.as_str().try_into().unwrap()),
             released_by_person_id: model.released_by_person_id,
             override_authorization: model.override_authorization,
         }
@@ -112,10 +111,10 @@ impl AccountHoldMapper {
         AccountHoldExpiryJobModel {
             id: job.id,
             processing_date: job.processing_date,
-            expired_holds_count: job.expired_holds_count as i32,
+            expired_holds_count: job.expired_holds_count,
             total_released_amount: job.total_released_amount,
             processed_at: job.processed_at,
-            errors: Some(job.errors.iter().map(|s| s.to_string()).collect()),
+            errors: job.errors.iter().map(|s| s.as_str().try_into().unwrap()).collect(),
         }
     }
 
@@ -123,15 +122,10 @@ impl AccountHoldMapper {
         AccountHoldExpiryJob {
             id: model.id,
             processing_date: model.processing_date,
-            expired_holds_count: model.expired_holds_count as u32,
+            expired_holds_count: model.expired_holds_count,
             total_released_amount: model.total_released_amount,
             processed_at: model.processed_at,
-            errors: model
-                .errors
-                .unwrap_or_default()
-                .into_iter()
-                .map(|s| HeaplessString::try_from(s.as_str()).unwrap())
-                .collect(),
+            errors: model.errors.into_iter().map(|s| s.as_str().try_into().unwrap()).collect(),
         }
     }
 
@@ -160,11 +154,11 @@ impl AccountHoldMapper {
             hold_type: model.hold_type,
             amount: model.amount,
             reason_id: model.reason_id,
-            additional_details: model.additional_details,
+            additional_details: model.additional_details.map(|s| s.as_str().try_into().unwrap()),
             placed_by_person_id: model.placed_by_person_id,
             expires_at: model.expires_at,
             priority: model.priority,
-            source_reference: model.source_reference,
+            source_reference: model.source_reference.map(|s| s.as_str().try_into().unwrap()),
         }
     }
 }

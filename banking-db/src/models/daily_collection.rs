@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 // Re-define enums with sqlx::Type support
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "agent_status", rename_all = "lowercase")]
+#[sqlx(type_name = "agent_status", rename_all = "PascalCase")]
 pub enum AgentStatus {
     Active,
     Suspended,
@@ -16,7 +16,7 @@ pub enum AgentStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "area_type", rename_all = "lowercase")]
+#[sqlx(type_name = "area_type", rename_all = "PascalCase")]
 pub enum AreaType {
     Urban,
     Suburban,
@@ -27,7 +27,7 @@ pub enum AreaType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "customer_density", rename_all = "lowercase")]
+#[sqlx(type_name = "customer_density", rename_all = "PascalCase")]
 pub enum CustomerDensity {
     High,
     Medium,
@@ -35,7 +35,7 @@ pub enum CustomerDensity {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "transport_mode", rename_all = "lowercase")]
+#[sqlx(type_name = "transport_mode", rename_all = "PascalCase")]
 pub enum TransportMode {
     Walking,
     Bicycle,
@@ -46,7 +46,7 @@ pub enum TransportMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "device_type", rename_all = "lowercase")]
+#[sqlx(type_name = "device_type", rename_all = "PascalCase")]
 pub enum DeviceType {
     Smartphone,
     Tablet,
@@ -55,7 +55,7 @@ pub enum DeviceType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "connectivity_status", rename_all = "lowercase")]
+#[sqlx(type_name = "connectivity_status", rename_all = "PascalCase")]
 pub enum ConnectivityStatus {
     Online,
     Offline,
@@ -64,7 +64,7 @@ pub enum ConnectivityStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collection_program_type", rename_all = "lowercase")]
+#[sqlx(type_name = "collection_program_type", rename_all = "PascalCase")]
 pub enum CollectionProgramType {
     FixedAmount,
     VariableAmount,
@@ -73,7 +73,7 @@ pub enum CollectionProgramType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "program_status", rename_all = "lowercase")]
+#[sqlx(type_name = "program_status", rename_all = "PascalCase")]
 pub enum ProgramStatus {
     Active,
     Suspended,
@@ -82,7 +82,7 @@ pub enum ProgramStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collection_frequency", rename_all = "lowercase")]
+#[sqlx(type_name = "collection_frequency", rename_all = "PascalCase")]
 pub enum CollectionFrequency {
     Daily,
     Weekly,
@@ -92,7 +92,7 @@ pub enum CollectionFrequency {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collection_status", rename_all = "lowercase")]
+#[sqlx(type_name = "collection_status", rename_all = "PascalCase")]
 pub enum CollectionStatus {
     Active,
     Suspended,
@@ -102,7 +102,7 @@ pub enum CollectionStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "holiday_handling", rename_all = "lowercase")]
+#[sqlx(type_name = "holiday_handling", rename_all = "PascalCase")]
 pub enum HolidayHandling {
     Skip,
     NextBusinessDay,
@@ -111,7 +111,7 @@ pub enum HolidayHandling {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "reliability_rating", rename_all = "lowercase")]
+#[sqlx(type_name = "reliability_rating", rename_all = "PascalCase")]
 pub enum ReliabilityRating {
     Excellent,
     Good,
@@ -121,7 +121,7 @@ pub enum ReliabilityRating {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collection_method", rename_all = "lowercase")]
+#[sqlx(type_name = "collection_method", rename_all = "PascalCase")]
 pub enum CollectionMethod {
     Cash,
     MobilePayment,
@@ -130,7 +130,7 @@ pub enum CollectionMethod {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collection_record_status", rename_all = "lowercase")]
+#[sqlx(type_name = "collection_record_status", rename_all = "PascalCase")]
 pub enum CollectionRecordStatus {
     Pending,
     Processed,
@@ -140,7 +140,7 @@ pub enum CollectionRecordStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "biometric_method", rename_all = "lowercase")]
+#[sqlx(type_name = "biometric_method", rename_all = "PascalCase")]
 pub enum BiometricMethod {
     Fingerprint,
     FaceRecognition,
@@ -149,7 +149,7 @@ pub enum BiometricMethod {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "batch_status", rename_all = "lowercase")]
+#[sqlx(type_name = "batch_status", rename_all = "PascalCase")]
 pub enum BatchStatus {
     Pending,
     Processing,
@@ -160,7 +160,7 @@ pub enum BatchStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "alert_type", rename_all = "lowercase")]
+#[sqlx(type_name = "alert_type", rename_all = "PascalCase")]
 pub enum AlertType {
     LowCollectionRate,
     CustomerComplaint,
@@ -172,7 +172,7 @@ pub enum AlertType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "fee_frequency", rename_all = "lowercase")]
+#[sqlx(type_name = "fee_frequency", rename_all = "PascalCase")]
 pub enum FeeFrequency {
     PerCollection,
     Daily,
@@ -182,7 +182,7 @@ pub enum FeeFrequency {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "alert_severity", rename_all = "lowercase")]
+#[sqlx(type_name = "alert_severity", rename_all = "PascalCase")]
 pub enum AlertSeverity {
     Low,
     Medium,

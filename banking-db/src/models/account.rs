@@ -34,6 +34,8 @@ pub struct AccountModel {
     pub open_date: NaiveDate,
     pub domicile_agency_branch_id: Uuid,
     
+    pub gl_code_suffix: Option<HeaplessString<10>>,
+    
     // Balance fields
     pub current_balance: Decimal,
     pub available_balance: Decimal,

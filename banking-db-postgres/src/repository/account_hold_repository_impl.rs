@@ -1,24 +1,51 @@
 use async_trait::async_trait;
 use banking_api::{BankingError, BankingResult};
-use banking_api::domain::{
-    HoldPriority, HoldStatus,
-    HoldType,
-};
+use std::str::FromStr;
 use banking_db::models::{
     AccountBalanceCalculationModel, AccountHoldExpiryJobModel,
     AccountHoldModel, AccountHoldReleaseRequestModel, AccountHoldSummaryModel,
-    PlaceHoldRequestModel,
-};
-use banking_db::repository::{
-    AccountHoldRepository, HighHoldRatioAccount, HoldAgingBucket, HoldAnalyticsSummary,
-    HoldOverrideRecord, HoldPrioritySummary, HoldTypeSummary, HoldValidationError,
+    PlaceHoldRequestModel, HighHoldRatioAccount, HoldAgingBucket, HoldAnalyticsSummary,
+    HoldOverrideRecord, HoldPrioritySummary, HoldValidationError,
     JudicialHoldReportData,
 };
+use banking_db::repository::account_hold_repository::AccountHoldRepository;
 use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool};
 use uuid::Uuid;
 
+use banking_db::models::{HoldPriority, HoldStatus, HoldType};
+use sqlx::Row;
+
+trait TryFromRow<R> {
+    fn try_from_row(row: &R) -> BankingResult<Self>
+    where
+        Self: Sized;
+}
+
+impl TryFromRow<sqlx::postgres::PgRow> for AccountHoldModel {
+    fn try_from_row(row: &sqlx::postgres::PgRow) -> BankingResult<Self> {
+        Ok(AccountHoldModel {
+            id: row.try_get("id")?,
+            account_id: row.try_get("account_id")?,
+            amount: row.try_get("amount")?,
+            hold_type: row.try_get::<String, _>("hold_type")?.parse::<HoldType>().unwrap(),
+            reason_id: row.try_get("reason_id")?,
+            additional_details: row.try_get::<Option<String>, _>("additional_details")?.map(|s| heapless::String::from_str(&s).unwrap()),
+            placed_by_person_id: row.try_get("placed_by_person_id")?,
+            placed_at: row.try_get("placed_at")?,
+            expires_at: row.try_get("expires_at")?,
+            status: row.try_get::<String, _>("status")?.parse::<HoldStatus>().unwrap(),
+            released_at: row.try_get("released_at")?,
+            released_by_person_id: row.try_get("released_by_person_id")?,
+            priority: row.try_get::<String, _>("priority")?.parse::<HoldPriority>().unwrap(),
+            source_reference: row.try_get::<Option<String>, _>("source_reference")?.map(|s| heapless::String::from_str(&s).unwrap()),
+            automatic_release: row.try_get("automatic_release")?,
+            created_at: row.try_get("created_at")?,
+            updated_at: row.try_get("updated_at")?,
+        })
+    }
+}
 pub struct AccountHoldRepositoryImpl {
     pool: PgPool,
 }
@@ -51,7 +78,7 @@ impl AccountHoldRepository for AccountHoldRepositoryImpl {
         .bind(hold.amount)
         .bind(hold.hold_type.to_string())
         .bind(hold.reason_id)
-        .bind(hold.additional_details.as_ref().map(|s| s.as_str()))
+        .bind(hold.additional_details.as_deref())
         .bind(hold.placed_by_person_id)
         .bind(hold.placed_at)
         .bind(hold.expires_at)
@@ -59,7 +86,7 @@ impl AccountHoldRepository for AccountHoldRepositoryImpl {
         .bind(hold.released_at)
         .bind(hold.released_by_person_id)
         .bind(hold.priority.to_string())
-        .bind(hold.source_reference.as_ref().map(|s| s.as_str()))
+        .bind(hold.source_reference.as_deref())
         .bind(hold.automatic_release)
         .fetch_one(&self.pool)
         .await?;
@@ -167,13 +194,13 @@ impl AccountHoldRepository for AccountHoldRepositoryImpl {
         .bind(hold.amount)
         .bind(hold.hold_type.to_string())
         .bind(hold.reason_id)
-        .bind(hold.additional_details.as_ref().map(|s| s.as_str()))
+        .bind(hold.additional_details.as_deref())
         .bind(hold.expires_at)
         .bind(hold.status.to_string())
         .bind(hold.released_at)
         .bind(hold.released_by_person_id)
         .bind(hold.priority.to_string())
-        .bind(hold.source_reference.as_ref().map(|s| s.as_str()))
+        .bind(hold.source_reference.as_deref())
         .bind(hold.automatic_release)
         .fetch_one(&self.pool)
         .await
@@ -287,139 +314,173 @@ impl AccountHoldRepository for AccountHoldRepositoryImpl {
         Ok(holds)
     }
 
+    #[allow(dead_code, unused_variables)]
     async fn get_holds_by_type(&self, hold_type: String, status: Option<String>, account_ids: Option<Vec<Uuid>>, limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_hold_history(&self, account_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>, include_released: bool) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn calculate_total_holds(&self, account_id: Uuid, exclude_hold_types: Option<Vec<String>>) -> BankingResult<Decimal> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_hold_amounts_by_priority(&self, account_id: Uuid) -> BankingResult<Vec<HoldPrioritySummary>> {
         unimplemented!()
     }
 
 
+    #[allow(unused_variables)]
     async fn cache_balance_calculation(&self, calculation: AccountBalanceCalculationModel) -> BankingResult<AccountBalanceCalculationModel> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_cached_balance_calculation(&self, account_id: Uuid, max_age_seconds: u64) -> BankingResult<Option<AccountBalanceCalculationModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn release_hold_detailed(&self, hold_id: Uuid, release_amount: Option<Decimal>, release_reason_id: Uuid, released_by: Uuid, released_at: DateTime<Utc>) -> BankingResult<AccountHoldModel> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn create_hold_release_record(&self, release_record: banking_db::models::HoldReleaseRecordModel) -> BankingResult<banking_db::models::HoldReleaseRecordModel> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_hold_release_records(&self, hold_id: Uuid) -> BankingResult<Vec<banking_db::models::HoldReleaseRecordModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn bulk_release_holds(&self, hold_ids: Vec<Uuid>, release_reason_id: Uuid, released_by: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_expired_holds(&self, cutoff_date: DateTime<Utc>, hold_types: Option<Vec<String>>, limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_auto_release_eligible_holds(&self, processing_date: NaiveDate, hold_types: Option<Vec<String>>) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn create_hold_expiry_job(&self, job: AccountHoldExpiryJobModel) -> BankingResult<AccountHoldExpiryJobModel> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn update_hold_expiry_job(&self, job: AccountHoldExpiryJobModel) -> BankingResult<AccountHoldExpiryJobModel> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn bulk_place_holds(&self, holds: Vec<AccountHoldModel>) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn update_hold_priorities(&self, account_id: Uuid, hold_priority_updates: Vec<(Uuid, String)>, updated_by_person_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_overrideable_holds(&self, account_id: Uuid, required_amount: Decimal, override_priority: String) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn create_hold_override(&self, account_id: Uuid, overridden_holds: Vec<Uuid>, override_amount: Decimal, authorized_by: Uuid, override_reason_id: Uuid) -> BankingResult<HoldOverrideRecord> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_judicial_holds_by_reference(&self, court_reference: String) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn update_loan_pledge_holds(&self, loan_account_id: Uuid, collateral_account_ids: Vec<Uuid>, new_pledge_amount: Decimal, updated_by_person_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_compliance_holds_by_alert(&self, compliance_alert_id: Uuid) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_hold_analytics(&self, from_date: NaiveDate, to_date: NaiveDate, hold_types: Option<Vec<String>>) -> BankingResult<HoldAnalyticsSummary> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_high_hold_ratio_accounts(&self, minimum_ratio: Decimal, exclude_hold_types: Option<Vec<String>>, limit: i32) -> BankingResult<Vec<HighHoldRatioAccount>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn generate_judicial_hold_report(&self, from_date: NaiveDate, to_date: NaiveDate) -> BankingResult<JudicialHoldReportData> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn get_hold_aging_report(&self, hold_types: Option<Vec<String>>, aging_buckets: Vec<i32>) -> BankingResult<Vec<HoldAgingBucket>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn validate_hold_amounts(&self, account_id: Uuid) -> BankingResult<Vec<HoldValidationError>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn find_orphaned_holds(&self, limit: Option<i32>) -> BankingResult<Vec<AccountHoldModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn cleanup_old_holds(&self, cutoff_date: NaiveDate, hold_statuses: Vec<String>) -> BankingResult<u32> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn create_balance_calculation(&self, calc: AccountBalanceCalculationModel) -> BankingResult<AccountBalanceCalculationModel> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn find_balance_calculation_by_id(&self, id: Uuid) -> BankingResult<Option<AccountBalanceCalculationModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn create_hold_summary(&self, summary: AccountHoldSummaryModel) -> BankingResult<AccountHoldSummaryModel> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn find_hold_summaries_by_calc_id(&self, calc_id: Uuid) -> BankingResult<Vec<AccountHoldSummaryModel>> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn create_hold_release_request(&self, request: AccountHoldReleaseRequestModel) -> BankingResult<AccountHoldReleaseRequestModel> {
         unimplemented!()
     }
 
+    #[allow(unused_variables)]
     async fn create_place_hold_request(&self, request: PlaceHoldRequestModel) -> BankingResult<PlaceHoldRequestModel> {
         unimplemented!()
     }

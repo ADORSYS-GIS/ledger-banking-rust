@@ -1,13 +1,12 @@
 use banking_api::domain::{
-    Account, AccountBalanceCalculation, AccountHold, AccountHoldExpiryJob, AccountHoldReleaseRequest,
-    AccountHoldSummary, AccountMandate, AccountOwnership, AccountRelationship,
-    AccountStatusChangeRecord, PlaceHoldRequest, UltimateBeneficiary,
+    Account, AccountBalanceCalculation, AccountMandate, AccountOwnership, AccountRelationship,
+    AccountStatusChangeRecord, UltimateBeneficiary,
 };
 use banking_db::models::{
-    AccountBalanceCalculationModel, AccountHoldExpiryJobModel, AccountHoldModel,
-    AccountHoldReleaseRequestModel, AccountHoldSummaryModel, AccountMandateModel, AccountModel,
+    AccountBalanceCalculationModel, 
+    AccountMandateModel, AccountModel,
     AccountOwnershipModel, AccountRelationshipModel, AccountStatusChangeRecordModel,
-    PlaceHoldRequestModel, UltimateBeneficiaryModel,
+    UltimateBeneficiaryModel,
 };
 use heapless::{String as HeaplessString};
 
@@ -40,6 +39,7 @@ impl AccountMapper {
             penalty_rate: account.penalty_rate,
             collateral_id: account.collateral_id,
             loan_purpose_id: account.loan_purpose_id,
+            gl_code_suffix: account.gl_code_suffix,
             // Enhanced lifecycle fields
             close_date: account.close_date,
             last_activity_date: account.last_activity_date,
@@ -107,6 +107,7 @@ impl AccountMapper {
             penalty_rate: model.penalty_rate,
             collateral_id: model.collateral_id,
             loan_purpose_id: model.loan_purpose_id,
+            gl_code_suffix: model.gl_code_suffix,
             // Enhanced lifecycle fields
             close_date: model.close_date,
             last_activity_date: model.last_activity_date,
@@ -295,7 +296,7 @@ impl AccountMapper {
             changed_by_person_id: record.changed_by_person_id,
             changed_at: record.changed_at,
             system_triggered: record.system_triggered,
-            created_at: record.changed_at, // Use changed_at as created_at
+            created_at: record.created_at,
         }
     }
 
@@ -312,6 +313,7 @@ impl AccountMapper {
             changed_by_person_id: model.changed_by_person_id,
             changed_at: model.changed_at,
             system_triggered: model.system_triggered,
+            created_at: model.created_at,
         }
     }
 

@@ -1,13 +1,12 @@
 use banking_db::models::{AccountWorkflowModel, WorkflowTypeModel, WorkflowStepModel, WorkflowStatusModel};
-use banking_db::repository::WorkflowRepository;
-use banking_db_postgres::WorkflowRepositoryImpl;
+use std::collections::HashSet;
 use chrono::Utc;
 use heapless::String as HeaplessString;
 use sqlx::PgPool;
-use std::collections::HashSet;
 use uuid::Uuid;
 
 /// Test helper to create a sample workflow
+#[allow(dead_code)]
 fn create_test_workflow() -> AccountWorkflowModel {
     // Use fixed UUIDs for consistent testing
     let workflow_id = Uuid::new_v4();
@@ -31,6 +30,7 @@ fn create_test_workflow() -> AccountWorkflowModel {
 }
 
 /// Test helper to create a workflow in different states with unique data
+#[allow(dead_code)]
 fn create_test_workflow_with_status(status: WorkflowStatusModel, workflow_type: WorkflowTypeModel) -> AccountWorkflowModel {
     let mut workflow = create_test_workflow();
     workflow.id = Uuid::new_v4();
@@ -48,6 +48,7 @@ fn create_test_workflow_with_status(status: WorkflowStatusModel, workflow_type: 
 }
 
 /// Integration test helper to set up database connection
+#[allow(dead_code)]
 async fn setup_test_db() -> PgPool {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/mydb".to_string());
@@ -78,23 +79,25 @@ async fn setup_test_db() -> PgPool {
 
     // Create a test account for workflow references
     let test_account_id = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
+    let product_id = Uuid::new_v4();
     sqlx::query(
         r#"
         INSERT INTO accounts (
-            id, product_code, account_type, account_status, 
+            id, product_id, account_type, account_status,
             signing_condition, currency, open_date, domicile_agency_branch_id,
-            current_balance, available_balance, accrued_interest, 
+            current_balance, available_balance, accrued_interest,
             created_at, last_updated_at, updated_by_person_id
         ) VALUES (
-            $1, 'TST01', 'Savings', 'Active', 
-            'AnyOwner', 'USD', '2024-01-01', $2,
+            $1, $2, 'Savings', 'Active',
+            'AnyOwner', 'USD', '2024-01-01', $3,
             0.00, 0.00, 0.00,
-            NOW(), NOW(), $3
+            NOW(), NOW(), $4
         )
         ON CONFLICT (id) DO NOTHING
         "#
     )
     .bind(test_account_id)
+    .bind(product_id)
     .bind(Uuid::new_v4()) // domicile_agency_branch_id
     .bind(test_person_id)
     .execute(&pool)
@@ -107,6 +110,9 @@ async fn setup_test_db() -> PgPool {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_workflow_crud_operations() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     let workflow = create_test_workflow();
@@ -139,6 +145,9 @@ async fn test_workflow_crud_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_workflows_by_account() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -178,6 +187,9 @@ async fn test_find_workflows_by_account() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_active_workflow() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -202,6 +214,9 @@ async fn test_find_active_workflow() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_workflows_by_type() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -238,6 +253,9 @@ async fn test_find_workflows_by_type() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_workflows_by_status() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -270,6 +288,9 @@ async fn test_find_workflows_by_status() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_workflow_status_management() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     let workflow = create_test_workflow();
@@ -291,6 +312,9 @@ async fn test_workflow_status_management() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_workflow_step_management() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     let workflow = create_test_workflow();
@@ -311,6 +335,9 @@ async fn test_workflow_step_management() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_complete_workflow() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     let workflow = create_test_workflow();
@@ -332,6 +359,9 @@ async fn test_complete_workflow() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_fail_workflow() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     let workflow = create_test_workflow();
@@ -353,6 +383,9 @@ async fn test_fail_workflow() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_cancel_workflow() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     let workflow = create_test_workflow();
@@ -374,6 +407,9 @@ async fn test_cancel_workflow() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_pending_workflows() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -410,6 +446,9 @@ async fn test_find_pending_workflows() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_in_progress_workflows() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -451,6 +490,9 @@ async fn test_find_in_progress_workflows() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_expired_workflows() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -477,6 +519,9 @@ async fn test_find_expired_workflows() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_account_opening_workflows() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -529,6 +574,9 @@ async fn test_find_account_opening_workflows() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_pending_kyc_workflows() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -561,6 +609,9 @@ async fn test_find_pending_kyc_workflows() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_pending_document_verification() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -592,6 +643,9 @@ async fn test_find_pending_document_verification() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_utility_operations() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     let workflow = create_test_workflow();
@@ -626,6 +680,9 @@ async fn test_utility_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_list_workflows_pagination() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -678,6 +735,9 @@ async fn test_list_workflows_pagination() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_bulk_operations() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     
@@ -711,6 +771,9 @@ async fn test_bulk_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_bulk_timeout_expired_workflows() {
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
     let pool = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool);
     

@@ -30,7 +30,7 @@ mod fee_repository_tests {
             transaction_id,
             fee_type: FeeType::EventBased,
             fee_category: FeeCategory::Transaction,
-            product_code: HeaplessString::try_from("SAV01").unwrap(),
+            product_id: Uuid::new_v4(),
             fee_code: HeaplessString::try_from("ATM_WD").unwrap(),
             description: HeaplessString::try_from("ATM Withdrawal Fee").unwrap(),
             amount: Decimal::from_str("2.50").unwrap(),
@@ -73,7 +73,7 @@ mod fee_repository_tests {
     }
 
     /// Set up test database with prerequisite data
-    async fn setup_test_db() -> (PgPool, Uuid, Uuid) {
+    async fn setup_test_db() -> (PgPool, Uuid, Uuid, Uuid) {
         let pool = commons::establish_connection().await;
         
         // Clean up before starting tests
@@ -93,17 +93,19 @@ mod fee_repository_tests {
         
         // Create test account for foreign key references
         let test_account_id = Uuid::new_v4();
+        let product_id = Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO accounts (
-                id, product_code, account_type, account_status, signing_condition,
+                id, product_id, account_type, account_status, signing_condition,
                 currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
                 accrued_interest, overdraft_limit, updated_by_person_id
             ) VALUES (
-                $1, 'SAV01', 'Savings', 'Active', 'AnyOwner', 'USD', '2024-01-15',
-                $2, 1000.00, 950.00, 12.50, NULL, $3
+                $1, $2, 'Savings', 'Active', 'AnyOwner', 'USD', '2024-01-15',
+                $3, 1000.00, 950.00, 12.50, NULL, $4
             ) ON CONFLICT (id) DO NOTHING"#
         )
         .bind(test_account_id)
+        .bind(product_id)
         .bind(Uuid::new_v4()) // domicile_agency_branch_id
         .bind(test_person_id)
         .execute(&pool)
@@ -123,20 +125,20 @@ mod fee_repository_tests {
         .await
         .expect("Failed to create test reason");
         
-        (pool, test_person_id, test_account_id)
+        (pool, test_person_id, test_account_id, product_id)
     }
 
     /// Cleanup database for test isolation
     async fn cleanup_database(pool: &PgPool) {
         let _ = sqlx::query("DELETE FROM fee_waivers").execute(pool).await;
         let _ = sqlx::query("DELETE FROM fee_applications").execute(pool).await;
-        let _ = sqlx::query("DELETE FROM accounts WHERE product_code = 'SAV01'").execute(pool).await;
-        let _ = sqlx::query("DELETE FROM reason_and_purpose WHERE code = 'GOODWILL'").execute(pool).await;
+        let _ = sqlx::query("DELETE FROM accounts").execute(pool).await;
+        let _ = sqlx::query("DELETE FROM reason_and_purpose").execute(pool).await;
     }
 
     #[tokio::test]
     async fn test_create_fee_application() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         let mut fee_app = create_test_fee_application();
@@ -157,7 +159,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_get_fee_application_by_id() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         let mut fee_app = create_test_fee_application();
@@ -190,7 +192,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_update_fee_application() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         let mut fee_app = create_test_fee_application();
@@ -239,7 +241,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_get_fee_applications_for_account() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create multiple fee applications for the same account
@@ -292,7 +294,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_get_fee_applications_by_status() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create fee applications with different statuses
@@ -337,7 +339,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_bulk_create_fee_applications() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create multiple fee applications
@@ -367,7 +369,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_create_fee_waiver() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // First create a fee application
@@ -408,7 +410,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_get_fee_waivers_for_account() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create fee application and waiver
@@ -453,15 +455,16 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_get_accounts_eligible_for_fees() {
-        let (pool, _person_id, _account_id) = setup_test_db().await;
+        let (pool, _person_id, _account_id, _product_id) = setup_test_db().await;
         cleanup_database(&pool).await; // Clean start
-        let (_pool, _person_id, account_id) = setup_test_db().await; // Recreate test data
+        let (pool, _person_id, account_id, product_id) = setup_test_db().await; // Recreate test data
         println!("Test account_id after setup: {}", account_id);
         let repo = FeeRepositoryImpl::new(pool);
         
         // Test getting eligible accounts
+        // Use the product_id from the latest db setup
         let result = repo.get_accounts_eligible_for_fees(
-            Some(vec!["TST01".to_string()]),
+            Some(vec![product_id]),
             vec!["Maintenance".to_string()],
             NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
             0,
@@ -486,7 +489,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_get_fee_revenue_summary() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create fee applications with different statuses and amounts
@@ -541,7 +544,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_get_top_fee_accounts() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create multiple fee applications for the account
@@ -585,7 +588,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_get_fee_application_statistics() {
-        let (pool, _person_id, account_id) = setup_test_db().await;
+        let (pool, _person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create fee applications
@@ -621,7 +624,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_reverse_fee_application() {
-        let (pool, person_id, account_id) = setup_test_db().await;
+        let (pool, person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create a fee application
@@ -668,7 +671,7 @@ mod fee_repository_tests {
 
     #[tokio::test]
     async fn test_bulk_reverse_account_fees() {
-        let (pool, person_id, account_id) = setup_test_db().await;
+        let (pool, person_id, account_id, _product_id) = setup_test_db().await;
         let repo = FeeRepositoryImpl::new(pool);
         
         // Create multiple fee applications

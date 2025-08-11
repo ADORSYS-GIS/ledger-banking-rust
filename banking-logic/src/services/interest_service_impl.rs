@@ -236,16 +236,18 @@ impl InterestService for InterestServiceImpl {
         let mut current_date = from_date;
 
         // Get product rules to determine accrual frequency
-        let product_rules = self.product_repository.find_rules_by_product_id(account.product_id).await?.unwrap();
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
 
         while current_date <= to_date {
             // Check if we should accrue interest on this date
             let should_accrue = match product_rules.accrual_frequency {
-                banking_api::domain::AccrualFrequency::Daily => true,
-                banking_api::domain::AccrualFrequency::BusinessDaysOnly => {
+                banking_db::models::AccrualFrequency::Daily => true,
+                banking_db::models::AccrualFrequency::BusinessDaysOnly => {
                     self.calendar_service.is_business_day(current_date, account.currency.as_str()).await?
                 }
-                banking_api::domain::AccrualFrequency::None => false,
+                banking_db::models::AccrualFrequency::None => false,
             };
 
             if should_accrue {
@@ -274,26 +276,28 @@ impl InterestService for InterestServiceImpl {
         let account = AccountMapper::from_model(account_model)?;
 
         // Get product rules
-        let product_rules = self.product_repository.find_rules_by_product_id(account.product_id).await?.unwrap();
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
 
         // Check posting frequency
         match product_rules.interest_posting_frequency {
-            banking_api::domain::PostingFrequency::Daily => Ok(true),
-            banking_api::domain::PostingFrequency::Weekly => {
+            banking_db::models::PostingFrequency::Daily => Ok(true),
+            banking_db::models::PostingFrequency::Weekly => {
                 use chrono::Datelike;
                 // Post on Fridays or last business day of week
                 Ok(date.weekday() == chrono::Weekday::Fri ||
                    self.is_last_business_day_of_week(date).await?)
             }
-            banking_api::domain::PostingFrequency::Monthly => {
+            banking_db::models::PostingFrequency::Monthly => {
                 // Post on last business day of month
                 self.is_last_business_day_of_month(date).await
             }
-            banking_api::domain::PostingFrequency::Quarterly => {
+            banking_db::models::PostingFrequency::Quarterly => {
                 // Post on last business day of quarter
                 self.is_last_business_day_of_quarter(date).await
             }
-            banking_api::domain::PostingFrequency::Annually => {
+            banking_db::models::PostingFrequency::Annually => {
                 // Post on last business day of year
                 self.is_last_business_day_of_year(date).await
             }
@@ -367,7 +371,9 @@ impl InterestServiceImpl {
         let overdraft_amount = account.current_balance.abs();
         
         // Get overdraft interest rate from product catalog
-        let product_rules = self.product_repository.find_rules_by_product_id(account.product_id).await?.unwrap();
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
         let overdraft_rate = product_rules.overdraft_interest_rate.unwrap_or(Decimal::ZERO);
 
         // Calculate daily overdraft interest
@@ -537,6 +543,38 @@ mod tests {
     struct MockAccountRepository;
     struct MockTransactionRepository;
     struct MockCalendarService;
+    struct MockProductRepository;
+
+    #[async_trait]
+    impl ProductRepository for MockProductRepository {
+        async fn create_product(&self, _product: banking_db::models::ProductModel) -> BankingResult<banking_db::models::ProductModel> {
+            todo!()
+        }
+        async fn find_product_by_id(&self, _product_id: Uuid) -> BankingResult<Option<banking_db::models::ProductModel>> {
+            todo!()
+        }
+        async fn update_product(&self, _product: banking_db::models::ProductModel) -> BankingResult<banking_db::models::ProductModel> {
+            todo!()
+        }
+        async fn deactivate_product(&self, _product_id: Uuid, _updated_by_person_id: Uuid) -> BankingResult<()> {
+            todo!()
+        }
+        async fn reactivate_product(&self, _product_id: Uuid, _updated_by_person_id: Uuid) -> BankingResult<()> {
+            todo!()
+        }
+        async fn find_active_products(&self) -> BankingResult<Vec<banking_db::models::ProductModel>> {
+            todo!()
+        }
+        async fn find_products_by_type(&self, _product_type: banking_db::models::ProductType) -> BankingResult<Vec<banking_db::models::ProductModel>> {
+            todo!()
+        }
+        async fn find_interest_rate_tiers_by_product_id(&self, _product_id: Uuid) -> BankingResult<Vec<banking_db::models::product::InterestRateTierModel>> {
+            Ok(vec![])
+        }
+        async fn find_gl_mapping_by_product_id(&self, _product_id: Uuid) -> BankingResult<Option<banking_db::models::product::GlMappingModel>> {
+            Ok(None)
+        }
+    }
 
     #[async_trait]
     impl AccountRepository for MockAccountRepository {
@@ -551,7 +589,8 @@ mod tests {
         async fn create(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> { todo!() }
         async fn update(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> { todo!() }
         async fn find_by_customer_id(&self, _customer_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
-        async fn find_by_product_code(&self, _product_code: &str) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
+        async fn find_by_account_type(&self, _account_type: banking_db::models::AccountType) -> BankingResult<Vec<banking_db::models::AccountModel>> { Ok(vec![]) }
+        async fn find_by_product_id(&self, _product_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_by_status(&self, _status: &str) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_dormancy_candidates(&self, _reference_date: chrono::NaiveDate, _threshold_days: i32) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_pending_closure(&self) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
@@ -585,7 +624,7 @@ mod tests {
             todo!()
         }
         async fn count_by_customer(&self, _customer_id: Uuid) -> BankingResult<i64> { todo!() }
-        async fn count_by_product(&self, _product_code: &str) -> BankingResult<i64> { todo!() }
+        async fn count_by_product(&self, _product_id: Uuid) -> BankingResult<i64> { todo!() }
         async fn list(&self, _limit: i64, _offset: i64) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn count(&self) -> BankingResult<i64> { todo!() }
         async fn update_last_activity_date(&self, _account_id: Uuid, _activity_date: chrono::NaiveDate) -> BankingResult<()> { todo!() }

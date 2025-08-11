@@ -5,8 +5,7 @@ use rust_decimal::Decimal;
 use chrono::{NaiveDate};
 
 use crate::models::{
-    AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, 
-    StatusChangeModel, AccountFinalSettlementModel
+    AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, AccountFinalSettlementModel, AccountType
 };
 
 #[async_trait]
@@ -24,10 +23,13 @@ pub trait AccountRepository: Send + Sync {
     async fn find_by_customer_id(&self, customer_id: Uuid) -> BankingResult<Vec<AccountModel>>;
     
     /// Find accounts by product code
-    async fn find_by_product_code(&self, product_code: &str) -> BankingResult<Vec<AccountModel>>;
+    async fn find_by_product_id(&self, product_id: Uuid) -> BankingResult<Vec<AccountModel>>;
     
     /// Find accounts by status
     async fn find_by_status(&self, status: &str) -> BankingResult<Vec<AccountModel>>;
+    
+    /// Find accounts by account type
+    async fn find_by_account_type(&self, account_type: AccountType) -> BankingResult<Vec<AccountModel>>;
     
     /// Find accounts eligible for dormancy
     async fn find_dormancy_candidates(&self, reference_date: NaiveDate, threshold_days: i32) -> BankingResult<Vec<AccountModel>>;
@@ -78,13 +80,13 @@ pub trait AccountRepository: Send + Sync {
     async fn update_settlement_status(&self, settlement_id: Uuid, status: &str) -> BankingResult<()>;
     
     /// Status History Operations
-    async fn get_status_history(&self, account_id: Uuid) -> BankingResult<Vec<StatusChangeModel>>;
-    async fn add_status_change(&self, status_change: StatusChangeModel) -> BankingResult<StatusChangeModel>;
+    async fn get_status_history(&self, account_id: Uuid) -> BankingResult<Vec<crate::models::account::AccountStatusChangeRecordModel>>;
+    async fn add_status_change(&self, status_change: crate::models::account::AccountStatusChangeRecordModel) -> BankingResult<crate::models::account::AccountStatusChangeRecordModel>;
     
     /// Utility Operations
     async fn exists(&self, account_id: Uuid) -> BankingResult<bool>;
     async fn count_by_customer(&self, customer_id: Uuid) -> BankingResult<i64>;
-    async fn count_by_product(&self, product_code: &str) -> BankingResult<i64>;
+    async fn count_by_product(&self, product_id: Uuid) -> BankingResult<i64>;
     async fn list(&self, offset: i64, limit: i64) -> BankingResult<Vec<AccountModel>>;
     async fn count(&self) -> BankingResult<i64>;
 

@@ -28,7 +28,7 @@ pub struct ReasonViewModel {
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountViewModel {
     pub id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     #[serde(serialize_with = "serialize_account_type", deserialize_with = "deserialize_account_type")]
     pub account_type: AccountType,
     #[serde(serialize_with = "serialize_account_status", deserialize_with = "deserialize_account_status")]

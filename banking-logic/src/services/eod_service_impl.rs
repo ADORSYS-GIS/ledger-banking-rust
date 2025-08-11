@@ -12,9 +12,12 @@ use banking_api::{
         InterestService, FeeService, CalendarService, AccountLifecycleService
     },
 };
-use banking_db::repository::{
-    AccountRepository, TransactionRepository, WorkflowRepository, CalendarRepository
-};
+use banking_db::{repository::{
+    AccountRepository, CalendarRepository, ProductRepository, TransactionRepository,
+    WorkflowRepository,
+}, AccountType};
+
+use crate::mappers::{ApiMapper, ProductMapper};
 
 /// Production implementation of EodService
 /// Orchestrates end-of-day processing across all banking operations
@@ -24,6 +27,7 @@ pub struct EodServiceImpl {
     transaction_repository: Arc<dyn TransactionRepository>,
     workflow_repository: Arc<dyn WorkflowRepository>,
     calendar_repository: Arc<dyn CalendarRepository>,
+    product_repository: Arc<dyn ProductRepository>,
     interest_service: Arc<dyn InterestService>,
     fee_service: Arc<dyn FeeService>,
     calendar_service: Arc<dyn CalendarService>,
@@ -36,6 +40,7 @@ pub struct EodServiceConfig {
     pub transaction_repository: Arc<dyn TransactionRepository>,
     pub workflow_repository: Arc<dyn WorkflowRepository>,
     pub calendar_repository: Arc<dyn CalendarRepository>,
+    pub product_repository: Arc<dyn ProductRepository>,
     pub interest_service: Arc<dyn InterestService>,
     pub fee_service: Arc<dyn FeeService>,
     pub calendar_service: Arc<dyn CalendarService>,
@@ -49,6 +54,7 @@ impl EodServiceImpl {
             transaction_repository: config.transaction_repository,
             workflow_repository: config.workflow_repository,
             calendar_repository: config.calendar_repository,
+            product_repository: config.product_repository,
             interest_service: config.interest_service,
             fee_service: config.fee_service,
             calendar_service: config.calendar_service,
@@ -202,7 +208,7 @@ impl EodService for EodServiceImpl {
         let started_at = Utc::now();
         
         // Find loan accounts
-        let loan_accounts = self.account_repository.find_by_product_code("LOAN").await
+        let loan_accounts = self.account_repository.find_by_account_type(AccountType::Loan).await
             .unwrap_or_else(|_| vec![]);
         
         let mut processed = 0;
@@ -355,13 +361,28 @@ impl EodService for EodServiceImpl {
     }
 
     /// Process accounts that are candidates for dormancy
-    async fn process_dormancy_candidates(&self, processing_date: NaiveDate) -> BankingResult<DormancyReport> {
-        // Find accounts with no activity for dormancy threshold (e.g., 180 days)
-        let dormancy_candidates = self.account_repository.find_dormancy_candidates(
-            processing_date,
-            180, // 180 days threshold
-        ).await?;
-        
+    async fn process_dormancy_candidates(
+        &self,
+        processing_date: NaiveDate,
+    ) -> BankingResult<DormancyReport> {
+        let all_products: Vec<banking_api::domain::Product> = self
+            .product_repository
+            .find_active_products()
+            .await?
+            .into_iter()
+            .map(ProductMapper::from_db)
+            .collect();
+
+        let mut dormancy_candidates = Vec::new();
+        for product in all_products {
+            let threshold = self.get_dormancy_threshold(product.id).await?;
+            let candidates = self
+                .account_repository
+                .find_dormancy_candidates(processing_date, threshold)
+                .await?;
+            dormancy_candidates.extend(candidates);
+        }
+
         let mut accounts_marked_dormant = 0;
         let mut accounts_by_product = HashMap::new();
         let mut errors = vec![];
@@ -375,8 +396,8 @@ impl EodService for EodServiceImpl {
             ).await {
                 Ok(_) => {
                     accounts_marked_dormant += 1;
-                    let product_code = account.product_code.as_str().to_string();
-                    *accounts_by_product.entry(product_code).or_insert(0) += 1;
+                    let product_id = account.product_id.to_string();
+                    *accounts_by_product.entry(product_id).or_insert(0) += 1;
                 }
                 Err(e) => errors.push(format!("Account {}: {e}", account.id)),
             }
@@ -460,5 +481,35 @@ impl EodService for EodServiceImpl {
         maintenance_report.workflows_cleaned = 0; // Placeholder
         
         Ok(maintenance_report)
+    }
+
+    async fn get_dormancy_threshold(&self, product_id: Uuid) -> BankingResult<i32> {
+        let product_model = self.product_repository.find_product_by_id(product_id).await?;
+        if let Some(p) = product_model {
+            let product_domain = ProductMapper::from_db(p);
+            if let Some(days) = product_domain.rules.default_dormancy_days {
+                return Ok(days);
+            }
+        }
+        Ok(180)
+    }
+    
+    async fn calculate_inactivity_period(
+        &self,
+        account_id: Uuid,
+        reference_date: NaiveDate,
+    ) -> BankingResult<i32> {
+        let last_activity_transaction = self
+            .transaction_repository
+            .find_last_customer_transaction(account_id)
+            .await?;
+
+        match last_activity_transaction {
+            Some(transaction) => {
+                let inactivity_days = reference_date.signed_duration_since(transaction.transaction_date.date_naive()).num_days();
+                Ok(inactivity_days as i32)
+            }
+            None => Ok(0),
+        }
     }
 }

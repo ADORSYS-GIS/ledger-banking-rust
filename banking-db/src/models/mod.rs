@@ -24,7 +24,7 @@ pub use account_hold::*;
 pub use transaction::*;
 pub use agent_network::*;
 pub use compliance::{
-    KycResultModel, KycCheckModel, KycRecordModel, 
+    KycResultModel, KycCheckModel,
     ScreeningResultModel, SanctionsMatchModel, SanctionsScreeningModel,
     ComplianceAlertModel, ExtendedComplianceAlertModel, UboVerificationResultModel,
     UboLinkModel, ComplianceResultModel, ComplianceRiskScoreModel,
