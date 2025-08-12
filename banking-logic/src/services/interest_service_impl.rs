@@ -784,8 +784,21 @@ mod tests {
         async fn is_weekend(&self, _date: NaiveDate, _jurisdiction: &str) -> BankingResult<bool> {
             Ok(false)
         }
-        async fn get_weekend_days(&self, _jurisdiction: &str) -> BankingResult<Vec<chrono::Weekday>> {
-            Ok(vec![chrono::Weekday::Sat, chrono::Weekday::Sun])
+        
+        async fn create_weekend_days(&self, weekend_days: banking_api::domain::WeekendDays) -> BankingResult<banking_api::domain::WeekendDays> {
+            Ok(weekend_days)
+        }
+        
+        async fn get_weekend_days_by_id(&self, _weekend_days_id: Uuid) -> BankingResult<Option<banking_api::domain::WeekendDays>> {
+            Ok(None)
+        }
+        
+        async fn update_weekend_days(&self, weekend_days: banking_api::domain::WeekendDays) -> BankingResult<banking_api::domain::WeekendDays> {
+            Ok(weekend_days)
+        }
+        
+        async fn delete_weekend_days(&self, _weekend_days_id: Uuid) -> BankingResult<()> {
+            Ok(())
         }
     }
 }

@@ -108,7 +108,6 @@ CREATE TYPE verification_status AS ENUM ('Pending', 'Verified', 'Rejected', 'Req
 -- Calendar enums
 CREATE TYPE holiday_type AS ENUM ('National', 'Regional', 'Religious', 'Banking');
 CREATE TYPE date_shift_rule AS ENUM ('NextBusinessDay', 'PreviousBusinessDay', 'NoShift');
-CREATE TYPE weekend_treatment AS ENUM ('SaturdaySunday', 'FridayOnly', 'Custom');
 CREATE TYPE import_status AS ENUM ('Success', 'Partial', 'Failed');
 
 -- Collateral related enums
@@ -1227,7 +1226,7 @@ CREATE TABLE date_calculation_rules (
     rule_name VARCHAR(100) NOT NULL,
     rule_type VARCHAR(30) NOT NULL CHECK (rule_type IN ('DateShift', 'MaturityCalculation', 'PaymentDue')),
     default_shift_rule date_shift_rule NOT NULL,
-    weekend_treatment weekend_treatment NOT NULL,
+    weekend_days UUID NOT NULL,
     product_specific_overrides VARCHAR(1000), -- JSON with product-specific rules
     priority INTEGER NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -3545,3 +3544,40 @@ CREATE TABLE "PlaceHoldRequest" (
 
 -- Add foreign key constraints
 ALTER TABLE "AccountHoldSummary" ADD CONSTRAINT "AccountHoldSummary_account_balance_calculation_id_fkey" FOREIGN KEY ("account_balance_calculation_id") REFERENCES "AccountBalanceCalculation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- =============================================================================
+-- MIGRATION FROM 002_calendar_weekend_days.sql
+-- =============================================================================
+
+-- Create the custom enum type for weekdays
+CREATE TYPE weekday AS ENUM (
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+);
+
+-- Create the weekend_days table
+CREATE TABLE weekend_days (
+    id UUID PRIMARY KEY,
+    name_l1 VARCHAR(50) NOT NULL,
+    name_l2 VARCHAR(50),
+    name_l3 VARCHAR(50),
+    weekend_day_01 weekday,
+    weekend_day_02 weekday,
+    weekend_day_03 weekday,
+    weekend_day_04 weekday,
+    weekend_day_05 weekday,
+    weekend_day_06 weekday,
+    weekend_day_07 weekday,
+    valid_from TIMESTAMPTZ NOT NULL,
+    valid_to TIMESTAMPTZ,
+    created_by_person_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add an index on created_by_person_id for faster lookups
+CREATE INDEX idx_weekend_days_created_by ON weekend_days(created_by_person_id);

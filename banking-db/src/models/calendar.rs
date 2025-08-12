@@ -1,41 +1,122 @@
-use chrono::{DateTime, Utc, NaiveDate, Weekday};
+use chrono::{DateTime, Utc, NaiveDate};
 use uuid::Uuid;
 use heapless::String as HeaplessString;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
-/// Holiday Type enum matching domain model
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
-#[cfg_attr(feature = "sqlx", sqlx(type_name = "holiday_type", rename_all = "PascalCase"))]
-pub enum HolidayType { 
-    National, 
-    Regional,
-    Religious, 
-    Banking
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "weekday", rename_all = "PascalCase")]
+pub enum Weekday {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
 }
 
-/// Date Shift Rule enum matching domain model
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum DateShiftRule { 
+impl FromStr for Weekday {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Monday" => Ok(Weekday::Monday),
+            "Tuesday" => Ok(Weekday::Tuesday),
+            "Wednesday" => Ok(Weekday::Wednesday),
+            "Thursday" => Ok(Weekday::Thursday),
+            "Friday" => Ok(Weekday::Friday),
+            "Saturday" => Ok(Weekday::Saturday),
+            "Sunday" => Ok(Weekday::Sunday),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct WeekendDaysModel {
+    pub id: Uuid,
+    pub name_l1: HeaplessString<50>,
+    pub name_l2: Option<HeaplessString<50>>,
+    pub name_l3: Option<HeaplessString<50>>,
+    pub weekend_day_01: Option<Weekday>,
+    pub weekend_day_02: Option<Weekday>,
+    pub weekend_day_03: Option<Weekday>,
+    pub weekend_day_04: Option<Weekday>,
+    pub weekend_day_05: Option<Weekday>,
+    pub weekend_day_06: Option<Weekday>,
+    pub weekend_day_07: Option<Weekday>,
+    pub valid_from: DateTime<Utc>,
+    pub valid_to: Option<DateTime<Utc>>,
+    pub created_by_person_id: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "holiday_type", rename_all = "PascalCase")]
+pub enum HolidayType {
+    National,
+    Regional,
+    Religious,
+    Banking,
+}
+
+impl FromStr for HolidayType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "National" => Ok(HolidayType::National),
+            "Regional" => Ok(HolidayType::Regional),
+            "Religious" => Ok(HolidayType::Religious),
+            "Banking" => Ok(HolidayType::Banking),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "date_shift_rule", rename_all = "PascalCase")]
+pub enum DateShiftRule {
     NextBusinessDay,
     PreviousBusinessDay,
     NoShift,
 }
 
-/// Weekend Treatment enum matching domain model
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum WeekendTreatment { 
-    SaturdaySunday, 
-    FridayOnly, 
-    Custom(Vec<Weekday>) 
+impl FromStr for DateShiftRule {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NextBusinessDay" => Ok(DateShiftRule::NextBusinessDay),
+            "PreviousBusinessDay" => Ok(DateShiftRule::PreviousBusinessDay),
+            "NoShift" => Ok(DateShiftRule::NoShift),
+            _ => Err(()),
+        }
+    }
 }
 
-/// Import Status enum
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "import_status", rename_all = "PascalCase")]
 pub enum ImportStatus {
     Success,
     Partial,
     Failed,
+}
+
+impl FromStr for ImportStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Success" => Ok(ImportStatus::Success),
+            "Partial" => Ok(ImportStatus::Partial),
+            "Failed" => Ok(ImportStatus::Failed),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Bank Holiday database model - simplified to match domain
@@ -79,7 +160,7 @@ pub struct DateCalculationRulesModel {
     pub rule_name: HeaplessString<100>,
     pub rule_type: HeaplessString<30>, // DateShift, MaturityCalculation, PaymentDue
     pub default_shift_rule: DateShiftRule, // Use enum instead of HeaplessString
-    pub weekend_treatment: WeekendTreatment, // Use enum instead of HeaplessString
+    pub weekend_days_id: Uuid,
     pub product_specific_overrides: Option<HeaplessString<1000>>, // JSON with product-specific rules
     pub priority: i32, // Rule precedence order
     pub is_active: bool,
