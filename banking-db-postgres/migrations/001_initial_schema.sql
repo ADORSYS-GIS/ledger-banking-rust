@@ -14,46 +14,46 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =============================================================================
 
 -- Person type enum for referenced persons
-CREATE TYPE person_type AS ENUM ('natural', 'legal', 'system', 'integration', 'unknown');
+CREATE TYPE person_type AS ENUM ('Natural', 'Legal', 'System', 'Integration', 'Unknown');
 
 -- Address type enum
-CREATE TYPE address_type AS ENUM ('residential', 'business', 'mailing', 'temporary', 'branch', 'community', 'other');
+CREATE TYPE address_type AS ENUM ('Residential', 'Business', 'Mailing', 'Temporary', 'Branch', 'Community', 'Other');
 
 -- Messaging type enum
-CREATE TYPE messaging_type AS ENUM ('email', 'phone', 'sms', 'whatsapp', 'telegram', 'skype', 'teams', 'signal', 'wechat', 'viber', 'messenger', 'linkedin', 'slack', 'discord', 'other');
+CREATE TYPE messaging_type AS ENUM ('Email', 'Phone', 'Sms', 'Whatsapp', 'Telegram', 'Skype', 'Teams', 'Signal', 'Wechat', 'Viber', 'Messenger', 'Linkedin', 'Slack', 'Discord', 'Other');
 
 -- Service type enum for branch capabilities
-CREATE TYPE service_type AS ENUM ('cash_withdrawal', 'cash_deposit', 'cash_transfer', 'bill_payment', 'account_opening', 'card_services', 'check_deposit', 'foreign_exchange', 'remittance_collection', 'agent_banking');
+CREATE TYPE service_type AS ENUM ('CashWithdrawal', 'CashDeposit', 'CashTransfer', 'BillPayment', 'AccountOpening', 'CardServices', 'CheckDeposit', 'ForeignExchange', 'RemittanceCollection', 'AgentBanking');
 
 -- Certification status enum
-CREATE TYPE certification_status AS ENUM ('active', 'expired', 'suspended', 'revoked');
+CREATE TYPE certification_status AS ENUM ('Active', 'Expired', 'Suspended', 'Revoked');
 
 -- Person entity type enum
-CREATE TYPE person_entity_type AS ENUM ('customer', 'employee', 'shareholder', 'director', 'beneficialowner', 'agent', 'vendor', 'partner', 'regulatorycontact', 'emergencycontact', 'systemadmin', 'other');
+CREATE TYPE person_entity_type AS ENUM ('Customer', 'Employee', 'Shareholder', 'Director', 'BeneficialOwner', 'Agent', 'Vendor', 'Partner', 'RegulatoryContact', 'EmergencyContact', 'SystemAdmin', 'Other');
 
 -- Disbursement status enum
 CREATE TYPE disbursement_status AS ENUM ('Pending', 'Approved', 'Executed', 'Cancelled', 'Failed', 'PartiallyExecuted');
 
 -- Agent network type enum
-CREATE TYPE network_type AS ENUM ('internal', 'partner', 'thirdparty');
+CREATE TYPE network_type AS ENUM ('Internal', 'Partner', 'ThirdParty');
 
 -- Agent network status enum
-CREATE TYPE network_status AS ENUM ('active', 'suspended', 'terminated');
+CREATE TYPE network_status AS ENUM ('Active', 'Suspended', 'Terminated');
 
 -- Branch status enum
-CREATE TYPE branch_status AS ENUM ('active', 'suspended', 'closed', 'temporarilyclosed');
+CREATE TYPE branch_status AS ENUM ('Active', 'Suspended', 'Closed', 'TemporarilyClosed');
 
 -- Branch type enum
-CREATE TYPE branch_type AS ENUM ('main_branch', 'sub_branch', 'agent_outlet', 'standalone_kiosk', 'partner_agent', 'atm_location', 'mobile_unit');
+CREATE TYPE branch_type AS ENUM ('MainBranch', 'SubBranch', 'AgentOutlet', 'StandaloneKiosk', 'PartnerAgent', 'AtmLocation', 'MobileUnit');
 
 -- Terminal type enum
-CREATE TYPE terminal_type AS ENUM ('pos', 'mobile', 'atm', 'webportal');
+CREATE TYPE terminal_type AS ENUM ('Pos', 'Mobile', 'Atm', 'WebPortal');
 
 -- Terminal status enum
-CREATE TYPE terminal_status AS ENUM ('active', 'maintenance', 'suspended', 'decommissioned');
+CREATE TYPE terminal_status AS ENUM ('Active', 'Maintenance', 'Suspended', 'Decommissioned');
 
 -- Branch risk rating enum
-CREATE TYPE branch_risk_rating AS ENUM ('low', 'medium', 'high', 'critical');
+CREATE TYPE branch_risk_rating AS ENUM ('Low', 'Medium', 'High', 'Critical');
 
 -- Customer related enums
 CREATE TYPE customer_type AS ENUM ('Individual', 'Corporate');
@@ -69,13 +69,10 @@ CREATE TYPE account_status AS ENUM ('PendingApproval', 'Active', 'Dormant', 'Fro
 CREATE TYPE signing_condition AS ENUM ('None', 'AnyOwner', 'AllOwners');
 CREATE TYPE disbursement_method AS ENUM ('Transfer', 'CashWithdrawal', 'Check', 'HoldFunds', 'OverdraftFacility', 'StagedRelease');
 -- hold_type has been updated to match the domain definition
-DROP TYPE IF EXISTS hold_type CASCADE;
 CREATE TYPE hold_type AS ENUM ('UnclearedFunds', 'JudicialLien', 'LoanPledge', 'ComplianceHold', 'AdministrativeHold', 'FraudHold', 'PendingAuthorization', 'OverdraftReserve', 'CardAuthorization', 'Other');
 -- hold_status has been updated to match the domain definition
-DROP TYPE IF EXISTS hold_status CASCADE;
 CREATE TYPE hold_status AS ENUM ('Active', 'Released', 'Expired', 'Cancelled', 'PartiallyReleased');
 -- hold_priority has been updated to match the domain definition
-DROP TYPE IF EXISTS hold_priority CASCADE;
 CREATE TYPE hold_priority AS ENUM ('Critical', 'High', 'Standard', 'Medium', 'Low');
 CREATE TYPE ownership_type AS ENUM ('Single', 'Joint', 'Corporate');
 CREATE TYPE entity_type AS ENUM ('Branch', 'Agent', 'RiskManager', 'ComplianceOfficer', 'CustomerService');
@@ -89,7 +86,6 @@ CREATE TYPE transaction_type AS ENUM ('Credit', 'Debit');
 CREATE TYPE transaction_status AS ENUM ('Pending', 'Posted', 'Reversed', 'Failed', 'AwaitingApproval', 'ApprovalRejected');
 CREATE TYPE transaction_approval_status AS ENUM ('Pending', 'Approved', 'Rejected', 'PartiallyApproved');
 CREATE TYPE transaction_workflow_status AS ENUM ('Pending', 'Approved', 'Rejected', 'TimedOut');
-CREATE TYPE transaction_audit_action AS ENUM ('Created', 'StatusChanged', 'Posted', 'Reversed', 'Failed', 'Approved', 'Rejected');
 CREATE TYPE channel_type AS ENUM ('MobileApp', 'AgentTerminal', 'ATM', 'InternetBanking', 'BranchTeller', 'USSD', 'ApiGateway');
 CREATE TYPE channel_status AS ENUM ('Active', 'Inactive', 'Maintenance', 'Suspended');
 CREATE TYPE channel_fee_type AS ENUM ('TransactionFee', 'MaintenanceFee', 'ServiceFee', 'PenaltyFee', 'ProcessingFee', 'ComplianceFee', 'InterchangeFee', 'NetworkFee');
@@ -105,7 +101,6 @@ CREATE TYPE risk_level AS ENUM ('Low', 'Medium', 'High', 'Critical');
 CREATE TYPE alert_type AS ENUM ('StructuringDetection', 'VelocityCheck', 'LargeCashTransaction', 'SuspiciousPattern', 'GeographicAnomaly', 'CrossBorderTransaction');
 CREATE TYPE severity AS ENUM ('Low', 'Medium', 'High', 'Critical');
 CREATE TYPE alert_status AS ENUM ('New', 'InReview', 'Investigated', 'Cleared', 'Escalated');
-CREATE TYPE sar_status AS ENUM ('Draft', 'Filed', 'Acknowledged');
 CREATE TYPE compliance_status AS ENUM ('Passed', 'Failed', 'RequiresReview', 'Pending');
 CREATE TYPE control_type AS ENUM ('DirectOwnership', 'IndirectOwnership', 'SignificantInfluence', 'SeniorManagement');
 CREATE TYPE verification_status AS ENUM ('Pending', 'Verified', 'Rejected', 'RequiresUpdate');
@@ -154,35 +149,28 @@ CREATE TYPE workflow_status AS ENUM ('Pending', 'InProgress', 'Approved', 'Rejec
 CREATE TYPE restructuring_type AS ENUM ('Rescheduling', 'Renewal', 'Refinancing', 'Restructuring', 'WriteOff');
 
 -- Update existing transaction_audit_action to match API enum
-DROP TYPE IF EXISTS transaction_audit_action CASCADE;
-CREATE TYPE transaction_audit_action AS ENUM ('Create', 'Approve', 'Reject', 'Cancel', 'Reverse', 'Modify', 'StatusChange');
+CREATE TYPE transaction_audit_action AS ENUM ('Created', 'StatusChanged', 'Posted', 'Reversed', 'Failed', 'Approved', 'Rejected');
 
--- The hold_type enum is now aligned with the domain model.
-
--- The hold_status enum is now aligned with the domain model.
-
--- Update existing sar_status to match API enum
-DROP TYPE IF EXISTS sar_status CASCADE;
-CREATE TYPE sar_status AS ENUM ('Draft', 'Submitted', 'Acknowledged', 'UnderReview', 'Closed');
+CREATE TYPE sar_status AS ENUM ('Draft', 'Filed', 'Acknowledged', 'UnderReview', 'Closed');
 
 -- Daily Collection Service related enums
-CREATE TYPE agent_status AS ENUM ('active', 'suspended', 'training', 'onleave', 'terminated');
-CREATE TYPE area_type AS ENUM ('urban', 'suburban', 'rural', 'commercial', 'industrial', 'mixed');
-CREATE TYPE customer_density AS ENUM ('high', 'medium', 'low');
-CREATE TYPE transport_mode AS ENUM ('walking', 'bicycle', 'motorcycle', 'car', 'publictransport', 'mixed');
-CREATE TYPE device_type AS ENUM ('smartphone', 'tablet', 'portableterminal', 'smartwatch');
-CREATE TYPE connectivity_status AS ENUM ('online', 'offline', 'limitedconnectivity', 'syncpending');
-CREATE TYPE collection_program_type AS ENUM ('fixedamount', 'variableamount', 'targetbased', 'durationbased');
-CREATE TYPE program_status AS ENUM ('active', 'suspended', 'closed', 'underreview');
-CREATE TYPE collection_frequency AS ENUM ('daily', 'weekly', 'monthly', 'quarterly', 'yearly');
-CREATE TYPE collection_status AS ENUM ('active', 'suspended', 'defaulted', 'graduated', 'terminated');
-CREATE TYPE holiday_handling AS ENUM ('skip', 'nextbusinessday', 'previousbusinessday', 'collectdouble');
-CREATE TYPE reliability_rating AS ENUM ('excellent', 'good', 'fair', 'poor', 'critical');
-CREATE TYPE collection_method AS ENUM ('cash', 'mobilepayment', 'banktransfer', 'digitalwallet');
-CREATE TYPE collection_record_status AS ENUM ('pending', 'processed', 'failed', 'reversed', 'underreview');
-CREATE TYPE biometric_method AS ENUM ('fingerprint', 'facerecognition', 'voiceprint', 'combined');
-CREATE TYPE batch_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'partiallyprocessed', 'requiresreconciliation');
-CREATE TYPE fee_frequency AS ENUM ('percollection', 'daily', 'weekly', 'monthly', 'onetime');
+CREATE TYPE agent_status AS ENUM ('Active', 'Suspended', 'Training', 'OnLeave', 'Terminated');
+CREATE TYPE area_type AS ENUM ('Urban', 'Suburban', 'Rural', 'Commercial', 'Industrial', 'Mixed');
+CREATE TYPE customer_density AS ENUM ('High', 'Medium', 'Low');
+CREATE TYPE transport_mode AS ENUM ('Walking', 'Bicycle', 'Motorcycle', 'Car', 'PublicTransport', 'Mixed');
+CREATE TYPE device_type AS ENUM ('Smartphone', 'Tablet', 'PortableTerminal', 'Smartwatch');
+CREATE TYPE connectivity_status AS ENUM ('Online', 'Offline', 'LimitedConnectivity', 'SyncPending');
+CREATE TYPE collection_program_type AS ENUM ('FixedAmount', 'VariableAmount', 'TargetBased', 'DurationBased');
+CREATE TYPE program_status AS ENUM ('Active', 'Suspended', 'Closed', 'UnderReview');
+CREATE TYPE collection_frequency AS ENUM ('Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly');
+CREATE TYPE collection_status AS ENUM ('Active', 'Suspended', 'Defaulted', 'Graduated', 'Terminated');
+CREATE TYPE holiday_handling AS ENUM ('Skip', 'NextBusinessDay', 'PreviousBusinessDay', 'CollectDouble');
+CREATE TYPE reliability_rating AS ENUM ('Excellent', 'Good', 'Fair', 'Poor', 'Critical');
+CREATE TYPE collection_method AS ENUM ('Cash', 'MobilePayment', 'BankTransfer', 'DigitalWallet');
+CREATE TYPE collection_record_status AS ENUM ('Pending', 'Processed', 'Failed', 'Reversed', 'UnderReview');
+CREATE TYPE biometric_method AS ENUM ('Fingerprint', 'FaceRecognition', 'Voiceprint', 'Combined');
+CREATE TYPE batch_status AS ENUM ('Pending', 'Processing', 'Completed', 'Failed', 'PartiallyProcessed', 'RequiresReconciliation');
+CREATE TYPE fee_frequency AS ENUM ('PerCollection', 'Daily', 'Weekly', 'Monthly', 'OneTime');
 
 -- Product catalogue enums
 CREATE TYPE product_type AS ENUM ('CASA', 'LOAN');
@@ -923,7 +911,7 @@ CREATE TABLE compliance_cert (
     issuer_person_id UUID NOT NULL REFERENCES persons(id),
     issue_date DATE NOT NULL,
     expiry_date DATE,
-    status certification_status NOT NULL DEFAULT 'active'
+    status certification_status NOT NULL DEFAULT 'Active'
 );
 
 -- Operating Hours standalone table
@@ -1063,7 +1051,7 @@ CREATE TABLE agent_networks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     network_name VARCHAR(100) NOT NULL,
     network_type network_type NOT NULL,
-    status network_status NOT NULL DEFAULT 'active',
+    status network_status NOT NULL DEFAULT 'Active',
     contract_external_id VARCHAR(50),
     aggregate_daily_limit DECIMAL(15,2) NOT NULL,
     current_daily_volume DECIMAL(15,2) NOT NULL DEFAULT 0,
@@ -1080,7 +1068,7 @@ CREATE TABLE agent_branches (
     branch_code VARCHAR(8) NOT NULL,
     branch_level INTEGER NOT NULL DEFAULT 1,
     gl_code_prefix VARCHAR(6) NOT NULL,
-    status branch_status NOT NULL DEFAULT 'active',
+    status branch_status NOT NULL DEFAULT 'Active',
     daily_transaction_limit DECIMAL(15,2) NOT NULL,
     current_daily_volume DECIMAL(15,2) NOT NULL DEFAULT 0,
     max_cash_limit DECIMAL(15,2) NOT NULL,
@@ -1126,7 +1114,7 @@ CREATE TABLE agent_branches (
     monthly_transaction_limit DECIMAL(15,2),
     
     -- Compliance and risk
-    risk_rating branch_risk_rating NOT NULL DEFAULT 'low',
+    risk_rating branch_risk_rating NOT NULL DEFAULT 'Low',
     last_audit_date DATE,
     last_compliance_certification_id UUID REFERENCES compliance_cert(id),
     
@@ -1150,7 +1138,7 @@ CREATE TABLE agent_terminals (
     max_cash_limit DECIMAL(15,2) NOT NULL,
     current_cash_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
     minimum_cash_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
-    status terminal_status NOT NULL DEFAULT 'active',
+    status terminal_status NOT NULL DEFAULT 'Active',
     last_sync_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -2391,10 +2379,10 @@ CREATE TRIGGER reason_and_purpose_updated_at
 -- Insert system persons (organization_person_id field is now UUID, set to NULL for system accounts)
 INSERT INTO persons (id, person_type, display_name, external_identifier, organization_person_id, is_active)
 VALUES 
-    ('00000000-0000-0000-0000-000000000000', 'system', 'SYSTEM', 'SYSTEM', NULL, TRUE),
-    ('00000000-0000-0000-0000-000000000001', 'system', 'MIGRATION', 'MIGRATION', NULL, TRUE),
-    ('00000000-0000-0000-0000-000000000002', 'integration', 'API_INTEGRATION', 'API', NULL, TRUE),
-    ('00000000-0000-0000-0000-000000000003', 'system', 'BATCH_PROCESSOR', 'BATCH', NULL, TRUE);
+    ('00000000-0000-0000-0000-000000000000', 'System', 'SYSTEM', 'SYSTEM', NULL, TRUE),
+    ('00000000-0000-0000-0000-000000000001', 'System', 'MIGRATION', 'MIGRATION', NULL, TRUE),
+    ('00000000-0000-0000-0000-000000000002', 'Integration', 'API_INTEGRATION', 'API', NULL, TRUE),
+    ('00000000-0000-0000-0000-000000000003', 'System', 'BATCH_PROCESSOR', 'BATCH', NULL, TRUE);
 
 -- =============================================================================
 -- SEED DATA: REASON AND PURPOSE ENTRIES
@@ -2419,7 +2407,7 @@ INSERT INTO reason_and_purpose (
     'Kununua Nyumba',
     'eng', 'fra', 'swa',
     FALSE, TRUE, NULL, 1,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2431,7 +2419,7 @@ INSERT INTO reason_and_purpose (
     'Upanuzi wa Biashara',
     'eng', 'fra', 'swa',
     TRUE, TRUE, NULL, 2,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2443,7 +2431,7 @@ INSERT INTO reason_and_purpose (
     'Elimu',
     'eng', 'fra', 'swa',
     FALSE, TRUE, NULL, 3,
-    'system', 'system'
+    'System', 'System'
 ),
 
 -- Account Closure Reasons
@@ -2457,7 +2445,7 @@ INSERT INTO reason_and_purpose (
     'Ombi la Mteja',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'Low', 1,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2469,7 +2457,7 @@ INSERT INTO reason_and_purpose (
     'Kutotumika kwa Akaunti',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Low', 2,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2481,7 +2469,7 @@ INSERT INTO reason_and_purpose (
     'Suala la Utiifu',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 3,
-    'system', 'system'
+    'System', 'System'
 ),
 
 -- AML/CTF Reasons  
@@ -2495,7 +2483,7 @@ INSERT INTO reason_and_purpose (
     'Mfumo wa shughuli za kutiliwa shaka umegundulika',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 1,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2507,7 +2495,7 @@ INSERT INTO reason_and_purpose (
     'Jina linafanana na orodha ya vikwazo',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'Critical', 1,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2519,7 +2507,7 @@ INSERT INTO reason_and_purpose (
     'Muamala unahusisha eneo lenye hatari kubwa',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 2,
-    'system', 'system'
+    'System', 'System'
 ),
 
 -- KYC Reasons
@@ -2533,7 +2521,7 @@ INSERT INTO reason_and_purpose (
     'Kitambulisho cha taifa kimepita muda',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 1,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2545,7 +2533,7 @@ INSERT INTO reason_and_purpose (
     'Uthibitisho wa makazi unahitajika',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 2,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2557,7 +2545,7 @@ INSERT INTO reason_and_purpose (
     'Hati za chanzo cha fedha zinahitajika',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 1,
-    'system', 'system'
+    'System', 'System'
 ),
 
 -- Transaction Hold Reasons
@@ -2571,7 +2559,7 @@ INSERT INTO reason_and_purpose (
     'Fedha hazitoshi',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 1,
-    'system', 'system'
+    'System', 'System'
 ),
 (
     gen_random_uuid(),
@@ -2583,7 +2571,7 @@ INSERT INTO reason_and_purpose (
     'Kuna uchunguzi wa udanganyifu',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 2,
-    'system', 'system'
+    'System', 'System'
 ),
 
 -- System Generated Reasons
@@ -2597,7 +2585,7 @@ INSERT INTO reason_and_purpose (
     'Usingizi wa otomatiki kwa kutotumika',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Low', 1,
-    'system', 'system'
+    'System', 'System'
 );
 
 -- Update compliance metadata for specific reasons

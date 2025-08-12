@@ -29,8 +29,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -51,8 +51,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -73,8 +73,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             // Account Closure Reasons
@@ -96,8 +96,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -118,8 +118,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -150,8 +150,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             // AML/CTF Reasons
@@ -187,8 +187,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -225,8 +225,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -257,8 +257,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             // KYC Reasons
@@ -290,8 +290,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -322,8 +322,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -354,8 +354,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             // Transaction Hold Reasons
@@ -377,8 +377,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             ReasonAndPurpose {
@@ -409,8 +409,8 @@ impl ReasonSeeds {
                 }),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
             
             // System Generated Reasons
@@ -432,8 +432,8 @@ impl ReasonSeeds {
                 compliance_metadata: None,
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
-                created_by_person_id: HeaplessString::try_from("system").unwrap(),
-                updated_by_person_id: HeaplessString::try_from("system").unwrap(),
+                created_by_person_id: HeaplessString::try_from("System").unwrap(),
+                updated_by_person_id: HeaplessString::try_from("System").unwrap(),
             },
         ]
     }

@@ -349,6 +349,8 @@ where S: Serializer {
         SarStatus::Draft => "Draft",
         SarStatus::Filed => "Filed",
         SarStatus::Acknowledged => "Acknowledged",
+        SarStatus::UnderReview => "UnderReview",
+        SarStatus::Closed => "Closed",
     };
     serializer.serialize_str(value_str)
 }
@@ -360,6 +362,8 @@ where D: Deserializer<'de> {
         "Draft" => Ok(SarStatus::Draft),
         "Filed" => Ok(SarStatus::Filed),
         "Acknowledged" => Ok(SarStatus::Acknowledged),
+        "UnderReview" => Ok(SarStatus::UnderReview),
+        "Closed" => Ok(SarStatus::Closed),
         _ => Err(serde::de::Error::custom("Invalid SarStatus value"))
     }
 }

@@ -230,6 +230,8 @@ pub enum SarStatus {
     Draft,
     Filed,
     Acknowledged,
+    UnderReview,
+    Closed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

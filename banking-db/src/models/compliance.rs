@@ -184,6 +184,8 @@ pub enum SarStatus {
     Draft,
     Filed,
     Acknowledged,
+    UnderReview,
+    Closed,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -898,8 +900,10 @@ where
 {
     let status_str = match status {
         SarStatus::Draft => "Draft",
+        SarStatus::UnderReview => "UnderReview",
         SarStatus::Filed => "Filed",
         SarStatus::Acknowledged => "Acknowledged",
+        SarStatus::Closed => "Closed",
     };
     serializer.serialize_str(status_str)
 }
@@ -911,8 +915,10 @@ where
     let s = String::deserialize(deserializer)?;
     match s.as_str() {
         "Draft" => Ok(SarStatus::Draft),
+        "UnderReview" => Ok(SarStatus::UnderReview),
         "Filed" => Ok(SarStatus::Filed),
         "Acknowledged" => Ok(SarStatus::Acknowledged),
+        "Closed" => Ok(SarStatus::Closed),
         _ => Err(serde::de::Error::custom(format!("Unknown SAR status: {s}"))),
     }
 }

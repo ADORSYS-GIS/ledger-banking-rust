@@ -172,7 +172,7 @@ async fn setup_test_db() -> PgPool {
     sqlx::query(
         r#"
         INSERT INTO persons (id, person_type, display_name, external_identifier)
-        VALUES ($1, 'system', 'Test User', 'test-user')
+        VALUES ($1, 'System', 'Test User', 'test-user')
         ON CONFLICT (id) DO NOTHING
         "#
     )

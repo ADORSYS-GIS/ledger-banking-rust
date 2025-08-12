@@ -318,6 +318,8 @@ impl ComplianceMapper {
             SarStatus::Draft => DbSarStatus::Draft,
             SarStatus::Filed => DbSarStatus::Filed,
             SarStatus::Acknowledged => DbSarStatus::Acknowledged,
+            SarStatus::UnderReview => DbSarStatus::UnderReview,
+            SarStatus::Closed => DbSarStatus::Closed,
         }
     }
 

@@ -19,11 +19,11 @@ impl PersonRepositoryImpl {
 /// Helper function to parse person type string
 fn parse_person_type(type_str: &str) -> BankingResult<PersonType> {
     match type_str {
-        "natural" => Ok(PersonType::Natural),
-        "legal" => Ok(PersonType::Legal),
-        "system" => Ok(PersonType::System),
-        "integration" => Ok(PersonType::Integration),
-        "unknown" => Ok(PersonType::Unknown),
+        "Natural" => Ok(PersonType::Natural),
+        "Legal" => Ok(PersonType::Legal),
+        "System" => Ok(PersonType::System),
+        "Integration" => Ok(PersonType::Integration),
+        "Unknown" => Ok(PersonType::Unknown),
         _ => Err(BankingError::ValidationError {
             field: "person_type".to_string(),
             message: format!("Invalid person type: {type_str}"),
@@ -409,7 +409,7 @@ mod tests {
     fn create_test_person() -> PersonModel {
         PersonModel {
             id: Uuid::new_v4(),
-            person_type: PersonType::Natural,
+            person_type: PersonType::Legal,
             display_name: HeaplessString::try_from("John Doe").unwrap(),
             external_identifier: Some(HeaplessString::try_from("EXT001").unwrap()),
             organization_person_id: None,
@@ -503,7 +503,7 @@ mod tests {
         let created = repo.create(test_person.clone()).await.expect("Failed to create person");
         
         // Try to find or create - should find existing
-        let result = repo.find_or_create("John Doe", PersonType::Natural, Some(&external_id)).await;
+        let result = repo.find_or_create("John Doe", PersonType::Legal, Some(&external_id)).await;
         assert!(result.is_ok());
         
         let found = result.unwrap();
