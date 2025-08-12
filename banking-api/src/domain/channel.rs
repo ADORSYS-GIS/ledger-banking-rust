@@ -19,6 +19,8 @@ pub struct Channel {
     pub supported_currency03: Option<HeaplessString<3>>,
     pub requires_additional_auth: bool,
     pub fee_schedule_id: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +39,7 @@ pub struct ChannelFee {
     pub currency: HeaplessString<3>,
     pub description: HeaplessString<200>,
     pub applies_to_transaction_id: Uuid,
+    pub created_at: DateTime<Utc>,
 }
 
 
@@ -45,6 +48,7 @@ pub struct ReconciliationReportDiscrepancy {
     pub id: Uuid,
     pub reconciliation_report_id: Uuid,
     pub discrepancy_id: Uuid,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,15 +60,22 @@ pub struct ReconciliationReport {
     pub total_amount: Decimal,
     pub status: ReconciliationStatus,
     pub generated_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Discrepancy {
+    pub id: Uuid,
+    pub report_id: Uuid,
     pub transaction_id: Uuid,
     pub description: HeaplessString<200>,
     pub expected_amount: Decimal,
     pub actual_amount: Decimal,
     pub difference: Decimal,
+    pub resolved: bool,
+    pub resolution_notes: Option<HeaplessString<500>>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,7 +91,7 @@ pub enum ReconciliationStatus {
 pub struct FeeSchedule {
     pub id: Uuid,
     pub schedule_name: HeaplessString<100>,
-    pub channel_id: Uuid,
+    pub channel_id: Option<Uuid>,
     pub effective_date: chrono::NaiveDate,
     pub expiry_date: Option<chrono::NaiveDate>,
     pub currency: HeaplessString<3>,
@@ -98,6 +109,7 @@ pub struct FeeSchedule {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeItem {
     pub id: Uuid,
+    pub schedule_id: Uuid,
     pub fee_code: HeaplessString<20>,
     pub fee_name: HeaplessString<100>,
     pub fee_type: ChannelFeeType,
@@ -130,6 +142,7 @@ pub struct FeeItem {
     pub applies_to_transaction_type_11: Option<HeaplessString<20>>,
     pub is_waivable: bool,
     pub requires_approval_for_waiver: bool,
+    pub created_at: DateTime<Utc>,
 }
 
 /// Channel fee calculation methods
@@ -160,10 +173,12 @@ pub enum ChannelFeeType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelFeeTier {
     pub id: Uuid,
+    pub fee_item_id: Uuid,
     pub tier_name: HeaplessString<50>,
     pub min_amount: Decimal,
     pub max_amount: Option<Decimal>,
     pub fee_amount: Option<Decimal>,
     pub fee_percentage: Option<Decimal>,
     pub tier_order: i32,
+    pub created_at: DateTime<Utc>,
 }

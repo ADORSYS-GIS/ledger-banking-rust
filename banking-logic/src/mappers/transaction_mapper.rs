@@ -263,10 +263,10 @@ impl TransactionRequestMapper {
         match t {
             domain::ChannelType::MobileApp => db::ChannelType::MobileApp,
             domain::ChannelType::AgentTerminal => db::ChannelType::AgentTerminal,
-            domain::ChannelType::ATM => db::ChannelType::ATM,
+            domain::ChannelType::Atm => db::ChannelType::Atm,
             domain::ChannelType::InternetBanking => db::ChannelType::InternetBanking,
             domain::ChannelType::BranchTeller => db::ChannelType::BranchTeller,
-            domain::ChannelType::USSD => db::ChannelType::USSD,
+            domain::ChannelType::Ussd => db::ChannelType::Ussd,
             domain::ChannelType::ApiGateway => db::ChannelType::ApiGateway,
         }
     }
@@ -275,10 +275,10 @@ impl TransactionRequestMapper {
         match t {
             db::ChannelType::MobileApp => domain::ChannelType::MobileApp,
             db::ChannelType::AgentTerminal => domain::ChannelType::AgentTerminal,
-            db::ChannelType::ATM => domain::ChannelType::ATM,
+            db::ChannelType::Atm => domain::ChannelType::Atm,
             db::ChannelType::InternetBanking => domain::ChannelType::InternetBanking,
             db::ChannelType::BranchTeller => domain::ChannelType::BranchTeller,
-            db::ChannelType::USSD => domain::ChannelType::USSD,
+            db::ChannelType::Ussd => domain::ChannelType::Ussd,
             db::ChannelType::ApiGateway => domain::ChannelType::ApiGateway,
         }
     }

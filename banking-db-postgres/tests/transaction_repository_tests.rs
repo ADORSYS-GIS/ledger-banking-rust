@@ -20,7 +20,7 @@ fn create_test_transaction(account_id: Uuid) -> TransactionModel {
         amount: Decimal::from_str("100.00").unwrap(),
         currency: HeaplessString::try_from("USD").unwrap(),
         description: HeaplessString::try_from("Test deposit transaction").unwrap(),
-        channel_id: HeaplessString::try_from("ATM").unwrap(),
+        channel_id: HeaplessString::try_from("Atm").unwrap(),
         terminal_id: Some(Uuid::new_v4()),
         agent_person_id: None,
         transaction_date: Utc::now(),
@@ -501,7 +501,7 @@ async fn test_transaction_find_by_channel() {
     transaction2.reference_number = HeaplessString::try_from(
         format!("ATM{}", Utc::now().timestamp_micros() % 100000).as_str()
     ).unwrap();
-    transaction2.channel_id = HeaplessString::try_from("ATM").unwrap();
+    transaction2.channel_id = HeaplessString::try_from("Atm").unwrap();
     
     repo.create(transaction1.clone()).await
         .expect("Failed to create mobile transaction");
@@ -628,7 +628,7 @@ async fn test_transaction_reconciliation() {
     let account_id = create_test_account_in_db(&pool).await;
     
     // Create transactions for reconciliation
-    let channel = "ATM";
+    let channel = "Atm";
     let reconciliation_date = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
     
     let mut transaction1 = create_test_transaction(account_id);

@@ -281,7 +281,7 @@ impl AgentNetworkMapper {
             BranchType::AgentOutlet => DbBranchType::AgentOutlet,
             BranchType::StandaloneKiosk => DbBranchType::StandaloneKiosk,
             BranchType::PartnerAgent => DbBranchType::PartnerAgent,
-            BranchType::ATMLocation => DbBranchType::AtmLocation,
+            BranchType::AtmLocation => DbBranchType::AtmLocation,
             BranchType::MobileUnit => DbBranchType::MobileUnit,
         }
     }
@@ -293,7 +293,7 @@ impl AgentNetworkMapper {
             DbBranchType::AgentOutlet => BranchType::AgentOutlet,
             DbBranchType::StandaloneKiosk => BranchType::StandaloneKiosk,
             DbBranchType::PartnerAgent => BranchType::PartnerAgent,
-            DbBranchType::AtmLocation => BranchType::ATMLocation,
+            DbBranchType::AtmLocation => BranchType::AtmLocation,
             DbBranchType::MobileUnit => BranchType::MobileUnit,
         }
     }

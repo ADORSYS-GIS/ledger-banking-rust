@@ -1,8 +1,9 @@
 #[cfg(feature = "postgres_tests")]
 mod channel_repository_tests {
-    use banking_api::BankingResult;
+    use banking_api::{BankingResult};
     use banking_db::models::channel::{ChannelModel, ChannelStatus};
     use banking_db::repository::ChannelRepository;
+    use banking_db::ChannelType;
     use banking_db_postgres::repository::ChannelRepositoryImpl;
     use sqlx::PgPool;
     use uuid::Uuid;
@@ -36,7 +37,7 @@ mod channel_repository_tests {
             id: channel_id,
             channel_code: HeaplessString::try_from("ATM001").unwrap(),
             channel_name: HeaplessString::try_from("ATM Branch 001").unwrap(),
-            channel_type: "ATM".to_string(),
+            channel_type: ChannelType::Atm,
             status: ChannelStatus::Active,
             daily_limit: Some(Decimal::from_str("10000.00").unwrap()),
             per_transaction_limit: Some(Decimal::from_str("5000.00").unwrap()),
@@ -60,7 +61,7 @@ mod channel_repository_tests {
             id: channel_id,
             channel_code: HeaplessString::try_from(unique_code.as_str()).unwrap(),
             channel_name: HeaplessString::try_from(unique_name.as_str()).unwrap(),
-            channel_type: "MobileApp".to_string(),
+            channel_type: ChannelType::MobileApp,
             status: ChannelStatus::Active,
             daily_limit: Some(Decimal::from_str("20000.00").unwrap()),
             per_transaction_limit: Some(Decimal::from_str("1000.00").unwrap()),
@@ -88,7 +89,7 @@ mod channel_repository_tests {
         assert_eq!(created.id, channel_id);
         assert_eq!(created.channel_code.as_str(), "ATM001");
         assert_eq!(created.channel_name.as_str(), "ATM Branch 001");
-        assert_eq!(created.channel_type, "ATM");
+        assert_eq!(created.channel_type, ChannelType::Atm);
         assert!(matches!(created.status, ChannelStatus::Active));
         assert_eq!(created.daily_limit, Some(Decimal::from_str("10000.00").unwrap()));
         assert_eq!(created.per_transaction_limit, Some(Decimal::from_str("5000.00").unwrap()));
@@ -173,18 +174,18 @@ mod channel_repository_tests {
         
         let channel1 = create_unique_test_channel("001");
         let mut channel2 = create_unique_test_channel("002");
-        channel2.channel_type = "ATM".to_string();
+        channel2.channel_type = ChannelType::Atm;
         
         let _created1 = repo.create(channel1).await.expect("Failed to create channel 1");
         let _created2 = repo.create(channel2).await.expect("Failed to create channel 2");
         
-        let mobile_channels = repo.find_by_type("MobileApp").await.expect("Failed to find channels by type");
+        let mobile_channels = repo.find_by_type(ChannelType::MobileApp).await.expect("Failed to find channels by type");
         assert_eq!(mobile_channels.len(), 1);
-        assert_eq!(mobile_channels[0].channel_type, "MobileApp");
+        assert_eq!(mobile_channels[0].channel_type, ChannelType::MobileApp);
         
-        let atm_channels = repo.find_by_type("ATM").await.expect("Failed to find ATM channels");
+        let atm_channels = repo.find_by_type(ChannelType::Atm).await.expect("Failed to find ATM channels");
         assert_eq!(atm_channels.len(), 1);
-        assert_eq!(atm_channels[0].channel_type, "ATM");
+        assert_eq!(atm_channels[0].channel_type, ChannelType::Atm);
         
         cleanup_database(&repo.get_pool()).await;
     }

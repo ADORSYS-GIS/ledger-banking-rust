@@ -86,7 +86,7 @@ CREATE TYPE transaction_type AS ENUM ('Credit', 'Debit');
 CREATE TYPE transaction_status AS ENUM ('Pending', 'Posted', 'Reversed', 'Failed', 'AwaitingApproval', 'ApprovalRejected');
 CREATE TYPE transaction_approval_status AS ENUM ('Pending', 'Approved', 'Rejected', 'PartiallyApproved');
 CREATE TYPE transaction_workflow_status AS ENUM ('Pending', 'Approved', 'Rejected', 'TimedOut');
-CREATE TYPE channel_type AS ENUM ('MobileApp', 'AgentTerminal', 'ATM', 'InternetBanking', 'BranchTeller', 'USSD', 'ApiGateway');
+CREATE TYPE channel_type AS ENUM ('MobileApp', 'AgentTerminal', 'Atm', 'InternetBanking', 'BranchTeller', 'Ussd', 'ApiGateway');
 CREATE TYPE channel_status AS ENUM ('Active', 'Inactive', 'Maintenance', 'Suspended');
 CREATE TYPE channel_fee_type AS ENUM ('TransactionFee', 'MaintenanceFee', 'ServiceFee', 'PenaltyFee', 'ProcessingFee', 'ComplianceFee', 'InterchangeFee', 'NetworkFee');
 CREATE TYPE channel_fee_calculation_method AS ENUM ('Fixed', 'Percentage', 'Tiered', 'BalanceBased', 'RuleBased', 'Hybrid');
@@ -729,7 +729,7 @@ CREATE TABLE transactions (
     description VARCHAR(200) NOT NULL,
     
     -- Multi-channel processing support
-    channel_id VARCHAR(50) NOT NULL, -- 'BranchTeller', 'ATM', 'OnlineBanking', 'MobileBanking', 'AgentBanking'
+    channel_id VARCHAR(50) NOT NULL, 
     terminal_id UUID, -- For ATM/POS transactions, references terminals table
     agent_person_id UUID, -- For agent banking transactions
     
@@ -802,7 +802,7 @@ CREATE TABLE transaction_requests (
     amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     description VARCHAR(200) NOT NULL,
-    channel VARCHAR(20) NOT NULL CHECK (channel IN ('MobileApp', 'AgentTerminal', 'ATM', 'InternetBanking', 'BranchTeller', 'USSD', 'ApiGateway')),
+    channel VARCHAR(20) NOT NULL CHECK (channel IN ('MobileApp', 'AgentTerminal', 'Atm', 'InternetBanking', 'BranchTeller', 'Ussd', 'ApiGateway')),
     terminal_id UUID,
     initiator_person_id UUID NOT NULL REFERENCES persons(id),
     external_reference VARCHAR(100),
@@ -1912,7 +1912,7 @@ CREATE TABLE channels (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     channel_code VARCHAR(50) NOT NULL UNIQUE,
     channel_name VARCHAR(100) NOT NULL,
-    channel_type VARCHAR(30) NOT NULL CHECK (channel_type IN ('BranchTeller', 'ATM', 'InternetBanking', 'MobileApp', 'AgentTerminal', 'USSD', 'ApiGateway')),
+    channel_type VARCHAR(30) NOT NULL CHECK (channel_type IN ('BranchTeller', 'Atm', 'InternetBanking', 'MobileApp', 'AgentTerminal', 'Ussd', 'ApiGateway')),
     status channel_status NOT NULL DEFAULT 'Active',
     daily_limit DECIMAL(15,2),
     per_transaction_limit DECIMAL(15,2),
@@ -1996,7 +1996,7 @@ CREATE TABLE fee_items (
 );
 
 -- Fee tiers for tiered pricing structures
-CREATE TABLE fee_tiers (
+CREATE TABLE channel_fee_tiers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     fee_item_id UUID NOT NULL REFERENCES fee_items(id) ON DELETE CASCADE,
     tier_name VARCHAR(50) NOT NULL,
@@ -2076,8 +2076,8 @@ CREATE INDEX idx_fee_schedules_effective ON fee_schedules(effective_date);
 CREATE INDEX idx_fee_items_schedule ON fee_items(schedule_id);
 CREATE INDEX idx_fee_items_code ON fee_items(fee_code);
 CREATE INDEX idx_fee_items_type ON fee_items(fee_type);
-CREATE INDEX idx_fee_tiers_item ON fee_tiers(fee_item_id);
-CREATE INDEX idx_fee_tiers_order ON fee_tiers(tier_order);
+CREATE INDEX idx_fee_tiers_item ON channel_fee_tiers(fee_item_id);
+CREATE INDEX idx_fee_tiers_order ON channel_fee_tiers(tier_order);
 CREATE INDEX idx_reconciliation_reports_channel ON channel_reconciliation_reports(channel_id);
 CREATE INDEX idx_reconciliation_reports_date ON channel_reconciliation_reports(reconciliation_date);
 CREATE INDEX idx_reconciliation_discrepancies_report ON reconciliation_discrepancies(report_id);

@@ -111,8 +111,8 @@ mod stack_optimization_tests {
             transaction_type: TransactionType::Debit,
             amount: Decimal::new(25000, 2), // $250.00
             currency: HeaplessString::try_from("USD").unwrap(),
-            description: HeaplessString::try_from("ATM withdrawal at Main Branch").unwrap(),
-            channel_id: HeaplessString::try_from("ATM").unwrap(),
+            description: HeaplessString::try_from("Atm withdrawal at Main Branch").unwrap(),
+            channel_id: HeaplessString::try_from("Atm").unwrap(),
             terminal_id: Some(Uuid::new_v4()),
             agent_person_id: None,
             transaction_date: Utc::now(),
@@ -132,16 +132,16 @@ mod stack_optimization_tests {
         println!("Transaction JSON: {}", json);
 
         // Verify HeaplessString fields are serialized correctly
-        assert!(json.contains("\"description\":\"ATM withdrawal at Main Branch\""));
-        assert!(json.contains("\"channel_id\":\"ATM\""));
+        assert!(json.contains("\"description\":\"Atm withdrawal at Main Branch\""));
+        assert!(json.contains("\"channel_id\":\"Atm\""));
         assert!(json.contains("\"reference_number\":\"TXN2024011500123\""));
 
         // Test deserialization
         let deserialized: Transaction = serde_json::from_str(&json).expect("Transaction deserialization should succeed");
         
         // Verify HeaplessString fields
-        assert_eq!(deserialized.description.as_str(), "ATM withdrawal at Main Branch");
-        assert_eq!(deserialized.channel_id.as_str(), "ATM");
+        assert_eq!(deserialized.description.as_str(), "Atm withdrawal at Main Branch");
+        assert_eq!(deserialized.channel_id.as_str(), "Atm");
         assert_eq!(deserialized.reference_number.as_str(), "TXN2024011500123");
         assert_eq!(deserialized.transaction_code.as_str(), "DEBIT1");
         assert_eq!(deserialized.gl_code.as_str(), "GL1100001");

@@ -1,8 +1,6 @@
-use banking_api::domain::channel::{
-    Channel, ChannelStatus, FeeSchedule, ReconciliationReport, 
-    Discrepancy, ChannelFeeType, ChannelFeeCalculationMethod, ReconciliationStatus,
-    FeeItem, ChannelFeeTier
-};
+use banking_api::{domain::{channel::{
+    Channel, ChannelFeeCalculationMethod, ChannelFeeTier, ChannelFeeType, ChannelStatus, Discrepancy, FeeItem, FeeSchedule, ReconciliationReport, ReconciliationStatus
+}}, ChannelType};
 use banking_db::models::channel::{
     ChannelModel, FeeScheduleModel, FeeItemModel, FeeTierModel,
     ChannelReconciliationReportModel, ReconciliationDiscrepancyModel
@@ -13,8 +11,37 @@ use chrono::Utc;
 pub struct ChannelMapper;
 
 impl ChannelMapper {
+    /// Convert domain ChannelType to database ChannelType
+    pub fn map_to_db_channel_type(channel_type: ChannelType) -> banking_db::ChannelType {
+        match channel_type {
+            ChannelType::Atm => banking_db::ChannelType::Atm,
+            ChannelType::AgentTerminal => banking_db::ChannelType::AgentTerminal,
+            ChannelType::ApiGateway => banking_db::ChannelType::ApiGateway,
+            ChannelType::BranchTeller => banking_db::ChannelType::BranchTeller,
+            ChannelType::InternetBanking => banking_db::ChannelType::InternetBanking,
+            ChannelType::MobileApp => banking_db::ChannelType::MobileApp,
+            ChannelType::Ussd => banking_db::ChannelType::Ussd,
+        }
+    }
+
+    /// Convert database ChannelType to domain ChannelType
+    fn map_from_db_channel_type(db_channel_type: banking_db::ChannelType) -> ChannelType {
+        match db_channel_type {
+            banking_db::ChannelType::Atm => ChannelType::Atm,
+            banking_db::ChannelType::AgentTerminal => ChannelType::AgentTerminal,
+            banking_db::ChannelType::ApiGateway => ChannelType::ApiGateway,
+            banking_db::ChannelType::BranchTeller => ChannelType::BranchTeller,
+            banking_db::ChannelType::InternetBanking => ChannelType::InternetBanking,
+            banking_db::ChannelType::MobileApp => ChannelType::MobileApp,
+            banking_db::ChannelType::Ussd => ChannelType::Ussd,
+        }
+    }
+
     /// Convert domain Channel to database ChannelModel
     pub fn to_channel_model(channel: Channel) -> ChannelModel {
+
+        let channel_type = Self::map_to_db_channel_type(channel.channel_type);
+
         let status = match channel.status {
             ChannelStatus::Active => banking_db::models::channel::ChannelStatus::Active,
             ChannelStatus::Inactive => banking_db::models::channel::ChannelStatus::Inactive,
@@ -26,7 +53,7 @@ impl ChannelMapper {
             id: channel.id,
             channel_code: channel.channel_code,
             channel_name: channel.channel_name,
-            channel_type: format!("{:?}", channel.channel_type),
+            channel_type,
             status,
             daily_limit: channel.daily_limit,
             per_transaction_limit: channel.per_transaction_limit,
@@ -43,18 +70,8 @@ impl ChannelMapper {
     /// Convert database ChannelModel to domain Channel
     pub fn from_channel_model(model: ChannelModel) -> Result<Channel, String> {
         use banking_api::domain::channel::Channel;
-        use banking_api::domain::transaction::ChannelType;
 
-        let channel_type = match model.channel_type.as_str() {
-            "BranchTeller" => ChannelType::BranchTeller,
-            "ATM" => ChannelType::ATM,
-            "InternetBanking" => ChannelType::InternetBanking,
-            "MobileApp" => ChannelType::MobileApp,
-            "AgentTerminal" => ChannelType::AgentTerminal,
-            "USSD" => ChannelType::USSD,
-            "ApiGateway" => ChannelType::ApiGateway,
-            _ => return Err(format!("Unknown channel type: {}", model.channel_type)),
-        };
+        let channel_type = Self::map_from_db_channel_type(model.channel_type);
 
         let status = match model.status {
             banking_db::models::channel::ChannelStatus::Active => ChannelStatus::Active,
@@ -76,6 +93,8 @@ impl ChannelMapper {
             supported_currency03: model.supported_currency03,
             requires_additional_auth: model.requires_additional_auth,
             fee_schedule_id: model.fee_schedule_id,
+            created_at: model.created_at,
+            updated_at: model.updated_at,
         })
     }
 
@@ -85,7 +104,7 @@ impl ChannelMapper {
         FeeScheduleModel {
             id: schedule.id,
             schedule_name: schedule.schedule_name,
-            channel_id: Some(schedule.channel_id),
+            channel_id: schedule.channel_id,
             effective_date: schedule.effective_date,
             expiry_date: schedule.expiry_date,
             currency: schedule.currency,
@@ -105,7 +124,7 @@ impl ChannelMapper {
         Ok(FeeSchedule {
             id: model.id,
             schedule_name: model.schedule_name,
-            channel_id: model.channel_id.ok_or("Channel ID is required for fee schedule")?,
+            channel_id: model.channel_id,
             effective_date: model.effective_date,
             expiry_date: model.expiry_date,
             currency: model.currency,
@@ -161,6 +180,8 @@ impl ChannelMapper {
             total_amount: model.total_amount,
             status,
             generated_at: model.generated_at,
+            completed_at: model.completed_at,
+            created_at: model.created_at,
         }
     }
 
@@ -177,11 +198,16 @@ impl ChannelMapper {
         };
 
         Discrepancy {
-            transaction_id: model.id,
+            id: model.id,
+            report_id: model.report_id,
+            transaction_id: model.transaction_id,
             description,
             expected_amount: model.expected_amount,
             actual_amount: model.actual_amount,
             difference: model.difference,
+            resolved: model.resolved,
+            resolution_notes: model.resolution_notes,
+            created_at: model.created_at,
         }
     }
 
@@ -270,6 +296,7 @@ impl ChannelMapper {
 
         FeeItem {
             id: model.id,
+            schedule_id: model.schedule_id,
             fee_code: model.fee_code,
             fee_name: model.fee_name,
             fee_type,
@@ -302,6 +329,7 @@ impl ChannelMapper {
             applies_to_transaction_type_11: model.applies_to_transaction_type_11,
             is_waivable: model.is_waivable,
             requires_approval_for_waiver: model.requires_approval_for_waiver,
+            created_at: model.created_at,
         }
     }
 
@@ -309,12 +337,14 @@ impl ChannelMapper {
     pub fn from_fee_tier_model(model: FeeTierModel) -> ChannelFeeTier {
         ChannelFeeTier {
             id: model.id,
+            fee_item_id: model.fee_item_id,
             tier_name: model.tier_name,
             min_amount: model.min_amount,
             max_amount: model.max_amount,
             fee_amount: model.fee_amount,
             fee_percentage: model.fee_percentage,
             tier_order: model.tier_order,
+            created_at: model.created_at,
         }
     }
 

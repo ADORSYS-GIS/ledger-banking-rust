@@ -118,10 +118,10 @@ impl std::fmt::Display for ChannelType {
         match self {
             ChannelType::MobileApp => write!(f, "MobileApp"),
             ChannelType::AgentTerminal => write!(f, "AgentTerminal"),
-            ChannelType::ATM => write!(f, "ATM"),
+            ChannelType::Atm => write!(f, "Atm"),
             ChannelType::InternetBanking => write!(f, "InternetBanking"),
             ChannelType::BranchTeller => write!(f, "BranchTeller"),
-            ChannelType::USSD => write!(f, "USSD"),
+            ChannelType::Ussd => write!(f, "Ussd"),
             ChannelType::ApiGateway => write!(f, "ApiGateway"),
         }
     }
@@ -221,10 +221,10 @@ impl std::str::FromStr for ChannelType {
         match s {
             "MobileApp" => Ok(ChannelType::MobileApp),
             "AgentTerminal" => Ok(ChannelType::AgentTerminal),
-            "ATM" => Ok(ChannelType::ATM),
+            "Atm" => Ok(ChannelType::Atm),
             "InternetBanking" => Ok(ChannelType::InternetBanking),
             "BranchTeller" => Ok(ChannelType::BranchTeller),
-            "USSD" => Ok(ChannelType::USSD),
+            "Ussd" => Ok(ChannelType::Ussd),
             "ApiGateway" => Ok(ChannelType::ApiGateway),
             _ => Err(format!("Invalid ChannelType: {s}")),
         }
@@ -607,10 +607,10 @@ pub enum TransactionAuditAction {
 pub enum ChannelType {
     MobileApp,
     AgentTerminal,
-    ATM,
+    Atm,
     InternetBanking,
     BranchTeller,
-    USSD,
+    Ussd,
     ApiGateway,
 }
 
