@@ -40,7 +40,7 @@ pub trait TransactionRepository: Send + Sync {
     async fn find_by_terminal_id(&self, terminal_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>>;
     
     /// Find transactions by agent user ID
-    async fn find_by_agent_user_id(&self, agent_user_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>>;
+    async fn find_by_agent_person_id(&self, agent_person_id: Uuid, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>>;
     
     /// Find transactions by channel
     async fn find_by_channel(&self, channel_id: &str, from_date: Option<NaiveDate>, to_date: Option<NaiveDate>) -> BankingResult<Vec<TransactionModel>>;
@@ -80,7 +80,7 @@ pub trait TransactionRepository: Send + Sync {
     /// Transaction Approval Operations
     async fn create_approval(&self, approval: WorkflowTransactionApprovalModel) -> BankingResult<WorkflowTransactionApprovalModel>;
     async fn find_approvals_by_workflow(&self, workflow_id: Uuid) -> BankingResult<Vec<WorkflowTransactionApprovalModel>>;
-    async fn find_approvals_by_approver(&self, approver_id: Uuid) -> BankingResult<Vec<WorkflowTransactionApprovalModel>>;
+    async fn find_approvals_by_approver(&self, approver_person_id: Uuid) -> BankingResult<Vec<WorkflowTransactionApprovalModel>>;
     async fn count_approvals_for_workflow(&self, workflow_id: Uuid) -> BankingResult<i64>;
     
     /// Utility Operations

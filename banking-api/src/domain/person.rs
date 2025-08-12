@@ -580,7 +580,7 @@ pub struct Person {
     pub external_identifier: Option<HeaplessString<50>>,
     
     /// References another Person.person_id for organizational hierarchy
-    pub organization: Option<Uuid>,
+    pub organization_person_id: Option<Uuid>,
     
     /// References to Messaging.messaging_id (up to 5 messaging methods)
     pub messaging1_id: Option<Uuid>,
@@ -598,10 +598,10 @@ pub struct Person {
     pub department: Option<HeaplessString<50>>,
     
     /// References Address.address_id for person's location
-    pub location: Option<Uuid>,
+    pub location_address_id: Option<Uuid>,
     
     /// Reference to another Person if this is a duplicate
-    pub duplicate_of: Option<Uuid>,
+    pub duplicate_of_person_id: Option<Uuid>,
     
     
     /// Whether this person reference is currently active
@@ -629,7 +629,7 @@ impl Person {
             person_type,
             display_name,
             external_identifier: None,
-            organization: None,
+            organization_person_id: None,
             messaging1_id: None,
             messaging1_type: None,
             messaging2_id: None,
@@ -641,8 +641,8 @@ impl Person {
             messaging5_id: None,
             messaging5_type: None,
             department: None,
-            location: None,
-            duplicate_of: None,
+            location_address_id: None,
+            duplicate_of_person_id: None,
             is_active: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -656,7 +656,7 @@ impl Person {
             person_type: PersonType::System,
             display_name: HeaplessString::try_from("SYSTEM").unwrap(),
             external_identifier: None,
-            organization: None,
+            organization_person_id: None,
             messaging1_id: None,
             messaging1_type: None,
             messaging2_id: None,
@@ -668,8 +668,8 @@ impl Person {
             messaging5_id: None,
             messaging5_type: None,
             department: None,
-            location: None,
-            duplicate_of: None,
+            location_address_id: None,
+            duplicate_of_person_id: None,
             is_active: true,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -767,11 +767,11 @@ pub struct PersonBuilder {
     person_type: PersonType,
     display_name: String,
     external_identifier: Option<String>,
-    organization: Option<Uuid>,
+    organization_person_id: Option<Uuid>,
     messaging: Vec<Uuid>,
     department: Option<String>,
-    location: Option<Uuid>,
-    duplicate_of: Option<Uuid>,
+    location_address_id: Option<Uuid>,
+    duplicate_of_person_id: Option<Uuid>,
     is_active: bool,
 }
 
@@ -782,11 +782,11 @@ impl PersonBuilder {
             person_type,
             display_name: display_name.as_ref().to_string(),
             external_identifier: None,
-            organization: None,
+            organization_person_id: None,
             messaging: Vec::new(),
             department: None,
-            location: None,
-            duplicate_of: None,
+            location_address_id: None,
+            duplicate_of_person_id: None,
             is_active: true,
         }
     }
@@ -796,8 +796,8 @@ impl PersonBuilder {
         self
     }
     
-    pub fn organization(mut self, organization_id: Uuid) -> Self {
-        self.organization = Some(organization_id);
+    pub fn organization_person_id(mut self, organization_id: Uuid) -> Self {
+        self.organization_person_id = Some(organization_id);
         self
     }
     
@@ -811,13 +811,13 @@ impl PersonBuilder {
         self
     }
     
-    pub fn location(mut self, address_id: Uuid) -> Self {
-        self.location = Some(address_id);
+    pub fn location_address_id(mut self, address_id: Uuid) -> Self {
+        self.location_address_id = Some(address_id);
         self
     }
     
-    pub fn duplicate_of(mut self, person_id: Uuid) -> Self {
-        self.duplicate_of = Some(person_id);
+    pub fn duplicate_of_person_id(mut self, person_id: Uuid) -> Self {
+        self.duplicate_of_person_id = Some(person_id);
         self
     }
     
@@ -855,7 +855,7 @@ impl PersonBuilder {
             person_type: self.person_type,
             display_name,
             external_identifier,
-            organization: self.organization,
+            organization_person_id: self.organization_person_id,
             messaging1_id: msg1_id,
             messaging1_type: None,  // Type will be set separately if needed
             messaging2_id: msg2_id,
@@ -867,8 +867,8 @@ impl PersonBuilder {
             messaging5_id: msg5_id,
             messaging5_type: None,
             department,
-            location: self.location,
-            duplicate_of: self.duplicate_of,
+            location_address_id: self.location_address_id,
+            duplicate_of_person_id: self.duplicate_of_person_id,
             is_active: self.is_active,
             created_at: Utc::now(),
             updated_at: Utc::now(),

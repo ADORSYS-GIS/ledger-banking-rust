@@ -65,6 +65,13 @@
 
 ## Key Achievements (August 2025)
 
+### 🎉 ID Normalization and Daily Collection Refactoring
+This commit introduces a major refactoring to normalize ID references across the workspace and enhances the daily collection functionality.
+- **ID Normalization**: Replaced `id: i32` with `id: Uuid` across all relevant domain models, repositories, and mappers for improved data integrity.
+- **Schema Update**: The database schema (`001_initial_schema.sql`) was updated to use native `UUID` primary keys.
+- **Daily Collection Enhancements**: The daily collection models, repositories, and mappers were refactored for better performance and consistency.
+- **Code Consistency**: Ensured that all components now adhere to a standardized `Uuid`-based identifier system.
+
 ### 🎉 Repository Refactoring and EOD Service Implementation
 This update marks a significant milestone with the removal of simplified repository implementations and the completion of the End-of-Day (EOD) service.
 - **Repository Refactoring**: Replaced simple `compliance` and `transaction` repositories with their full-featured counterparts, improving data integrity and feature completeness.

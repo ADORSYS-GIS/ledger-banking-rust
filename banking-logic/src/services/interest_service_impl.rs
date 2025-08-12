@@ -124,7 +124,7 @@ impl InterestService for InterestServiceImpl {
                 message: "Channel ID too long".to_string(),
             })?,
             terminal_id: None,
-            agent_user_id: None,
+            agent_person_id: None,
             transaction_date: Utc::now(),
             value_date: today,
             status: TransactionStatus::Posted,
@@ -663,7 +663,7 @@ mod tests {
         async fn find_by_terminal_id(&self, _terminal_id: Uuid, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>) -> BankingResult<Vec<banking_db::models::TransactionModel>> {
             Ok(Vec::new())
         }
-        async fn find_by_agent_user_id(&self, _agent_user_id: Uuid, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>) -> BankingResult<Vec<banking_db::models::TransactionModel>> {
+        async fn find_by_agent_person_id(&self, _agent_person_id: Uuid, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>) -> BankingResult<Vec<banking_db::models::TransactionModel>> {
             Ok(Vec::new())
         }
         async fn find_by_channel(&self, _channel_id: &str, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>) -> BankingResult<Vec<banking_db::models::TransactionModel>> {

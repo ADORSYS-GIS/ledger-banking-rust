@@ -1,5 +1,4 @@
 use banking_db::models::{AccountWorkflowModel, WorkflowTypeModel, WorkflowStepModel, WorkflowStatusModel};
-use std::collections::HashSet;
 use chrono::Utc;
 use heapless::String as HeaplessString;
 use sqlx::PgPool;
@@ -680,6 +679,8 @@ async fn test_utility_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_list_workflows_pagination() {
+    use std::collections::HashSet;
+
     use banking_db_postgres::WorkflowRepositoryImpl;
     use banking_db::WorkflowRepository;
 

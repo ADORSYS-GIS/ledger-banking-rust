@@ -191,7 +191,7 @@ pub struct PersonModel {
     pub display_name: HeaplessString<100>,
     pub external_identifier: Option<HeaplessString<50>>,
     /// References PersonModel.person_id for organizational hierarchy
-    pub organization: Option<Uuid>,
+    pub organization_person_id: Option<Uuid>,
     
     /// References to MessagingModel.messaging_id (up to 5 messaging methods)
     pub messaging1_id: Option<Uuid>,
@@ -212,9 +212,9 @@ pub struct PersonModel {
     
     pub department: Option<HeaplessString<50>>,
     /// References AddressModel.address_id for person's location
-    pub location: Option<Uuid>,
+    pub location_address_id: Option<Uuid>,
     
-    pub duplicate_of: Option<Uuid>,
+    pub duplicate_of_person_id: Option<Uuid>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

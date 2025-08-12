@@ -114,7 +114,7 @@ mod stack_optimization_tests {
             description: HeaplessString::try_from("ATM withdrawal at Main Branch").unwrap(),
             channel_id: HeaplessString::try_from("ATM").unwrap(),
             terminal_id: Some(Uuid::new_v4()),
-            agent_user_id: None,
+            agent_person_id: None,
             transaction_date: Utc::now(),
             value_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
             status: TransactionStatus::Posted,
@@ -231,7 +231,7 @@ mod stack_optimization_tests {
         let audit_deserialized: TransactionAudit = serde_json::from_str(&audit_json).expect("TransactionAudit deserialization should succeed");
         assert_eq!(audit_deserialized.action_type, TransactionAuditAction::StatusChanged);
         // performed_by is now a UUID
-        assert!(!audit_deserialized.performed_by.is_nil());
+        assert!(!audit_deserialized.performed_by_person_id.is_nil());
         // Verify hash integrity
         let expected_audit_hash = blake3::hash(b"audit_details_content_for_verification");
         assert_eq!(audit_deserialized.details, Some(expected_audit_hash));

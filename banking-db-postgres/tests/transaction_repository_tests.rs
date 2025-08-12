@@ -1,5 +1,4 @@
 use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
-use banking_db_postgres::TransactionRepositoryImpl;
 use banking_db::models::{TransactionModel, TransactionType, TransactionStatus, AccountModel};
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
@@ -23,7 +22,7 @@ fn create_test_transaction(account_id: Uuid) -> TransactionModel {
         description: HeaplessString::try_from("Test deposit transaction").unwrap(),
         channel_id: HeaplessString::try_from("ATM").unwrap(),
         terminal_id: Some(Uuid::new_v4()),
-        agent_user_id: None,
+        agent_person_id: None,
         transaction_date: Utc::now(),
         value_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
         status: TransactionStatus::Pending,
@@ -195,6 +194,7 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
 #[tokio::test]
 async fn test_transaction_crud_operations() {
     use banking_db::TransactionRepository;
+    use banking_db_postgres::TransactionRepositoryImpl;
     
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
@@ -243,6 +243,7 @@ async fn test_transaction_crud_operations() {
 #[tokio::test]
 async fn test_transaction_find_by_reference() {
     use banking_db::TransactionRepository;
+    use banking_db_postgres::TransactionRepositoryImpl;
 
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
@@ -845,7 +846,7 @@ async fn test_transaction_approval_operations() {
         id: Uuid::new_v4(),
         workflow_id: created_workflow.id,
         transaction_id: created_transaction.id,
-        approver_id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
+        approver_person_id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
         approval_action: HeaplessString::try_from("Approved").unwrap(),
         approved_at: Utc::now(),
         approval_notes: Some(HeaplessString::try_from("Looks good to approve").unwrap()),
@@ -865,7 +866,7 @@ async fn test_transaction_approval_operations() {
     assert_eq!(workflow_approvals[0].id, approval.id);
     
     // Test find approvals by approver
-    let approver_approvals = repo.find_approvals_by_approver(approval.approver_id).await
+    let approver_approvals = repo.find_approvals_by_approver(approval.approver_person_id).await
         .expect("Failed to find approvals by approver");
     let our_approval = approver_approvals.iter()
         .find(|a| a.id == approval.id);

@@ -23,7 +23,7 @@ pub trait PersonRepository: Send + Sync {
     async fn update(&self, person: PersonModel) -> Result<PersonModel, Box<dyn std::error::Error + Send + Sync>>;
     
     /// Mark a person as duplicate of another
-    async fn mark_as_duplicate(&self, person_id: Uuid, duplicate_of: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn mark_as_duplicate(&self, person_id: Uuid, duplicate_of_person_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
     
     /// Get all active persons
     async fn get_all_active(&self) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
