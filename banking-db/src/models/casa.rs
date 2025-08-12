@@ -2,6 +2,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::str::FromStr;
 use uuid::Uuid;
 
 use banking_api::domain::{KycStatus, RiskRating, TransactionType};
@@ -22,7 +23,6 @@ pub struct OverdraftFacility {
     pub approval_date: NaiveDate,
     pub expiry_date: Option<NaiveDate>,
     pub approved_by_person_id: Uuid, // References Person.person_id
-    #[serde(serialize_with = "serialize_review_frequency", deserialize_with = "deserialize_review_frequency")]
     pub review_frequency: ReviewFrequency,
     pub next_review_date: NaiveDate,
     pub security_required: bool,
@@ -31,7 +31,8 @@ pub struct OverdraftFacility {
     pub last_updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "overdraft_status", rename_all = "PascalCase")]
 pub enum OverdraftStatus {
     Active,
     Suspended,
@@ -40,12 +41,42 @@ pub enum OverdraftStatus {
     Cancelled,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl FromStr for OverdraftStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(OverdraftStatus::Active),
+            "Suspended" => Ok(OverdraftStatus::Suspended),
+            "Expired" => Ok(OverdraftStatus::Expired),
+            "UnderReview" => Ok(OverdraftStatus::UnderReview),
+            "Cancelled" => Ok(OverdraftStatus::Cancelled),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "review_frequency", rename_all = "PascalCase")]
 pub enum ReviewFrequency {
     Monthly,
     Quarterly,
     SemiAnnually,
     Annually,
+}
+
+impl FromStr for ReviewFrequency {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Monthly" => Ok(ReviewFrequency::Monthly),
+            "Quarterly" => Ok(ReviewFrequency::Quarterly),
+            "SemiAnnually" => Ok(ReviewFrequency::SemiAnnually),
+            "Annually" => Ok(ReviewFrequency::Annually),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Overdraft utilization tracking for interest calculation
@@ -76,19 +107,33 @@ pub struct OverdraftInterestCalculation {
     pub applicable_rate: Decimal,
     pub days_calculated: u32,
     pub interest_amount: Decimal,
-    #[serde(serialize_with = "serialize_compounding_frequency", deserialize_with = "deserialize_compounding_frequency")]
     pub compounding_frequency: CompoundingFrequency,
     pub capitalization_due: bool,
     pub calculated_at: DateTime<Utc>,
     pub calculated_by_person_id: Uuid, // References Person.person_id
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "compounding_frequency", rename_all = "PascalCase")]
 pub enum CompoundingFrequency {
     Daily,
     Weekly,
     Monthly,
     Quarterly,
+}
+
+impl FromStr for CompoundingFrequency {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Daily" => Ok(CompoundingFrequency::Daily),
+            "Weekly" => Ok(CompoundingFrequency::Weekly),
+            "Monthly" => Ok(CompoundingFrequency::Monthly),
+            "Quarterly" => Ok(CompoundingFrequency::Quarterly),
+            _ => Err(()),
+        }
+    }
 }
 
 /// CASA account summary for comprehensive reporting
@@ -119,17 +164,31 @@ pub struct CasaAccountSummary {
     pub mtd_credit_amount: Decimal,
     
     // Account status
-    #[serde(serialize_with = "serialize_dormancy_risk", deserialize_with = "deserialize_dormancy_risk")]
     pub dormancy_risk: DormancyRisk,
     pub compliance_status: CasaComplianceStatus,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "dormancy_risk", rename_all = "PascalCase")]
 pub enum DormancyRisk {
     Active,
     AtRisk,
     Dormant,
     Inactive,
+}
+
+impl FromStr for DormancyRisk {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(DormancyRisk::Active),
+            "AtRisk" => Ok(DormancyRisk::AtRisk),
+            "Dormant" => Ok(DormancyRisk::Dormant),
+            "Inactive" => Ok(DormancyRisk::Inactive),
+            _ => Err(()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,7 +214,6 @@ pub struct OverdraftProcessingJob {
     pub total_interest_accrued: Decimal,
     pub accounts_capitalized: u32,
     pub total_capitalized_amount: Decimal,
-    #[serde(serialize_with = "serialize_processing_job_status", deserialize_with = "deserialize_processing_job_status")]
     pub status: ProcessingJobStatus,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
@@ -166,13 +224,29 @@ pub struct OverdraftProcessingJob {
     pub errors_05: HeaplessString<200>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "processing_job_status", rename_all = "PascalCase")]
 pub enum ProcessingJobStatus {
     Scheduled,
     Running,
     Completed,
     Failed,
     PartiallyCompleted,
+}
+
+impl FromStr for ProcessingJobStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Scheduled" => Ok(ProcessingJobStatus::Scheduled),
+            "Running" => Ok(ProcessingJobStatus::Running),
+            "Completed" => Ok(ProcessingJobStatus::Completed),
+            "Failed" => Ok(ProcessingJobStatus::Failed),
+            "PartiallyCompleted" => Ok(ProcessingJobStatus::PartiallyCompleted),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Overdraft limit adjustment request
@@ -195,7 +269,6 @@ pub struct OverdraftLimitAdjustment {
     pub required_document07_id: Option<Uuid>,
     pub requested_by_person_id: Uuid, // References Person.person_id
     pub requested_at: DateTime<Utc>,
-    #[serde(serialize_with = "serialize_casa_approval_status", deserialize_with = "deserialize_casa_approval_status")]
     pub approval_status: CasaApprovalStatus,
     pub approved_by_person_id: Option<Uuid>, // References Person.person_id
     pub approved_at: Option<DateTime<Utc>>,
@@ -203,13 +276,29 @@ pub struct OverdraftLimitAdjustment {
     pub effective_date: Option<NaiveDate>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "casa_approval_status", rename_all = "PascalCase")]
 pub enum CasaApprovalStatus {
     Pending,
     Approved,
     Rejected,
     RequiresAdditionalDocuments,
     UnderReview,
+}
+
+impl FromStr for CasaApprovalStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Pending" => Ok(CasaApprovalStatus::Pending),
+            "Approved" => Ok(CasaApprovalStatus::Approved),
+            "Rejected" => Ok(CasaApprovalStatus::Rejected),
+            "RequiresAdditionalDocuments" => Ok(CasaApprovalStatus::RequiresAdditionalDocuments),
+            "UnderReview" => Ok(CasaApprovalStatus::UnderReview),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Transaction validation context for CASA accounts
@@ -224,17 +313,16 @@ pub struct CasaTransactionValidation {
     pub overdraft_limit: Option<Decimal>,
     pub post_transaction_balance: Decimal,
     pub overdraft_utilization: Option<Decimal>,
-    #[serde(serialize_with = "serialize_casa_validation_result", deserialize_with = "deserialize_casa_validation_result")]
     pub validation_result: CasaValidationResult,
     pub validation_message_01: HeaplessString<200>,
     pub validation_message_02: HeaplessString<200>,
     pub validation_message_03: HeaplessString<200>,
     pub requires_authorization: bool,
-    #[serde(serialize_with = "serialize_authorization_level_opt", deserialize_with = "deserialize_authorization_level_opt")]
     pub authorization_level: Option<AuthorizationLevel>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "casa_validation_result", rename_all = "PascalCase")]
 pub enum CasaValidationResult {
     Approved,
     Rejected,
@@ -242,12 +330,41 @@ pub enum CasaValidationResult {
     RequiresHoldRelease,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl FromStr for CasaValidationResult {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Approved" => Ok(CasaValidationResult::Approved),
+            "Rejected" => Ok(CasaValidationResult::Rejected),
+            "RequiresAuthorization" => Ok(CasaValidationResult::RequiresAuthorization),
+            "RequiresHoldRelease" => Ok(CasaValidationResult::RequiresHoldRelease),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "authorization_level", rename_all = "PascalCase")]
 pub enum AuthorizationLevel {
     Teller,
     Supervisor,
     Manager,
     CreditCommittee,
+}
+
+impl FromStr for AuthorizationLevel {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Teller" => Ok(AuthorizationLevel::Teller),
+            "Supervisor" => Ok(AuthorizationLevel::Supervisor),
+            "Manager" => Ok(AuthorizationLevel::Manager),
+            "CreditCommittee" => Ok(AuthorizationLevel::CreditCommittee),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Interest posting record for CASA accounts
@@ -256,7 +373,6 @@ pub struct InterestPostingRecord {
     pub id: Uuid,
     pub account_id: Uuid,
     pub posting_date: NaiveDate,
-    #[serde(serialize_with = "serialize_interest_type", deserialize_with = "deserialize_interest_type")]
     pub interest_type: InterestType,
     pub period_start: NaiveDate,
     pub period_end: NaiveDate,
@@ -266,25 +382,53 @@ pub struct InterestPostingRecord {
     pub interest_amount: Decimal,
     pub tax_withheld: Option<Decimal>,
     pub net_amount: Decimal,
-    #[serde(serialize_with = "serialize_posting_status", deserialize_with = "deserialize_posting_status")]
     pub posting_status: PostingStatus,
     pub posted_by_person_id: Uuid, // References Person.person_id
     pub posted_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "interest_type", rename_all = "PascalCase")]
 pub enum InterestType {
     CreditInterest,  // Positive balance interest
     DebitInterest,   // Overdraft interest
     PenaltyInterest, // Additional penalty
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl FromStr for InterestType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "CreditInterest" => Ok(InterestType::CreditInterest),
+            "DebitInterest" => Ok(InterestType::DebitInterest),
+            "PenaltyInterest" => Ok(InterestType::PenaltyInterest),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "posting_status", rename_all = "PascalCase")]
 pub enum PostingStatus {
     Calculated,
     Posted,
     Reversed,
     Adjusted,
+}
+
+impl FromStr for PostingStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Calculated" => Ok(PostingStatus::Calculated),
+            "Posted" => Ok(PostingStatus::Posted),
+            "Reversed" => Ok(PostingStatus::Reversed),
+            "Adjusted" => Ok(PostingStatus::Adjusted),
+            _ => Err(()),
+        }
+    }
 }
 
 // Custom serialization functions for database compatibility
@@ -314,6 +458,7 @@ where D: Deserializer<'de> {
     }
 }
 
+#[allow(dead_code)]
 fn serialize_review_frequency<S>(value: &ReviewFrequency, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer {
     let value_str = match value {
@@ -325,6 +470,7 @@ where S: Serializer {
     serializer.serialize_str(value_str)
 }
 
+#[allow(dead_code)]
 fn deserialize_review_frequency<'de, D>(deserializer: D) -> Result<ReviewFrequency, D::Error>
 where D: Deserializer<'de> {
     let s = String::deserialize(deserializer)?;
@@ -337,6 +483,7 @@ where D: Deserializer<'de> {
     }
 }
 
+#[allow(dead_code)]
 fn serialize_compounding_frequency<S>(value: &CompoundingFrequency, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer {
     let value_str = match value {
@@ -348,6 +495,7 @@ where S: Serializer {
     serializer.serialize_str(value_str)
 }
 
+#[allow(dead_code)]
 fn deserialize_compounding_frequency<'de, D>(deserializer: D) -> Result<CompoundingFrequency, D::Error>
 where D: Deserializer<'de> {
     let s = String::deserialize(deserializer)?;
@@ -360,6 +508,7 @@ where D: Deserializer<'de> {
     }
 }
 
+#[allow(dead_code)]
 fn serialize_dormancy_risk<S>(value: &DormancyRisk, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer {
     let value_str = match value {
@@ -371,6 +520,7 @@ where S: Serializer {
     serializer.serialize_str(value_str)
 }
 
+#[allow(dead_code)]
 fn deserialize_dormancy_risk<'de, D>(deserializer: D) -> Result<DormancyRisk, D::Error>
 where D: Deserializer<'de> {
     let s = String::deserialize(deserializer)?;
@@ -408,6 +558,7 @@ where D: Deserializer<'de> {
     }
 }
 
+#[allow(dead_code)]
 fn serialize_casa_approval_status<S>(value: &CasaApprovalStatus, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer {
     let value_str = match value {
@@ -420,6 +571,7 @@ where S: Serializer {
     serializer.serialize_str(value_str)
 }
 
+#[allow(dead_code)]
 fn deserialize_casa_approval_status<'de, D>(deserializer: D) -> Result<CasaApprovalStatus, D::Error>
 where D: Deserializer<'de> {
     let s = String::deserialize(deserializer)?;
@@ -433,6 +585,7 @@ where D: Deserializer<'de> {
     }
 }
 
+#[allow(dead_code)]
 fn serialize_casa_validation_result<S>(value: &CasaValidationResult, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer {
     let value_str = match value {
@@ -444,6 +597,7 @@ where S: Serializer {
     serializer.serialize_str(value_str)
 }
 
+#[allow(dead_code)]
 fn deserialize_casa_validation_result<'de, D>(deserializer: D) -> Result<CasaValidationResult, D::Error>
 where D: Deserializer<'de> {
     let s = String::deserialize(deserializer)?;
@@ -456,6 +610,7 @@ where D: Deserializer<'de> {
     }
 }
 
+#[allow(dead_code)]
 fn serialize_authorization_level_opt<S>(value: &Option<AuthorizationLevel>, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer {
     match value {
@@ -472,6 +627,7 @@ where S: Serializer {
     }
 }
 
+#[allow(dead_code)]
 fn deserialize_authorization_level_opt<'de, D>(deserializer: D) -> Result<Option<AuthorizationLevel>, D::Error>
 where D: Deserializer<'de> {
     let opt: Option<String> = Option::deserialize(deserializer)?;
@@ -487,6 +643,7 @@ where D: Deserializer<'de> {
     }
 }
 
+#[allow(dead_code)]
 fn serialize_interest_type<S>(value: &InterestType, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer {
     let value_str = match value {
@@ -497,6 +654,7 @@ where S: Serializer {
     serializer.serialize_str(value_str)
 }
 
+#[allow(dead_code)]
 fn deserialize_interest_type<'de, D>(deserializer: D) -> Result<InterestType, D::Error>
 where D: Deserializer<'de> {
     let s = String::deserialize(deserializer)?;
@@ -508,6 +666,7 @@ where D: Deserializer<'de> {
     }
 }
 
+#[allow(dead_code)]
 fn serialize_posting_status<S>(value: &PostingStatus, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer {
     let value_str = match value {
@@ -519,6 +678,7 @@ where S: Serializer {
     serializer.serialize_str(value_str)
 }
 
+#[allow(dead_code)]
 fn deserialize_posting_status<'de, D>(deserializer: D) -> Result<PostingStatus, D::Error>
 where D: Deserializer<'de> {
     let s = String::deserialize(deserializer)?;
