@@ -63,6 +63,13 @@
 - **FeeServiceImpl** - 12 todo! fee waiver/automation methods
 - **DailyCollectionServiceImpl** - 50+ todo! collection operations
 
+### 🎉 Stack Optimization: Replaced Vec with BoundedVec
+This commit replaces `Vec<T>` with `BoundedVec<T, N>` across multiple crates to reduce heap allocations and improve memory efficiency.
+- **Memory Efficiency**: Reduces heap allocations by favoring stack-based data structures.
+- **Performance**: Improves performance by avoiding the overhead of heap management for small, fixed-size collections.
+- **Workspace-Wide Impact**: The change was applied to domain models, mappers, and repositories for `Channel` and `Transaction`.
+- **Code Health**: Aligns with the project's goal of optimizing for resource-constrained environments.
+
 ## Key Achievements (August 2025)
 
 ### 🎉 Performance Refactoring: Slice-Based APIs
