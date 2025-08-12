@@ -271,13 +271,13 @@ pub struct TransactionResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationResult {
+pub struct TransactionValidationResult {
     pub is_valid: bool,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
 }
 
-impl ValidationResult {
+impl TransactionValidationResult {
     pub fn new(is_valid: bool, errors: Vec<String>, warnings: Vec<String>) -> Self {
         Self { is_valid, errors, warnings }
     }
@@ -307,7 +307,7 @@ impl ValidationResult {
         }
     }
     
-    pub fn merge(&mut self, other: ValidationResult) {
+    pub fn merge(&mut self, other: TransactionValidationResult) {
         self.errors.extend(other.errors);
         self.warnings.extend(other.warnings);
         self.is_valid = self.is_valid && other.is_valid;

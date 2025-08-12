@@ -65,6 +65,13 @@
 
 ## Key Achievements (August 2025)
 
+### 🎉 Domain Model Refactoring and Type Cleanup
+This commit introduces a major refactoring to remove ambiguous types and align domain models with the database schema.
+- **Type Cleanup**: Replaced `heapless::String` with `std::string::String` across the workspace for improved clarity and maintainability.
+- **Domain Model Refactoring**: Updated domain models to use nested structs instead of flattened fields, improving code clarity and consistency.
+- **Schema Alignment**: Aligned the `daily_collection_mapper` with the updated `CollectionBatch` domain object, resolving a compilation error.
+- **Code Consistency**: Ensured that all components now adhere to a standardized data model, improving consistency and reducing ambiguity.
+
 ### 🎉 ID Normalization and Daily Collection Refactoring
 This commit introduces a major refactoring to normalize ID references across the workspace and enhances the daily collection functionality.
 - **ID Normalization**: Replaced `id: i32` with `id: Uuid` across all relevant domain models, repositories, and mappers for improved data integrity.

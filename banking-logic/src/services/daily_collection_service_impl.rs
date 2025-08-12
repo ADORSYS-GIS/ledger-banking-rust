@@ -8,8 +8,8 @@ use uuid::Uuid;
 use banking_api::{
     BankingResult,
     domain::{
-        CollectionProgram, DailyCollectionProgramStatus as ProgramStatus, CustomerCollectionProfile, DailyCollectionStatus as CollectionStatus,
-        CollectionRecord, CollectionRecordStatus, CollectionAgent, DailyCollectionAgentStatus as AgentStatus,
+        CollectionProgram, ProgramStatus, CustomerCollectionProfile, CollectionStatus,
+        CollectionRecord, CollectionRecordStatus, CollectionAgent, AgentStatus,
         CollectionBatch
     },
     service::{

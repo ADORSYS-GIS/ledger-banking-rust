@@ -152,7 +152,7 @@ pub struct ComplianceAlert {
     pub customer_id: Option<Uuid>,
     pub account_id: Option<Uuid>,
     pub transaction_id: Option<Uuid>,
-    pub alert_type: AlertType,
+    pub alert_type: ComplianceAlertType,
     pub description: HeaplessString<500>,
     pub severity: Severity,
     pub triggered_at: DateTime<Utc>,
@@ -167,7 +167,7 @@ pub struct ComplianceAlert {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AlertType {
+pub enum ComplianceAlertType {
     StructuringDetection,
     VelocityCheck,
     LargeCashTransaction,

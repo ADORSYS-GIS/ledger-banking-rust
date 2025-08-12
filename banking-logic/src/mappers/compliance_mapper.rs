@@ -1,7 +1,7 @@
 use banking_api::domain::{
     KycResult, KycCheck, CheckResult, ScreeningResult, ScreeningType, SanctionsMatch,
     RiskLevel, MonitoringResult, ComplianceAlert, Severity, AlertStatus,
-    compliance::AlertType,
+    compliance::ComplianceAlertType as AlertType,
     SarData, SarStatus, UboVerificationResult, UboLink, MonitoringRules
 };
 use banking_db::models::{

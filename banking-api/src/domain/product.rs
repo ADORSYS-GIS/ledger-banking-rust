@@ -48,7 +48,7 @@ pub enum PostingFrequency {
 
 /// Frequency for interest accrual
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum AccrualFrequency {
+pub enum ProductAccrualFrequency {
     Daily,
     BusinessDaysOnly,
     None,
@@ -73,7 +73,7 @@ pub struct ProductRules {
     pub default_overdraft_limit: Option<Decimal>,
     pub per_transaction_limit: Option<Decimal>,
     pub overdraft_interest_rate: Option<Decimal>,
-    pub accrual_frequency: AccrualFrequency,
+    pub accrual_frequency: ProductAccrualFrequency,
 }
 
 

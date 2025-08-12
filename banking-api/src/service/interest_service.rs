@@ -30,7 +30,7 @@ pub trait InterestService: Send + Sync {
     async fn calculate_interest_rate(&self, product_id: Uuid, balance: Decimal, account_type: crate::domain::AccountType) -> BankingResult<Decimal>;
 
     /// Get interest rate tiers for a product
-    async fn get_interest_rate_tiers(&self, product_id: Uuid) -> BankingResult<Vec<InterestRateTier>>;
+    async fn get_interest_rate_tiers(&self, product_id: Uuid) -> BankingResult<Vec<ServiceInterestRateTier>>;
 
     /// Check if account should accrue interest on given date
     async fn should_accrue_interest(&self, account_id: Uuid, date: NaiveDate) -> BankingResult<bool>;
@@ -72,7 +72,7 @@ pub struct CapitalizationResult {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct InterestRateTier {
+pub struct ServiceInterestRateTier {
     pub minimum_balance: Decimal,
     pub interest_rate: Decimal,
     pub tier_name: String,
@@ -86,7 +86,7 @@ pub enum CalculationMethod {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum AccrualFrequency {
+pub enum InterestAccrualFrequency {
     Daily,
     BusinessDaysOnly,
     None,

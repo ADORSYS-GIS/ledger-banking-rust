@@ -71,7 +71,9 @@ pub struct AccountHoldExpiryJobModel {
     pub expired_holds_count: u32,
     pub total_released_amount: Decimal,
     pub processed_at: DateTime<Utc>,
-    pub errors: Vec<HeaplessString<100>>,
+    pub errors_01: Option<HeaplessString<100>>,
+    pub errors_02: Option<HeaplessString<100>>,
+    pub errors_03: Option<HeaplessString<100>>,
 }
 
 /// Database model for Place Hold Request

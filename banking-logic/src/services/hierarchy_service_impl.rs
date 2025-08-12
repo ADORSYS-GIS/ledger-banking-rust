@@ -7,7 +7,7 @@ use uuid::Uuid;
 use banking_api::{
     BankingResult, BankingError,
     domain::{
-        AgentNetwork, AgencyBranch, AgentTerminal, ValidationResult,
+        AgentNetwork, AgencyBranch, AgentTerminal,
         NetworkStatus, BranchStatus, TerminalStatus
     },
     service::{HierarchyService, NetworkHierarchy, BranchHierarchy},
@@ -16,6 +16,7 @@ use banking_db::{
     repository::AgentNetworkRepository,
     models::agent_network::{BranchStatus as DbBranchStatus, TerminalStatus as DbTerminalStatus, NetworkStatus as DbNetworkStatus}
 };
+use banking_api::domain::transaction::TransactionValidationResult as ValidationResult;
 use banking_api::domain::TerminalLimits;
 use crate::mappers::AgentNetworkMapper;
 

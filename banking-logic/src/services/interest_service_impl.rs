@@ -243,11 +243,11 @@ impl InterestService for InterestServiceImpl {
         while current_date <= to_date {
             // Check if we should accrue interest on this date
             let should_accrue = match product_rules.accrual_frequency {
-                banking_db::models::AccrualFrequency::Daily => true,
-                banking_db::models::AccrualFrequency::BusinessDaysOnly => {
+                banking_db::models::ProductAccrualFrequency::Daily => true,
+                banking_db::models::ProductAccrualFrequency::BusinessDaysOnly => {
                     self.calendar_service.is_business_day(current_date, account.currency.as_str()).await?
                 }
-                banking_db::models::AccrualFrequency::None => false,
+                banking_db::models::ProductAccrualFrequency::None => false,
             };
 
             if should_accrue {
@@ -320,7 +320,7 @@ impl InterestService for InterestServiceImpl {
     }
 
     /// Get interest rate tiers for a product
-    async fn get_interest_rate_tiers(&self, _product_id: Uuid) -> BankingResult<Vec<banking_api::service::InterestRateTier>> {
+    async fn get_interest_rate_tiers(&self, _product_id: Uuid) -> BankingResult<Vec<banking_api::service::ServiceInterestRateTier>> {
         todo!("Implement get_interest_rate_tiers")
     }
 

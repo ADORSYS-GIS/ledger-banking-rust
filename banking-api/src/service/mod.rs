@@ -35,11 +35,4 @@ pub use reason_service::*;
 pub use reason_and_purpose_service::*;
 pub use collateral_service::*;
 pub use product_service::*;
-pub use daily_collection_service::{
-    DailyCollectionService, CollectionStatistics, AgentPerformanceUpdate,
-    AgentPerformanceReport, CollectionRoute, RouteWaypoint, ScheduledCollection,
-    CollectionPriority, CollectionScheduleUpdate, ProgramPerformanceReport,
-    DailyCollectionSummary, CollectionTrends, TrendGranularity, TrendDataPoint,
-    AgentRanking, RankingCriteria,
-    TrendDirection as DailyCollectionTrendDirection,
-};
+pub use daily_collection_service::*;

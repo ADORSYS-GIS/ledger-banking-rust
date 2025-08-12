@@ -1,12 +1,12 @@
 use banking_api::domain::{
     GlMapping as ApiGlMapping, InterestRateTier as ApiInterestRateTier, Product as ApiProduct,
     ProductRules as ApiProductRules, ProductType as ApiProductType,
-    PostingFrequency as ApiPostingFrequency, AccrualFrequency as ApiAccrualFrequency
+    PostingFrequency as ApiPostingFrequency, ProductAccrualFrequency as ApiProductAccrualFrequency
 };
 use banking_db::models::{
     GlMappingModel as DbGlMapping, InterestRateTierModel as DbInterestRateTier,
     ProductModel as DbProduct, ProductRules as DbProductRules, ProductType as DbProductType,
-    PostingFrequency as DbPostingFrequency, AccrualFrequency as DbAccrualFrequency
+    PostingFrequency as DbPostingFrequency, ProductAccrualFrequency as DbProductAccrualFrequency
 };
 use super::{ApiMapper, DBMapper};
 
@@ -87,9 +87,9 @@ impl DBMapper<ApiProductRules, DbProductRules> for ProductRulesMapper {
             per_transaction_limit: api_model.per_transaction_limit,
             overdraft_interest_rate: api_model.overdraft_interest_rate,
             accrual_frequency: match api_model.accrual_frequency {
-                ApiAccrualFrequency::Daily => DbAccrualFrequency::Daily,
-                ApiAccrualFrequency::BusinessDaysOnly => DbAccrualFrequency::BusinessDaysOnly,
-                ApiAccrualFrequency::None => DbAccrualFrequency::None,
+                ApiProductAccrualFrequency::Daily => DbProductAccrualFrequency::Daily,
+                ApiProductAccrualFrequency::BusinessDaysOnly => DbProductAccrualFrequency::BusinessDaysOnly,
+                ApiProductAccrualFrequency::None => DbProductAccrualFrequency::None,
             },
         }
     }
@@ -122,9 +122,9 @@ impl ApiMapper<DbProductRules, ApiProductRules> for ProductRulesMapper {
             per_transaction_limit: db_model.per_transaction_limit,
             overdraft_interest_rate: db_model.overdraft_interest_rate,
             accrual_frequency: match db_model.accrual_frequency {
-                DbAccrualFrequency::Daily => ApiAccrualFrequency::Daily,
-                DbAccrualFrequency::BusinessDaysOnly => ApiAccrualFrequency::BusinessDaysOnly,
-                DbAccrualFrequency::None => ApiAccrualFrequency::None,
+                DbProductAccrualFrequency::Daily => ApiProductAccrualFrequency::Daily,
+                DbProductAccrualFrequency::BusinessDaysOnly => ApiProductAccrualFrequency::BusinessDaysOnly,
+                DbProductAccrualFrequency::None => ApiProductAccrualFrequency::None,
             },
         }
     }

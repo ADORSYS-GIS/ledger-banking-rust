@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::{
     BankingResult,
     domain::{
-        ReasonAndPurpose, ReasonCategory, ReasonContext, ReasonSeverity
+        ReasonAndPurpose, ReasonCategory, ReasonContext, ReasonSeverity, DataValidationResult
     },
 };
 
@@ -132,7 +132,7 @@ pub trait ReasonAndPurposeService: Send + Sync {
         &self,
         reason_id: Uuid,
         additional_details: Option<&str>,
-    ) -> BankingResult<ValidationResult>;
+    ) -> BankingResult<DataValidationResult>;
     
     /// Check if reason is still active and usable
     async fn is_reason_active(&self, reason_id: Uuid) -> BankingResult<bool>;
@@ -227,20 +227,6 @@ pub enum ReasonChangeType {
     DisplayOrderUpdated,
 }
 
-/// Result of reason validation
-#[derive(Debug, Clone)]
-pub struct ValidationResult {
-    pub is_valid: bool,
-    pub validation_errors: Vec<ValidationError>,
-    pub warnings: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ValidationError {
-    pub field: String,
-    pub message: String,
-    pub error_code: String,
-}
 
 /// Result of bulk import operation
 #[derive(Debug, Clone)]

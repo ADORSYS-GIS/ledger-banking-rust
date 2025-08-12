@@ -1,11 +1,10 @@
-use banking_api::domain::{
-    AccountHold, AccountHoldExpiryJob, AccountHoldReleaseRequest,
-    AccountHoldSummary, PlaceHoldRequest,
+use banking_api::domain::account_hold::{
+    AccountHold, AccountHoldExpiryJob, AccountHoldReleaseRequest, AccountHoldSummary,
+    PlaceHoldRequest,
 };
-use banking_db::models::{
-    AccountHoldExpiryJobModel, AccountHoldModel,
-    AccountHoldReleaseRequestModel, AccountHoldSummaryModel,
-    PlaceHoldRequestModel,
+use banking_db::models::account_hold::{
+    AccountHoldExpiryJobModel, AccountHoldModel, AccountHoldReleaseRequestModel,
+    AccountHoldSummaryModel, PlaceHoldRequestModel,
 };
 
 pub struct AccountHoldMapper;
@@ -114,7 +113,9 @@ impl AccountHoldMapper {
             expired_holds_count: job.expired_holds_count,
             total_released_amount: job.total_released_amount,
             processed_at: job.processed_at,
-            errors: job.errors.iter().map(|s| s.as_str().try_into().unwrap()).collect(),
+            errors_01: Some(job.error_01),
+            errors_02: Some(job.error_02),
+            errors_03: Some(job.error_03),
         }
     }
 
@@ -125,7 +126,9 @@ impl AccountHoldMapper {
             expired_holds_count: model.expired_holds_count,
             total_released_amount: model.total_released_amount,
             processed_at: model.processed_at,
-            errors: model.errors.into_iter().map(|s| s.as_str().try_into().unwrap()).collect(),
+            error_01: model.errors_01.unwrap_or_default(),
+            error_02: model.errors_02.unwrap_or_default(),
+            error_03: model.errors_03.unwrap_or_default(),
         }
     }
 

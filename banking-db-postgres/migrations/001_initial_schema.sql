@@ -3097,6 +3097,110 @@ CREATE TABLE collection_records (
     reason_id UUID
 );
 
+-- Collection Agent table
+CREATE TABLE collection_agents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    person_id UUID NOT NULL,
+    license_number VARCHAR(50) NOT NULL,
+    license_expiry DATE NOT NULL,
+    status agent_status NOT NULL,
+    assigned_territory_id UUID NOT NULL,
+    agent_performance_metrics_id UUID NOT NULL,
+    cash_limit DECIMAL(15, 2) NOT NULL,
+    device_information_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Territory table
+CREATE TABLE territories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    territory_name VARCHAR(100) NOT NULL,
+    coverage_area_id UUID NOT NULL,
+    customer_count INTEGER NOT NULL,
+    route_optimization_enabled BOOLEAN NOT NULL,
+    territory_manager_person_id UUID
+);
+
+-- Coverage Area table
+CREATE TABLE coverage_areas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    area_name VARCHAR(100) NOT NULL,
+    area_type area_type NOT NULL,
+    boundary_coordinates_long_1 DECIMAL(11, 8),
+    boundary_coordinates_lat_1 DECIMAL(10, 8),
+    boundary_coordinates_long_2 DECIMAL(11, 8),
+    boundary_coordinates_lat_2 DECIMAL(10, 8),
+    boundary_coordinates_long_3 DECIMAL(11, 8),
+    boundary_coordinates_lat_3 DECIMAL(10, 8),
+    boundary_coordinates_long_4 DECIMAL(11, 8),
+    boundary_coordinates_lat_4 DECIMAL(10, 8),
+    boundary_coordinates_long_5 DECIMAL(11, 8),
+    boundary_coordinates_lat_5 DECIMAL(10, 8),
+    customer_density customer_density NOT NULL,
+    transport_mode transport_mode NOT NULL
+);
+
+-- Agent Performance Metrics table
+CREATE TABLE agent_performance_metrics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_rate DECIMAL(5, 2) NOT NULL,
+    customer_satisfaction_score DECIMAL(5, 2) NOT NULL,
+    punctuality_score DECIMAL(5, 2) NOT NULL,
+    cash_handling_accuracy DECIMAL(5, 2) NOT NULL,
+    compliance_score DECIMAL(5, 2) NOT NULL,
+    total_collections BIGINT NOT NULL,
+    total_amount_collected DECIMAL(15, 2) NOT NULL,
+    average_collection_time_minutes BIGINT NOT NULL,
+    customer_retention_rate DECIMAL(5, 2) NOT NULL,
+    route_efficiency DECIMAL(5, 2) NOT NULL,
+    monthly_targets_id UUID NOT NULL
+);
+
+-- Monthly Targets table
+CREATE TABLE monthly_targets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_target DECIMAL(15, 2) NOT NULL,
+    customer_target INTEGER NOT NULL,
+    satisfaction_target DECIMAL(5, 2) NOT NULL,
+    punctuality_target DECIMAL(5, 2) NOT NULL,
+    accuracy_target DECIMAL(5, 2) NOT NULL
+);
+
+-- Device Information table
+CREATE TABLE device_information (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    external_id VARCHAR(100) NOT NULL,
+    device_type device_type NOT NULL,
+    model VARCHAR(50) NOT NULL,
+    os_version VARCHAR(50) NOT NULL,
+    app_version VARCHAR(20) NOT NULL,
+    last_sync TIMESTAMPTZ,
+    battery_level REAL,
+    connectivity_status connectivity_status NOT NULL,
+    security_features_id UUID NOT NULL
+);
+
+-- Collection Security Features table
+CREATE TABLE collection_security_features (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    biometric_enabled BOOLEAN NOT NULL,
+    pin_protection BOOLEAN NOT NULL,
+    encryption_enabled BOOLEAN NOT NULL,
+    remote_wipe_enabled BOOLEAN NOT NULL,
+    certificate_installed BOOLEAN NOT NULL,
+    last_security_scan TIMESTAMPTZ
+);
+
+-- Foreign key constraints for daily collection tables
+ALTER TABLE collection_agents ADD CONSTRAINT fk_collection_agents_person FOREIGN KEY (person_id) REFERENCES persons(id);
+ALTER TABLE collection_agents ADD CONSTRAINT fk_collection_agents_territory FOREIGN KEY (assigned_territory_id) REFERENCES territories(id);
+ALTER TABLE collection_agents ADD CONSTRAINT fk_collection_agents_performance FOREIGN KEY (agent_performance_metrics_id) REFERENCES agent_performance_metrics(id);
+ALTER TABLE collection_agents ADD CONSTRAINT fk_collection_agents_device FOREIGN KEY (device_information_id) REFERENCES device_information(id);
+ALTER TABLE territories ADD CONSTRAINT fk_territories_coverage_area FOREIGN KEY (coverage_area_id) REFERENCES coverage_areas(id);
+ALTER TABLE agent_performance_metrics ADD CONSTRAINT fk_agent_performance_metrics_targets FOREIGN KEY (monthly_targets_id) REFERENCES monthly_targets(id);
+ALTER TABLE device_information ADD CONSTRAINT fk_device_information_security FOREIGN KEY (security_features_id) REFERENCES collection_security_features(id);
+
 -- Collection Batch table
 CREATE TABLE collection_batch (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -3107,16 +3211,202 @@ CREATE TABLE collection_batch (
     currency VARCHAR(3) NOT NULL,
     status batch_status NOT NULL,
     collection_records UUID[],
-    reconciliation_expected_amount DECIMAL(15, 2),
-    reconciliation_actual_amount DECIMAL(15, 2),
-    reconciliation_variance DECIMAL(15, 2),
-    reconciliation_variance_reason VARCHAR(500),
-    reconciliation_reconciled_by UUID,
-    reconciliation_timestamp TIMESTAMPTZ,
-    reconciliation_adjustment_required BOOLEAN,
+    reconciliation_data_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     processed_at TIMESTAMPTZ
 );
+
+-- Collection Program table
+CREATE TABLE collection_programs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    program_type collection_program_type NOT NULL,
+    status program_status NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    collection_frequency collection_frequency NOT NULL,
+    operating_hours_id UUID,
+    minimum_amount DECIMAL(15, 2) NOT NULL,
+    maximum_amount DECIMAL(15, 2) NOT NULL,
+    target_amount DECIMAL(15, 2),
+    program_duration_days INTEGER NOT NULL,
+    graduation_criteria_id UUID NOT NULL,
+    fee_structure_id UUID NOT NULL,
+    interest_rate DECIMAL(5, 2),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by_person_id UUID NOT NULL,
+    reason_id UUID
+);
+
+-- Graduation Criteria table
+CREATE TABLE graduation_criteria (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    minimum_balance DECIMAL(15, 2),
+    minimum_collection_rate DECIMAL(5, 2),
+    minimum_duration_days INTEGER,
+    consecutive_collections_required INTEGER,
+    target_achievement_required BOOLEAN NOT NULL,
+    auto_graduation_enabled BOOLEAN NOT NULL
+);
+
+-- Fee Structure table
+CREATE TABLE fee_structures (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    setup_fee DECIMAL(15, 2),
+    collection_fee DECIMAL(15, 2),
+    maintenance_fee DECIMAL(15, 2),
+    graduation_fee DECIMAL(15, 2),
+    early_termination_fee DECIMAL(15, 2),
+    fee_frequency fee_frequency NOT NULL
+);
+
+-- Customer Collection Profile table
+CREATE TABLE customer_collection_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id UUID NOT NULL,
+    collection_program_id UUID NOT NULL,
+    account_id UUID NOT NULL,
+    enrollment_date DATE NOT NULL,
+    status collection_status NOT NULL,
+    daily_amount DECIMAL(15, 2) NOT NULL,
+    collection_schedule_id UUID NOT NULL,
+    assigned_collection_agent_id UUID NOT NULL,
+    collection_location_address_id UUID NOT NULL,
+    collection_performance_metrics_id UUID NOT NULL,
+    graduation_progress_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reason_id UUID
+);
+
+-- Collection Schedule table
+CREATE TABLE collection_schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    frequency collection_frequency NOT NULL,
+    collection_time TIME NOT NULL,
+    timezone VARCHAR(50) NOT NULL,
+    holiday_handling holiday_handling NOT NULL
+);
+
+-- Collection Performance Metrics table
+CREATE TABLE collection_performance_metrics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_rate DECIMAL(5, 2) NOT NULL,
+    total_collections BIGINT NOT NULL,
+    total_amount_collected DECIMAL(15, 2) NOT NULL,
+    average_collection_amount DECIMAL(15, 2) NOT NULL,
+    consecutive_collections INTEGER NOT NULL,
+    missed_collections INTEGER NOT NULL,
+    last_collection_date DATE,
+    performance_score DECIMAL(5, 2) NOT NULL,
+    reliability_rating reliability_rating NOT NULL
+);
+
+-- Graduation Progress table
+CREATE TABLE graduation_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_collection_profile_id UUID NOT NULL,
+    current_balance DECIMAL(15, 2) NOT NULL,
+    target_balance DECIMAL(15, 2),
+    days_in_program INTEGER NOT NULL,
+    minimum_days_required INTEGER,
+    collection_consistency_rate DECIMAL(5, 2) NOT NULL,
+    minimum_consistency_required DECIMAL(5, 2),
+    graduation_eligible BOOLEAN NOT NULL,
+    graduation_date DATE,
+    next_review_date DATE NOT NULL
+);
+
+-- Collection Verification table
+CREATE TABLE collection_verifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_record_id UUID NOT NULL,
+    customer_signature VARCHAR(200),
+    agent_verification_code VARCHAR(50),
+    biometric_data_id UUID,
+    photo_evidence_id UUID,
+    witness_person_id UUID,
+    verification_timestamp TIMESTAMPTZ NOT NULL
+);
+
+-- Biometric Data table
+CREATE TABLE biometric_data (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_verification_id UUID NOT NULL,
+    fingerprint_hash VARCHAR(100),
+    face_recognition_score REAL,
+    verification_method biometric_method NOT NULL,
+    confidence_level REAL NOT NULL
+);
+
+-- Photo Evidence table
+CREATE TABLE photo_evidence (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_verification_id UUID NOT NULL,
+    customer_photo_hash VARCHAR(100),
+    receipt_photo_hash VARCHAR(100),
+    location_photo_hash VARCHAR(100),
+    photo_timestamp TIMESTAMPTZ NOT NULL
+);
+
+-- Witness Information table
+CREATE TABLE witness_information (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_verification_id UUID NOT NULL,
+    witness_name VARCHAR(100) NOT NULL,
+    witness_contact VARCHAR(50) NOT NULL,
+    witness_relationship VARCHAR(50) NOT NULL,
+    witness_signature VARCHAR(200)
+);
+
+-- Reconciliation Data table
+CREATE TABLE reconciliation_data (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_batch_id UUID NOT NULL,
+    expected_amount DECIMAL(15, 2) NOT NULL,
+    actual_amount DECIMAL(15, 2) NOT NULL,
+    variance DECIMAL(15, 2) NOT NULL,
+    variance_reason VARCHAR(500),
+    reconciled_by_person_id UUID NOT NULL,
+    reconciliation_timestamp TIMESTAMPTZ NOT NULL,
+    adjustment_required BOOLEAN NOT NULL
+);
+
+-- Performance Alert table
+CREATE TABLE performance_alerts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    agent_performance_metrics_id UUID NOT NULL,
+    alert_type alert_type NOT NULL,
+    severity alert_severity NOT NULL,
+    message VARCHAR(200) NOT NULL,
+    acknowledged BOOLEAN NOT NULL,
+    resolution_required BOOLEAN NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    acknowledged_at TIMESTAMPTZ,
+    resolved_at TIMESTAMPTZ
+);
+
+-- Foreign key constraints for daily collection tables
+ALTER TABLE collection_programs ADD CONSTRAINT fk_collection_programs_operating_hours FOREIGN KEY (operating_hours_id) REFERENCES collection_operating_hours(id);
+ALTER TABLE collection_programs ADD CONSTRAINT fk_collection_programs_graduation_criteria FOREIGN KEY (graduation_criteria_id) REFERENCES graduation_criteria(id);
+ALTER TABLE collection_programs ADD CONSTRAINT fk_collection_programs_fee_structure FOREIGN KEY (fee_structure_id) REFERENCES fee_structures(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_customer FOREIGN KEY (customer_id) REFERENCES customers(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_program FOREIGN KEY (collection_program_id) REFERENCES collection_programs(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_account FOREIGN KEY (account_id) REFERENCES accounts(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_schedule FOREIGN KEY (collection_schedule_id) REFERENCES collection_schedules(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_agent FOREIGN KEY (assigned_collection_agent_id) REFERENCES collection_agents(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_address FOREIGN KEY (collection_location_address_id) REFERENCES addresses(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_performance FOREIGN KEY (collection_performance_metrics_id) REFERENCES collection_performance_metrics(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_progress FOREIGN KEY (graduation_progress_id) REFERENCES graduation_progress(id);
+ALTER TABLE graduation_progress ADD CONSTRAINT fk_graduation_progress_profile FOREIGN KEY (customer_collection_profile_id) REFERENCES customer_collection_profiles(id);
+ALTER TABLE collection_verifications ADD CONSTRAINT fk_collection_verifications_record FOREIGN KEY (collection_record_id) REFERENCES collection_records(id);
+ALTER TABLE biometric_data ADD CONSTRAINT fk_biometric_data_verification FOREIGN KEY (collection_verification_id) REFERENCES collection_verifications(id);
+ALTER TABLE photo_evidence ADD CONSTRAINT fk_photo_evidence_verification FOREIGN KEY (collection_verification_id) REFERENCES collection_verifications(id);
+ALTER TABLE witness_information ADD CONSTRAINT fk_witness_information_verification FOREIGN KEY (collection_verification_id) REFERENCES collection_verifications(id);
+ALTER TABLE reconciliation_data ADD CONSTRAINT fk_reconciliation_data_batch FOREIGN KEY (collection_batch_id) REFERENCES collection_batch(id);
+ALTER TABLE performance_alerts ADD CONSTRAINT fk_performance_alerts_metrics FOREIGN KEY (agent_performance_metrics_id) REFERENCES agent_performance_metrics(id);
 
 -- =============================================================================
 -- COMMENTS FOR DOCUMENTATION
@@ -3230,7 +3520,9 @@ CREATE TABLE "AccountHoldExpiryJob" (
     "expired_holds_count" INTEGER NOT NULL,
     "total_released_amount" DECIMAL NOT NULL,
     "processed_at" TIMESTAMPTZ NOT NULL,
-    "errors" VARCHAR(100)[],
+    "errors_01" VARCHAR(100),
+    "errors_02" VARCHAR(100),
+    "errors_03" VARCHAR(100),
 
     CONSTRAINT "AccountHoldExpiryJob_pkey" PRIMARY KEY ("id")
 );

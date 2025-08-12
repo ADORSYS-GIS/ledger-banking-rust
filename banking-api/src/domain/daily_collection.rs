@@ -241,7 +241,7 @@ pub struct MonthlyTargets {
 pub struct PerformanceAlert {
     pub id: Uuid,
     pub agent_performance_metrics_id: Uuid,
-    pub alert_type: AlertType,
+    pub alert_type: CollectionAlertType,
     pub severity: AlertSeverity,
     pub message: HeaplessString<200>,
     pub created_at: DateTime<Utc>,
@@ -250,7 +250,7 @@ pub struct PerformanceAlert {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum AlertType {
+pub enum CollectionAlertType {
     LowCollectionRate,
     CustomerComplaint,
     CashDiscrepancy,
@@ -260,33 +260,33 @@ pub enum AlertType {
     DeviceIssue,
 }
 
-impl fmt::Display for AlertType {
+impl fmt::Display for CollectionAlertType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AlertType::LowCollectionRate => write!(f, "LowCollectionRate"),
-            AlertType::CustomerComplaint => write!(f, "CustomerComplaint"),
-            AlertType::CashDiscrepancy => write!(f, "CashDiscrepancy"),
-            AlertType::MissedSchedule => write!(f, "MissedSchedule"),
-            AlertType::ComplianceViolation => write!(f, "ComplianceViolation"),
-            AlertType::SafetyConcern => write!(f, "SafetyConcern"),
-            AlertType::DeviceIssue => write!(f, "DeviceIssue"),
+            CollectionAlertType::LowCollectionRate => write!(f, "LowCollectionRate"),
+            CollectionAlertType::CustomerComplaint => write!(f, "CustomerComplaint"),
+            CollectionAlertType::CashDiscrepancy => write!(f, "CashDiscrepancy"),
+            CollectionAlertType::MissedSchedule => write!(f, "MissedSchedule"),
+            CollectionAlertType::ComplianceViolation => write!(f, "ComplianceViolation"),
+            CollectionAlertType::SafetyConcern => write!(f, "SafetyConcern"),
+            CollectionAlertType::DeviceIssue => write!(f, "DeviceIssue"),
         }
     }
 }
 
-impl std::str::FromStr for AlertType {
+impl std::str::FromStr for CollectionAlertType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "LowCollectionRate" => Ok(AlertType::LowCollectionRate),
-            "CustomerComplaint" => Ok(AlertType::CustomerComplaint),
-            "CashDiscrepancy" => Ok(AlertType::CashDiscrepancy),
-            "MissedSchedule" => Ok(AlertType::MissedSchedule),
-            "ComplianceViolation" => Ok(AlertType::ComplianceViolation),
-            "SafetyConcern" => Ok(AlertType::SafetyConcern),
-            "DeviceIssue" => Ok(AlertType::DeviceIssue),
-            _ => Err(format!("Invalid AlertType: {s}")),
+            "LowCollectionRate" => Ok(CollectionAlertType::LowCollectionRate),
+            "CustomerComplaint" => Ok(CollectionAlertType::CustomerComplaint),
+            "CashDiscrepancy" => Ok(CollectionAlertType::CashDiscrepancy),
+            "MissedSchedule" => Ok(CollectionAlertType::MissedSchedule),
+            "ComplianceViolation" => Ok(CollectionAlertType::ComplianceViolation),
+            "SafetyConcern" => Ok(CollectionAlertType::SafetyConcern),
+            "DeviceIssue" => Ok(CollectionAlertType::DeviceIssue),
+            _ => Err(format!("Invalid CollectionAlertType: {s}")),
         }
     }
 }
@@ -375,7 +375,7 @@ impl std::str::FromStr for ConnectivityStatus {
 
 /// Security features for agent devices
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SecurityFeatures {
+pub struct CollectionSecurityFeatures {
     pub id: Uuid,
     pub biometric_enabled: bool,
     pub pin_protection: bool,
@@ -537,11 +537,11 @@ pub struct FeeStructure {
     pub maintenance_fee: Option<Decimal>,
     pub graduation_fee: Option<Decimal>,
     pub early_termination_fee: Option<Decimal>,
-    pub fee_frequency: FeeFrequency,
+    pub fee_frequency: CollectionFeeFrequency,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum FeeFrequency {
+pub enum CollectionFeeFrequency {
     PerCollection,
     Daily,
     Weekly,
@@ -549,28 +549,28 @@ pub enum FeeFrequency {
     OneTime,
 }
 
-impl fmt::Display for FeeFrequency {
+impl fmt::Display for CollectionFeeFrequency {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FeeFrequency::PerCollection => write!(f, "PerCollection"),
-            FeeFrequency::Daily => write!(f, "Daily"),
-            FeeFrequency::Weekly => write!(f, "Weekly"),
-            FeeFrequency::Monthly => write!(f, "Monthly"),
-            FeeFrequency::OneTime => write!(f, "OneTime"),
+            CollectionFeeFrequency::PerCollection => write!(f, "PerCollection"),
+            CollectionFeeFrequency::Daily => write!(f, "Daily"),
+            CollectionFeeFrequency::Weekly => write!(f, "Weekly"),
+            CollectionFeeFrequency::Monthly => write!(f, "Monthly"),
+            CollectionFeeFrequency::OneTime => write!(f, "OneTime"),
         }
     }
 }
 
-impl std::str::FromStr for FeeFrequency {
+impl std::str::FromStr for CollectionFeeFrequency {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "PerCollection" => Ok(FeeFrequency::PerCollection),
-            "Daily" => Ok(FeeFrequency::Daily),
-            "Weekly" => Ok(FeeFrequency::Weekly),
-            "Monthly" => Ok(FeeFrequency::Monthly),
-            "OneTime" => Ok(FeeFrequency::OneTime),
+            "PerCollection" => Ok(CollectionFeeFrequency::PerCollection),
+            "Daily" => Ok(CollectionFeeFrequency::Daily),
+            "Weekly" => Ok(CollectionFeeFrequency::Weekly),
+            "Monthly" => Ok(CollectionFeeFrequency::Monthly),
+            "OneTime" => Ok(CollectionFeeFrequency::OneTime),
             _ => Err(format!("Invalid FeeFrequency: {s}")),
         }
     }
@@ -589,11 +589,11 @@ pub struct CustomerCollectionProfile {
     pub enrollment_date: NaiveDate,
     pub status: CollectionStatus,
     pub daily_amount: Decimal,
-    pub collection_schedule_id: Uuid,
+    pub collection_schedule: CollectionSchedule,
     pub assigned_collection_agent_id: Uuid,
     pub collection_location_address_id: Uuid,
-    pub collection_performance_metrics_id: Uuid,
-    pub graduation_progress_id: Uuid,
+    pub collection_performance_metrics: CollectionPerformanceMetrics,
+    pub graduation_progress: GraduationProgress,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub reason_id: Option<Uuid>,
@@ -1246,11 +1246,11 @@ pub struct CustomerCollectionProfileBuilder {
     enrollment_date: Option<NaiveDate>,
     status: CollectionStatus,
     daily_amount: Option<Decimal>,
-    collection_schedule_id: Option<Uuid>,
+    collection_schedule: Option<CollectionSchedule>,
     assigned_collection_agent_id: Option<Uuid>,
     collection_location_address_id: Option<Uuid>,
-    collection_performance_metrics_id: Option<Uuid>,
-    graduation_progress_id: Option<Uuid>,
+    collection_performance_metrics: Option<CollectionPerformanceMetrics>,
+    graduation_progress: Option<GraduationProgress>,
     reason_id: Option<Uuid>,
 }
 
@@ -1269,11 +1269,11 @@ impl CustomerCollectionProfile {
             enrollment_date: None,
             status: CollectionStatus::Active,
             daily_amount: None,
-            collection_schedule_id: None,
+            collection_schedule: None,
             assigned_collection_agent_id: None,
             collection_location_address_id: None,
-            collection_performance_metrics_id: None,
-            graduation_progress_id: None,
+            collection_performance_metrics: None,
+            graduation_progress: None,
             reason_id: None,
         }
     }
@@ -1295,8 +1295,8 @@ impl CustomerCollectionProfileBuilder {
         self
     }
 
-    pub fn collection_schedule_id(mut self, id: Uuid) -> Self {
-        self.collection_schedule_id = Some(id);
+    pub fn collection_schedule(mut self, schedule: CollectionSchedule) -> Self {
+        self.collection_schedule = Some(schedule);
         self
     }
 
@@ -1310,13 +1310,13 @@ impl CustomerCollectionProfileBuilder {
         self
     }
 
-    pub fn collection_performance_metrics_id(mut self, id: Uuid) -> Self {
-        self.collection_performance_metrics_id = Some(id);
+    pub fn collection_performance_metrics(mut self, metrics: CollectionPerformanceMetrics) -> Self {
+        self.collection_performance_metrics = Some(metrics);
         self
     }
 
-    pub fn graduation_progress_id(mut self, id: Uuid) -> Self {
-        self.graduation_progress_id = Some(id);
+    pub fn graduation_progress(mut self, progress: GraduationProgress) -> Self {
+        self.graduation_progress = Some(progress);
         self
     }
 
@@ -1337,11 +1337,11 @@ impl CustomerCollectionProfileBuilder {
             enrollment_date,
             status: self.status,
             daily_amount: self.daily_amount.ok_or("Daily amount is required")?,
-            collection_schedule_id: self.collection_schedule_id.ok_or("Collection schedule ID is required")?,
+            collection_schedule: self.collection_schedule.ok_or("Collection schedule is required")?,
             assigned_collection_agent_id: self.assigned_collection_agent_id.ok_or("Assigned agent ID is required")?,
             collection_location_address_id: self.collection_location_address_id.ok_or("Collection location ID is required")?,
-            collection_performance_metrics_id: self.collection_performance_metrics_id.ok_or("Collection performance metrics ID is required")?,
-            graduation_progress_id: self.graduation_progress_id.ok_or("Graduation progress ID is required")?,
+            collection_performance_metrics: self.collection_performance_metrics.ok_or("Collection performance metrics are required")?,
+            graduation_progress: self.graduation_progress.ok_or("Graduation progress is required")?,
             created_at: now,
             updated_at: now,
             reason_id: self.reason_id,

@@ -477,14 +477,14 @@ pub struct ParRatios {
 /// Trend analysis for portfolio performance
 #[derive(Debug, Clone)]
 pub struct TrendAnalysis {
-    pub three_month_trend: TrendDirection,
-    pub six_month_trend: TrendDirection,
+    pub three_month_trend: LoanTrendDirection,
+    pub six_month_trend: LoanTrendDirection,
     pub year_over_year_change: Decimal,
     pub seasonal_adjustments: Vec<(String, Decimal)>,
 }
 
 #[derive(Debug, Clone)]
-pub enum TrendDirection {
+pub enum LoanTrendDirection {
     Improving,
     Stable,
     Deteriorating,

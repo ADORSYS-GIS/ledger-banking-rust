@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     domain::{
-        Transaction, TransactionType, ValidationResult, ApprovalWorkflow, 
+        Transaction, TransactionType, TransactionValidationResult, ApprovalWorkflow,
         PermittedOperation, TransactionRequest, TransactionResult, FinalSettlement
     },
     error::BankingResult,
@@ -16,7 +16,7 @@ pub trait TransactionService: Send + Sync {
     async fn process_transaction(&self, transaction: Transaction) -> BankingResult<Transaction>;
     
     /// Validate transaction limits
-    async fn validate_transaction_limits(&self, transaction: &Transaction) -> BankingResult<ValidationResult>;
+    async fn validate_transaction_limits(&self, transaction: &Transaction) -> BankingResult<TransactionValidationResult>;
     
     /// Reverse a posted transaction with reason ID validation
     async fn reverse_transaction(&self, transaction_id: Uuid, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<()>;
@@ -33,7 +33,7 @@ pub trait TransactionService: Send + Sync {
     async fn approve_transaction(&self, transaction_id: Uuid, approver_person_id: Uuid) -> BankingResult<()>;
 
     /// Status-aware transaction validation (from enhancements)
-    async fn validate_account_transactional_status(&self, account_id: Uuid, transaction_type: TransactionType) -> BankingResult<ValidationResult>;
+    async fn validate_account_transactional_status(&self, account_id: Uuid, transaction_type: TransactionType) -> BankingResult<TransactionValidationResult>;
     
     /// Get permitted operations for an account
     async fn get_permitted_operations(&self, account_id: Uuid) -> BankingResult<Vec<PermittedOperation>>;

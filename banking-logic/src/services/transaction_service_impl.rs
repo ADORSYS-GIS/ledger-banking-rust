@@ -9,12 +9,13 @@ use heapless::String as HeaplessString;
 use banking_api::{
     BankingResult, BankingError, Transaction, ApprovalWorkflow,
     service::TransactionService,
-    domain::{TransactionType, TransactionStatus, AccountStatus, ValidationResult},
+    domain::{TransactionType, TransactionStatus, AccountStatus},
 };
 use banking_db::repository::{TransactionRepository, AccountRepository};
 use crate::{
     mappers::{TransactionMapper, AccountMapper},
 };
+use banking_api::domain::transaction::TransactionValidationResult as ValidationResult;
 use banking_db::repository::ProductRepository;
 
 /// Production implementation of TransactionService
@@ -317,7 +318,7 @@ impl TransactionService for TransactionServiceImpl {
     }
 
     /// Validate account transactional status
-    async fn validate_account_transactional_status(&self, _account_id: Uuid, _transaction_type: banking_api::domain::TransactionType) -> BankingResult<banking_api::domain::ValidationResult> {
+    async fn validate_account_transactional_status(&self, _account_id: Uuid, _transaction_type: banking_api::domain::TransactionType) -> BankingResult<banking_api::domain::TransactionValidationResult> {
         todo!("Implement validate_account_transactional_status")
     }
 

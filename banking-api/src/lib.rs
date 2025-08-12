@@ -3,16 +3,45 @@ pub mod service;
 pub mod error;
 pub mod views;
 
-// Re-export all domain types
-pub use domain::*;
-
-// Re-export service types but exclude the conflicting ValidationResult
-pub use service::{
-    AccountService, TransactionService, CustomerService, FeeService, ReasonAndPurposeService,
-    CalendarService, ComplianceService, InterestService, CasaService, CollateralService, 
-    HierarchyService, EodService, LoanService,
-    // Export ValidationResult with a different name to avoid conflict
-    ValidationResult as ServiceValidationResult,
-};
 pub use error::*;
 pub use views::*;
+
+pub use domain::account_hold::*;
+pub use domain::account::*;
+pub use domain::agent_network::*;
+pub use domain::calendar::*;
+pub use domain::casa::*;
+pub use domain::channel::*;
+pub use domain::collateral::*;
+pub use domain::common::{DataValidationResult, ValidationError};
+pub use domain::compliance::*;
+pub use domain::customer::*;
+pub use domain::daily_collection::*;
+pub use domain::fee::*;
+pub use domain::loan::*;
+pub use domain::person::*;
+pub use domain::product::*;
+pub use domain::reason_and_purpose::*;
+pub use domain::reason_view::*;
+pub use domain::transaction::*;
+pub use domain::workflow::*;
+
+pub use service::account_hold_service::*;
+pub use service::account_service::*;
+pub use service::calendar_service::*;
+pub use service::casa_service::*;
+pub use service::channel_service::*;
+pub use service::collateral_service::*;
+pub use service::compliance_service::*;
+pub use service::customer_service::*;
+pub use service::daily_collection_service::*;
+pub use service::eod_service::*;
+pub use service::fee_service::*;
+pub use service::hierarchy_service::*;
+pub use service::interest_service::*;
+pub use service::lifecycle_service::*;
+pub use service::loan_service::*;
+pub use service::product_service::*;
+pub use service::reason_and_purpose_service::*;
+pub use service::reason_service::*;
+pub use service::transaction_service::*;

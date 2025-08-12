@@ -1,6 +1,6 @@
 use banking_api::domain::{
     Transaction, TransactionAudit, GlEntry, TransactionRequest, TransactionResult, 
-    ValidationResult, Approval, ChannelType,
+    TransactionValidationResult, Approval, ChannelType,
     TransactionType, TransactionStatus, TransactionApprovalStatus, TransactionAuditAction
 };
 use banking_db::models::{
@@ -315,7 +315,7 @@ pub struct ValidationResultMapper;
 
 impl ValidationResultMapper {
     /// Map from domain ValidationResult to database ValidationResultModel
-    pub fn to_model(validation: ValidationResult, transaction_id: Option<uuid::Uuid>) -> ValidationResultModel {
+    pub fn to_model(validation: TransactionValidationResult, transaction_id: Option<uuid::Uuid>) -> ValidationResultModel {
         let errors_json = serde_json::to_string(&validation.errors)
             .unwrap_or_else(|_| "[]".to_string());
         let warnings_json = serde_json::to_string(&validation.warnings)
@@ -332,13 +332,13 @@ impl ValidationResultMapper {
     }
 
     /// Map from database ValidationResultModel to domain ValidationResult
-    pub fn from_model(model: ValidationResultModel) -> banking_api::BankingResult<ValidationResult> {
+    pub fn from_model(model: ValidationResultModel) -> banking_api::BankingResult<TransactionValidationResult> {
         let errors: Vec<String> = serde_json::from_str(&model.errors)
             .unwrap_or_else(|_| vec![]);
         let warnings: Vec<String> = serde_json::from_str(&model.warnings)
             .unwrap_or_else(|_| vec![]);
             
-        Ok(ValidationResult::new(model.is_valid, errors, warnings))
+        Ok(TransactionValidationResult::new(model.is_valid, errors, warnings))
     }
 }
 
