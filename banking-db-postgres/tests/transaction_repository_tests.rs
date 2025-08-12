@@ -1,4 +1,4 @@
-use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
+use banking_db::{DbAccountStatus, DbAccountType, DbSigningCondition};
 use banking_db::models::{TransactionModel, TransactionType, TransactionStatus, AccountModel};
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
@@ -58,9 +58,9 @@ fn create_test_account() -> AccountModel {
         id: account_id,
         product_id: Uuid::new_v4(),
         gl_code_suffix: None,
-        account_type: AccountType::Savings,
-        account_status: AccountStatus::Active,
-        signing_condition: SigningCondition::AnyOwner,
+        account_type: DbAccountType::Savings,
+        account_status: DbAccountStatus::Active,
+        signing_condition: DbSigningCondition::AnyOwner,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
         domicile_agency_branch_id: domicile_agency_branch_id,
@@ -173,9 +173,9 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
     )
     .bind(account.id)
     .bind(account.product_id)
-    .bind(account.account_type.to_string())
-    .bind(account.account_status.to_string())
-    .bind(account.signing_condition.to_string())
+    .bind(format!("{:?}", account.account_type))
+    .bind(format!("{:?}", account.account_status))
+    .bind(format!("{:?}", account.signing_condition))
     .bind(account.currency.as_str())
     .bind(account.open_date)
     .bind(account.domicile_agency_branch_id)

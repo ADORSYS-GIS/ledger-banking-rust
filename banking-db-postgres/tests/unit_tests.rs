@@ -1,4 +1,4 @@
-use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
+use banking_db::{DbAccountType, DbAccountStatus, DbSigningCondition};
 use banking_db::models::AccountModel;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
@@ -16,9 +16,9 @@ fn create_test_account() -> AccountModel {
         id: account_id,
         product_id: Uuid::new_v4(),
         gl_code_suffix: None,
-        account_type: AccountType::Savings,
-        account_status: AccountStatus::Active,
-        signing_condition: SigningCondition::AnyOwner,
+        account_type: DbAccountType::Savings,
+        account_status: DbAccountStatus::Active,
+        signing_condition: DbSigningCondition::AnyOwner,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
         domicile_agency_branch_id: domicile_agency_branch_id,
@@ -80,9 +80,9 @@ fn create_test_account() -> AccountModel {
 fn test_account_model_creation() {
     let account = create_test_account();
     
-    assert!(matches!(account.account_type, AccountType::Savings));
-    assert!(matches!(account.account_status, AccountStatus::Active));
-    assert!(matches!(account.signing_condition, SigningCondition::AnyOwner));
+    assert!(matches!(account.account_type, DbAccountType::Savings));
+    assert!(matches!(account.account_status, DbAccountStatus::Active));
+    assert!(matches!(account.signing_condition, DbSigningCondition::AnyOwner));
     assert!(!account.product_id.is_nil());
     assert_eq!(account.currency.as_str(), "USD");
     assert_eq!(account.current_balance, Decimal::from_str("1000.00").unwrap());
@@ -109,7 +109,7 @@ fn test_heapless_string_constraints() {
 #[test]
 fn test_loan_account_specific_fields() {
     let mut loan_account = create_test_account();
-    loan_account.account_type = AccountType::Loan;
+    loan_account.account_type = DbAccountType::Loan;
     loan_account.original_principal = Some(Decimal::from_str("10000.00").unwrap());
     loan_account.outstanding_principal = Some(Decimal::from_str("7500.00").unwrap());
     loan_account.loan_interest_rate = Some(Decimal::from_str("0.12").unwrap()); // 12%
@@ -120,7 +120,7 @@ fn test_loan_account_specific_fields() {
     loan_account.next_due_date = Some(NaiveDate::from_ymd_opt(2024, 2, 15).unwrap());
     loan_account.penalty_rate = Some(Decimal::from_str("0.05").unwrap()); // 5%
     
-    assert!(matches!(loan_account.account_type, AccountType::Loan));
+    assert!(matches!(loan_account.account_type, DbAccountType::Loan));
     assert_eq!(loan_account.original_principal, Some(Decimal::from_str("10000.00").unwrap()));
     assert_eq!(loan_account.outstanding_principal, Some(Decimal::from_str("7500.00").unwrap()));
     assert_eq!(loan_account.loan_interest_rate, Some(Decimal::from_str("0.12").unwrap()));
@@ -130,12 +130,12 @@ fn test_loan_account_specific_fields() {
 #[test]
 fn test_current_account_overdraft() {
     let mut current_account = create_test_account();
-    current_account.account_type = AccountType::Current;
+    current_account.account_type = DbAccountType::Current;
     current_account.overdraft_limit = Some(Decimal::from_str("500.00").unwrap());
     current_account.current_balance = Decimal::from_str("-100.00").unwrap(); // Negative balance
     current_account.available_balance = Decimal::from_str("400.00").unwrap(); // Available from overdraft
     
-    assert!(matches!(current_account.account_type, AccountType::Current));
+    assert!(matches!(current_account.account_type, DbAccountType::Current));
     assert_eq!(current_account.overdraft_limit, Some(Decimal::from_str("500.00").unwrap()));
     assert_eq!(current_account.current_balance, Decimal::from_str("-100.00").unwrap());
     assert_eq!(current_account.available_balance, Decimal::from_str("400.00").unwrap());
@@ -146,26 +146,26 @@ fn test_account_status_transitions() {
     let mut account = create_test_account();
     
     // Test status changes
-    account.account_status = AccountStatus::PendingApproval;
-    assert!(matches!(account.account_status, AccountStatus::PendingApproval));
+    account.account_status = DbAccountStatus::PendingApproval;
+    assert!(matches!(account.account_status, DbAccountStatus::PendingApproval));
     
-    account.account_status = AccountStatus::Active;
-    assert!(matches!(account.account_status, AccountStatus::Active));
+    account.account_status = DbAccountStatus::Active;
+    assert!(matches!(account.account_status, DbAccountStatus::Active));
     
-    account.account_status = AccountStatus::Frozen;
-    assert!(matches!(account.account_status, AccountStatus::Frozen));
+    account.account_status = DbAccountStatus::Frozen;
+    assert!(matches!(account.account_status, DbAccountStatus::Frozen));
     
-    account.account_status = AccountStatus::Dormant;
-    assert!(matches!(account.account_status, AccountStatus::Dormant));
+    account.account_status = DbAccountStatus::Dormant;
+    assert!(matches!(account.account_status, DbAccountStatus::Dormant));
     
-    account.account_status = AccountStatus::PendingClosure;
-    assert!(matches!(account.account_status, AccountStatus::PendingClosure));
+    account.account_status = DbAccountStatus::PendingClosure;
+    assert!(matches!(account.account_status, DbAccountStatus::PendingClosure));
     
-    account.account_status = AccountStatus::Closed;
-    assert!(matches!(account.account_status, AccountStatus::Closed));
+    account.account_status = DbAccountStatus::Closed;
+    assert!(matches!(account.account_status, DbAccountStatus::Closed));
     
-    account.account_status = AccountStatus::PendingReactivation;
-    assert!(matches!(account.account_status, AccountStatus::PendingReactivation));
+    account.account_status = DbAccountStatus::PendingReactivation;
+    assert!(matches!(account.account_status, DbAccountStatus::PendingReactivation));
 }
 
 #[test]
@@ -173,14 +173,14 @@ fn test_signing_conditions() {
     let mut account = create_test_account();
     
     // Test different signing conditions
-    account.signing_condition = SigningCondition::None;
-    assert!(matches!(account.signing_condition, SigningCondition::None));
+    account.signing_condition = DbSigningCondition::None;
+    assert!(matches!(account.signing_condition, DbSigningCondition::None));
     
-    account.signing_condition = SigningCondition::AnyOwner;
-    assert!(matches!(account.signing_condition, SigningCondition::AnyOwner));
+    account.signing_condition = DbSigningCondition::AnyOwner;
+    assert!(matches!(account.signing_condition, DbSigningCondition::AnyOwner));
     
-    account.signing_condition = SigningCondition::AllOwners;
-    assert!(matches!(account.signing_condition, SigningCondition::AllOwners));
+    account.signing_condition = DbSigningCondition::AllOwners;
+    assert!(matches!(account.signing_condition, DbSigningCondition::AllOwners));
 }
 
 #[test]
@@ -219,7 +219,7 @@ fn test_optional_fields() {
     let account = create_test_account();
     
     // Test that savings account doesn't have loan-specific fields
-    assert!(matches!(account.account_type, AccountType::Savings));
+    assert!(matches!(account.account_type, DbAccountType::Savings));
     assert!(account.original_principal.is_none());
     assert!(account.outstanding_principal.is_none());
     assert!(account.loan_interest_rate.is_none());
@@ -262,15 +262,15 @@ fn test_audit_fields() {
 #[test]
 fn test_enum_debug_output() {
     // Test that enums have proper debug output
-    assert_eq!(format!("{:?}", AccountType::Savings), "Savings");
-    assert_eq!(format!("{:?}", AccountType::Current), "Current");
-    assert_eq!(format!("{:?}", AccountType::Loan), "Loan");
+    assert_eq!(format!("{:?}", DbAccountType::Savings), "Savings");
+    assert_eq!(format!("{:?}", DbAccountType::Current), "Current");
+    assert_eq!(format!("{:?}", DbAccountType::Loan), "Loan");
     
-    assert_eq!(format!("{:?}", AccountStatus::Active), "Active");
-    assert_eq!(format!("{:?}", AccountStatus::Frozen), "Frozen");
-    assert_eq!(format!("{:?}", AccountStatus::Closed), "Closed");
+    assert_eq!(format!("{:?}", DbAccountStatus::Active), "Active");
+    assert_eq!(format!("{:?}", DbAccountStatus::Frozen), "Frozen");
+    assert_eq!(format!("{:?}", DbAccountStatus::Closed), "Closed");
     
-    assert_eq!(format!("{:?}", SigningCondition::None), "None");
-    assert_eq!(format!("{:?}", SigningCondition::AnyOwner), "AnyOwner");
-    assert_eq!(format!("{:?}", SigningCondition::AllOwners), "AllOwners");
+    assert_eq!(format!("{:?}", DbSigningCondition::None), "None");
+    assert_eq!(format!("{:?}", DbSigningCondition::AnyOwner), "AnyOwner");
+    assert_eq!(format!("{:?}", DbSigningCondition::AllOwners), "AllOwners");
 }

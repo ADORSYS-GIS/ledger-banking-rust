@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use async_trait::async_trait;
+use banking_db::DbAccountType;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -60,7 +61,7 @@ impl CasaService for CasaServiceImpl {
             .await?
             .ok_or(BankingError::AccountNotFound(request.account_id))?;
 
-        if account.account_type != banking_api::domain::AccountType::Current {
+        if account.account_type != DbAccountType::Current {
             return Err(BankingError::ValidationError {
                 field: "account_type".to_string(),
                 message: "Overdraft facilities are only available for current accounts".to_string(),

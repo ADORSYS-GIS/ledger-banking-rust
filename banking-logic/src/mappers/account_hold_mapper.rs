@@ -1,10 +1,9 @@
 use banking_api::domain::account_hold::{
     AccountHold, AccountHoldExpiryJob, AccountHoldReleaseRequest, AccountHoldSummary,
-    PlaceHoldRequest, HoldType as ApiHoldType, HoldStatus as ApiHoldStatus, HoldPriority as ApiHoldPriority,
 };
 use banking_db::models::account_hold::{
     AccountHoldExpiryJobModel, AccountHoldModel, AccountHoldReleaseRequestModel,
-    AccountHoldSummaryModel, HoldType as DbHoldType, HoldStatus as DbHoldStatus, HoldPriority as DbHoldPriority,
+    AccountHoldSummaryModel, 
 };
 
 pub struct AccountHoldMapper;

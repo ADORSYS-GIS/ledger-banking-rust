@@ -381,7 +381,7 @@ impl TransactionValidationResult {
             None,
         );
 
-        if let Some(error) = errors.get(0) {
+        if let Some(error) = errors.first() {
             result.validation_error_01_field = error.0.clone();
             result.validation_error_01_message = error.1.clone();
             result.validation_error_01_error_code = error.2.clone();

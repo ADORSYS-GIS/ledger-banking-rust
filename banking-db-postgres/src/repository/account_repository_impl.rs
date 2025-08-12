@@ -2,9 +2,10 @@ use async_trait::async_trait;
 use banking_api::{BankingError, BankingResult};
 use banking_db::models::{
     AccountFinalSettlementModel, AccountMandateModel, AccountModel, AccountOwnershipModel,
-    AccountRelationshipModel, AccountStatusChangeRecordModel, AccountType, ReasonAndPurpose as ReasonAndPurposeModel,
+    AccountRelationshipModel, AccountStatusChangeRecordModel, ReasonAndPurpose as ReasonAndPurposeModel,
 };
 use banking_db::repository::{AccountRepository, ReasonAndPurposeRepository};
+use banking_db::{DbAccountType, DbMandateStatus, DbPermissionType};
 use chrono::{NaiveDate, Utc};
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row, postgres::PgRow};
@@ -85,9 +86,9 @@ impl AccountRepository for AccountRepositoryImpl {
         )
         .bind(account.id)
         .bind(account.product_id)
-        .bind(account.account_type.to_string())
-        .bind(account.account_status.to_string())
-        .bind(account.signing_condition.to_string())
+        .bind(account.account_type)
+        .bind(account.account_status)
+        .bind(account.signing_condition)
         .bind(account.currency.as_str())
         .bind(account.open_date)
         .bind(account.domicile_agency_branch_id)
@@ -191,9 +192,9 @@ impl AccountRepository for AccountRepositoryImpl {
         )
         .bind(account.id)
         .bind(account.product_id)
-        .bind(account.account_type.to_string())
-        .bind(account.account_status.to_string())
-        .bind(account.signing_condition.to_string())
+        .bind(account.account_type)
+        .bind(account.account_status)
+        .bind(account.signing_condition)
         .bind(account.currency.as_str())
         .bind(account.open_date)
         .bind(account.domicile_agency_branch_id)
@@ -395,7 +396,7 @@ impl AccountRepository for AccountRepositoryImpl {
         Ok(accounts)
     }
 
-    async fn find_by_account_type(&self, account_type: AccountType) -> BankingResult<Vec<AccountModel>> {
+    async fn find_by_account_type(&self, account_type: DbAccountType) -> BankingResult<Vec<AccountModel>> {
         let rows = sqlx::query(
             r#"
             SELECT id, product_id, account_type::text as account_type,
@@ -420,7 +421,7 @@ impl AccountRepository for AccountRepositoryImpl {
             ORDER BY created_at DESC
             "#,
         )
-        .bind(account_type.to_string())
+        .bind(account_type)
         .fetch_all(&self.pool)
         .await?;
 
@@ -580,8 +581,8 @@ impl AccountRepository for AccountRepositoryImpl {
             compliance_metadata: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by_person_id: HeaplessString::try_from(changed_by_person_id.to_string().as_str()).unwrap(),
-            updated_by_person_id: HeaplessString::try_from(changed_by_person_id.to_string().as_str()).unwrap(),
+            created_by_person_id: changed_by_person_id,
+            updated_by_person_id: changed_by_person_id,
         };
         let created_reason = self.reason_repo.create(reason_model).await?;
 
@@ -692,7 +693,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(ownership.id)
         .bind(ownership.account_id)
         .bind(ownership.customer_id)
-        .bind(ownership.ownership_type.to_string())
+        .bind(ownership.ownership_type)
         .bind(ownership.ownership_percentage)
         .fetch_one(&self.pool)
         .await?;
@@ -770,9 +771,9 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(relationship.id)
         .bind(relationship.account_id)
         .bind(relationship.person_id)
-        .bind(relationship.entity_type.to_string())
-        .bind(relationship.relationship_type.to_string())
-        .bind(relationship.status.to_string())
+        .bind(relationship.entity_type)
+        .bind(relationship.relationship_type)
+        .bind(relationship.status)
         .bind(relationship.start_date)
         .bind(relationship.end_date)
         .fetch_one(&self.pool)
@@ -841,9 +842,9 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(relationship.id)
         .bind(relationship.account_id)
         .bind(relationship.person_id)
-        .bind(relationship.entity_type.to_string())
-        .bind(relationship.relationship_type.to_string())
-        .bind(relationship.status.to_string())
+        .bind(relationship.entity_type)
+        .bind(relationship.relationship_type)
+        .bind(relationship.status)
         .bind(relationship.start_date)
         .bind(relationship.end_date)
         .fetch_one(&self.pool)
@@ -883,7 +884,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(mandate.id)
         .bind(mandate.account_id)
         .bind(mandate.grantee_customer_id)
-        .bind(mandate.permission_type.to_string())
+        .bind(mandate.permission_type)
         .bind(mandate.transaction_limit)
         .bind(mandate.approver01_person_id)
         .bind(mandate.approver02_person_id)
@@ -894,7 +895,7 @@ impl AccountRepository for AccountRepositoryImpl {
         .bind(mandate.approver07_person_id)
         .bind(mandate.required_signers_count as i16)
         .bind(mandate.conditional_mandate_id)
-        .bind(mandate.status.to_string())
+        .bind(mandate.status)
         .bind(mandate.start_date)
         .bind(mandate.end_date)
         .fetch_one(&self.pool)
@@ -1049,8 +1050,8 @@ impl AccountRepository for AccountRepositoryImpl {
         )
         .bind(status_change.id)
         .bind(status_change.account_id)
-        .bind(status_change.old_status.map(|s| s.to_string()))
-        .bind(status_change.new_status.to_string())
+        .bind(status_change.old_status)
+        .bind(status_change.new_status)
         .bind(status_change.reason_id)
         .bind(status_change.additional_context.map(|s| s.to_string()))
         .bind(status_change.changed_by_person_id)
@@ -1274,7 +1275,7 @@ impl TryFromRow<PgRow> for AccountMandateModel {
             id: row.get("id"),
             account_id: row.get("account_id"),
             grantee_customer_id: row.get("grantee_customer_id"),
-            permission_type: row.get::<String, _>("permission_type").parse().map_err(|_| BankingError::Internal("Failed to parse permission_type".into()))?,
+            permission_type: row.try_get::<String, _>("permission_type")?.parse::<DbPermissionType>().map_err(|_| sqlx::Error::Decode("Invalid Permission Type".into()))?,
             transaction_limit: row.get("transaction_limit"),
             approver01_person_id: row.get("approver01_person_id"),
             approver02_person_id: row.get("approver02_person_id"),
@@ -1285,7 +1286,7 @@ impl TryFromRow<PgRow> for AccountMandateModel {
             approver07_person_id: row.get("approver07_person_id"),
             required_signers_count: row.get::<i16, _>("required_signers_count") as u8,
             conditional_mandate_id: row.get("conditional_mandate_id"),
-            status: row.get::<String, _>("status").parse().map_err(|_| BankingError::Internal("Failed to parse status".into()))?,
+            status: row.try_get::<String, _>("status")?.parse::<DbMandateStatus>().map_err(|_| sqlx::Error::Decode("Invalid Status".into()))?,
             start_date: row.get("start_date"),
             end_date: row.get("end_date"),
         })

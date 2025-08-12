@@ -40,6 +40,28 @@ pub enum NetworkType {
 }
 ```
 
+Additionally, implement the `FromStr` trait for the database model enum to allow for conversion from a string. This is useful for deserialization and other contexts where the enum is represented as a string.
+
+**`FromStr` Implementation (`banking-db/src/models/account_hold.rs`):**
+```rust
+use std::str::FromStr;
+
+impl FromStr for HoldPriority {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Critical" => Ok(HoldPriority::Critical),
+            "High" => Ok(HoldPriority::High),
+            "Standard" => Ok(HoldPriority::Standard),
+            "Medium" => Ok(HoldPriority::Medium),
+            "Low" => Ok(HoldPriority::Low),
+            _ => Err(()),
+        }
+    }
+}
+```
+
 After creating the separate enums, update all relevant mapper functions to correctly convert between the domain enum and its new database model counterpart for all enums within the `banking-logic/src/mappers/{file_name}_mapper.rs` module. Use helper methods within the mapper implementation for the conversions, as shown in the example below:
 
 **Mapper Implementation (`banking-logic/src/mappers/agent_network_mapper.rs`):**

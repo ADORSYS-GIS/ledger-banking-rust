@@ -461,8 +461,8 @@ CREATE TABLE reason_and_purpose (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by_person_id VARCHAR(100) NOT NULL,
-    updated_by_person_id VARCHAR(100) NOT NULL
+    created_by_person_id UUID NOT NULL,
+    updated_by_person_id UUID NOT NULL
 );
 
 -- Create indexes for efficient querying
@@ -2419,7 +2419,7 @@ INSERT INTO reason_and_purpose (
     'Kununua Nyumba',
     'eng', 'fra', 'swa',
     FALSE, TRUE, NULL, 1,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2431,7 +2431,7 @@ INSERT INTO reason_and_purpose (
     'Upanuzi wa Biashara',
     'eng', 'fra', 'swa',
     TRUE, TRUE, NULL, 2,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2443,7 +2443,7 @@ INSERT INTO reason_and_purpose (
     'Elimu',
     'eng', 'fra', 'swa',
     FALSE, TRUE, NULL, 3,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- Account Closure Reasons
@@ -2457,7 +2457,7 @@ INSERT INTO reason_and_purpose (
     'Ombi la Mteja',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'Low', 1,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2469,7 +2469,7 @@ INSERT INTO reason_and_purpose (
     'Kutotumika kwa Akaunti',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Low', 2,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2481,7 +2481,7 @@ INSERT INTO reason_and_purpose (
     'Suala la Utiifu',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 3,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- AML/CTF Reasons  
@@ -2495,7 +2495,7 @@ INSERT INTO reason_and_purpose (
     'Mfumo wa shughuli za kutiliwa shaka umegundulika',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 1,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2507,7 +2507,7 @@ INSERT INTO reason_and_purpose (
     'Jina linafanana na orodha ya vikwazo',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'Critical', 1,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2519,7 +2519,7 @@ INSERT INTO reason_and_purpose (
     'Muamala unahusisha eneo lenye hatari kubwa',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 2,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- KYC Reasons
@@ -2533,7 +2533,7 @@ INSERT INTO reason_and_purpose (
     'Kitambulisho cha taifa kimepita muda',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 1,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2545,7 +2545,7 @@ INSERT INTO reason_and_purpose (
     'Uthibitisho wa makazi unahitajika',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 2,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2557,7 +2557,7 @@ INSERT INTO reason_and_purpose (
     'Hati za chanzo cha fedha zinahitajika',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 1,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- Transaction Hold Reasons
@@ -2571,7 +2571,7 @@ INSERT INTO reason_and_purpose (
     'Fedha hazitoshi',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 1,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2583,7 +2583,7 @@ INSERT INTO reason_and_purpose (
     'Kuna uchunguzi wa udanganyifu',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 2,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- System Generated Reasons
@@ -2597,7 +2597,7 @@ INSERT INTO reason_and_purpose (
     'Usingizi wa otomatiki kwa kutotumika',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Low', 1,
-    'System', 'System'
+    gen_random_uuid(),gen_random_uuid()
 );
 
 -- Update compliance metadata for specific reasons

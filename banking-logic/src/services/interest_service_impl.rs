@@ -589,7 +589,7 @@ mod tests {
         async fn create(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> { todo!() }
         async fn update(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> { todo!() }
         async fn find_by_customer_id(&self, _customer_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
-        async fn find_by_account_type(&self, _account_type: banking_db::models::AccountType) -> BankingResult<Vec<banking_db::models::AccountModel>> { Ok(vec![]) }
+        async fn find_by_account_type(&self, _account_type: banking_db::models::DbAccountType) -> BankingResult<Vec<banking_db::models::AccountModel>> { Ok(vec![]) }
         async fn find_by_product_id(&self, _product_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_by_status(&self, _status: &str) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_dormancy_candidates(&self, _reference_date: chrono::NaiveDate, _threshold_days: i32) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }

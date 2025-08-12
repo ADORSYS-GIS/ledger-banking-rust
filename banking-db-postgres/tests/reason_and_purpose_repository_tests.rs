@@ -50,8 +50,8 @@ mod reason_and_purpose_repository_tests {
             compliance_metadata: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by_person_id: HeaplessString::try_from("test_user").unwrap(),
-            updated_by_person_id: HeaplessString::try_from("test_user").unwrap(),
+            created_by_person_id: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         }
     }
 
@@ -182,14 +182,15 @@ mod reason_and_purpose_repository_tests {
         let created = repo.create(test_reason).await.expect("Failed to create reason");
         assert!(created.is_active);
         
+        let test_admin = Uuid::new_v4();
         // Deactivate
-        repo.deactivate(reason_id, "test_admin").await.expect("Failed to deactivate reason");
+        repo.deactivate(reason_id, test_admin).await.expect("Failed to deactivate reason");
         
         let deactivated = repo.find_by_id(reason_id).await.expect("Failed to find reason").unwrap();
         assert!(!deactivated.is_active);
         
         // Reactivate
-        repo.reactivate(reason_id, "test_admin").await.expect("Failed to reactivate reason");
+        repo.reactivate(reason_id, test_admin).await.expect("Failed to reactivate reason");
         
         let reactivated = repo.find_by_id(reason_id).await.expect("Failed to find reason").unwrap();
         assert!(reactivated.is_active);
@@ -427,9 +428,11 @@ mod reason_and_purpose_repository_tests {
         
         let is_active = repo.is_active(reason_id).await.expect("Failed to check if reason is active");
         assert!(is_active);
+
+        let test_admin = Uuid::new_v4();
         
         // Deactivate and check again
-        repo.deactivate(reason_id, "test_admin").await.expect("Failed to deactivate reason");
+        repo.deactivate(reason_id, test_admin).await.expect("Failed to deactivate reason");
         
         let is_active_after = repo.is_active(reason_id).await.expect("Failed to check if reason is active after deactivation");
         assert!(!is_active_after);
