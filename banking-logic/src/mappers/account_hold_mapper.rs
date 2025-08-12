@@ -1,10 +1,10 @@
 use banking_api::domain::account_hold::{
     AccountHold, AccountHoldExpiryJob, AccountHoldReleaseRequest, AccountHoldSummary,
-    PlaceHoldRequest,
+    PlaceHoldRequest, HoldType as ApiHoldType, HoldStatus as ApiHoldStatus, HoldPriority as ApiHoldPriority,
 };
 use banking_db::models::account_hold::{
     AccountHoldExpiryJobModel, AccountHoldModel, AccountHoldReleaseRequestModel,
-    AccountHoldSummaryModel, PlaceHoldRequestModel,
+    AccountHoldSummaryModel, HoldType as DbHoldType, HoldStatus as DbHoldStatus, HoldPriority as DbHoldPriority,
 };
 
 pub struct AccountHoldMapper;
@@ -16,16 +16,16 @@ impl AccountHoldMapper {
             id: hold.id,
             account_id: hold.account_id,
             amount: hold.amount,
-            hold_type: hold.hold_type,
+            hold_type: hold.hold_type.into(),
             reason_id: hold.reason_id,
             additional_details: hold.additional_details,
             placed_by_person_id: hold.placed_by_person_id,
             placed_at: hold.placed_at,
             expires_at: hold.expires_at,
-            status: hold.status,
+            status: hold.status.into(),
             released_at: hold.released_at,
             released_by_person_id: hold.released_by_person_id,
-            priority: hold.priority,
+            priority: hold.priority.into(),
             source_reference: hold.source_reference,
             automatic_release: hold.automatic_release,
             created_at: chrono::Utc::now(), // Database audit field
@@ -38,16 +38,16 @@ impl AccountHoldMapper {
             id: model.id,
             account_id: model.account_id,
             amount: model.amount,
-            hold_type: model.hold_type,
+            hold_type: model.hold_type.into(),
             reason_id: model.reason_id,
             additional_details: model.additional_details.map(|s| s.as_str().try_into().unwrap()),
             placed_by_person_id: model.placed_by_person_id,
             placed_at: model.placed_at,
             expires_at: model.expires_at,
-            status: model.status,
+            status: model.status.into(),
             released_at: model.released_at,
             released_by_person_id: model.released_by_person_id,
-            priority: model.priority,
+            priority: model.priority.into(),
             source_reference: model.source_reference.map(|s| s.as_str().try_into().unwrap()),
             automatic_release: model.automatic_release,
         }
@@ -58,10 +58,10 @@ impl AccountHoldMapper {
         AccountHoldSummaryModel {
             id: summary.id,
             account_balance_calculation_id: summary.account_balance_calculation_id,
-            hold_type: summary.hold_type,
+            hold_type: summary.hold_type.into(),
             total_amount: summary.total_amount,
             hold_count: summary.hold_count,
-            priority: summary.priority,
+            priority: summary.priority.into(),
         }
     }
 
@@ -69,10 +69,10 @@ impl AccountHoldMapper {
         AccountHoldSummary {
             id: model.id,
             account_balance_calculation_id: model.account_balance_calculation_id,
-            hold_type: model.hold_type,
+            hold_type: model.hold_type.into(),
             total_amount: model.total_amount,
             hold_count: model.hold_count,
-            priority: model.priority,
+            priority: model.priority.into(),
         }
     }
 
@@ -133,35 +133,5 @@ impl AccountHoldMapper {
     }
 
     // PlaceHoldRequest mappers
-    pub fn place_hold_request_to_model(
-        request: PlaceHoldRequest,
-        id: uuid::Uuid,
-    ) -> PlaceHoldRequestModel {
-        PlaceHoldRequestModel {
-            id,
-            account_id: request.account_id,
-            hold_type: request.hold_type,
-            amount: request.amount,
-            reason_id: request.reason_id,
-            additional_details: request.additional_details,
-            placed_by_person_id: request.placed_by_person_id,
-            expires_at: request.expires_at,
-            priority: request.priority,
-            source_reference: request.source_reference,
-        }
-    }
-
-    pub fn place_hold_request_from_model(model: PlaceHoldRequestModel) -> PlaceHoldRequest {
-        PlaceHoldRequest {
-            account_id: model.account_id,
-            hold_type: model.hold_type,
-            amount: model.amount,
-            reason_id: model.reason_id,
-            additional_details: model.additional_details.map(|s| s.as_str().try_into().unwrap()),
-            placed_by_person_id: model.placed_by_person_id,
-            expires_at: model.expires_at,
-            priority: model.priority,
-            source_reference: model.source_reference.map(|s| s.as_str().try_into().unwrap()),
-        }
-    }
 }
+

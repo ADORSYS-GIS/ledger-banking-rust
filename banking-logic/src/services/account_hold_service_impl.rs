@@ -60,25 +60,7 @@ impl AccountHoldService for AccountHoldServiceImpl {
         request: PlaceHoldRequest,
     ) -> BankingResult<AccountHold> {
         let id = Uuid::new_v4();
-        let model = banking_db::models::account_hold::AccountHoldModel {
-            id,
-            account_id: request.account_id,
-            amount: request.amount,
-            hold_type: request.hold_type,
-            reason_id: request.reason_id,
-            additional_details: request.additional_details,
-            placed_by_person_id: request.placed_by_person_id,
-            placed_at: Utc::now(),
-            expires_at: request.expires_at,
-            status: HoldStatus::Active,
-            released_at: None,
-            released_by_person_id: None,
-            priority: request.priority,
-            source_reference: request.source_reference,
-            automatic_release: request.expires_at.is_some(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
+        let model = (request, id).into();
         let created_hold = self.account_hold_repo.create_hold(model).await?;
         Ok(AccountHoldMapper::account_hold_from_model(created_hold))
     }

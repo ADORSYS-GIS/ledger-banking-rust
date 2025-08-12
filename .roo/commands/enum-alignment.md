@@ -40,4 +40,28 @@ pub enum NetworkType {
 }
 ```
 
-After creating the separate enums, update all relevant mapper functions (e.g., `From<DomainType> for DbType` and `From<DbType> for DomainType` implementations) to correctly convert between the domain enum and its new database model counterpart for all enums within the `banking-logic/src/mappers/{file_name}_mapper.rs` module.
+After creating the separate enums, update all relevant mapper functions to correctly convert between the domain enum and its new database model counterpart for all enums within the `banking-logic/src/mappers/{file_name}_mapper.rs` module. Use helper methods within the mapper implementation for the conversions, as shown in the example below:
+
+**Mapper Implementation (`banking-logic/src/mappers/agent_network_mapper.rs`):**
+```rust
+impl AgentNetworkMapper {
+    // ... other mapping functions
+
+    // Helper methods for enum conversions
+    fn network_type_to_db(network_type: NetworkType) -> DbNetworkType {
+        match network_type {
+            NetworkType::Internal => DbNetworkType::Internal,
+            NetworkType::Partner => DbNetworkType::Partner,
+            NetworkType::ThirdParty => DbNetworkType::ThirdParty,
+        }
+    }
+
+    fn network_type_from_db(db_type: DbNetworkType) -> NetworkType {
+        match db_type {
+            DbNetworkType::Internal => NetworkType::Internal,
+            DbNetworkType::Partner => NetworkType::Partner,
+            DbNetworkType::ThirdParty => NetworkType::ThirdParty,
+        }
+    }
+}
+```

@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc, NaiveDate};
 
 use crate::models::{
     AccountHoldModel, HoldReleaseRecordModel, AccountHoldExpiryJobModel, AccountBalanceCalculationModel,
-    AccountHoldSummaryModel, AccountHoldReleaseRequestModel, PlaceHoldRequestModel,
+    AccountHoldSummaryModel, AccountHoldReleaseRequestModel, 
     HoldPrioritySummary, HoldOverrideRecord, HoldAnalyticsSummary, HighHoldRatioAccount,
     JudicialHoldReportData, HoldAgingBucket, HoldValidationError
 };
@@ -299,5 +299,5 @@ pub trait AccountHoldRepository: Send + Sync {
     async fn create_hold_release_request(&self, request: AccountHoldReleaseRequestModel) -> BankingResult<AccountHoldReleaseRequestModel>;
 
     // PlaceHoldRequest operations
-    async fn create_place_hold_request(&self, request: PlaceHoldRequestModel) -> BankingResult<PlaceHoldRequestModel>;
+    async fn create_place_hold_request(&self, request: AccountHoldModel) -> BankingResult<AccountHoldModel>;
 }

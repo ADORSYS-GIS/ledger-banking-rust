@@ -65,6 +65,13 @@
 
 ## Key Achievements (August 2025)
 
+### 🎉 Performance Refactoring: Slice-Based APIs
+This commit completes a significant performance-focused refactoring by replacing `Vec<T>` with `&[T]` in function signatures across the workspace.
+- **Performance Boost**: Reduces unnecessary heap allocations and memory copies, leading to faster execution.
+- **Ergonomic APIs**: Provides more flexible and idiomatic Rust APIs, allowing callers to pass arrays, `Vecs`, or slices.
+- **Workspace-Wide Impact**: The change was applied to domain models, service layers, repositories, and mappers for consistency.
+- **Code Health**: Improves overall code quality and maintainability by adhering to Rust best practices.
+
 ### 🎉 Domain Model Refactoring and Type Cleanup
 This commit introduces a major refactoring to remove ambiguous types and align domain models with the database schema.
 - **Type Cleanup**: Replaced `heapless::String` with `std::string::String` across the workspace for improved clarity and maintainability.
