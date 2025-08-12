@@ -197,7 +197,9 @@ impl CasaService for CasaServiceImpl {
                                account.overdraft_limit.unwrap_or(Decimal::ZERO) - 
                                balance_calc;
 
-        let mut validation_messages: Vec<HeaplessString<200>> = Vec::new();
+        let mut validation_message_01 = HeaplessString::<200>::new();
+        let validation_message_02 = HeaplessString::<200>::new();
+        let validation_message_03 = HeaplessString::<200>::new();
         let mut requires_authorization = false;
         let mut authorization_level = None;
 
@@ -222,7 +224,7 @@ impl CasaService for CasaServiceImpl {
             } else if overdraft_utilization.is_some() {
                 // Transaction will utilize overdraft
                 if let Ok(msg) = HeaplessString::try_from("Transaction will utilize overdraft facility") {
-                    validation_messages.push(msg);
+                    validation_message_01 = msg;
                 }
                 
                 let overdraft_amount = overdraft_utilization.unwrap();
@@ -261,7 +263,9 @@ impl CasaService for CasaServiceImpl {
             post_transaction_balance,
             overdraft_utilization,
             validation_result,
-            validation_messages,
+            validation_message_01,
+            validation_message_02,
+            validation_message_03,
             requires_authorization,
             authorization_level,
         };

@@ -3,7 +3,6 @@ use chrono::{DateTime, NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -250,6 +249,7 @@ impl std::str::FromStr for PermittedOperation {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionRequest {
+    pub id: Uuid,
     pub account_id: Uuid,
     pub transaction_type: TransactionType,
     pub amount: Decimal,
@@ -257,93 +257,331 @@ pub struct TransactionRequest {
     pub description: HeaplessString<200>,
     pub channel: ChannelType,
     pub terminal_id: Option<Uuid>,
-    pub initiator_person_id: Uuid, // References Person.person_id
+    pub initiator_person_id: Uuid,
     pub external_reference: Option<HeaplessString<100>>,
-    pub metadata: HashMap<String, String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionRequestMetadata {
+    pub id: Uuid,
+    pub transaction_request_id: Uuid,
+    pub key: HeaplessString<50>,
+    pub value: HeaplessString<500>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionResult {
+    pub id: Uuid,
     pub transaction_id: Uuid,
-    pub reference_number: HeaplessString<200>,
-    pub gl_entries: Vec<GlEntry>,
+    pub reference_number: HeaplessString<50>,
     pub timestamp: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionValidationResult {
+    pub id: Uuid,
     pub is_valid: bool,
-    pub errors: Vec<String>,
-    pub warnings: Vec<String>,
+    pub transaction_id: Option<Uuid>,
+    pub validation_error_01_field: Option<HeaplessString<50>>,
+    pub validation_error_01_message: Option<HeaplessString<200>>,
+    pub validation_error_01_error_code: Option<HeaplessString<50>>,
+    pub validation_error_02_field: Option<HeaplessString<50>>,
+    pub validation_error_02_message: Option<HeaplessString<200>>,
+    pub validation_error_02_error_code: Option<HeaplessString<50>>,
+    pub validation_error_03_field: Option<HeaplessString<50>>,
+    pub validation_error_03_message: Option<HeaplessString<200>>,
+    pub validation_error_03_error_code: Option<HeaplessString<50>>,
+    pub warning_01: Option<HeaplessString<200>>,
+    pub warning_02: Option<HeaplessString<200>>,
+    pub warning_03: Option<HeaplessString<200>>,
+    pub created_at: DateTime<Utc>,
 }
 
 impl TransactionValidationResult {
-    pub fn new(is_valid: bool, errors: Vec<String>, warnings: Vec<String>) -> Self {
-        Self { is_valid, errors, warnings }
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        is_valid: bool,
+        transaction_id: Option<Uuid>,
+        validation_error_01_field: Option<HeaplessString<50>>,
+        validation_error_01_message: Option<HeaplessString<200>>,
+        validation_error_01_error_code: Option<HeaplessString<50>>,
+        validation_error_02_field: Option<HeaplessString<50>>,
+        validation_error_02_message: Option<HeaplessString<200>>,
+        validation_error_02_error_code: Option<HeaplessString<50>>,
+        validation_error_03_field: Option<HeaplessString<50>>,
+        validation_error_03_message: Option<HeaplessString<200>>,
+        validation_error_03_error_code: Option<HeaplessString<50>>,
+        warning_01: Option<HeaplessString<200>>,
+        warning_02: Option<HeaplessString<200>>,
+        warning_03: Option<HeaplessString<200>>,
+    ) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            is_valid,
+            transaction_id,
+            validation_error_01_field,
+            validation_error_01_message,
+            validation_error_01_error_code,
+            validation_error_02_field,
+            validation_error_02_message,
+            validation_error_02_error_code,
+            validation_error_03_field,
+            validation_error_03_message,
+            validation_error_03_error_code,
+            warning_01,
+            warning_02,
+            warning_03,
+            created_at: Utc::now(),
+        }
     }
-    
-    pub fn success() -> Self {
-        Self::new(true, vec![], vec![])
+
+    pub fn success(transaction_id: Option<Uuid>) -> Self {
+        Self::new(
+            true,
+            transaction_id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
     }
-    
-    pub fn failure(errors: Vec<String>) -> Self {
-        Self::new(false, errors, vec![])
+
+    pub fn failure(
+        transaction_id: Option<Uuid>,
+        errors: Vec<(
+            Option<HeaplessString<50>>,
+            Option<HeaplessString<200>>,
+            Option<HeaplessString<50>>,
+        )>,
+    ) -> Self {
+        let mut result = Self::new(
+            false,
+            transaction_id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        if let Some(error) = errors.get(0) {
+            result.validation_error_01_field = error.0.clone();
+            result.validation_error_01_message = error.1.clone();
+            result.validation_error_01_error_code = error.2.clone();
+        }
+        if let Some(error) = errors.get(1) {
+            result.validation_error_02_field = error.0.clone();
+            result.validation_error_02_message = error.1.clone();
+            result.validation_error_02_error_code = error.2.clone();
+        }
+        if let Some(error) = errors.get(2) {
+            result.validation_error_03_field = error.0.clone();
+            result.validation_error_03_message = error.1.clone();
+            result.validation_error_03_error_code = error.2.clone();
+        }
+
+        result
     }
-    
+
     pub fn is_valid(&self) -> bool {
         self.is_valid
     }
-    
-    pub fn get_failure_reasons(&self) -> Vec<String> {
-        self.errors.clone()
+
+    pub fn get_failure_reasons(&self) -> Vec<(String, String, String)> {
+        let mut errors = Vec::new();
+        if let (Some(field), Some(message), Some(code)) = (
+            &self.validation_error_01_field,
+            &self.validation_error_01_message,
+            &self.validation_error_01_error_code,
+        ) {
+            errors.push((field.to_string(), message.to_string(), code.to_string()));
+        }
+        if let (Some(field), Some(message), Some(code)) = (
+            &self.validation_error_02_field,
+            &self.validation_error_02_message,
+            &self.validation_error_02_error_code,
+        ) {
+            errors.push((field.to_string(), message.to_string(), code.to_string()));
+        }
+        if let (Some(field), Some(message), Some(code)) = (
+            &self.validation_error_03_field,
+            &self.validation_error_03_message,
+            &self.validation_error_03_error_code,
+        ) {
+            errors.push((field.to_string(), message.to_string(), code.to_string()));
+        }
+        errors
     }
-    
-    pub fn add_check(&mut self, field: &str, is_valid: bool, message: String) {
+
+    pub fn add_check(
+        &mut self,
+        field: &str,
+        is_valid: bool,
+        message: String,
+        error_code: Option<String>,
+    ) {
         if !is_valid {
-            self.errors.push(format!("{field}: {message}"));
             self.is_valid = false;
+            let field_hs = HeaplessString::try_from(field).ok();
+            let message_hs = HeaplessString::try_from(message.as_str()).ok();
+            let error_code_hs = error_code.and_then(|c| HeaplessString::try_from(c.as_str()).ok());
+
+            if self.validation_error_01_field.is_none() {
+                self.validation_error_01_field = field_hs;
+                self.validation_error_01_message = message_hs;
+                self.validation_error_01_error_code = error_code_hs;
+            } else if self.validation_error_02_field.is_none() {
+                self.validation_error_02_field = field_hs;
+                self.validation_error_02_message = message_hs;
+                self.validation_error_02_error_code = error_code_hs;
+            } else if self.validation_error_03_field.is_none() {
+                self.validation_error_03_field = field_hs;
+                self.validation_error_03_message = message_hs;
+                self.validation_error_03_error_code = error_code_hs;
+            }
         } else {
-            self.warnings.push(format!("{field}: {message}"));
+            let warning_hs = HeaplessString::try_from(format!("{field}: {message}").as_str()).ok();
+            if self.warning_01.is_none() {
+                self.warning_01 = warning_hs;
+            } else if self.warning_02.is_none() {
+                self.warning_02 = warning_hs;
+            } else if self.warning_03.is_none() {
+                self.warning_03 = warning_hs;
+            }
         }
     }
-    
-    pub fn merge(&mut self, other: TransactionValidationResult) {
-        self.errors.extend(other.errors);
-        self.warnings.extend(other.warnings);
+
+    pub fn merge(&mut self, other: &TransactionValidationResult) {
         self.is_valid = self.is_valid && other.is_valid;
+
+        if other.validation_error_01_field.is_some() {
+            self.add_check(
+                other.validation_error_01_field.as_ref().unwrap(),
+                false,
+                other
+                    .validation_error_01_message
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                other
+                    .validation_error_01_error_code
+                    .as_ref()
+                    .map(|s| s.to_string()),
+            );
+        }
+        if other.validation_error_02_field.is_some() {
+            self.add_check(
+                other.validation_error_02_field.as_ref().unwrap(),
+                false,
+                other
+                    .validation_error_02_message
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                other
+                    .validation_error_02_error_code
+                    .as_ref()
+                    .map(|s| s.to_string()),
+            );
+        }
+        if other.validation_error_03_field.is_some() {
+            self.add_check(
+                other.validation_error_03_field.as_ref().unwrap(),
+                false,
+                other
+                    .validation_error_03_message
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                other
+                    .validation_error_03_error_code
+                    .as_ref()
+                    .map(|s| s.to_string()),
+            );
+        }
+
+        if other.warning_01.is_some() {
+            if self.warning_01.is_none() {
+                self.warning_01 = other.warning_01.clone();
+            } else if self.warning_02.is_none() {
+                self.warning_02 = other.warning_01.clone();
+            } else if self.warning_03.is_none() {
+                self.warning_03 = other.warning_01.clone();
+            }
+        }
+        if other.warning_02.is_some() {
+            if self.warning_01.is_none() {
+                self.warning_01 = other.warning_02.clone();
+            } else if self.warning_02.is_none() {
+                self.warning_02 = other.warning_02.clone();
+            } else if self.warning_03.is_none() {
+                self.warning_03 = other.warning_02.clone();
+            }
+        }
+        if other.warning_03.is_some() {
+            if self.warning_01.is_none() {
+                self.warning_01 = other.warning_03.clone();
+            } else if self.warning_02.is_none() {
+                self.warning_02 = other.warning_03.clone();
+            } else if self.warning_03.is_none() {
+                self.warning_03 = other.warning_03.clone();
+            }
+        }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlEntry {
     pub id: Uuid,
+    pub transaction_id: Uuid,
     pub account_code: Uuid,
     pub debit_amount: Option<Decimal>,
     pub credit_amount: Option<Decimal>,
     pub currency: HeaplessString<3>,
     pub description: HeaplessString<200>,
-    pub reference_number: HeaplessString<200>,
-    pub transaction_id: Uuid,
+    pub reference_number: HeaplessString<50>,
     pub value_date: NaiveDate,
     pub posting_date: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApprovalWorkflow {
+pub struct TransactionApprovalWorkflow {
     pub id: Uuid,
     pub transaction_id: Uuid,
-    pub required_approvers: Vec<Uuid>,
-    pub received_approvals: Vec<Approval>,
     pub status: TransactionWorkflowStatus,
     pub timeout_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Approval {
+pub struct TransactionApproval {
     pub id: Uuid,
+    pub transaction_id: Uuid,
+    pub required: bool,
     pub approver_person_id: Uuid,
+    pub approval_status: TransactionApprovalStatus,
     pub approved_at: DateTime<Utc>,
-    pub notes: Option<String>,
+    pub notes: Option<HeaplessString<500>>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

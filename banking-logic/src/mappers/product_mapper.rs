@@ -8,12 +8,10 @@ use banking_db::models::{
     ProductModel as DbProduct, ProductRules as DbProductRules, ProductType as DbProductType,
     PostingFrequency as DbPostingFrequency, ProductAccrualFrequency as DbProductAccrualFrequency
 };
-use super::{ApiMapper, DBMapper};
-
 pub struct ProductMapper;
 
-impl DBMapper<ApiProduct, DbProduct> for ProductMapper {
-    fn to_db(api_model: ApiProduct) -> DbProduct {
+impl ProductMapper {
+    pub fn to_db(api_model: ApiProduct) -> DbProduct {
         DbProduct {
             id: api_model.id,
             name_l1: api_model.name_l1,
@@ -33,10 +31,8 @@ impl DBMapper<ApiProduct, DbProduct> for ProductMapper {
             updated_by_person_id: api_model.updated_by_person_id,
         }
     }
-}
 
-impl ApiMapper<DbProduct, ApiProduct> for ProductMapper {
-    fn from_db(db_model: DbProduct) -> ApiProduct {
+    pub fn from_db(db_model: DbProduct) -> ApiProduct {
         ApiProduct {
             id: db_model.id,
             name_l1: db_model.name_l1,
@@ -60,8 +56,8 @@ impl ApiMapper<DbProduct, ApiProduct> for ProductMapper {
 
 pub struct ProductRulesMapper;
 
-impl DBMapper<ApiProductRules, DbProductRules> for ProductRulesMapper {
-    fn to_db(api_model: ApiProductRules) -> DbProductRules {
+impl ProductRulesMapper {
+    pub fn to_db(api_model: ApiProductRules) -> DbProductRules {
         DbProductRules {
             minimum_balance: api_model.minimum_balance,
             maximum_balance: api_model.maximum_balance,
@@ -93,10 +89,8 @@ impl DBMapper<ApiProductRules, DbProductRules> for ProductRulesMapper {
             },
         }
     }
-}
 
-impl ApiMapper<DbProductRules, ApiProductRules> for ProductRulesMapper {
-    fn from_db(db_model: DbProductRules) -> ApiProductRules {
+    pub fn from_db(db_model: DbProductRules) -> ApiProductRules {
         ApiProductRules {
             minimum_balance: db_model.minimum_balance,
             maximum_balance: db_model.maximum_balance,
@@ -132,8 +126,8 @@ impl ApiMapper<DbProductRules, ApiProductRules> for ProductRulesMapper {
 
 pub struct GlMappingMapper;
 
-impl DBMapper<ApiGlMapping, DbGlMapping> for GlMappingMapper {
-    fn to_db(api_model: ApiGlMapping) -> DbGlMapping {
+impl GlMappingMapper {
+    pub fn to_db(api_model: ApiGlMapping) -> DbGlMapping {
         DbGlMapping {
             product_id: api_model.product_id,
             customer_account_code: api_model.customer_account_code,
@@ -142,10 +136,8 @@ impl DBMapper<ApiGlMapping, DbGlMapping> for GlMappingMapper {
             overdraft_code: api_model.overdraft_code,
         }
     }
-}
 
-impl ApiMapper<DbGlMapping, ApiGlMapping> for GlMappingMapper {
-    fn from_db(db_model: DbGlMapping) -> ApiGlMapping {
+    pub fn from_db(db_model: DbGlMapping) -> ApiGlMapping {
         ApiGlMapping {
             product_id: db_model.product_id,
             customer_account_code: db_model.customer_account_code,
@@ -158,8 +150,8 @@ impl ApiMapper<DbGlMapping, ApiGlMapping> for GlMappingMapper {
 
 pub struct InterestRateTierMapper;
 
-impl DBMapper<ApiInterestRateTier, DbInterestRateTier> for InterestRateTierMapper {
-    fn to_db(api_model: ApiInterestRateTier) -> DbInterestRateTier {
+impl InterestRateTierMapper {
+    pub fn to_db(api_model: ApiInterestRateTier) -> DbInterestRateTier {
         DbInterestRateTier {
             minimum_balance: api_model.minimum_balance,
             maximum_balance: api_model.maximum_balance,
@@ -167,10 +159,8 @@ impl DBMapper<ApiInterestRateTier, DbInterestRateTier> for InterestRateTierMappe
             tier_name: api_model.tier_name,
         }
     }
-}
 
-impl ApiMapper<DbInterestRateTier, ApiInterestRateTier> for InterestRateTierMapper {
-    fn from_db(db_model: DbInterestRateTier) -> ApiInterestRateTier {
+    pub fn from_db(db_model: DbInterestRateTier) -> ApiInterestRateTier {
         ApiInterestRateTier {
             minimum_balance: db_model.minimum_balance,
             maximum_balance: db_model.maximum_balance,

@@ -4,10 +4,6 @@ use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
-pub use banking_api::domain::{
-    TransactionType, TransactionStatus, TransactionApprovalStatus, TransactionWorkflowStatus, 
-    TransactionAuditAction, ChannelType, PermittedOperation
-};
 
 
 /// Database model for Transaction table
@@ -17,10 +13,7 @@ pub struct TransactionModel {
     pub id: Uuid,
     pub account_id: Uuid,
     pub transaction_code: HeaplessString<8>,
-    #[serde(
-        serialize_with = "serialize_transaction_type",
-        deserialize_with = "deserialize_transaction_type"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "transaction_type"))]
     pub transaction_type: TransactionType,
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
@@ -30,19 +23,13 @@ pub struct TransactionModel {
     pub agent_person_id: Option<Uuid>,
     pub transaction_date: DateTime<Utc>,
     pub value_date: NaiveDate,
-    #[serde(
-        serialize_with = "serialize_transaction_status",
-        deserialize_with = "deserialize_transaction_status"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "status"))]
     pub status: TransactionStatus,
     pub reference_number: HeaplessString<100>,
     pub external_reference: Option<HeaplessString<100>>,
     pub gl_code: HeaplessString<10>,
     pub requires_approval: bool,
-    #[serde(
-        serialize_with = "serialize_approval_status_option",
-        deserialize_with = "deserialize_approval_status_option"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "approval_status"))]
     pub approval_status: Option<TransactionApprovalStatus>,
     pub risk_score: Option<Decimal>,
     pub created_at: DateTime<Utc>,
@@ -54,14 +41,13 @@ pub struct TransactionModel {
 pub struct TransactionApprovalModel {
     pub id: Uuid,
     pub transaction_id: Uuid,
+    pub required: bool,
     pub approver_person_id: Uuid,
-    #[serde(
-        serialize_with = "serialize_transaction_approval_status",
-        deserialize_with = "deserialize_transaction_approval_status"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "approval_status"))]
     pub approval_status: TransactionApprovalStatus,
     pub approved_at: DateTime<Utc>,
-    pub notes: Option<String>,
+    pub notes: Option<HeaplessString<500>>,
+    pub created_at: DateTime<Utc>,
 }
 
 /// Database model for Approval Workflows
@@ -70,15 +56,11 @@ pub struct TransactionApprovalModel {
 pub struct TransactionApprovalWorkflowModel {
     pub id: Uuid,
     pub transaction_id: Uuid,
-    pub required_approvers: String, // JSON array
-    #[serde(
-        serialize_with = "serialize_transaction_workflow_status",
-        deserialize_with = "deserialize_transaction_workflow_status"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "status"))]
     pub status: TransactionWorkflowStatus,
-    pub created_at: DateTime<Utc>,
     pub timeout_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
 }
 
 /// Database model for GL Entries
@@ -92,7 +74,7 @@ pub struct GlEntryModel {
     pub credit_amount: Option<Decimal>,
     pub currency: HeaplessString<3>,
     pub description: HeaplessString<200>,
-    pub reference_number: HeaplessString<200>,
+    pub reference_number: HeaplessString<50>,
     pub value_date: NaiveDate,
     pub posting_date: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
@@ -104,23 +86,14 @@ pub struct GlEntryModel {
 pub struct TransactionAuditModel {
     pub id: Uuid,
     pub transaction_id: Uuid,
-    #[serde(
-        serialize_with = "serialize_transaction_audit_action",
-        deserialize_with = "deserialize_transaction_audit_action"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "action_type"))]
     pub action_type: TransactionAuditAction,
     /// References Person.person_id
     pub performed_by_person_id: Uuid,
     pub performed_at: DateTime<Utc>,
-    #[serde(
-        serialize_with = "serialize_transaction_status_option",
-        deserialize_with = "deserialize_transaction_status_option"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "old_status"))]
     pub old_status: Option<TransactionStatus>,
-    #[serde(
-        serialize_with = "serialize_transaction_status_option",
-        deserialize_with = "deserialize_transaction_status_option"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "new_status"))]
     pub new_status: Option<TransactionStatus>,
     /// References ReasonAndPurpose.id for audit reason
     pub reason_id: Option<Uuid>,
@@ -138,24 +111,26 @@ pub struct TransactionAuditModel {
 pub struct TransactionRequestModel {
     pub id: Uuid,
     pub account_id: Uuid,
-    #[serde(
-        serialize_with = "serialize_transaction_type",
-        deserialize_with = "deserialize_transaction_type"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "transaction_type"))]
     pub transaction_type: TransactionType,
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
     pub description: HeaplessString<200>,
-    #[serde(
-        serialize_with = "serialize_channel_type",
-        deserialize_with = "deserialize_channel_type"
-    )]
+    #[cfg_attr(feature = "sqlx", sqlx(rename = "channel"))]
     pub channel: ChannelType,
     pub terminal_id: Option<Uuid>,
-    pub initiator_person_id: Uuid, // References Person.person_id
+    pub initiator_person_id: Uuid,
     pub external_reference: Option<HeaplessString<100>>,
-    pub metadata: String, // JSON-serialized HashMap
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
+pub struct TransactionRequestMetadataModel {
+    pub id: Uuid,
+    pub transaction_request_id: Uuid,
+    pub key: HeaplessString<50>,
+    pub value: HeaplessString<500>,
 }
 
 /// Database model for Transaction Result
@@ -164,7 +139,7 @@ pub struct TransactionRequestModel {
 pub struct TransactionResultModel {
     pub id: Uuid,
     pub transaction_id: Uuid,
-    pub reference_number: HeaplessString<200>,
+    pub reference_number: HeaplessString<50>,
     pub timestamp: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
 }
@@ -172,319 +147,135 @@ pub struct TransactionResultModel {
 /// Database model for Validation Result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
-pub struct ValidationResultModel {
+pub struct TransactionValidationResultModel {
     pub id: Uuid,
-    pub transaction_id: Option<Uuid>,
     pub is_valid: bool,
-    pub errors: String, // JSON array
-    pub warnings: String, // JSON array
+    pub transaction_id: Option<Uuid>,
+    pub validation_error_01_field: Option<HeaplessString<50>>,
+    pub validation_error_01_message: Option<HeaplessString<200>>,
+    pub validation_error_01_error_code: Option<HeaplessString<50>>,
+    pub validation_error_02_field: Option<HeaplessString<50>>,
+    pub validation_error_02_message: Option<HeaplessString<200>>,
+    pub validation_error_02_error_code: Option<HeaplessString<50>>,
+    pub validation_error_03_field: Option<HeaplessString<50>>,
+    pub validation_error_03_message: Option<HeaplessString<200>>,
+    pub validation_error_03_error_code: Option<HeaplessString<50>>,
+    pub warning_01: Option<HeaplessString<200>>,
+    pub warning_02: Option<HeaplessString<200>>,
+    pub warning_03: Option<HeaplessString<200>>,
     pub created_at: DateTime<Utc>,
 }
 
-/// Database model for Approval
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
-pub struct ApprovalModel {
-    pub id: Uuid,
-    pub transaction_id: Uuid,
-    pub approver_person_id: Uuid,
-    pub approved_at: DateTime<Utc>,
-    pub notes: Option<String>,
-    pub created_at: DateTime<Utc>,
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "sqlx", sqlx(type_name = "transaction_type", rename_all = "PascalCase"))]
+pub enum TransactionType {
+    Credit,
+    Debit,
 }
 
-// Transaction enum serialization helpers for database compatibility
-fn serialize_transaction_type<S>(transaction_type: &TransactionType, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let type_str = match transaction_type {
-        TransactionType::Credit => "Credit",
-        TransactionType::Debit => "Debit",
-    };
-    serializer.serialize_str(type_str)
-}
-
-fn deserialize_transaction_type<'de, D>(deserializer: D) -> Result<TransactionType, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let type_str = String::deserialize(deserializer)?;
-    match type_str.as_str() {
-        "Credit" => Ok(TransactionType::Credit),
-        "Debit" => Ok(TransactionType::Debit),
-        _ => Err(serde::de::Error::custom(format!("Invalid transaction type: {type_str}"))),
-    }
-}
-
-fn serialize_transaction_status<S>(status: &TransactionStatus, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let status_str = match status {
-        TransactionStatus::Pending => "Pending",
-        TransactionStatus::Posted => "Posted",
-        TransactionStatus::Reversed => "Reversed",
-        TransactionStatus::Failed => "Failed",
-        TransactionStatus::AwaitingApproval => "AwaitingApproval",
-        TransactionStatus::ApprovalRejected => "ApprovalRejected",
-    };
-    serializer.serialize_str(status_str)
-}
-
-fn deserialize_transaction_status<'de, D>(deserializer: D) -> Result<TransactionStatus, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let status_str = String::deserialize(deserializer)?;
-    match status_str.as_str() {
-        "Pending" => Ok(TransactionStatus::Pending),
-        "Posted" => Ok(TransactionStatus::Posted),
-        "Reversed" => Ok(TransactionStatus::Reversed),
-        "Failed" => Ok(TransactionStatus::Failed),
-        "AwaitingApproval" => Ok(TransactionStatus::AwaitingApproval),
-        "ApprovalRejected" => Ok(TransactionStatus::ApprovalRejected),
-        _ => Err(serde::de::Error::custom(format!("Invalid transaction status: {status_str}"))),
-    }
-}
-
-fn serialize_approval_status_option<S>(approval_status: &Option<TransactionApprovalStatus>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match approval_status {
-        Some(status) => {
-            let status_str = match status {
-                TransactionApprovalStatus::Pending => "Pending",
-                TransactionApprovalStatus::Approved => "Approved",
-                TransactionApprovalStatus::Rejected => "Rejected",
-                TransactionApprovalStatus::PartiallyApproved => "PartiallyApproved",
-            };
-            serializer.serialize_some(status_str)
+impl std::fmt::Display for TransactionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionType::Credit => write!(f, "Credit"),
+            TransactionType::Debit => write!(f, "Debit"),
         }
-        None => serializer.serialize_none(),
     }
 }
 
-fn deserialize_approval_status_option<'de, D>(deserializer: D) -> Result<Option<TransactionApprovalStatus>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let status_opt: Option<String> = Option::deserialize(deserializer)?;
-    match status_opt {
-        Some(status_str) => {
-            let status = match status_str.as_str() {
-                "Pending" => TransactionApprovalStatus::Pending,
-                "Approved" => TransactionApprovalStatus::Approved,
-                "Rejected" => TransactionApprovalStatus::Rejected,
-                "PartiallyApproved" => TransactionApprovalStatus::PartiallyApproved,
-                _ => return Err(serde::de::Error::custom(format!("Invalid approval status: {status_str}"))),
-            };
-            Ok(Some(status))
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "sqlx", sqlx(type_name = "transaction_status", rename_all = "PascalCase"))]
+pub enum TransactionStatus {
+    Pending,
+    Posted,
+    Reversed,
+    Failed,
+    AwaitingApproval,
+    ApprovalRejected,
+}
+
+impl std::fmt::Display for TransactionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionStatus::Pending => write!(f, "Pending"),
+            TransactionStatus::Posted => write!(f, "Posted"),
+            TransactionStatus::Reversed => write!(f, "Reversed"),
+            TransactionStatus::Failed => write!(f, "Failed"),
+            TransactionStatus::AwaitingApproval => write!(f, "AwaitingApproval"),
+            TransactionStatus::ApprovalRejected => write!(f, "ApprovalRejected"),
         }
-        None => Ok(None),
     }
 }
 
-// TransactionAuditAction serialization helpers
-fn serialize_transaction_audit_action<S>(action: &TransactionAuditAction, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let action_str = match action {
-        TransactionAuditAction::Created => "Created",
-        TransactionAuditAction::StatusChanged => "StatusChanged",
-        TransactionAuditAction::Posted => "Posted",
-        TransactionAuditAction::Reversed => "Reversed",
-        TransactionAuditAction::Failed => "Failed",
-        TransactionAuditAction::Approved => "Approved",
-        TransactionAuditAction::Rejected => "Rejected",
-    };
-    serializer.serialize_str(action_str)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "sqlx", sqlx(type_name = "transaction_approval_status", rename_all = "PascalCase"))]
+pub enum TransactionApprovalStatus {
+    Pending,
+    Approved,
+    Rejected,
+    PartiallyApproved,
 }
 
-fn deserialize_transaction_audit_action<'de, D>(deserializer: D) -> Result<TransactionAuditAction, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let action_str = String::deserialize(deserializer)?;
-    match action_str.as_str() {
-        "Created" => Ok(TransactionAuditAction::Created),
-        "StatusChanged" => Ok(TransactionAuditAction::StatusChanged),
-        "Posted" => Ok(TransactionAuditAction::Posted),
-        "Reversed" => Ok(TransactionAuditAction::Reversed),
-        "Failed" => Ok(TransactionAuditAction::Failed),
-        "Approved" => Ok(TransactionAuditAction::Approved),
-        "Rejected" => Ok(TransactionAuditAction::Rejected),
-        _ => Err(serde::de::Error::custom(format!("Invalid transaction audit action: {action_str}"))),
-    }
-}
-
-// TransactionStatus Option serialization helpers  
-fn serialize_transaction_status_option<S>(status: &Option<TransactionStatus>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match status {
-        Some(status) => {
-            let status_str = match status {
-                TransactionStatus::Pending => "Pending",
-                TransactionStatus::Posted => "Posted",
-                TransactionStatus::Reversed => "Reversed",
-                TransactionStatus::Failed => "Failed",
-                TransactionStatus::AwaitingApproval => "AwaitingApproval",
-                TransactionStatus::ApprovalRejected => "ApprovalRejected",
-            };
-            serializer.serialize_some(status_str)
+impl std::fmt::Display for TransactionApprovalStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionApprovalStatus::Pending => write!(f, "Pending"),
+            TransactionApprovalStatus::Approved => write!(f, "Approved"),
+            TransactionApprovalStatus::Rejected => write!(f, "Rejected"),
+            TransactionApprovalStatus::PartiallyApproved => write!(f, "PartiallyApproved"),
         }
-        None => serializer.serialize_none(),
     }
 }
 
-fn deserialize_transaction_status_option<'de, D>(deserializer: D) -> Result<Option<TransactionStatus>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let status_opt: Option<String> = Option::deserialize(deserializer)?;
-    match status_opt {
-        Some(status_str) => {
-            let status = match status_str.as_str() {
-                "Pending" => TransactionStatus::Pending,
-                "Posted" => TransactionStatus::Posted,
-                "Reversed" => TransactionStatus::Reversed,
-                "Failed" => TransactionStatus::Failed,
-                "AwaitingApproval" => TransactionStatus::AwaitingApproval,
-                "ApprovalRejected" => TransactionStatus::ApprovalRejected,
-                _ => return Err(serde::de::Error::custom(format!("Invalid transaction status: {status_str}"))),
-            };
-            Ok(Some(status))
-        }
-        None => Ok(None),
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "sqlx", sqlx(type_name = "transaction_workflow_status", rename_all = "PascalCase"))]
+pub enum TransactionWorkflowStatus {
+    Pending,
+    Approved,
+    Rejected,
+    TimedOut,
 }
 
-// TransactionApprovalStatus serialization helpers
-fn serialize_transaction_approval_status<S>(status: &TransactionApprovalStatus, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let status_str = match status {
-        TransactionApprovalStatus::Pending => "Pending",
-        TransactionApprovalStatus::Approved => "Approved",
-        TransactionApprovalStatus::Rejected => "Rejected",
-        TransactionApprovalStatus::PartiallyApproved => "PartiallyApproved",
-    };
-    serializer.serialize_str(status_str)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "sqlx", sqlx(type_name = "transaction_audit_action", rename_all = "PascalCase"))]
+pub enum TransactionAuditAction {
+    Created,
+    StatusChanged,
+    Posted,
+    Reversed,
+    Failed,
+    Approved,
+    Rejected,
 }
 
-fn deserialize_transaction_approval_status<'de, D>(deserializer: D) -> Result<TransactionApprovalStatus, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let status_str = String::deserialize(deserializer)?;
-    match status_str.as_str() {
-        "Pending" => Ok(TransactionApprovalStatus::Pending),
-        "Approved" => Ok(TransactionApprovalStatus::Approved),
-        "Rejected" => Ok(TransactionApprovalStatus::Rejected),
-        "PartiallyApproved" => Ok(TransactionApprovalStatus::PartiallyApproved),
-        _ => Err(serde::de::Error::custom(format!("Invalid transaction approval status: {status_str}"))),
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "sqlx", sqlx(type_name = "channel_type", rename_all = "PascalCase"))]
+pub enum ChannelType {
+    MobileApp,
+    AgentTerminal,
+    ATM,
+    InternetBanking,
+    BranchTeller,
+    USSD,
+    ApiGateway,
 }
 
-// TransactionWorkflowStatus serialization helpers
-fn serialize_transaction_workflow_status<S>(status: &TransactionWorkflowStatus, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let status_str = match status {
-        TransactionWorkflowStatus::Pending => "Pending",
-        TransactionWorkflowStatus::Approved => "Approved",
-        TransactionWorkflowStatus::Rejected => "Rejected",
-        TransactionWorkflowStatus::TimedOut => "TimedOut",
-    };
-    serializer.serialize_str(status_str)
-}
-
-fn deserialize_transaction_workflow_status<'de, D>(deserializer: D) -> Result<TransactionWorkflowStatus, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let status_str = String::deserialize(deserializer)?;
-    match status_str.as_str() {
-        "Pending" => Ok(TransactionWorkflowStatus::Pending),
-        "Approved" => Ok(TransactionWorkflowStatus::Approved),
-        "Rejected" => Ok(TransactionWorkflowStatus::Rejected),
-        "TimedOut" => Ok(TransactionWorkflowStatus::TimedOut),
-        _ => Err(serde::de::Error::custom(format!("Invalid transaction workflow status: {status_str}"))),
-    }
-}
-
-// ChannelType serialization helpers
-fn serialize_channel_type<S>(channel: &ChannelType, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let channel_str = match channel {
-        ChannelType::MobileApp => "MobileApp",
-        ChannelType::AgentTerminal => "AgentTerminal",
-        ChannelType::ATM => "ATM",
-        ChannelType::InternetBanking => "InternetBanking",
-        ChannelType::BranchTeller => "BranchTeller",
-        ChannelType::USSD => "USSD",
-        ChannelType::ApiGateway => "ApiGateway",
-    };
-    serializer.serialize_str(channel_str)
-}
-
-fn deserialize_channel_type<'de, D>(deserializer: D) -> Result<ChannelType, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let channel_str = String::deserialize(deserializer)?;
-    match channel_str.as_str() {
-        "MobileApp" => Ok(ChannelType::MobileApp),
-        "AgentTerminal" => Ok(ChannelType::AgentTerminal),
-        "ATM" => Ok(ChannelType::ATM),
-        "InternetBanking" => Ok(ChannelType::InternetBanking),
-        "BranchTeller" => Ok(ChannelType::BranchTeller),
-        "USSD" => Ok(ChannelType::USSD),
-        "ApiGateway" => Ok(ChannelType::ApiGateway),
-        _ => Err(serde::de::Error::custom(format!("Invalid channel type: {channel_str}"))),
-    }
-}
-
-// PermittedOperation serialization helpers (unused but kept for future use)
-#[allow(dead_code)]
-fn serialize_permitted_operation<S>(operation: &PermittedOperation, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let operation_str = match operation {
-        PermittedOperation::Credit => "Credit",
-        PermittedOperation::Debit => "Debit",
-        PermittedOperation::InterestPosting => "InterestPosting",
-        PermittedOperation::FeeApplication => "FeeApplication",
-        PermittedOperation::ClosureSettlement => "ClosureSettlement",
-        PermittedOperation::None => "None",
-    };
-    serializer.serialize_str(operation_str)
-}
-
-#[allow(dead_code)]
-fn deserialize_permitted_operation<'de, D>(deserializer: D) -> Result<PermittedOperation, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let operation_str = String::deserialize(deserializer)?;
-    match operation_str.as_str() {
-        "Credit" => Ok(PermittedOperation::Credit),
-        "Debit" => Ok(PermittedOperation::Debit),
-        "InterestPosting" => Ok(PermittedOperation::InterestPosting),
-        "FeeApplication" => Ok(PermittedOperation::FeeApplication),
-        "ClosureSettlement" => Ok(PermittedOperation::ClosureSettlement),
-        "None" => Ok(PermittedOperation::None),
-        _ => Err(serde::de::Error::custom(format!("Invalid permitted operation: {operation_str}"))),
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "sqlx", sqlx(type_name = "permitted_operation", rename_all = "PascalCase"))]
+pub enum PermittedOperation {
+    Credit,
+    Debit,
+    InterestPosting,
+    FeeApplication,
+    ClosureSettlement,
+    None,
 }
 
 // Blake3 Hash serialization helpers

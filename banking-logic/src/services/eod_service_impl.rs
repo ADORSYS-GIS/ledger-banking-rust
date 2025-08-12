@@ -17,7 +17,7 @@ use banking_db::{repository::{
     WorkflowRepository,
 }, AccountType};
 
-use crate::mappers::{ApiMapper, ProductMapper};
+use crate::mappers::ProductMapper;
 
 /// Production implementation of EodService
 /// Orchestrates end-of-day processing across all banking operations

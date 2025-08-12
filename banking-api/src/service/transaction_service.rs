@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     domain::{
-        Transaction, TransactionType, TransactionValidationResult, ApprovalWorkflow,
+        Transaction, TransactionType, TransactionValidationResult, TransactionApprovalWorkflow,
         PermittedOperation, TransactionRequest, TransactionResult, FinalSettlement
     },
     error::BankingResult,
@@ -29,7 +29,7 @@ pub trait TransactionService: Send + Sync {
     async fn find_transactions_by_account(&self, account_id: Uuid, from: NaiveDate, to: NaiveDate) -> BankingResult<Vec<Transaction>>;
     
     /// Multi-party authorization workflow
-    async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<ApprovalWorkflow>;
+    async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<TransactionApprovalWorkflow>;
     async fn approve_transaction(&self, transaction_id: Uuid, approver_person_id: Uuid) -> BankingResult<()>;
 
     /// Status-aware transaction validation (from enhancements)
@@ -60,7 +60,7 @@ pub trait TransactionService: Send + Sync {
     async fn get_transaction_audit_trail(&self, transaction_id: Uuid) -> BankingResult<Vec<TransactionAuditEntry>>;
 
     /// Update transaction status
-    async fn update_transaction_status(&self, transaction_id: Uuid, status: crate::domain::TransactionStatus, updated_by_person_id: String) -> BankingResult<()>;
+    async fn update_transaction_status(&self, transaction_id: Uuid, status: crate::domain::TransactionStatus, reason: String) -> BankingResult<()>;
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

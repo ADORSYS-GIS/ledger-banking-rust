@@ -226,7 +226,9 @@ pub struct CasaTransactionValidation {
     pub overdraft_utilization: Option<Decimal>,
     #[serde(serialize_with = "serialize_casa_validation_result", deserialize_with = "deserialize_casa_validation_result")]
     pub validation_result: CasaValidationResult,
-    pub validation_messages: Vec<HeaplessString<200>>,
+    pub validation_message_01: HeaplessString<200>,
+    pub validation_message_02: HeaplessString<200>,
+    pub validation_message_03: HeaplessString<200>,
     pub requires_authorization: bool,
     #[serde(serialize_with = "serialize_authorization_level_opt", deserialize_with = "deserialize_authorization_level_opt")]
     pub authorization_level: Option<AuthorizationLevel>,

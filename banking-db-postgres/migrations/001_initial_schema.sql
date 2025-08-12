@@ -827,8 +827,18 @@ CREATE TABLE validation_results (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_id UUID REFERENCES transactions(id),
     is_valid BOOLEAN NOT NULL DEFAULT FALSE,
-    errors JSONB, -- JSON array of error messages
-    warnings JSONB, -- JSON array of warning messages
+    validation_error_01_field VARCHAR(50),
+    validation_error_01_message VARCHAR(200),
+    validation_error_01_error_code VARCHAR(50),
+    validation_error_02_field VARCHAR(50),
+    validation_error_02_message VARCHAR(200),
+    validation_error_02_error_code VARCHAR(50),
+    validation_error_03_field VARCHAR(50),
+    validation_error_03_message VARCHAR(200),
+    validation_error_03_error_code VARCHAR(50),
+    warning_01 VARCHAR(200),
+    warning_02 VARCHAR(200),
+    warning_03 VARCHAR(200),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -1881,7 +1891,9 @@ CREATE TABLE casa_transaction_validations (
     post_transaction_balance DECIMAL(15,2) NOT NULL,
     overdraft_utilization DECIMAL(15,2),
     validation_result VARCHAR(30) NOT NULL CHECK (validation_result IN ('Approved', 'Rejected', 'RequiresAuthorization', 'RequiresHoldRelease')),
-    validation_messages TEXT[], -- Array of validation messages
+    validation_message_01 VARCHAR(200),
+    validation_message_02 VARCHAR(200),
+    validation_message_03 VARCHAR(200),
     requires_authorization BOOLEAN NOT NULL DEFAULT FALSE,
     authorization_level VARCHAR(20) CHECK (authorization_level IN ('Teller', 'Supervisor', 'Manager', 'CreditCommittee')),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
