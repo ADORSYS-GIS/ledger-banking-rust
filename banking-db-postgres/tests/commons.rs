@@ -201,12 +201,12 @@ pub async fn create_test_account(pool: &PgPool, created_by_person_id: uuid::Uuid
     sqlx::query(
         r#"
         INSERT INTO accounts (
-            id, product_code, account_type, account_status, 
+            id, product_id, account_type, account_status,
             signing_condition, currency, open_date, domicile_agency_branch_id,
-            current_balance, available_balance, accrued_interest, 
+            current_balance, available_balance, accrued_interest,
             created_at, last_updated_at, updated_by_person_id
         ) VALUES (
-            $1, 'TST01', 'Savings', 'Active', 
+            $1, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Savings', 'Active',
             'AnyOwner', 'USD', '2024-01-01', $2,
             0.00, 0.00, 0.00,
             NOW(), NOW(), $3

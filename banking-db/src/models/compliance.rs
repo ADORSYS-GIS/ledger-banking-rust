@@ -3,13 +3,16 @@ use chrono::{DateTime, Utc, NaiveDate};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize, Deserializer, Serializer};
+use std::str::FromStr;
 use uuid::Uuid;
+use sqlx::Type;
 
 // Re-export enums from API domain for backward compatibility in mappers
 pub use banking_api::domain::KycStatus;
 
 // Domain-aligned enums with custom serialization
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "control_type", rename_all = "PascalCase")]
 pub enum ControlType {
     DirectOwnership,
     IndirectOwnership,
@@ -17,7 +20,8 @@ pub enum ControlType {
     SeniorManagement,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "verification_status", rename_all = "PascalCase")]
 pub enum VerificationStatus {
     Pending,
     Verified,
@@ -25,7 +29,8 @@ pub enum VerificationStatus {
     RequiresUpdate,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "check_result", rename_all = "PascalCase")]
 pub enum CheckResult {
     Pass,
     Fail,
@@ -33,7 +38,8 @@ pub enum CheckResult {
     Manual,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "screening_type", rename_all = "PascalCase")]
 pub enum ScreeningType {
     Sanctions,
     PoliticallyExposed,
@@ -41,7 +47,8 @@ pub enum ScreeningType {
     Watchlist,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "risk_level", rename_all = "PascalCase")]
 pub enum RiskLevel {
     Low,
     Medium,
@@ -60,7 +67,8 @@ impl std::fmt::Display for RiskLevel {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "alert_type", rename_all = "PascalCase")]
 pub enum AlertType {
     StructuringDetection,
     VelocityCheck,
@@ -83,7 +91,24 @@ impl std::fmt::Display for AlertType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+impl FromStr for AlertType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "StructuringDetection" => Ok(AlertType::StructuringDetection),
+            "VelocityCheck" => Ok(AlertType::VelocityCheck),
+            "LargeCashTransaction" => Ok(AlertType::LargeCashTransaction),
+            "SuspiciousPattern" => Ok(AlertType::SuspiciousPattern),
+            "GeographicAnomaly" => Ok(AlertType::GeographicAnomaly),
+            "CrossBorderTransaction" => Ok(AlertType::CrossBorderTransaction),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "severity", rename_all = "PascalCase")]
 pub enum Severity {
     Low,
     Medium,
@@ -91,7 +116,33 @@ pub enum Severity {
     Critical,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+impl std::fmt::Display for Severity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Severity::Low => write!(f, "Low"),
+            Severity::Medium => write!(f, "Medium"),
+            Severity::High => write!(f, "High"),
+            Severity::Critical => write!(f, "Critical"),
+        }
+    }
+}
+
+impl FromStr for Severity {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Low" => Ok(Severity::Low),
+            "Medium" => Ok(Severity::Medium),
+            "High" => Ok(Severity::High),
+            "Critical" => Ok(Severity::Critical),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "alert_status", rename_all = "PascalCase")]
 pub enum AlertStatus {
     New,
     InReview,
@@ -100,14 +151,43 @@ pub enum AlertStatus {
     Escalated,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+impl std::fmt::Display for AlertStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AlertStatus::New => write!(f, "New"),
+            AlertStatus::InReview => write!(f, "InReview"),
+            AlertStatus::Investigated => write!(f, "Investigated"),
+            AlertStatus::Cleared => write!(f, "Cleared"),
+            AlertStatus::Escalated => write!(f, "Escalated"),
+        }
+    }
+}
+
+impl FromStr for AlertStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "New" => Ok(AlertStatus::New),
+            "InReview" => Ok(AlertStatus::InReview),
+            "Investigated" => Ok(AlertStatus::Investigated),
+            "Cleared" => Ok(AlertStatus::Cleared),
+            "Escalated" => Ok(AlertStatus::Escalated),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "sar_status", rename_all = "PascalCase")]
 pub enum SarStatus {
     Draft,
     Filed,
     Acknowledged,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "compliance_status", rename_all = "PascalCase")]
 pub enum ComplianceStatus {
     Passed,
     Failed,
@@ -118,7 +198,8 @@ pub enum ComplianceStatus {
 // Re-export KycStatus from customer model for local use
 pub use banking_api::domain::KycStatus as ComplianceKycStatus;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[sqlx(type_name = "check_type", rename_all = "PascalCase")]
 pub enum CheckType {
     Kyc,
     Aml,
@@ -224,23 +305,6 @@ pub struct KycCheckModel {
     pub performed_at: DateTime<Utc>,
 }
 
-/// KYC Record database model (legacy - kept for repository compatibility)
-#[derive(Debug, Clone)]
-pub struct KycRecordModel {
-    pub id: Uuid,
-    pub customer_id: Uuid,
-    pub status: KycStatus,
-    pub risk_assessment: HeaplessString<100>,
-    pub verification_level: HeaplessString<50>, // Basic, Enhanced, Simplified
-    pub documents_verified: HeaplessString<500>, // JSON array of document types
-    pub last_review_date: Option<NaiveDate>,
-    pub next_review_date: Option<NaiveDate>,
-    pub reviewed_by: Option<HeaplessString<100>>,
-    pub verification_notes: Option<HeaplessString<500>>,
-    pub created_at: DateTime<Utc>,
-    pub last_updated_at: DateTime<Utc>,
-    pub updated_by_person_id: HeaplessString<100>,
-}
 
 /// Screening Result database model - aligned with domain ScreeningResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -284,17 +348,10 @@ pub struct SanctionsScreeningModel {
 }
 
 /// Compliance Alert database model - aligned with domain ComplianceAlert
-#[derive(Debug, Clone, Serialize, Deserialize)] 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceAlertModel {
-    pub id: Uuid,
-    #[serde(serialize_with = "serialize_alert_type", deserialize_with = "deserialize_alert_type")]
-    pub alert_type: AlertType,
-    pub description: HeaplessString<500>,
-    #[serde(serialize_with = "serialize_severity", deserialize_with = "deserialize_severity")]
-    pub severity: Severity,
-    pub triggered_at: DateTime<Utc>,
-    #[serde(serialize_with = "serialize_alert_status", deserialize_with = "deserialize_alert_status")]
-    pub status: AlertStatus,
+    #[serde(flatten)]
+    pub alert_data: ExtendedComplianceAlertModel,
 }
 
 /// Extended Compliance Alert database model (for repository use)
@@ -302,22 +359,31 @@ pub struct ComplianceAlertModel {
 pub struct ExtendedComplianceAlertModel {
     pub id: Uuid,
     pub customer_id: Option<Uuid>,
+    pub account_id: Option<Uuid>,
     pub transaction_id: Option<Uuid>,
     #[serde(serialize_with = "serialize_alert_type", deserialize_with = "deserialize_alert_type")]
     pub alert_type: AlertType,
     #[serde(serialize_with = "serialize_severity", deserialize_with = "deserialize_severity")]
     pub severity: Severity,
     pub description: HeaplessString<500>,
-    pub generated_at: DateTime<Utc>,
+    pub triggered_at: DateTime<Utc>,
     #[serde(serialize_with = "serialize_alert_status", deserialize_with = "deserialize_alert_status")]
     pub status: AlertStatus,
-    pub assigned_to: Option<HeaplessString<100>>,
+    pub assigned_to_person_id: Option<Uuid>,
     pub resolved_at: Option<DateTime<Utc>>,
-    pub resolved_by: Option<HeaplessString<100>>,
+    pub resolved_by_person_id: Option<Uuid>,
     pub resolution_notes: Option<HeaplessString<500>>,
     pub metadata: Option<HeaplessString<1000>>, // JSON with additional alert data
     pub created_at: DateTime<Utc>,
     pub last_updated_at: DateTime<Utc>,
+}
+
+impl From<ExtendedComplianceAlertModel> for ComplianceAlertModel {
+    fn from(extended: ExtendedComplianceAlertModel) -> Self {
+        Self {
+            alert_data: extended,
+        }
+    }
 }
 
 /// UBO Verification Result database model - aligned with domain UboVerificationResult

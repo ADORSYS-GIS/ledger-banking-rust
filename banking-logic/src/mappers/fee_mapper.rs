@@ -1,5 +1,5 @@
 use banking_api::domain::fee::{
-    FeeApplication, FeeWaiver, FeeProcessingJob, FeeCategory
+    FeeApplication, FeeWaiver, FeeProcessingJob
 };
 use banking_db::models::fee::{
     FeeApplicationModel, FeeWaiverModel, FeeProcessingJobModel
@@ -16,7 +16,7 @@ impl FeeMapper {
             transaction_id: fee.transaction_id,
             fee_type: fee.fee_type,
             fee_category: fee.fee_category,
-            product_code: fee.product_code,
+            product_id: fee.product_id,
             fee_code: fee.fee_code,
             description: fee.description,
             amount: fee.amount,
@@ -45,7 +45,7 @@ impl FeeMapper {
             transaction_id: model.transaction_id,
             fee_type: model.fee_type,
             fee_category: model.fee_category,
-            product_code: model.product_code,
+            product_id: model.product_id,
             fee_code: model.fee_code,
             description: model.description,
             amount: model.amount,
@@ -107,8 +107,16 @@ impl FeeMapper {
             job_type: job.job_type,
             job_name: job.job_name,
             schedule_expression: job.schedule_expression,
-            target_fee_categories: serde_json::to_string(&job.target_fee_categories).unwrap_or_default(),
-            target_products: job.target_products.map(|p| serde_json::to_string(&p).unwrap_or_default()),
+            target_fee_categories_01: job.target_fee_categories_01,
+            target_fee_categories_02: job.target_fee_categories_02,
+            target_fee_categories_03: job.target_fee_categories_03,
+            target_fee_categories_04: job.target_fee_categories_04,
+            target_fee_categories_05: job.target_fee_categories_05,
+            target_product_id_01: job.target_product_id_01,
+            target_product_id_02: job.target_product_id_02,
+            target_product_id_03: job.target_product_id_03,
+            target_product_id_04: job.target_product_id_04,
+            target_product_id_05: job.target_product_id_05,
             processing_date: job.processing_date,
             status: job.status,
             started_at: job.started_at,
@@ -116,27 +124,32 @@ impl FeeMapper {
             accounts_processed: job.accounts_processed as i32,
             fees_applied: job.fees_applied as i32,
             total_amount: job.total_amount,
-            errors: if job.errors.is_empty() { None } else { Some(serde_json::to_string(&job.errors).unwrap_or_default()) },
+            errors_01: job.errors_01,
+            errors_02: job.errors_02,
+            errors_03: job.errors_03,
+            errors_04: job.errors_04,
+            errors_05: job.errors_05,
             created_at: chrono::Utc::now(),
         }
     }
 
     /// Map from database FeeProcessingJobModel to domain FeeProcessingJob
     pub fn fee_processing_job_from_model(model: FeeProcessingJobModel) -> banking_api::BankingResult<FeeProcessingJob> {
-        let target_fee_categories: Vec<FeeCategory> = serde_json::from_str(&model.target_fee_categories).unwrap_or_default();
-        let target_products: Option<Vec<String>> = model.target_products
-            .map(|p| serde_json::from_str(&p).unwrap_or_default());
-        let errors: Vec<String> = model.errors
-            .map(|e| serde_json::from_str(&e).unwrap_or_default())
-            .unwrap_or_default();
-
         Ok(FeeProcessingJob {
             id: model.id,
             job_type: model.job_type,
             job_name: model.job_name,
             schedule_expression: model.schedule_expression,
-            target_fee_categories,
-            target_products,
+            target_fee_categories_01: model.target_fee_categories_01,
+            target_fee_categories_02: model.target_fee_categories_02,
+            target_fee_categories_03: model.target_fee_categories_03,
+            target_fee_categories_04: model.target_fee_categories_04,
+            target_fee_categories_05: model.target_fee_categories_05,
+            target_product_id_01: model.target_product_id_01,
+            target_product_id_02: model.target_product_id_02,
+            target_product_id_03: model.target_product_id_03,
+            target_product_id_04: model.target_product_id_04,
+            target_product_id_05: model.target_product_id_05,
             processing_date: model.processing_date,
             status: model.status,
             started_at: model.started_at,
@@ -144,7 +157,11 @@ impl FeeMapper {
             accounts_processed: model.accounts_processed as u32,
             fees_applied: model.fees_applied as u32,
             total_amount: model.total_amount,
-            errors,
+            errors_01: model.errors_01,
+            errors_02: model.errors_02,
+            errors_03: model.errors_03,
+            errors_04: model.errors_04,
+            errors_05: model.errors_05,
         })
     }
 }

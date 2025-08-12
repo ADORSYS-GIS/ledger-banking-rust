@@ -6,7 +6,7 @@ use crate::{
     domain::{
         AccountWorkflow, AccountOpeningRequest, ClosureRequest, 
         FinalSettlement, DormancyAssessment, AccountStatus, 
-        StatusChangeRecord, KycResult
+        AccountStatusChangeRecord, KycResult
     },
     error::BankingResult,
 };
@@ -39,7 +39,7 @@ pub trait AccountLifecycleService: Send + Sync {
     /// Legacy method - deprecated, use update_account_status with reason_id instead
     #[deprecated(note = "Use update_account_status with reason_id instead")]
     async fn update_account_status_legacy(&self, account_id: Uuid, new_status: AccountStatus, reason: HeaplessString<500>, authorized_by: Uuid) -> BankingResult<()>;
-    async fn get_status_history(&self, account_id: Uuid) -> BankingResult<Vec<StatusChangeRecord>>;
+    async fn get_status_history(&self, account_id: Uuid) -> BankingResult<Vec<AccountStatusChangeRecord>>;
 
     /// Workflow management
     async fn find_workflow_by_id(&self, workflow_id: Uuid) -> BankingResult<Option<AccountWorkflow>>;

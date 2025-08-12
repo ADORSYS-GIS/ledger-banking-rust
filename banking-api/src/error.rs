@@ -8,6 +8,8 @@ pub type BankingResult<T> = Result<T, BankingError>;
 
 #[derive(Debug, Error, Serialize, Deserialize)]
 pub enum BankingError {
+    #[error("Not found: {0}")]
+    NotFound(String),
     // Account-related errors
     #[error("Account not found: {0}")]
     AccountNotFound(Uuid),
@@ -136,13 +138,16 @@ pub enum BankingError {
     },
     
     // Product and system errors
-    #[error("Invalid product code: {0}")]
-    InvalidProductCode(String),
+    #[error("Invalid product id: {0}")]
+    InvalidProductId(Uuid),
+
+    #[error("Product not found: {0}")]
+    ProductNotFound(Uuid),
     
-    #[error("Product catalog unavailable for {product_code}, fallback used: {fallback_used}")]
-    ProductCatalogUnavailable { 
-        product_code: String, 
-        fallback_used: bool 
+    #[error("Product catalog unavailable for {product_id}, fallback used: {fallback_used}")]
+    ProductCatalogUnavailable {
+        product_id: Uuid,
+        fallback_used: bool
     },
     
     #[error("Business day calculation error for date {date} in jurisdiction {jurisdiction}")]

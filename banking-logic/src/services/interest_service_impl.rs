@@ -15,15 +15,15 @@ use banking_db::{
 };
 use crate::{
     mappers::{AccountMapper, TransactionMapper},
-    integration::ProductCatalogClient,
 };
+use banking_db::repository::ProductRepository;
 
 /// Production implementation of InterestService
 /// Provides product catalog-driven interest calculations with business day awareness
 pub struct InterestServiceImpl {
     account_repository: Arc<dyn AccountRepository>,
     transaction_repository: Arc<dyn TransactionRepository>,
-    product_catalog_client: Arc<ProductCatalogClient>,
+    product_repository: Arc<dyn ProductRepository>,
     calendar_service: Arc<dyn CalendarService>,
 }
 
@@ -31,13 +31,13 @@ impl InterestServiceImpl {
     pub fn new(
         account_repository: Arc<dyn AccountRepository>,
         transaction_repository: Arc<dyn TransactionRepository>,
-        product_catalog_client: Arc<ProductCatalogClient>,
+        product_repository: Arc<dyn ProductRepository>,
         calendar_service: Arc<dyn CalendarService>,
     ) -> Self {
         Self {
             account_repository,
             transaction_repository,
-            product_catalog_client,
+            product_repository,
             calendar_service,
         }
     }
@@ -137,7 +137,7 @@ impl InterestService for InterestServiceImpl {
             },
             external_reference: None,
             gl_code: {
-                let gl_code_str = self.get_interest_gl_code(account.product_code.as_str()).await?;
+                let gl_code_str = self.get_interest_gl_code(account.product_id).await?;
                 HeaplessString::try_from(gl_code_str.as_str()).map_err(|_| BankingError::ValidationError {
                     field: "gl_code".to_string(),
                     message: "GL code too long".to_string(),
@@ -236,16 +236,18 @@ impl InterestService for InterestServiceImpl {
         let mut current_date = from_date;
 
         // Get product rules to determine accrual frequency
-        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
 
         while current_date <= to_date {
             // Check if we should accrue interest on this date
             let should_accrue = match product_rules.accrual_frequency {
-                crate::integration::AccrualFrequency::Daily => true,
-                crate::integration::AccrualFrequency::BusinessDaysOnly => {
+                banking_db::models::AccrualFrequency::Daily => true,
+                banking_db::models::AccrualFrequency::BusinessDaysOnly => {
                     self.calendar_service.is_business_day(current_date, account.currency.as_str()).await?
                 }
-                crate::integration::AccrualFrequency::None => false,
+                banking_db::models::AccrualFrequency::None => false,
             };
 
             if should_accrue {
@@ -274,26 +276,28 @@ impl InterestService for InterestServiceImpl {
         let account = AccountMapper::from_model(account_model)?;
 
         // Get product rules
-        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
 
         // Check posting frequency
         match product_rules.interest_posting_frequency {
-            crate::integration::PostingFrequency::Daily => Ok(true),
-            crate::integration::PostingFrequency::Weekly => {
+            banking_db::models::PostingFrequency::Daily => Ok(true),
+            banking_db::models::PostingFrequency::Weekly => {
                 use chrono::Datelike;
                 // Post on Fridays or last business day of week
-                Ok(date.weekday() == chrono::Weekday::Fri || 
+                Ok(date.weekday() == chrono::Weekday::Fri ||
                    self.is_last_business_day_of_week(date).await?)
             }
-            crate::integration::PostingFrequency::Monthly => {
+            banking_db::models::PostingFrequency::Monthly => {
                 // Post on last business day of month
                 self.is_last_business_day_of_month(date).await
             }
-            crate::integration::PostingFrequency::Quarterly => {
+            banking_db::models::PostingFrequency::Quarterly => {
                 // Post on last business day of quarter
                 self.is_last_business_day_of_quarter(date).await
             }
-            crate::integration::PostingFrequency::Annually => {
+            banking_db::models::PostingFrequency::Annually => {
                 // Post on last business day of year
                 self.is_last_business_day_of_year(date).await
             }
@@ -311,12 +315,12 @@ impl InterestService for InterestServiceImpl {
     }
 
     /// Calculate interest rate for an account based on balance tiers
-    async fn calculate_interest_rate(&self, _product_code: &str, _balance: rust_decimal::Decimal, _account_type: banking_api::domain::AccountType) -> BankingResult<rust_decimal::Decimal> {
+    async fn calculate_interest_rate(&self, _product_id: Uuid, _balance: rust_decimal::Decimal, _account_type: banking_api::domain::AccountType) -> BankingResult<rust_decimal::Decimal> {
         todo!("Implement interest rate calculation")
     }
 
     /// Get interest rate tiers for a product
-    async fn get_interest_rate_tiers(&self, _product_code: &str) -> BankingResult<Vec<banking_api::service::InterestRateTier>> {
+    async fn get_interest_rate_tiers(&self, _product_id: Uuid) -> BankingResult<Vec<banking_api::service::InterestRateTier>> {
         todo!("Implement get_interest_rate_tiers")
     }
 
@@ -334,7 +338,7 @@ impl InterestServiceImpl {
         }
 
         // Get tiered interest rate based on balance
-        let interest_rate = self.get_tiered_savings_rate(account.product_code.as_str(), account.current_balance).await?;
+        let interest_rate = self.get_tiered_savings_rate(account.product_id, account.current_balance).await?;
 
         // Calculate simple daily interest: (Balance * Rate) / 365
         let daily_interest = (account.current_balance * interest_rate) / Decimal::from(365);
@@ -367,7 +371,9 @@ impl InterestServiceImpl {
         let overdraft_amount = account.current_balance.abs();
         
         // Get overdraft interest rate from product catalog
-        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
         let overdraft_rate = product_rules.overdraft_interest_rate.unwrap_or(Decimal::ZERO);
 
         // Calculate daily overdraft interest
@@ -377,8 +383,8 @@ impl InterestServiceImpl {
     }
 
     /// Get tiered savings rate based on balance
-    async fn get_tiered_savings_rate(&self, product_code: &str, balance: Decimal) -> BankingResult<Decimal> {
-        let rate_tiers = self.product_catalog_client.get_interest_rate_tiers(product_code).await?;
+    async fn get_tiered_savings_rate(&self, product_id: Uuid, balance: Decimal) -> BankingResult<Decimal> {
+        let rate_tiers = self.product_repository.find_interest_rate_tiers_by_product_id(product_id).await?;
 
         // Find applicable tier (start from highest tier)
         for tier in rate_tiers.iter().rev() {
@@ -410,9 +416,10 @@ impl InterestServiceImpl {
     }
 
     /// Get GL code for interest transactions
-    async fn get_interest_gl_code(&self, product_code: &str) -> BankingResult<String> {
+    async fn get_interest_gl_code(&self, product_id: Uuid) -> BankingResult<String> {
         // In production, this would come from product catalog GL mapping
-        Ok(format!("INT_{product_code}"))
+        let gl_mapping = self.product_repository.find_gl_mapping_by_product_id(product_id).await?.unwrap();
+        Ok(gl_mapping.interest_expense_code.to_string())
     }
 
     /// Power function for Decimal (simple implementation)
@@ -511,7 +518,7 @@ mod tests {
     async fn test_calculate_loan_installment() {
         let mock_account_repo = Arc::new(MockAccountRepository);
         let mock_transaction_repo = Arc::new(MockTransactionRepository);
-        let mock_product_client = Arc::new(ProductCatalogClient::new("http://localhost".to_string()).unwrap());
+        let mock_product_client = Arc::new(MockProductRepository);
         let mock_calendar = Arc::new(MockCalendarService);
 
         let service = InterestServiceImpl::new(
@@ -536,6 +543,38 @@ mod tests {
     struct MockAccountRepository;
     struct MockTransactionRepository;
     struct MockCalendarService;
+    struct MockProductRepository;
+
+    #[async_trait]
+    impl ProductRepository for MockProductRepository {
+        async fn create_product(&self, _product: banking_db::models::ProductModel) -> BankingResult<banking_db::models::ProductModel> {
+            todo!()
+        }
+        async fn find_product_by_id(&self, _product_id: Uuid) -> BankingResult<Option<banking_db::models::ProductModel>> {
+            todo!()
+        }
+        async fn update_product(&self, _product: banking_db::models::ProductModel) -> BankingResult<banking_db::models::ProductModel> {
+            todo!()
+        }
+        async fn deactivate_product(&self, _product_id: Uuid, _updated_by_person_id: Uuid) -> BankingResult<()> {
+            todo!()
+        }
+        async fn reactivate_product(&self, _product_id: Uuid, _updated_by_person_id: Uuid) -> BankingResult<()> {
+            todo!()
+        }
+        async fn find_active_products(&self) -> BankingResult<Vec<banking_db::models::ProductModel>> {
+            todo!()
+        }
+        async fn find_products_by_type(&self, _product_type: banking_db::models::ProductType) -> BankingResult<Vec<banking_db::models::ProductModel>> {
+            todo!()
+        }
+        async fn find_interest_rate_tiers_by_product_id(&self, _product_id: Uuid) -> BankingResult<Vec<banking_db::models::product::InterestRateTierModel>> {
+            Ok(vec![])
+        }
+        async fn find_gl_mapping_by_product_id(&self, _product_id: Uuid) -> BankingResult<Option<banking_db::models::product::GlMappingModel>> {
+            Ok(None)
+        }
+    }
 
     #[async_trait]
     impl AccountRepository for MockAccountRepository {
@@ -550,7 +589,8 @@ mod tests {
         async fn create(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> { todo!() }
         async fn update(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> { todo!() }
         async fn find_by_customer_id(&self, _customer_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
-        async fn find_by_product_code(&self, _product_code: &str) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
+        async fn find_by_account_type(&self, _account_type: banking_db::models::AccountType) -> BankingResult<Vec<banking_db::models::AccountModel>> { Ok(vec![]) }
+        async fn find_by_product_id(&self, _product_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_by_status(&self, _status: &str) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_dormancy_candidates(&self, _reference_date: chrono::NaiveDate, _threshold_days: i32) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_pending_closure(&self) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
@@ -571,56 +611,24 @@ mod tests {
         async fn find_mandates_by_grantee(&self, _grantee_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountMandateModel>> { todo!() }
         async fn update_mandate_status(&self, _mandate_id: Uuid, _status: &str) -> BankingResult<()> { todo!() }
         async fn find_active_mandates(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountMandateModel>> { todo!() }
-        async fn create_hold(&self, _hold: banking_db::models::AccountHoldModel) -> BankingResult<banking_db::models::AccountHoldModel> { todo!() }
-        async fn find_holds_by_account(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn find_active_holds(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn release_hold(&self, _hold_id: Uuid, _released_by: Uuid) -> BankingResult<()> { todo!() }
-        async fn release_expired_holds(&self, _expiry_cutoff: chrono::DateTime<chrono::Utc>) -> BankingResult<i64> { todo!() }
         async fn create_final_settlement(&self, _settlement: banking_db::models::AccountFinalSettlementModel) -> BankingResult<banking_db::models::AccountFinalSettlementModel> { todo!() }
         async fn find_settlement_by_account(&self, _account_id: Uuid) -> BankingResult<Option<banking_db::models::AccountFinalSettlementModel>> { todo!() }
         async fn update_settlement_status(&self, _settlement_id: Uuid, _status: &str) -> BankingResult<()> { todo!() }
-        async fn get_status_history(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountStatusHistoryModel>> { todo!() }
-        async fn add_status_change(&self, _status_change: banking_db::models::AccountStatusHistoryModel) -> BankingResult<banking_db::models::AccountStatusHistoryModel> { todo!() }
+        async fn get_status_history(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountStatusChangeRecordModel>> {
+            todo!()
+        }
+        async fn add_status_change(
+            &self,
+            _status_change: banking_db::models::AccountStatusChangeRecordModel,
+        ) -> BankingResult<banking_db::models::AccountStatusChangeRecordModel> {
+            todo!()
+        }
         async fn count_by_customer(&self, _customer_id: Uuid) -> BankingResult<i64> { todo!() }
-        async fn count_by_product(&self, _product_code: &str) -> BankingResult<i64> { todo!() }
+        async fn count_by_product(&self, _product_id: Uuid) -> BankingResult<i64> { todo!() }
         async fn list(&self, _limit: i64, _offset: i64) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn count(&self) -> BankingResult<i64> { todo!() }
         async fn update_last_activity_date(&self, _account_id: Uuid, _activity_date: chrono::NaiveDate) -> BankingResult<()> { todo!() }
 
-        // Hold-related methods
-        async fn update_hold(&self, _hold: banking_db::models::AccountHoldModel) -> BankingResult<banking_db::models::AccountHoldModel> { todo!() }
-        async fn get_hold_by_id(&self, _hold_id: Uuid) -> BankingResult<Option<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_active_holds_for_account(&self, _account_id: Uuid, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_holds_by_status(&self, _account_id: Option<Uuid>, _status: String, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_holds_by_type(&self, _hold_type: String, _status: Option<String>, _account_ids: Option<Vec<Uuid>>, _limit: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_hold_history(&self, _account_id: Uuid, _from_date: Option<chrono::NaiveDate>, _to_date: Option<chrono::NaiveDate>, _include_released: bool) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn calculate_total_holds(&self, _account_id: Uuid, _exclude_types: Option<Vec<String>>) -> BankingResult<rust_decimal::Decimal> { todo!() }
-        async fn get_hold_amounts_by_priority(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldPrioritySummary>> { todo!() }
-        async fn get_hold_breakdown(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldTypeSummary>> { todo!() }
-        async fn cache_balance_calculation(&self, _calculation: banking_db::models::AccountBalanceCalculationModel) -> BankingResult<banking_db::models::AccountBalanceCalculationModel> { todo!() }
-        async fn get_cached_balance_calculation(&self, _account_id: Uuid, _max_age_seconds: u64) -> BankingResult<Option<banking_db::models::AccountBalanceCalculationModel>> { todo!() }
-        async fn release_hold_detailed(&self, _hold_id: Uuid, _release_amount: Option<rust_decimal::Decimal>, _release_reason_id: Uuid, _released_by: Uuid, _released_at: chrono::DateTime<chrono::Utc>) -> BankingResult<banking_db::models::AccountHoldModel> { todo!() }
-        async fn create_hold_release_record(&self, _release_record: banking_db::models::HoldReleaseRecordModel) -> BankingResult<banking_db::models::HoldReleaseRecordModel> { todo!() }
-        async fn get_hold_release_records(&self, _hold_id: Uuid) -> BankingResult<Vec<banking_db::models::HoldReleaseRecordModel>> { todo!() }
-        async fn bulk_release_holds(&self, _hold_ids: Vec<Uuid>, _release_reason_id: Uuid, _released_by: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_expired_holds(&self, _cutoff_date: chrono::DateTime<chrono::Utc>, _hold_types: Option<Vec<String>>, _limit: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_auto_release_eligible_holds(&self, _processing_date: chrono::NaiveDate, _hold_types: Option<Vec<String>>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn create_hold_expiry_job(&self, _expiry_job: banking_db::models::AccountHoldExpiryJobModel) -> BankingResult<banking_db::models::AccountHoldExpiryJobModel> { todo!() }
-        async fn update_hold_expiry_job(&self, _expiry_job: banking_db::models::AccountHoldExpiryJobModel) -> BankingResult<banking_db::models::AccountHoldExpiryJobModel> { todo!() }
-        async fn bulk_place_holds(&self, _holds: Vec<banking_db::models::AccountHoldModel>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn update_hold_priorities(&self, _account_id: Uuid, _priority_updates: Vec<(Uuid, String)>, _updated_by_person_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_overrideable_holds(&self, _account_id: Uuid, _required_amount: rust_decimal::Decimal, _override_reason: String) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn create_hold_override(&self, _account_id: Uuid, _hold_ids: Vec<Uuid>, _override_amount: rust_decimal::Decimal, _authorized_by: Uuid, _override_reason_id: Uuid) -> BankingResult<banking_db::repository::HoldOverrideRecord> { todo!() }
-        async fn get_judicial_holds_by_reference(&self, _source_reference: String) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn update_loan_pledge_holds(&self, _collateral_id: Uuid, _affected_accounts: Vec<Uuid>, _new_pledge_amount: rust_decimal::Decimal, _updated_by_person_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_compliance_holds_by_alert(&self, _alert_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn get_hold_analytics(&self, _from_date: chrono::NaiveDate, _to_date: chrono::NaiveDate, _product_codes: Option<Vec<String>>) -> BankingResult<banking_db::repository::HoldAnalyticsSummary> { todo!() }
-        async fn get_high_hold_ratio_accounts(&self, _threshold_percentage: rust_decimal::Decimal, _product_codes: Option<Vec<String>>, _limit: i32) -> BankingResult<Vec<banking_db::repository::HighHoldRatioAccount>> { todo!() }
-        async fn generate_judicial_hold_report(&self, _from_date: chrono::NaiveDate, _to_date: chrono::NaiveDate) -> BankingResult<banking_db::repository::JudicialHoldReportData> { todo!() }
-        async fn get_hold_aging_report(&self, _product_codes: Option<Vec<String>>, _aging_buckets: Vec<i32>) -> BankingResult<Vec<banking_db::repository::HoldAgingBucket>> { todo!() }
-        async fn validate_hold_amounts(&self, _account_id: Uuid) -> BankingResult<Vec<banking_db::repository::HoldValidationError>> { todo!() }
-        async fn find_orphaned_holds(&self, _max_age_days: Option<i32>) -> BankingResult<Vec<banking_db::models::AccountHoldModel>> { todo!() }
-        async fn cleanup_old_holds(&self, _cutoff_date: chrono::NaiveDate, _statuses_to_clean: Vec<String>) -> BankingResult<u32> { todo!() }
     }
 
     #[async_trait]

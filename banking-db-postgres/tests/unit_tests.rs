@@ -14,7 +14,8 @@ fn create_test_account() -> AccountModel {
     
     AccountModel {
         id: account_id,
-        product_code: HeaplessString::try_from("SAV01").unwrap(),
+        product_id: Uuid::new_v4(),
+        gl_code_suffix: None,
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,
         signing_condition: SigningCondition::AnyOwner,
@@ -82,7 +83,7 @@ fn test_account_model_creation() {
     assert!(matches!(account.account_type, AccountType::Savings));
     assert!(matches!(account.account_status, AccountStatus::Active));
     assert!(matches!(account.signing_condition, SigningCondition::AnyOwner));
-    assert_eq!(account.product_code.as_str(), "SAV01");
+    assert!(!account.product_id.is_nil());
     assert_eq!(account.currency.as_str(), "USD");
     assert_eq!(account.current_balance, Decimal::from_str("1000.00").unwrap());
     assert_eq!(account.available_balance, Decimal::from_str("950.00").unwrap());
@@ -91,14 +92,9 @@ fn test_account_model_creation() {
 
 #[test]
 fn test_heapless_string_constraints() {
-    // Test product code length constraint (HeaplessString<12>)
-    let valid_product_code = "SAV01";
-    let heapless_valid = HeaplessString::<12>::try_from(valid_product_code);
-    assert!(heapless_valid.is_ok());
-    
-    let too_long_product_code = "SAVINGS_ACCOUNT_01"; // 18 chars > 12
-    let heapless_invalid = HeaplessString::<12>::try_from(too_long_product_code);
-    assert!(heapless_invalid.is_err());
+    // Test Uuid size
+    let product_id = Uuid::new_v4();
+    assert_eq!(std::mem::size_of_val(&product_id), 16);
     
     // Test currency code length constraint (HeaplessString<3>)
     let valid_currency = "USD";

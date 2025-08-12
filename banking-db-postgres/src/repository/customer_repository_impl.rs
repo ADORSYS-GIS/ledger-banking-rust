@@ -9,11 +9,11 @@ use uuid::Uuid;
 use heapless::String as HeaplessString;
 
 /// PostgreSQL implementation of CustomerRepository
-pub struct PostgresCustomerRepository {
+pub struct CustomerRepositoryImpl {
     pool: PgPool,
 }
 
-impl PostgresCustomerRepository {
+impl CustomerRepositoryImpl {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -147,7 +147,7 @@ trait TryFromRow<R> {
 }
 
 #[async_trait]
-impl CustomerRepository for PostgresCustomerRepository {
+impl CustomerRepository for CustomerRepositoryImpl {
     async fn create(&self, customer: CustomerModel) -> BankingResult<CustomerModel> {
         let result = sqlx::query(
             r#"

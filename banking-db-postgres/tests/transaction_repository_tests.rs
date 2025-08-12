@@ -1,8 +1,5 @@
 use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
-use banking_db::models::{TransactionModel, TransactionType, TransactionStatus, TransactionApprovalStatus, AccountModel};
-use banking_db::models::workflow::{ApprovalWorkflowModel, WorkflowTransactionApprovalModel, WorkflowStatusModel};
-use banking_db::repository::TransactionRepository;
-use banking_db_postgres::repository::transaction_repository_impl::TransactionRepositoryImpl;
+use banking_db::models::{TransactionModel, TransactionType, TransactionStatus, AccountModel};
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
@@ -11,6 +8,7 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 /// Test helper to create a sample transaction
+#[allow(dead_code)]
 fn create_test_transaction(account_id: Uuid) -> TransactionModel {
     let transaction_id = Uuid::new_v4();
     
@@ -50,6 +48,7 @@ fn create_test_transaction(account_id: Uuid) -> TransactionModel {
 }
 
 /// Test helper to create a sample account for transaction testing
+#[allow(dead_code)]
 fn create_test_account() -> AccountModel {
     let account_id = Uuid::new_v4();
     let updated_by_person_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
@@ -57,7 +56,8 @@ fn create_test_account() -> AccountModel {
     
     AccountModel {
         id: account_id,
-        product_code: HeaplessString::try_from("SAV01").unwrap(),
+        product_id: Uuid::new_v4(),
+        gl_code_suffix: None,
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,
         signing_condition: SigningCondition::AnyOwner,
@@ -119,6 +119,7 @@ fn create_test_account() -> AccountModel {
 }
 
 /// Integration test helper to set up database connection and prerequisites
+#[allow(dead_code)]
 async fn setup_test_db() -> PgPool {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/mydb".to_string());
@@ -151,6 +152,7 @@ async fn setup_test_db() -> PgPool {
 }
 
 /// Create a test account in the database
+#[allow(dead_code)]
 async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
     let account = create_test_account();
     let account_id = account.id;
@@ -158,7 +160,7 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
     sqlx::query(
         r#"
         INSERT INTO accounts (
-            id, product_code, account_type, account_status, signing_condition,
+            id, product_id, account_type, account_status, signing_condition,
             currency, open_date, domicile_agency_branch_id, current_balance, available_balance,
             accrued_interest, updated_by_person_id
         )
@@ -170,7 +172,7 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
         "#
     )
     .bind(account.id)
-    .bind(account.product_code.as_str())
+    .bind(account.product_id)
     .bind(account.account_type.to_string())
     .bind(account.account_status.to_string())
     .bind(account.signing_condition.to_string())
@@ -191,6 +193,9 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_crud_operations() {
+    use banking_db::TransactionRepository;
+    use banking_db_postgres::TransactionRepositoryImpl;
+    
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -237,6 +242,9 @@ async fn test_transaction_crud_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_find_by_reference() {
+    use banking_db::TransactionRepository;
+    use banking_db_postgres::TransactionRepositoryImpl;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -264,6 +272,9 @@ async fn test_transaction_find_by_reference() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_find_by_account_id() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -306,6 +317,9 @@ async fn test_transaction_find_by_account_id() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_find_by_external_reference() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -345,6 +359,9 @@ async fn test_transaction_find_by_external_reference() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_find_by_status() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -385,6 +402,10 @@ async fn test_transaction_find_by_status() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_requiring_approval() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+    use banking_db::TransactionApprovalStatus;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -419,6 +440,11 @@ async fn test_transaction_requiring_approval() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_status_updates() {
+    use banking_db::TransactionApprovalStatus;
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
+    
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -454,6 +480,9 @@ async fn test_transaction_status_updates() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_find_by_channel() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -493,6 +522,9 @@ async fn test_transaction_find_by_channel() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_find_last_customer_transaction() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -532,6 +564,9 @@ async fn test_transaction_find_last_customer_transaction() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_reverse_transaction() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -583,6 +618,9 @@ async fn test_transaction_reverse_transaction() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_reconciliation() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -631,6 +669,9 @@ async fn test_transaction_reconciliation() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_count_operations() {
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -693,6 +734,12 @@ async fn test_transaction_count_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_with_approval_workflow() {
+    use banking_db::TransactionApprovalStatus;
+    use banking_db::ApprovalWorkflowModel;
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+    use banking_db::WorkflowStatusModel;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     
@@ -759,6 +806,10 @@ async fn test_transaction_with_approval_workflow() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_transaction_approval_operations() {
+    use banking_db::{ApprovalWorkflowModel, WorkflowStatusModel, WorkflowTransactionApprovalModel};
+    use banking_db_postgres::TransactionRepositoryImpl;
+    use banking_db::TransactionRepository;
+
     let pool = setup_test_db().await;
     let repo = TransactionRepositoryImpl::new(pool.clone());
     

@@ -3,16 +3,13 @@
 
 mod commons;
 
-use commons::{setup_test_db, cleanup_database, create_test_person, create_test_account};
 use banking_db::models::{AccountWorkflowModel, WorkflowTypeModel, WorkflowStepModel, WorkflowStatusModel};
-use banking_db::repository::WorkflowRepository;
-use banking_db_postgres::WorkflowRepositoryImpl;
 use chrono::Utc;
 use heapless::String as HeaplessString;
 use uuid::Uuid;
-use sqlx;
 
 /// Create a test workflow with provided IDs
+#[allow(dead_code)]
 fn create_workflow_for_test(workflow_id: Uuid, account_id: Uuid, person_id: Uuid) -> AccountWorkflowModel {
     AccountWorkflowModel {
         id: workflow_id,
@@ -34,6 +31,11 @@ fn create_workflow_for_test(workflow_id: Uuid, account_id: Uuid, person_id: Uuid
 #[tokio::test]
 async fn test_cleanup_isolation_demo() {
     // Initial setup
+
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
+    use crate::commons::{cleanup_database, create_test_account, setup_test_db};
     let (pool, person_id, account_id) = setup_test_db().await;
     let repo = WorkflowRepositoryImpl::new(pool.clone());
     
@@ -55,7 +57,7 @@ async fn test_cleanup_isolation_demo() {
     assert_eq!(post_cleanup_count, 0, "Should have 0 workflows after cleanup");
     
     // Recreate test prerequisites
-    let person_id = create_test_person(&pool).await;
+    let person_id = crate::commons::create_test_person(&pool).await;
     let account_id = create_test_account(&pool, person_id).await;
     
     // Create new workflow in clean environment
@@ -75,6 +77,11 @@ async fn test_cleanup_isolation_demo() {
 #[tokio::test]
 async fn test_workflow_crud_basic() {
     // Setup with clean environment
+
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
+    use crate::commons::{cleanup_database, create_test_account, create_test_person, setup_test_db};
     let (pool, _person_id, _account_id) = setup_test_db().await;
     cleanup_database(&pool).await;
     
@@ -139,6 +146,11 @@ async fn test_workflow_crud_basic() {
 #[tokio::test]
 async fn test_multiple_workflows_with_cleanup() {
     // Clean start
+
+    use banking_db_postgres::WorkflowRepositoryImpl;
+    use banking_db::WorkflowRepository;
+
+    use crate::commons::{cleanup_database, create_test_account, create_test_person, setup_test_db};
     let (pool, _person_id, _account_id) = setup_test_db().await;
     cleanup_database(&pool).await;
     

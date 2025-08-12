@@ -27,10 +27,10 @@ pub trait InterestService: Send + Sync {
     async fn capitalize_interest(&self, processing_date: NaiveDate) -> BankingResult<CapitalizationReport>;
 
     /// Calculate interest for specific account type and balance
-    async fn calculate_interest_rate(&self, product_code: &str, balance: Decimal, account_type: crate::domain::AccountType) -> BankingResult<Decimal>;
+    async fn calculate_interest_rate(&self, product_id: Uuid, balance: Decimal, account_type: crate::domain::AccountType) -> BankingResult<Decimal>;
 
     /// Get interest rate tiers for a product
-    async fn get_interest_rate_tiers(&self, product_code: &str) -> BankingResult<Vec<InterestRateTier>>;
+    async fn get_interest_rate_tiers(&self, product_id: Uuid) -> BankingResult<Vec<InterestRateTier>>;
 
     /// Check if account should accrue interest on given date
     async fn should_accrue_interest(&self, account_id: Uuid, date: NaiveDate) -> BankingResult<bool>;

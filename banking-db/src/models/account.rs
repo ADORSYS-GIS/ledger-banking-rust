@@ -14,7 +14,7 @@ pub use banking_api::domain::{
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AccountModel {
     pub id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     #[serde(
         serialize_with = "serialize_account_type",
         deserialize_with = "deserialize_account_type"
@@ -33,6 +33,8 @@ pub struct AccountModel {
     pub currency: HeaplessString<3>,
     pub open_date: NaiveDate,
     pub domicile_agency_branch_id: Uuid,
+    
+    pub gl_code_suffix: Option<HeaplessString<10>>,
     
     // Balance fields
     pub current_balance: Decimal,
@@ -181,49 +183,11 @@ pub struct AccountMandateModel {
     pub end_date: Option<NaiveDate>,
 }
 
-/// Database model for Account Holds
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
-pub struct AccountHoldModel {
-    pub id: Uuid,
-    pub account_id: Uuid,
-    pub amount: Decimal,
-    #[serde(
-        serialize_with = "serialize_hold_type",
-        deserialize_with = "deserialize_hold_type"
-    )]
-    pub hold_type: HoldType,
-    /// References ReasonAndPurpose.id
-    pub reason_id: Uuid,
-    /// Additional context beyond the standard reason
-    pub additional_details: Option<HeaplessString<200>>,
-    /// References Person.person_id
-    pub placed_by_person_id: Uuid,
-    pub placed_at: DateTime<Utc>,
-    pub expires_at: Option<DateTime<Utc>>,
-    #[serde(
-        serialize_with = "serialize_hold_status",
-        deserialize_with = "deserialize_hold_status"
-    )]
-    pub status: HoldStatus,
-    pub released_at: Option<DateTime<Utc>>,
-    /// References Person.person_id
-    pub released_by_person_id: Option<Uuid>,
-    #[serde(
-        serialize_with = "serialize_hold_priority",
-        deserialize_with = "deserialize_hold_priority"
-    )]
-    pub priority: HoldPriority,
-    pub source_reference: Option<HeaplessString<100>>,
-    pub automatic_release: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
 
 /// Database model for Account Status History (from enhancements)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
-pub struct AccountStatusHistoryModel {
+pub struct AccountStatusChangeRecordModel {
     pub id: Uuid,
     pub account_id: Uuid,
     #[serde(
@@ -237,7 +201,7 @@ pub struct AccountStatusHistoryModel {
     )]
     pub new_status: AccountStatus,
     /// References ReasonAndPurpose.id
-    pub change_reason_id: Uuid,
+    pub reason_id: Uuid,
     /// Additional context for status change
     pub additional_context: Option<HeaplessString<200>>,
     /// References Person.person_id
@@ -272,8 +236,6 @@ pub struct AccountFinalSettlementModel {
 /// Database model for Final Settlement (alias for compatibility)
 pub type FinalSettlementModel = AccountFinalSettlementModel;
 
-/// Database model for Status Change (alias for compatibility) 
-pub type StatusChangeModel = AccountStatusHistoryModel;
 
 /// Database model for Disbursement Instructions
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -342,114 +304,9 @@ pub struct UltimateBeneficiaryModel {
     pub created_at: DateTime<Utc>,
 }
 
-/// Database model for Account Balance Calculation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
-pub struct AccountBalanceCalculationModel {
-    pub account_id: Uuid,
-    pub current_balance: Decimal,
-    pub available_balance: Decimal,
-    pub overdraft_limit: Option<Decimal>,
-    pub total_holds: Decimal,
-    pub active_hold_count: u32,
-    pub calculation_timestamp: DateTime<Utc>,
-    pub hold_breakdown: serde_json::Value, // Will store Vec<AccountHoldSummaryModel> as JSON
-}
 
-/// Database model for Account Hold Summary
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccountHoldSummaryModel {
-    #[serde(
-        serialize_with = "serialize_hold_type",
-        deserialize_with = "deserialize_hold_type"
-    )]
-    pub hold_type: HoldType,
-    pub total_amount: Decimal,
-    pub hold_count: u32,
-    #[serde(
-        serialize_with = "serialize_hold_priority",
-        deserialize_with = "deserialize_hold_priority"
-    )]
-    pub priority: HoldPriority,
-}
 
-/// Database model for Hold Release Request
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
-pub struct HoldReleaseRequestModel {
-    pub id: Uuid,
-    pub release_amount: Option<Decimal>, // For partial releases
-    /// References ReasonAndPurpose.id for release
-    pub release_reason_id: Uuid,
-    /// Additional context for release
-    pub release_additional_details: Option<HeaplessString<200>>,
-    /// References Person.person_id
-    pub released_by_person_id: Uuid,
-    pub override_authorization: bool,
-}
 
-/// Database model for Account Hold Expiry Job
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
-pub struct AccountHoldExpiryJobModel {
-    pub id: Uuid,
-    pub processing_date: NaiveDate,
-    pub expired_holds_count: u32,
-    pub total_released_amount: Decimal,
-    pub processed_at: DateTime<Utc>,
-    pub errors: serde_json::Value, // Will store Vec<HeaplessString<100>> as JSON
-}
-
-/// Database model for Status Change Record
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
-pub struct StatusChangeRecordModel {
-    pub id: Uuid,
-    pub account_id: Uuid,
-    #[serde(
-        serialize_with = "serialize_account_status_option",
-        deserialize_with = "deserialize_account_status_option"
-    )]
-    pub old_status: Option<AccountStatus>,
-    #[serde(
-        serialize_with = "serialize_account_status",
-        deserialize_with = "deserialize_account_status"
-    )]
-    pub new_status: AccountStatus,
-    /// References ReasonAndPurpose.id
-    pub reason_id: Uuid,
-    /// Additional context beyond the standard reason
-    pub additional_context: Option<HeaplessString<200>>,
-    /// References Person.person_id
-    pub changed_by: Uuid,
-    pub changed_at: DateTime<Utc>,
-    pub system_triggered: bool,
-}
-
-/// Database model for Place Hold Request
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlaceHoldRequestModel {
-    pub account_id: Uuid,
-    #[serde(
-        serialize_with = "serialize_hold_type",
-        deserialize_with = "deserialize_hold_type"
-    )]
-    pub hold_type: HoldType,
-    pub amount: Decimal,
-    /// References ReasonAndPurpose.id - required field
-    pub reason_id: Uuid,
-    /// Additional context beyond the standard reason
-    pub additional_details: Option<HeaplessString<200>>,
-    /// References Person.person_id
-    pub placed_by_person_id: Uuid,
-    pub expires_at: Option<DateTime<Utc>>,
-    #[serde(
-        serialize_with = "serialize_hold_priority",
-        deserialize_with = "deserialize_hold_priority"
-    )]
-    pub priority: HoldPriority,
-    pub source_reference: Option<HeaplessString<100>>,
-}
 
 // Enum serialization helpers for database compatibility
 fn serialize_account_type<S>(account_type: &AccountType, serializer: S) -> Result<S::Ok, S::Error>
@@ -568,102 +425,6 @@ where
     }
 }
 
-fn serialize_hold_type<S>(hold_type: &HoldType, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let type_str = match hold_type {
-        HoldType::UnclearedFunds => "UnclearedFunds",
-        HoldType::JudicialLien => "JudicialLien",
-        HoldType::LoanPledge => "LoanPledge",
-        HoldType::ComplianceHold => "ComplianceHold",
-        HoldType::AdministrativeHold => "AdministrativeHold",
-        HoldType::FraudHold => "FraudHold",
-        HoldType::PendingAuthorization => "PendingAuthorization",
-        HoldType::OverdraftReserve => "OverdraftReserve",
-        HoldType::CardAuthorization => "CardAuthorization",
-        HoldType::Other => "Other",
-    };
-    serializer.serialize_str(type_str)
-}
-
-fn deserialize_hold_type<'de, D>(deserializer: D) -> Result<HoldType, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let type_str = String::deserialize(deserializer)?;
-    match type_str.as_str() {
-        "UnclearedFunds" => Ok(HoldType::UnclearedFunds),
-        "JudicialLien" => Ok(HoldType::JudicialLien),
-        "LoanPledge" => Ok(HoldType::LoanPledge),
-        "ComplianceHold" => Ok(HoldType::ComplianceHold),
-        "AdministrativeHold" => Ok(HoldType::AdministrativeHold),
-        "FraudHold" => Ok(HoldType::FraudHold),
-        "PendingAuthorization" => Ok(HoldType::PendingAuthorization),
-        "OverdraftReserve" => Ok(HoldType::OverdraftReserve),
-        "CardAuthorization" => Ok(HoldType::CardAuthorization),
-        "Other" => Ok(HoldType::Other),
-        _ => Err(serde::de::Error::custom(format!("Invalid hold type: {type_str}"))),
-    }
-}
-
-fn serialize_hold_status<S>(status: &HoldStatus, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let status_str = match status {
-        HoldStatus::Active => "Active",
-        HoldStatus::Released => "Released",
-        HoldStatus::Expired => "Expired",
-        HoldStatus::Cancelled => "Cancelled",
-        HoldStatus::PartiallyReleased => "PartiallyReleased",
-    };
-    serializer.serialize_str(status_str)
-}
-
-fn deserialize_hold_status<'de, D>(deserializer: D) -> Result<HoldStatus, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let status_str = String::deserialize(deserializer)?;
-    match status_str.as_str() {
-        "Active" => Ok(HoldStatus::Active),
-        "Released" => Ok(HoldStatus::Released),
-        "Expired" => Ok(HoldStatus::Expired),
-        "Cancelled" => Ok(HoldStatus::Cancelled),
-        "PartiallyReleased" => Ok(HoldStatus::PartiallyReleased),
-        _ => Err(serde::de::Error::custom(format!("Invalid hold status: {status_str}"))),
-    }
-}
-
-fn serialize_hold_priority<S>(priority: &HoldPriority, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let priority_str = match priority {
-        HoldPriority::Critical => "Critical",
-        HoldPriority::High => "High",
-        HoldPriority::Standard => "Standard",
-        HoldPriority::Medium => "Medium",
-        HoldPriority::Low => "Low",
-    };
-    serializer.serialize_str(priority_str)
-}
-
-fn deserialize_hold_priority<'de, D>(deserializer: D) -> Result<HoldPriority, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let priority_str = String::deserialize(deserializer)?;
-    match priority_str.as_str() {
-        "Critical" => Ok(HoldPriority::Critical),
-        "High" => Ok(HoldPriority::High),
-        "Standard" => Ok(HoldPriority::Standard),
-        "Medium" => Ok(HoldPriority::Medium),
-        "Low" => Ok(HoldPriority::Low),
-        _ => Err(serde::de::Error::custom(format!("Invalid hold priority: {priority_str}"))),
-    }
-}
 
 fn serialize_ownership_type<S>(ownership_type: &OwnershipType, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -973,9 +734,8 @@ where
 }
 
 impl AccountModel {
-    /// Set product code from string with validation
-    pub fn set_product_code(&mut self, product_code: &str) -> Result<(), &'static str> {
-        self.product_code = HeaplessString::try_from(product_code).map_err(|_| "Product code too long")?;
-        Ok(())
+    /// Set product id
+    pub fn set_product_id(&mut self, product_id: Uuid) {
+        self.product_id = product_id;
     }
 }

@@ -1,5 +1,6 @@
 #[cfg(feature = "postgres_tests")]
 mod tests {
+    use banking_db_postgres::CustomerRepositoryImpl;
     use uuid::Uuid;
     use chrono::Utc;
     use heapless::String as HeaplessString;
@@ -8,7 +9,6 @@ mod tests {
         CustomerType, IdentityType, RiskRating, CustomerStatus, DocumentStatus
     };
     use banking_db::repository::CustomerRepository;
-    use banking_db_postgres::repository::customer_repository_impl::PostgresCustomerRepository;
     use sqlx::PgPool;
 
     async fn setup_test_db() -> PgPool {
@@ -56,7 +56,7 @@ mod tests {
     #[tokio::test]
     async fn test_customer_crud_operations() {
         let pool = setup_test_db().await;
-        let repo = PostgresCustomerRepository::new(pool);
+        let repo = CustomerRepositoryImpl::new(pool);
         let mut customer = create_test_customer();
         
         // Unique identity for this test
@@ -123,7 +123,7 @@ mod tests {
     #[tokio::test]
     async fn test_find_by_risk_rating() {
         let pool = setup_test_db().await;
-        let repo = PostgresCustomerRepository::new(pool);
+        let repo = CustomerRepositoryImpl::new(pool);
         
         // Create customers with different risk ratings
         let mut customer1 = create_test_customer();
@@ -166,7 +166,7 @@ mod tests {
     #[tokio::test]
     async fn test_risk_rating_update_with_audit() {
         let pool = setup_test_db().await;
-        let repo = PostgresCustomerRepository::new(pool);
+        let repo = CustomerRepositoryImpl::new(pool);
         let mut customer = create_test_customer();
         
         let unique_id = Uuid::new_v4();
@@ -203,7 +203,7 @@ mod tests {
     #[tokio::test]
     async fn test_customer_documents() {
         let pool = setup_test_db().await;
-        let repo = PostgresCustomerRepository::new(pool);
+        let repo = CustomerRepositoryImpl::new(pool);
         let mut customer = create_test_customer();
         
         let unique_id = Uuid::new_v4();
@@ -245,7 +245,7 @@ mod tests {
     #[tokio::test]
     async fn test_find_requiring_review() {
         let pool = setup_test_db().await;
-        let repo = PostgresCustomerRepository::new(pool);
+        let repo = CustomerRepositoryImpl::new(pool);
         
         // Create customer requiring review (pending verification)
         let mut customer = create_test_customer();
@@ -270,7 +270,7 @@ mod tests {
     #[tokio::test]
     async fn test_customer_portfolio() {
         let pool = setup_test_db().await;
-        let repo = PostgresCustomerRepository::new(pool);
+        let repo = CustomerRepositoryImpl::new(pool);
         let mut customer = create_test_customer();
         
         let unique_id = Uuid::new_v4();
@@ -294,7 +294,7 @@ mod tests {
     #[tokio::test]
     async fn test_pagination() {
         let pool = setup_test_db().await;
-        let repo = PostgresCustomerRepository::new(pool);
+        let repo = CustomerRepositoryImpl::new(pool);
 
         // Create test customers with predictable names for pagination testing
         let mut test_customers = Vec::new();
@@ -337,7 +337,7 @@ mod tests {
     #[tokio::test]
     async fn test_audit_trail() {
         let pool = setup_test_db().await;
-        let repo = PostgresCustomerRepository::new(pool);
+        let repo = CustomerRepositoryImpl::new(pool);
         let mut customer = create_test_customer();
         
         let unique_id = Uuid::new_v4();

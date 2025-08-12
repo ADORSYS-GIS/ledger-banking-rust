@@ -13,7 +13,7 @@ pub struct FeeApplication {
     pub transaction_id: Option<Uuid>, // For event-based fees
     pub fee_type: FeeType,
     pub fee_category: FeeCategory,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub fee_code: HeaplessString<12>,
     pub description: HeaplessString<200>,
     pub amount: Decimal,
@@ -46,8 +46,9 @@ pub enum FeeType {
 }
 
 /// Fee Categories for business logic
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum FeeCategory {
+    #[default]
     /// Transaction-related fees
     Transaction,
     /// Account maintenance fees
@@ -126,7 +127,7 @@ pub enum FeeApplicationStatus {
 /// Fee Schedule from Product Catalog
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductFeeSchedule {
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub fees: Vec<ProductFee>,
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
@@ -220,9 +221,17 @@ pub struct FeeProcessingJob {
     pub id: Uuid,
     pub job_type: FeeJobType,
     pub job_name: String,
-    pub schedule_expression: String, // Cron expression
-    pub target_fee_categories: Vec<FeeCategory>,
-    pub target_products: Option<Vec<String>>,
+    pub schedule_expression: HeaplessString<200>, // Cron expression
+    pub target_fee_categories_01: FeeCategory,
+    pub target_fee_categories_02: FeeCategory,
+    pub target_fee_categories_03: FeeCategory,
+    pub target_fee_categories_04: FeeCategory,
+    pub target_fee_categories_05: FeeCategory,
+    pub target_product_id_01: Option<Uuid>,
+    pub target_product_id_02: Option<Uuid>,
+    pub target_product_id_03: Option<Uuid>,
+    pub target_product_id_04: Option<Uuid>,
+    pub target_product_id_05: Option<Uuid>,
     pub processing_date: NaiveDate,
     pub status: FeeJobStatus,
     pub started_at: Option<DateTime<Utc>>,
@@ -230,7 +239,11 @@ pub struct FeeProcessingJob {
     pub accounts_processed: u32,
     pub fees_applied: u32,
     pub total_amount: Decimal,
-    pub errors: Vec<String>,
+    pub errors_01: HeaplessString<200>,
+    pub errors_02: HeaplessString<200>,
+    pub errors_03: HeaplessString<200>,
+    pub errors_04: HeaplessString<200>,
+    pub errors_05: HeaplessString<200>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

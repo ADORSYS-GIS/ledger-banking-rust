@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 /// Database model for collateral type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collateral_type", rename_all = "lowercase")]
+#[sqlx(type_name = "collateral_type", rename_all = "PascalCase")]
 pub enum CollateralType {
     ResidentialProperty,
     CommercialProperty,
@@ -37,7 +37,7 @@ pub enum CollateralType {
 
 /// Database model for collateral category enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collateral_category", rename_all = "lowercase")]
+#[sqlx(type_name = "collateral_category", rename_all = "PascalCase")]
 pub enum CollateralCategory {
     Immovable,
     Movable,
@@ -47,7 +47,7 @@ pub enum CollateralCategory {
 
 /// Database model for custody location enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "custody_location", rename_all = "lowercase")]
+#[sqlx(type_name = "custody_location", rename_all = "PascalCase")]
 pub enum CustodyLocation {
     BankVault,
     ThirdPartyCustodian,
@@ -59,7 +59,7 @@ pub enum CustodyLocation {
 
 /// Database model for perfection status enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "perfection_status", rename_all = "lowercase")]
+#[sqlx(type_name = "perfection_status", rename_all = "PascalCase")]
 pub enum PerfectionStatus {
     Pending,
     Perfected,
@@ -70,7 +70,7 @@ pub enum PerfectionStatus {
 
 /// Database model for collateral risk rating enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collateral_risk_rating", rename_all = "lowercase")]
+#[sqlx(type_name = "collateral_risk_rating", rename_all = "PascalCase")]
 pub enum CollateralRiskRating {
     Excellent,
     Good,
@@ -161,7 +161,7 @@ impl std::fmt::Display for CollateralRiskRating {
 
 /// Database model for collateral status enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collateral_status", rename_all = "lowercase")]
+#[sqlx(type_name = "collateral_status", rename_all = "PascalCase")]
 pub enum CollateralStatus {
     Active,
     Released,
@@ -173,9 +173,29 @@ pub enum CollateralStatus {
     Substituted,
 }
 
+use std::str::FromStr;
+
+impl FromStr for CollateralStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(CollateralStatus::Active),
+            "Released" => Ok(CollateralStatus::Released),
+            "PartiallyReleased" => Ok(CollateralStatus::PartiallyReleased),
+            "UnderReview" => Ok(CollateralStatus::UnderReview),
+            "Disputed" => Ok(CollateralStatus::Disputed),
+            "Liquidated" => Ok(CollateralStatus::Liquidated),
+            "Impaired" => Ok(CollateralStatus::Impaired),
+            "Substituted" => Ok(CollateralStatus::Substituted),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Database model for environmental risk level enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "environmental_risk_level", rename_all = "lowercase")]
+#[sqlx(type_name = "environmental_risk_level", rename_all = "PascalCase")]
 pub enum EnvironmentalRiskLevel {
     None,
     Low,
@@ -186,7 +206,7 @@ pub enum EnvironmentalRiskLevel {
 
 /// Database model for environmental compliance status enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "environmental_compliance_status", rename_all = "lowercase")]
+#[sqlx(type_name = "environmental_compliance_status", rename_all = "PascalCase")]
 pub enum EnvironmentalComplianceStatus {
     Compliant,
     NonCompliant,
@@ -196,7 +216,7 @@ pub enum EnvironmentalComplianceStatus {
 
 /// Database model for insurance coverage type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "insurance_coverage_type", rename_all = "lowercase")]
+#[sqlx(type_name = "insurance_coverage_type", rename_all = "PascalCase")]
 pub enum InsuranceCoverageType {
     Comprehensive,
     FireAndTheft,
@@ -208,7 +228,7 @@ pub enum InsuranceCoverageType {
 
 /// Database model for enforcement type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "enforcement_type", rename_all = "lowercase")]
+#[sqlx(type_name = "enforcement_type", rename_all = "PascalCase")]
 pub enum EnforcementType {
     PrivateSale,
     PublicAuction,
@@ -220,7 +240,7 @@ pub enum EnforcementType {
 
 /// Database model for enforcement method enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "enforcement_method", rename_all = "lowercase")]
+#[sqlx(type_name = "enforcement_method", rename_all = "PascalCase")]
 pub enum EnforcementMethod {
     DirectSale,
     AuctionHouse,
@@ -232,7 +252,7 @@ pub enum EnforcementMethod {
 
 /// Database model for enforcement status enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "enforcement_status", rename_all = "lowercase")]
+#[sqlx(type_name = "enforcement_status", rename_all = "PascalCase")]
 pub enum EnforcementStatus {
     Initiated,
     InProgress,
@@ -244,7 +264,7 @@ pub enum EnforcementStatus {
 
 /// Database model for valuation method enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "valuation_method", rename_all = "lowercase")]
+#[sqlx(type_name = "valuation_method", rename_all = "PascalCase")]
 pub enum ValuationMethod {
     MarketComparison,
     IncomeApproach,
@@ -257,7 +277,7 @@ pub enum ValuationMethod {
 
 /// Database model for pledge priority enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "pledge_priority", rename_all = "lowercase")]
+#[sqlx(type_name = "pledge_priority", rename_all = "PascalCase")]
 pub enum PledgePriority {
     First,
     Second,
@@ -267,7 +287,7 @@ pub enum PledgePriority {
 
 /// Database model for pledge status enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "pledge_status", rename_all = "lowercase")]
+#[sqlx(type_name = "pledge_status", rename_all = "PascalCase")]
 pub enum PledgeStatus {
     Active,
     Released,
@@ -279,7 +299,7 @@ pub enum PledgeStatus {
 
 /// Database model for covenant compliance status enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "covenant_compliance_status", rename_all = "lowercase")]
+#[sqlx(type_name = "covenant_compliance_status", rename_all = "PascalCase")]
 pub enum CovenantComplianceStatus {
     Compliant,
     MinorBreach,
@@ -289,7 +309,7 @@ pub enum CovenantComplianceStatus {
 
 /// Database model for collateral alert type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collateral_alert_type", rename_all = "lowercase")]
+#[sqlx(type_name = "collateral_alert_type", rename_all = "PascalCase")]
 pub enum CollateralAlertType {
     ValuationDue,
     ValuationOverdue,
@@ -307,7 +327,7 @@ pub enum CollateralAlertType {
 
 /// Database model for alert severity enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "alert_severity", rename_all = "lowercase")]
+#[sqlx(type_name = "alert_severity", rename_all = "PascalCase")]
 pub enum AlertSeverity {
     Low,
     Medium,
@@ -317,7 +337,7 @@ pub enum AlertSeverity {
 
 /// Database model for collateral alert status enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "collateral_alert_status", rename_all = "lowercase")]
+#[sqlx(type_name = "collateral_alert_status", rename_all = "PascalCase")]
 pub enum CollateralAlertStatus {
     Open,
     InProgress,
@@ -328,7 +348,7 @@ pub enum CollateralAlertStatus {
 
 /// Database model for concentration category enum  
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "concentration_category", rename_all = "lowercase")]
+#[sqlx(type_name = "concentration_category", rename_all = "PascalCase")]
 pub enum ConcentrationCategory {
     CollateralType,
     GeographicLocation,

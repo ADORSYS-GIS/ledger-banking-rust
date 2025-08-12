@@ -11,22 +11,22 @@ use banking_api::{
     domain::{
         AccountWorkflow, WorkflowType, WorkflowStep, WorkflowStatus,
         AccountOpeningRequest, ClosureRequest, DormancyAssessment,
-        FinalSettlement, AccountStatus, KycResult, StatusChangeRecord,
+        FinalSettlement, AccountStatus, KycResult, AccountStatusChangeRecord,
     },
 };
 use banking_db::repository::{AccountRepository, WorkflowRepository};
 use crate::{
-    mappers::{AccountMapper, WorkflowMapper}, 
-    integration::ProductCatalogClient,
+    mappers::{AccountMapper, WorkflowMapper},
     constants::*,
 };
+use banking_db::repository::ProductRepository;
 
 /// Production implementation of AccountLifecycleService
 /// Handles comprehensive account lifecycle management with workflow orchestration
 pub struct AccountLifecycleServiceImpl {
     account_repository: Arc<dyn AccountRepository>,
     workflow_repository: Arc<dyn WorkflowRepository>,
-    product_catalog_client: Arc<ProductCatalogClient>,
+    product_repository: Arc<dyn ProductRepository>,
     #[allow(dead_code)]
     calendar_service: Arc<dyn CalendarService>,
 }
@@ -35,13 +35,13 @@ impl AccountLifecycleServiceImpl {
     pub fn new(
         account_repository: Arc<dyn AccountRepository>,
         workflow_repository: Arc<dyn WorkflowRepository>,
-        product_catalog_client: Arc<ProductCatalogClient>,
+        product_repository: Arc<dyn ProductRepository>,
         calendar_service: Arc<dyn CalendarService>,
     ) -> Self {
         Self {
             account_repository,
             workflow_repository,
-            product_catalog_client,
+            product_repository,
             calendar_service,
         }
     }
@@ -78,7 +78,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
         tracing::info!(
             "Account opening workflow {} initiated for customer {} with product {}",
-            workflow.id, request.customer_id, request.product_code.as_str()
+            workflow.id, request.customer_id, request.product_id
         );
 
         Ok(workflow)
@@ -226,7 +226,9 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         let account = AccountMapper::from_model(account_model)?;
 
         // Get product-specific dormancy rules
-        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(banking_api::BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
         let threshold_days = account.dormancy_threshold_days
             .unwrap_or(product_rules.default_dormancy_days.unwrap_or(90));
 
@@ -249,7 +251,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
             days_inactive,
             threshold_days,
             product_specific_rules: vec![
-                heapless::String::try_from(format!("Product: {}", account.product_code.as_str()).as_str())
+                heapless::String::try_from(format!("Product: {}", account.product_id).as_str())
                     .unwrap_or_else(|_| heapless::String::new()),
                 heapless::String::try_from(format!("Threshold: {threshold_days} days").as_str())
                     .unwrap_or_else(|_| heapless::String::new()),
@@ -506,7 +508,9 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
         };
 
         // Get closure fees from product catalog
-        let product_rules = self.product_catalog_client.get_product_rules(account.product_code.as_str()).await?;
+        let product = self.product_repository.find_product_by_id(account.product_id).await?
+            .ok_or(banking_api::BankingError::ProductNotFound(account.product_id))?;
+        let product_rules = product.rules;
         let closure_fees = product_rules.closure_fee;
 
         // Calculate final amount
@@ -650,7 +654,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
     }
 
     /// Get account status change history
-    async fn get_status_history(&self, _account_id: Uuid) -> BankingResult<Vec<StatusChangeRecord>> {
+    async fn get_status_history(&self, _account_id: Uuid) -> BankingResult<Vec<AccountStatusChangeRecord>> {
         // In production, this would query the account_status_history table
         Ok(Vec::new()) // Simplified for this implementation
     }
@@ -749,10 +753,10 @@ impl AccountLifecycleServiceImpl {
     /// Validate product eligibility for account opening
     async fn validate_product_eligibility(&self, request: &AccountOpeningRequest) -> BankingResult<()> {
         // Check if product exists
-        let _product_rules = self.product_catalog_client
-            .get_product_rules(request.product_code.as_str())
-            .await
-            .map_err(|_| banking_api::BankingError::InvalidProductCode(request.product_code.as_str().to_string()))?;
+        let _product_rules = self.product_repository
+            .find_product_by_id(request.product_id)
+            .await?
+            .ok_or(banking_api::BankingError::InvalidProductId(request.product_id))?;
 
         // Additional eligibility checks would go here
         // (customer type compatibility, minimum deposits, etc.)

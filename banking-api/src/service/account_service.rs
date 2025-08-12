@@ -6,8 +6,7 @@ use uuid::Uuid;
 use crate::{
     BankingResult,
     domain::{
-        Account, AccountStatus, AccountHold, HoldType, HoldStatus, HoldPriority, 
-        HoldReleaseRequest, BalanceCalculation, HoldSummary, HoldExpiryJob, PlaceHoldRequest
+        Account, AccountStatus, AccountBalanceCalculation, AccountHoldSummary,
     },
 };
 
@@ -58,12 +57,6 @@ pub trait AccountService: Send + Sync {
     /// Get account status (for caching)
     async fn get_account_status(&self, account_id: Uuid) -> BankingResult<AccountStatus>;
 
-    /// Get active holds for an account
-    async fn get_active_holds(&self, account_id: Uuid) -> BankingResult<Vec<AccountHold>>;
-
-    /// Release a hold
-    /// @param released_by_person_id - References Person.person_id
-    async fn release_hold(&self, hold_id: Uuid, released_by_person_id: Uuid) -> BankingResult<()>;
 
     /// Find accounts eligible for dormancy check
     async fn find_dormancy_candidates(&self, threshold_days: i32) -> BankingResult<Vec<Account>>;
@@ -71,40 +64,6 @@ pub trait AccountService: Send + Sync {
     /// Update last activity date
     async fn update_last_activity_date(&self, account_id: Uuid, activity_date: chrono::NaiveDate) -> BankingResult<()>;
 
-    // ============================================================================
-    // HOLD PLACEMENT AND MANAGEMENT (integrated from HoldService)
-    // ============================================================================
-    
-    /// Place a hold on an account with specified amount and type
-    /// This immediately impacts available balance but not current balance
-    async fn place_hold(
-        &self,
-        request: PlaceHoldRequest,
-    ) -> BankingResult<AccountHold>;
-    
-    /// Release a hold completely or partially
-    async fn release_hold_with_request(
-        &self,
-        release_request: HoldReleaseRequest,
-    ) -> BankingResult<AccountHold>;
-    
-    /// Modify an existing hold (amount, expiry, etc.)
-    async fn modify_hold(
-        &self,
-        hold_id: Uuid,
-        new_amount: Option<Decimal>,
-        new_expiry: Option<DateTime<Utc>>,
-        new_reason_id: Option<Uuid>, // References ReasonAndPurpose.id
-        modified_by_person_id: Uuid, // References Person.person_id
-    ) -> BankingResult<AccountHold>;
-    
-    /// Cancel a hold (mark as cancelled, not released)
-    async fn cancel_hold(
-        &self,
-        hold_id: Uuid,
-        cancellation_reason_id: Uuid, // References ReasonAndPurpose.id
-        cancelled_by_person_id: Uuid, // References Person.person_id
-    ) -> BankingResult<AccountHold>;
     
     // ============================================================================
     // BALANCE CALCULATION ENGINE (enhanced)
@@ -115,71 +74,34 @@ pub trait AccountService: Send + Sync {
     async fn calculate_available_balance_detailed(
         &self,
         account_id: Uuid,
-    ) -> BankingResult<BalanceCalculation>;
+    ) -> BankingResult<AccountBalanceCalculation>;
     
     /// Validate if a transaction can proceed given hold constraints
     async fn validate_transaction_against_holds(
         &self,
         account_id: Uuid,
         transaction_amount: Decimal,
-        ignore_hold_types: Option<Vec<HoldType>>,
+        ignore_hold_types: Option<Vec<crate::domain::HoldType>>,
     ) -> BankingResult<bool>;
     
     /// Get total hold amount by priority for authorization override scenarios
     async fn get_hold_amounts_by_priority(
         &self,
         account_id: Uuid,
-    ) -> BankingResult<Vec<HoldSummary>>;
+    ) -> BankingResult<Vec<AccountHoldSummary>>;
     
     /// Check if sufficient available balance exists after placing a new hold
     async fn validate_hold_placement(
         &self,
         account_id: Uuid,
         additional_hold_amount: Decimal,
-        hold_priority: HoldPriority,
+        hold_priority: crate::domain::HoldPriority,
     ) -> BankingResult<bool>;
     
     // ============================================================================
     // HOLD QUERIES AND REPORTING
     // ============================================================================
     
-    /// Get all active holds for an account with optional type filtering
-    async fn get_active_holds_with_types(
-        &self,
-        account_id: Uuid,
-        hold_types: Option<Vec<HoldType>>,
-    ) -> BankingResult<Vec<AccountHold>>;
-    
-    /// Get hold by ID
-    async fn get_hold_by_id(
-        &self,
-        hold_id: Uuid,
-    ) -> BankingResult<Option<AccountHold>>;
-    
-    /// Get holds by status and date range
-    async fn get_holds_by_status(
-        &self,
-        account_id: Option<Uuid>,
-        status: HoldStatus,
-        from_date: Option<NaiveDate>,
-        to_date: Option<NaiveDate>,
-    ) -> BankingResult<Vec<AccountHold>>;
-    
-    /// Get holds by type across multiple accounts (for reporting)
-    async fn get_holds_by_type(
-        &self,
-        hold_type: HoldType,
-        status: Option<HoldStatus>,
-        account_ids: Option<Vec<Uuid>>,
-    ) -> BankingResult<Vec<AccountHold>>;
-    
-    /// Get hold history for an account including released/expired holds
-    async fn get_hold_history(
-        &self,
-        account_id: Uuid,
-        from_date: Option<NaiveDate>,
-        to_date: Option<NaiveDate>,
-    ) -> BankingResult<Vec<AccountHold>>;
     
     // ============================================================================
     // BATCH PROCESSING AND AUTOMATION
@@ -189,26 +111,26 @@ pub trait AccountService: Send + Sync {
     async fn process_expired_holds(
         &self,
         processing_date: NaiveDate,
-        hold_types: Option<Vec<HoldType>>,
-    ) -> BankingResult<HoldExpiryJob>;
+        hold_types: Option<Vec<crate::domain::HoldType>>,
+    ) -> BankingResult<crate::domain::AccountHoldExpiryJob>;
     
     /// Auto-release holds based on business rules
     /// E.g., release uncleared funds holds after clearance period
     async fn process_automatic_releases(
         &self,
         processing_date: NaiveDate,
-    ) -> BankingResult<Vec<AccountHold>>;
+    ) -> BankingResult<Vec<crate::domain::AccountHold>>;
     
     /// Bulk place holds (e.g., regulatory compliance sweep)
     async fn bulk_place_holds(
         &self,
         account_ids: Vec<Uuid>,
-        hold_type: HoldType,
+        hold_type: crate::domain::HoldType,
         amount_per_account: Decimal,
         reason_id: Uuid, // References ReasonAndPurpose.id
         placed_by_person_id: Uuid, // References Person.person_id
         expires_at: Option<DateTime<Utc>>,
-    ) -> BankingResult<Vec<AccountHold>>;
+    ) -> BankingResult<Vec<crate::domain::AccountHold>>;
     
     /// Bulk release holds (e.g., court order resolution)
     async fn bulk_release_holds(
@@ -216,7 +138,7 @@ pub trait AccountService: Send + Sync {
         hold_ids: Vec<Uuid>,
         release_reason_id: Uuid, // References ReasonAndPurpose.id
         released_by_person_id: Uuid, // References Person.person_id
-    ) -> BankingResult<Vec<AccountHold>>;
+    ) -> BankingResult<Vec<crate::domain::AccountHold>>;
     
     // ============================================================================
     // PRIORITY AND AUTHORIZATION MANAGEMENT
@@ -227,23 +149,23 @@ pub trait AccountService: Send + Sync {
         &self,
         account_id: Uuid,
         transaction_amount: Decimal,
-        override_priority: HoldPriority,
+        override_priority: crate::domain::HoldPriority,
         authorized_by_person_id: Uuid, // References Person.person_id
         override_reason_id: Uuid, // References ReasonAndPurpose.id
-    ) -> BankingResult<Vec<AccountHold>>;
+    ) -> BankingResult<Vec<crate::domain::AccountHold>>;
     
     /// Reorder hold priorities (e.g., judicial lien takes precedence)
     async fn reorder_hold_priorities(
         &self,
         account_id: Uuid,
-        hold_priority_map: Vec<(Uuid, HoldPriority)>,
+        hold_priority_map: Vec<(Uuid, crate::domain::HoldPriority)>,
         authorized_by_person_id: Uuid, // References Person.person_id
-    ) -> BankingResult<Vec<AccountHold>>;
+    ) -> BankingResult<Vec<crate::domain::AccountHold>>;
     
     /// Check authorization level required for hold operations
     async fn get_required_authorization_level(
         &self,
-        hold_type: HoldType,
+        hold_type: crate::domain::HoldType,
         amount: Decimal,
     ) -> BankingResult<HoldAuthorizationLevel>;
     
@@ -255,7 +177,7 @@ pub trait AccountService: Send + Sync {
     async fn sync_judicial_holds(
         &self,
         court_reference: String,
-    ) -> BankingResult<Vec<AccountHold>>;
+    ) -> BankingResult<Vec<crate::domain::AccountHold>>;
     
     /// Update loan pledge holds when loan status changes
     async fn update_loan_pledge_holds(
@@ -263,7 +185,7 @@ pub trait AccountService: Send + Sync {
         loan_account_id: Uuid,
         collateral_account_ids: Vec<Uuid>,
         new_pledge_amount: Decimal,
-    ) -> BankingResult<Vec<AccountHold>>;
+    ) -> BankingResult<Vec<crate::domain::AccountHold>>;
     
     /// Process regulatory compliance holds (e.g., sanctions screening)
     async fn process_compliance_holds(
@@ -271,7 +193,7 @@ pub trait AccountService: Send + Sync {
         compliance_alert_id: Uuid,
         affected_accounts: Vec<Uuid>,
         hold_amount_per_account: Decimal,
-    ) -> BankingResult<Vec<AccountHold>>;
+    ) -> BankingResult<Vec<crate::domain::AccountHold>>;
     
     // ============================================================================
     // REPORTING AND ANALYTICS
@@ -282,14 +204,14 @@ pub trait AccountService: Send + Sync {
         &self,
         from_date: NaiveDate,
         to_date: NaiveDate,
-        hold_types: Option<Vec<HoldType>>,
+        hold_types: Option<Vec<crate::domain::HoldType>>,
     ) -> BankingResult<HoldAnalytics>;
     
     /// Get accounts with high hold ratios (holds vs balance)
     async fn get_high_hold_ratio_accounts(
         &self,
         minimum_ratio: Decimal, // e.g., 0.8 for 80%
-        exclude_hold_types: Option<Vec<HoldType>>,
+        exclude_hold_types: Option<Vec<crate::domain::HoldType>>,
     ) -> BankingResult<Vec<HighHoldAccount>>;
     
     /// Generate regulatory reporting for judicial holds
@@ -322,8 +244,8 @@ pub struct HoldAnalytics {
     pub active_hold_count: u32,
     pub expired_hold_count: u32,
     pub released_hold_count: u32,
-    pub hold_by_type: std::collections::HashMap<HoldType, (u32, Decimal)>,
-    pub hold_by_priority: std::collections::HashMap<HoldPriority, (u32, Decimal)>,
+    pub hold_by_type: std::collections::HashMap<crate::domain::HoldType, (u32, Decimal)>,
+    pub hold_by_priority: std::collections::HashMap<crate::domain::HoldPriority, (u32, Decimal)>,
     pub average_hold_duration_days: f64,
     pub top_hold_accounts: Vec<Uuid>,
 }
@@ -345,9 +267,9 @@ pub struct HighHoldAccount {
 pub struct JudicialHoldReport {
     pub total_judicial_holds: u32,
     pub total_amount: Decimal,
-    pub active_holds: Vec<AccountHold>,
-    pub released_holds: Vec<AccountHold>,
-    pub expired_holds: Vec<AccountHold>,
+    pub active_holds: Vec<crate::domain::AccountHold>,
+    pub released_holds: Vec<crate::domain::AccountHold>,
+    pub expired_holds: Vec<crate::domain::AccountHold>,
     pub report_period: (NaiveDate, NaiveDate),
     pub generated_at: DateTime<Utc>,
 }

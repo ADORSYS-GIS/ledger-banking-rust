@@ -39,17 +39,16 @@ When this prompt is used, the assistant should:
    - Include detailed body explaining the changes
    - Specify affected components
    - Explain benefits and impact
-   - Add Claude Code attribution
-   - Add Qwen Code attribution
+   - Add LLM Code attribution
 
-5. **Update CLAUDE.md Progress Tracking** (IMPORTANT):
+5. **Update docs/progress/progress-tracking.md Progress Tracking** (IMPORTANT):
    - **Always check if the commit includes new repository implementations**
    - **Update completion percentages** (e.g., 92% → 95%)
    - **Update test counts** (e.g., 39+ tests → 42+ tests)
    - **Move completed repositories** from "Remaining" to "Complete" sections
    - **Update "Next Steps"** to reflect new priority order
    - **Add achievement documentation** in "Recent Achievements" section
-   - This ensures CLAUDE.md accurately reflects the current implementation state
+   - This ensures docs/progress/progress-tracking.md accurately reflects the current implementation state
 
 6. **Commit with Proper Signing**:
    - Use both `-s` (DCO sign-off) and `-S` (GPG signature) flags
@@ -72,13 +71,9 @@ Benefits:
 - Benefit 2: Specific improvement achieved
 - Benefit 3: Specific improvement achieved
 
-🤖 Generated with [Claude Code](https://claude.ai/code)
+🤖 Generated with [Gemini 2.5 Pro](https://gemini.google.com/)
 
-Co-Authored-By: Claude <noreply@anthropic.com>
-
-🤖 Generated with [Qwen Code](https://tongyi.aliyun.com/qianwen/)
-
-Co-Authored-By: Qwen <noreply@alibaba.com>
+Co-Authored-By: Gemini <noreply@google.com>
 
 ```
 

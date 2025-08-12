@@ -149,11 +149,21 @@ pub struct MonitoringResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceAlert {
     pub id: Uuid,
+    pub customer_id: Option<Uuid>,
+    pub account_id: Option<Uuid>,
+    pub transaction_id: Option<Uuid>,
     pub alert_type: AlertType,
     pub description: HeaplessString<500>,
     pub severity: Severity,
     pub triggered_at: DateTime<Utc>,
     pub status: AlertStatus,
+    pub assigned_to_person_id: Option<Uuid>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub resolved_by_person_id: Option<Uuid>,
+    pub resolution_notes: Option<HeaplessString<500>>,
+    pub metadata: Option<HeaplessString<1000>>,
+    pub created_at: DateTime<Utc>,
+    pub last_updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

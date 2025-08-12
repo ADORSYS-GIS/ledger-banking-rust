@@ -1,5 +1,6 @@
 pub mod customer;
 pub mod account;
+pub mod account_hold;
 pub mod agent_network;
 pub mod transaction;
 pub mod calendar;
@@ -14,9 +15,11 @@ pub mod reason_and_purpose;
 pub mod person;
 pub mod collateral;
 pub mod daily_collection;
+pub mod product;
 
 pub use customer::*;
 pub use account::*;
+pub use account_hold::*;
 pub use agent_network::*;
 pub use transaction::*;
 pub use calendar::*;
@@ -37,6 +40,7 @@ pub use reason_view::*;
 pub use reason_and_purpose::*;
 pub use person::*;
 pub use collateral::*;
+pub use product::*;
 pub use daily_collection::{
     CollectionAgent, Territory, CoverageArea, AgentPerformanceMetrics, DeviceInformation,
     CollectionProgram, CustomerCollectionProfile, CollectionRecord, CollectionBatch,

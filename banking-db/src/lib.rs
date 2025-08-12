@@ -10,7 +10,7 @@ pub use models::{
 };
 // Import compliance models with aliases to avoid conflicts
 pub use models::{
-    KycResultModel, KycCheckModel, KycRecordModel,
+    KycResultModel, KycCheckModel,
     ScreeningResultModel, SanctionsMatchModel, SanctionsScreeningModel,
     ComplianceAlertModel, ExtendedComplianceAlertModel, UboVerificationResultModel,
     UboLinkModel, ComplianceResultModel, ComplianceRiskScoreModel,

@@ -18,7 +18,7 @@ mod stack_optimization_tests {
         // Create account with optimized field types
         let account = Account {
             id: Uuid::new_v4(),
-            product_code: HeaplessString::try_from("SAVP0001").unwrap(),
+            product_id: Uuid::new_v4(),
             account_type: AccountType::Savings,
             account_status: AccountStatus::Active,
             signing_condition: SigningCondition::None,
@@ -76,6 +76,7 @@ mod stack_optimization_tests {
             created_at: Utc::now(),
             last_updated_at: Utc::now(),
             updated_by_person_id: Uuid::new_v4(), // Changed to UUID for Person.person_id
+            gl_code_suffix: None,
         };
 
         // Test serialization
@@ -83,7 +84,7 @@ mod stack_optimization_tests {
         println!("Account JSON: {}", json);
 
         // Verify key optimized fields are serialized correctly
-        assert!(json.contains("\"product_code\":\"SAVP0001\""));
+        assert!(json.contains("\"product_id\""));
         assert!(json.contains("\"currency\":\"USD\""));
         assert!(json.contains("\"account_type\":\"Savings\""));
         assert!(json.contains("\"account_status\":\"Active\""));
@@ -92,7 +93,7 @@ mod stack_optimization_tests {
         let deserialized: Account = serde_json::from_str(&json).expect("Deserialization should succeed");
         
         // Verify fixed array fields
-        assert_eq!(deserialized.product_code.as_str(), "SAVP0001");
+        assert!(!deserialized.product_id.is_nil());
         let currency_str = deserialized.currency.as_str();
         assert_eq!(currency_str, "USD");
         assert!(matches!(deserialized.account_type, AccountType::Savings));

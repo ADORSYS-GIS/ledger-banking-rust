@@ -1,5 +1,6 @@
 pub mod customer;
 pub mod account;
+pub mod account_hold;
 pub mod transaction;
 pub mod agent_network;
 pub mod compliance;
@@ -15,13 +16,15 @@ pub mod casa;
 pub mod loan;
 pub mod reason_view;
 pub mod daily_collection;
+pub mod product;
 
 pub use customer::*;
 pub use account::*;
+pub use account_hold::*;
 pub use transaction::*;
 pub use agent_network::*;
 pub use compliance::{
-    KycResultModel, KycCheckModel, KycRecordModel, 
+    KycResultModel, KycCheckModel,
     ScreeningResultModel, SanctionsMatchModel, SanctionsScreeningModel,
     ComplianceAlertModel, ExtendedComplianceAlertModel, UboVerificationResultModel,
     UboLinkModel, ComplianceResultModel, ComplianceRiskScoreModel,
@@ -44,6 +47,7 @@ pub use collateral::*;
 pub use casa::*;
 pub use loan::*;
 pub use reason_view::*;
+pub use product::*;
 pub use daily_collection::{
     CollectionAgentModel, CollectionProgramModel, CustomerCollectionProfileModel,
     CollectionRecordModel, CollectionBatchModel, CollectionBatchRecordModel, CoverageAreaModel, PerformanceAlertModel,

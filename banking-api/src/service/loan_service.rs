@@ -152,7 +152,7 @@ pub trait LoanService: Send + Sync {
     async fn identify_overdue_loans(
         &self,
         assessment_date: NaiveDate,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
     ) -> BankingResult<Vec<Uuid>>;
     
     /// Create or update loan delinquency record
@@ -299,7 +299,7 @@ pub trait LoanService: Send + Sync {
     async fn generate_loan_portfolio_summary(
         &self,
         as_of_date: NaiveDate,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
         branch_ids: Option<Vec<Uuid>>,
     ) -> BankingResult<LoanPortfolioSummary>;
     

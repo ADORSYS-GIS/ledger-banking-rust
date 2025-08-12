@@ -375,7 +375,7 @@ impl CalendarRepository for CalendarRepositoryImpl {
         Ok(start_date + months)
     }
 
-    async fn get_payment_due_date(&self, original_date: NaiveDate, _jurisdiction: &str, _product_code: Option<&str>) -> BankingResult<NaiveDate> {
+    async fn get_payment_due_date(&self, original_date: NaiveDate, _jurisdiction: &str, _product_id: Option<Uuid>) -> BankingResult<NaiveDate> {
         // TODO: Implement payment due date calculation
         Ok(original_date)
     }

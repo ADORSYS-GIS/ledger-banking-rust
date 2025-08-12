@@ -66,7 +66,7 @@ pub trait FeeService: Send + Sync {
         &self,
         job_type: FeeJobType,
         processing_date: NaiveDate,
-        target_products: Option<Vec<String>>,
+        target_products: Option<Vec<Uuid>>,
         target_categories: Vec<FeeCategory>,
     ) -> BankingResult<FeeProcessingJob>;
     
@@ -82,7 +82,7 @@ pub trait FeeService: Send + Sync {
         &self,
         fee_categories: Vec<FeeCategory>,
         processing_date: NaiveDate,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
     ) -> BankingResult<Vec<Uuid>>;
     
     /// Process periodic fees for a single account
@@ -128,19 +128,19 @@ pub trait FeeService: Send + Sync {
     /// Get fee schedule from Product Catalog for a product
     async fn get_product_fee_schedule(
         &self,
-        product_code: String,
+        product_id: Uuid,
     ) -> BankingResult<ProductFeeSchedule>;
     
     /// Refresh fee rules cache from Product Catalog
     async fn refresh_fee_rules_cache(
         &self,
-        product_code: Option<String>,
+        product_id: Option<Uuid>,
     ) -> BankingResult<()>;
     
     /// Get applicable fees for a specific trigger event
     async fn get_applicable_fees(
         &self,
-        product_code: String,
+        product_id: Uuid,
         trigger_event: FeeTriggerEvent,
     ) -> BankingResult<Vec<ProductFee>>;
     
@@ -205,7 +205,7 @@ pub trait FeeService: Send + Sync {
         from_date: NaiveDate,
         to_date: NaiveDate,
         fee_categories: Option<Vec<FeeCategory>>,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
     ) -> BankingResult<FeeRevenueSummary>;
     
     // ============================================================================
@@ -236,7 +236,7 @@ pub struct FeeRevenueSummary {
     pub total_revenue: Decimal,
     pub fee_count: u32,
     pub revenue_by_category: std::collections::HashMap<FeeCategory, Decimal>,
-    pub revenue_by_product: std::collections::HashMap<String, Decimal>,
+    pub revenue_by_product: std::collections::HashMap<Uuid, Decimal>,
     pub waived_amount: Decimal,
     pub reversed_amount: Decimal,
     pub period_from: NaiveDate,

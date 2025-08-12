@@ -1,5 +1,6 @@
 pub mod customer_mapper;
 pub mod account_mapper;
+pub mod account_hold_mapper;
 pub mod agent_network_mapper;
 pub mod transaction_mapper;
 pub mod calendar_mapper;
@@ -13,6 +14,7 @@ pub mod casa_mapper;
 pub mod loan_mapper;
 pub mod reason_and_purpose_mapper;
 pub mod daily_collection_mapper;
+pub mod product_mapper;
 
 pub use customer_mapper::*;
 pub use account_mapper::*;
@@ -29,3 +31,11 @@ pub use casa_mapper::*;
 pub use loan_mapper::*;
 pub use reason_and_purpose_mapper::*;
 pub use daily_collection_mapper::*;
+pub use product_mapper::*;
+pub trait DBMapper<A, D> {
+    fn to_db(api_model: A) -> D;
+}
+
+pub trait ApiMapper<D, A> {
+    fn from_db(db_model: D) -> A;
+}

@@ -1,7 +1,5 @@
 use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
 use banking_db::models::AccountModel;
-use banking_db::repository::AccountRepository;
-use banking_db_postgres::AccountRepositoryImpl;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
@@ -10,6 +8,7 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 /// Test helper to create a sample account
+#[allow(dead_code)]
 fn create_test_account() -> AccountModel {
     let account_id = Uuid::new_v4();
     // Use a fixed UUID that we'll insert into persons table in setup
@@ -18,7 +17,8 @@ fn create_test_account() -> AccountModel {
     
     AccountModel {
         id: account_id,
-        product_code: HeaplessString::try_from("SAV01").unwrap(),
+        product_id: Uuid::new_v4(),
+        gl_code_suffix: None,
         account_type: AccountType::Savings,
         account_status: AccountStatus::Active,
         signing_condition: SigningCondition::AnyOwner,
@@ -80,6 +80,7 @@ fn create_test_account() -> AccountModel {
 }
 
 /// Test helper to create a loan account
+#[allow(dead_code)]
 fn create_test_loan_account() -> AccountModel {
     let account_id = Uuid::new_v4();
     // Use the same fixed UUID as the test person
@@ -88,7 +89,8 @@ fn create_test_loan_account() -> AccountModel {
     
     AccountModel {
         id: account_id,
-        product_code: HeaplessString::try_from("LON01").unwrap(),
+        product_id: Uuid::new_v4(),
+        gl_code_suffix: None,
         account_type: AccountType::Loan,
         account_status: AccountStatus::Active,
         signing_condition: SigningCondition::None,
@@ -150,6 +152,7 @@ fn create_test_loan_account() -> AccountModel {
 }
 
 /// Integration test helper to set up database connection
+#[allow(dead_code)]
 async fn setup_test_db() -> PgPool {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/mydb".to_string());
@@ -184,6 +187,10 @@ async fn setup_test_db() -> PgPool {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_account_crud_operations() {
+    use banking_db::AccountRepository;
+    use banking_db_postgres::AccountRepositoryImpl;
+
+    
     let pool = setup_test_db().await;
     let repo = AccountRepositoryImpl::new(pool);
     let mut account = create_test_account();
@@ -192,7 +199,7 @@ async fn test_account_crud_operations() {
     let created_account = repo.create(account.clone()).await
         .expect("Failed to create account");
     assert_eq!(created_account.id, account.id);
-    assert_eq!(created_account.product_code, account.product_code);
+    assert_eq!(created_account.product_id, account.product_id);
     assert_eq!(created_account.account_type, account.account_type);
     
     // Test READ
@@ -224,7 +231,12 @@ async fn test_account_crud_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_account_balance_operations() {
+    use banking_db::AccountRepository;
+    use banking_db_postgres::AccountRepositoryImpl;
+
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     let account = create_test_account();
     
@@ -250,7 +262,11 @@ async fn test_account_balance_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_accrued_interest_operations() {
+    use banking_db_postgres::AccountRepositoryImpl;
+    use banking_db::AccountRepository;
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     let account = create_test_account();
     
@@ -283,7 +299,12 @@ async fn test_accrued_interest_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_account_status_operations() {
+    use banking_db::AccountRepository;
+    use banking_db_postgres::AccountRepositoryImpl;
+
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     let account = create_test_account();
     // Use the same test person UUID for changed_by
@@ -294,7 +315,8 @@ async fn test_account_status_operations() {
         .expect("Failed to create account");
     
     // Test status update
-    repo.update_status(account.id, "Frozen", "Compliance hold", changed_by).await
+    let reason_code = format!("hold-{}", Uuid::new_v4());
+    repo.update_status(account.id, "Frozen", &reason_code, changed_by).await
         .expect("Failed to update status");
     
     // Verify status was updated
@@ -309,19 +331,24 @@ async fn test_account_status_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_find_operations() {
+    use banking_db_postgres::AccountRepositoryImpl;
+    use banking_db::AccountRepository;
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     
     // Use UUIDs to ensure truly unique product codes
-    let unique_id = Uuid::new_v4();
-    let product_code_1 = format!("FD{}", &unique_id.to_string()[0..6]); // FD + first 6 chars of UUID
-    let product_code_2 = format!("FE{}", &unique_id.to_string()[0..6]); // FE + first 6 chars of UUID
+    #[allow(unused_variables)]
+    let product_id_1 = Uuid::new_v4();
+    #[allow(unused_variables)]
+    let product_id_2 = Uuid::new_v4();
     
     let mut account1 = create_test_account();
-    account1.product_code = HeaplessString::try_from(product_code_1.as_str()).unwrap();
+    account1.product_id = Uuid::new_v4();
     let mut account2 = create_test_account();
     account2.id = Uuid::new_v4();
-    account2.product_code = HeaplessString::try_from(product_code_2.as_str()).unwrap();
+    account2.product_id = Uuid::new_v4();
     account2.account_status = AccountStatus::Dormant;
     
     // Create accounts
@@ -329,10 +356,10 @@ async fn test_find_operations() {
     repo.create(account2.clone()).await.expect("Failed to create account2");
     
     // Test find by product code
-    let accounts_by_code = repo.find_by_product_code(&product_code_1).await
+    let accounts_by_id = repo.find_by_product_id(account1.product_id).await
         .expect("Failed to find by product code");
-    assert_eq!(accounts_by_code.len(), 1);
-    assert_eq!(accounts_by_code[0].id, account1.id);
+    assert_eq!(accounts_by_id.len(), 1);
+    assert_eq!(accounts_by_id[0].id, account1.id);
     
     // Test find by status
     let active_accounts = repo.find_by_status("Active").await
@@ -347,7 +374,11 @@ async fn test_find_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_interest_bearing_accounts() {
+    use banking_db_postgres::AccountRepositoryImpl;
+    use banking_db::AccountRepository;
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     let savings_account = create_test_account(); // Savings account
     let loan_account = create_test_loan_account(); // Loan account
@@ -374,7 +405,11 @@ async fn test_interest_bearing_accounts() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_dormancy_candidates() {
+    use banking_db_postgres::AccountRepositoryImpl;
+    use banking_db::AccountRepository;
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     let mut old_account = create_test_account();
     old_account.last_activity_date = Some(NaiveDate::from_ymd_opt(2023, 1, 1).unwrap()); // Very old activity
@@ -401,7 +436,11 @@ async fn test_dormancy_candidates() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_count_operations() {
+    use banking_db_postgres::AccountRepositoryImpl;
+    use banking_db::AccountRepository;
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     
     // Get initial count
@@ -411,7 +450,7 @@ async fn test_count_operations() {
     let account1 = create_test_account();
     let mut account2 = create_test_account();
     account2.id = Uuid::new_v4();
-    account2.product_code = HeaplessString::try_from("SAV02").unwrap();
+    account2.product_id = Uuid::new_v4();
     
     repo.create(account1.clone()).await.expect("Failed to create account1");
     repo.create(account2.clone()).await.expect("Failed to create account2");
@@ -421,11 +460,11 @@ async fn test_count_operations() {
     assert!(new_count >= initial_count + 2, "Expected count to increase by at least 2, initial: {}, new: {}", initial_count, new_count);
     
     // Test count by product
-    let sav01_count = repo.count_by_product("SAV01").await
+    let sav01_count = repo.count_by_product(account1.product_id).await
         .expect("Failed to count by product");
     assert!(sav01_count >= 1);
     
-    let sav02_count = repo.count_by_product("SAV02").await
+    let sav02_count = repo.count_by_product(account2.product_id).await
         .expect("Failed to count by product");
     assert!(sav02_count >= 1);
 }
@@ -433,7 +472,11 @@ async fn test_count_operations() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_list_with_pagination() {
+    use banking_db_postgres::AccountRepositoryImpl;
+    use banking_db::AccountRepository;
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     
     // Test basic pagination functionality
@@ -463,7 +506,12 @@ async fn test_list_with_pagination() {
 #[cfg(feature = "postgres_tests")]
 #[tokio::test]
 async fn test_last_activity_date_update() {
+    use banking_db::AccountRepository;
+    use banking_db_postgres::AccountRepositoryImpl;
+
+
     let pool = setup_test_db().await;
+    #[allow(unused_variables)]
     let repo = AccountRepositoryImpl::new(pool);
     let account = create_test_account();
     
@@ -486,12 +534,8 @@ async fn test_last_activity_date_update() {
 // Unit tests for row conversion functions (no database required)
 #[tokio::test]
 async fn test_account_model_validation() {
-    // Test HeaplessString limits
-    let long_product_code = "A".repeat(20); // Exceeds HeaplessString<12> limit
-    
-    // This would be tested if we had a validation function
-    // For now, this serves as documentation of the constraints
-    assert!(long_product_code.len() > 12);
+    // This test is no longer relevant as we are using Uuid for product_id
+    // and the HeaplessString validation is not needed.
 }
 
 #[tokio::test]
@@ -505,4 +549,57 @@ async fn test_enum_conversions() {
     assert_eq!(format!("{:?}", AccountStatus::Active), "Active");
     assert_eq!(format!("{:?}", AccountStatus::Frozen), "Frozen");
     assert_eq!(format!("{:?}", AccountStatus::Closed), "Closed");
+}
+
+#[cfg(feature = "postgres_tests")]
+#[tokio::test]
+async fn test_account_status_history() {
+    use banking_db_postgres::AccountRepositoryImpl;
+    use banking_db::AccountRepository;
+    
+    let pool = setup_test_db().await;
+    #[allow(unused_variables)]
+    let repo = AccountRepositoryImpl::new(pool);
+    let account = create_test_account();
+    let changed_by = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+
+    // Create account first
+    repo.create(account.clone()).await
+        .expect("Failed to create account");
+
+    // Create a test reason to satisfy the foreign key constraint
+    let reason_id = Uuid::new_v4();
+    let reason_code = format!("test_reason-{}", Uuid::new_v4());
+    sqlx::query(
+        r#"
+        INSERT INTO reason_and_purpose (id, category, context, code, l1_content, is_active, created_by_person_id, updated_by_person_id)
+        VALUES ($1, 'StatusChange', 'Account', $2, 'A test reason for status change', true, '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001')
+        "#
+    )
+    .bind(reason_id)
+    .bind(reason_code)
+    .execute(&repo.pool)
+    .await
+    .expect("Failed to create test reason");
+
+    // Add a status change record
+    let status_change = banking_db::models::AccountStatusChangeRecordModel {
+        id: Uuid::new_v4(),
+        account_id: account.id,
+        old_status: Some(AccountStatus::Active),
+        new_status: AccountStatus::Frozen,
+        reason_id: reason_id,
+        additional_context: Some("Test freeze".try_into().unwrap()),
+        changed_by_person_id: changed_by,
+        changed_at: Utc::now(),
+        system_triggered: false,
+        created_at: Utc::now(),
+    };
+    repo.add_status_change(status_change.clone()).await.expect("Failed to add status change");
+
+    // Get status history
+    let history = repo.get_status_history(account.id).await.expect("Failed to get status history");
+
+    assert!(!history.is_empty());
+    assert_eq!(history[0].new_status, AccountStatus::Frozen);
 }

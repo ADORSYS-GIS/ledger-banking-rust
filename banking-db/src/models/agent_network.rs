@@ -10,7 +10,7 @@ use super::person::MessagingType;
 
 /// Database model enums
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "network_type", rename_all = "lowercase")]
+#[sqlx(type_name = "network_type", rename_all = "PascalCase")]
 pub enum NetworkType {
     Internal,
     Partner,
@@ -18,7 +18,7 @@ pub enum NetworkType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "network_status", rename_all = "lowercase")]
+#[sqlx(type_name = "network_status", rename_all = "PascalCase")]
 pub enum NetworkStatus {
     Active,
     Suspended,
@@ -26,7 +26,7 @@ pub enum NetworkStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "branch_status", rename_all = "lowercase")]
+#[sqlx(type_name = "branch_status", rename_all = "PascalCase")]
 pub enum BranchStatus {
     Active,
     Suspended,
@@ -35,7 +35,7 @@ pub enum BranchStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "terminal_type", rename_all = "lowercase")]
+#[sqlx(type_name = "terminal_type", rename_all = "PascalCase")]
 pub enum TerminalType {
     Pos,
     Mobile,
@@ -44,7 +44,7 @@ pub enum TerminalType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "terminal_status", rename_all = "lowercase")]
+#[sqlx(type_name = "terminal_status", rename_all = "PascalCase")]
 pub enum TerminalStatus {
     Active,
     Maintenance,
@@ -53,7 +53,7 @@ pub enum TerminalStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "branch_type", rename_all = "snake_case")]
+#[sqlx(type_name = "branch_type", rename_all = "PascalCase")]
 pub enum BranchType {
     MainBranch,
     SubBranch,
@@ -65,7 +65,7 @@ pub enum BranchType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "branch_risk_rating", rename_all = "lowercase")]
+#[sqlx(type_name = "branch_risk_rating", rename_all = "PascalCase")]
 pub enum BranchRiskRating {
     Low,
     Medium,
@@ -74,14 +74,14 @@ pub enum BranchRiskRating {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "cash_limit_entity_type", rename_all = "lowercase")]
+#[sqlx(type_name = "cash_limit_entity_type", rename_all = "PascalCase")]
 pub enum CashLimitEntityType {
     Branch,
     Terminal,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "cash_operation_type", rename_all = "snake_case")]
+#[sqlx(type_name = "cash_operation_type", rename_all = "PascalCase")]
 pub enum CashOperationType {
     Withdrawal,
     Deposit,
@@ -90,7 +90,7 @@ pub enum CashOperationType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "cash_limit_validation_result", rename_all = "snake_case")]
+#[sqlx(type_name = "cash_limit_validation_result", rename_all = "PascalCase")]
 pub enum CashLimitValidationResult {
     Approved,
     InsufficientCash,
@@ -99,7 +99,7 @@ pub enum CashLimitValidationResult {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "service_type", rename_all = "snake_case")]
+#[sqlx(type_name = "service_type", rename_all = "PascalCase")]
 pub enum ServiceType {
     CashWithdrawal,
     CashDeposit,
@@ -114,7 +114,7 @@ pub enum ServiceType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "certification_status", rename_all = "lowercase")]
+#[sqlx(type_name = "certification_status", rename_all = "PascalCase")]
 pub enum CertificationStatus {
     Active,
     Expired,

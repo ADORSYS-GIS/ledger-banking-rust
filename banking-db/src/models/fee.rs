@@ -20,7 +20,7 @@ pub struct FeeApplicationModel {
     pub fee_type: FeeType,
     #[serde(serialize_with = "serialize_fee_category", deserialize_with = "deserialize_fee_category")]
     pub fee_category: FeeCategory,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub fee_code: HeaplessString<12>,
     pub description: HeaplessString<200>,
     pub amount: Decimal,
@@ -69,9 +69,17 @@ pub struct FeeProcessingJobModel {
     #[serde(serialize_with = "serialize_job_type", deserialize_with = "deserialize_job_type")]
     pub job_type: FeeJobType,
     pub job_name: String,
-    pub schedule_expression: String,
-    pub target_fee_categories: String, // JSON array
-    pub target_products: Option<String>, // JSON array
+    pub schedule_expression: HeaplessString<200>,
+    pub target_fee_categories_01: FeeCategory,
+    pub target_fee_categories_02: FeeCategory,
+    pub target_fee_categories_03: FeeCategory,
+    pub target_fee_categories_04: FeeCategory,
+    pub target_fee_categories_05: FeeCategory,
+    pub target_product_id_01: Option<Uuid>,
+    pub target_product_id_02: Option<Uuid>,
+    pub target_product_id_03: Option<Uuid>,
+    pub target_product_id_04: Option<Uuid>,
+    pub target_product_id_05: Option<Uuid>,
     pub processing_date: NaiveDate,
     #[serde(serialize_with = "serialize_job_status", deserialize_with = "deserialize_job_status")]
     pub status: FeeJobStatus,
@@ -80,7 +88,11 @@ pub struct FeeProcessingJobModel {
     pub accounts_processed: i32,
     pub fees_applied: i32,
     pub total_amount: Decimal,
-    pub errors: Option<String>, // JSON array of error messages
+    pub errors_01: HeaplessString<200>,
+    pub errors_02: HeaplessString<200>,
+    pub errors_03: HeaplessString<200>,
+    pub errors_04: HeaplessString<200>,
+    pub errors_05: HeaplessString<200>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -108,21 +120,6 @@ pub struct FeeAccountHoldModel {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Database model for hold release records
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HoldReleaseRecordModel {
-    pub id: Uuid,
-    pub hold_id: Uuid,
-    pub release_amount: Decimal,
-    /// References ReasonAndPurpose.id for release reason
-    pub release_reason_id: Uuid,
-    /// Additional context for release
-    pub release_additional_details: Option<HeaplessString<200>>,
-    pub released_by: Uuid,
-    pub released_at: DateTime<Utc>,
-    pub is_partial_release: bool,
-    pub remaining_amount: Decimal,
-}
 
 /// Database model for hold expiry jobs
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,7 +150,7 @@ pub struct BalanceCalculationModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductFeeScheduleModel {
     pub id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub fee_schedule_data: String, // JSON serialized fee schedule
     pub effective_from: NaiveDate,
     pub effective_to: Option<NaiveDate>,
@@ -165,7 +162,7 @@ pub struct ProductFeeScheduleModel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeCalculationCacheModel {
     pub id: Uuid,
-    pub product_code: HeaplessString<12>,
+    pub product_id: Uuid,
     pub fee_code: HeaplessString<12>,
     pub calculation_key: String, // Hash of calculation parameters
     pub calculated_amount: Decimal,

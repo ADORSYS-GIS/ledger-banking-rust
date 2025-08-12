@@ -10,7 +10,7 @@ use banking_db::models::{
     ComplianceAlertModel, SarDataModel, UboVerificationResultModel, UboLinkModel,
     MonitoringResultModel, MonitoringRulesModel, ComplianceResultModel,
     // Legacy models for repository compatibility
-    KycRecordModel, SanctionsScreeningModel,
+    SanctionsScreeningModel,
     // Enums
     CheckType as DbCheckType, CheckResult as DbCheckResult, ScreeningType as DbScreeningType,
     RiskLevel as DbRiskLevel, Severity as DbSeverity,
@@ -87,12 +87,24 @@ impl ComplianceMapper {
     /// Map from domain ComplianceAlert to database ComplianceAlertModel
     pub fn compliance_alert_to_model(alert: ComplianceAlert) -> ComplianceAlertModel {
         ComplianceAlertModel {
-            id: alert.id,
-            alert_type: Self::domain_alert_type_to_db_alert_type(alert.alert_type),
-            description: alert.description,
-            severity: Self::domain_severity_to_db_severity(alert.severity),
-            triggered_at: alert.triggered_at,
-            status: Self::domain_alert_status_to_db_alert_status(alert.status),
+            alert_data: banking_db::models::ExtendedComplianceAlertModel {
+                id: alert.id,
+                customer_id: alert.customer_id,
+                account_id: alert.account_id,
+                transaction_id: alert.transaction_id,
+                alert_type: Self::domain_alert_type_to_db_alert_type(alert.alert_type),
+                description: alert.description,
+                severity: Self::domain_severity_to_db_severity(alert.severity),
+                triggered_at: alert.triggered_at,
+                status: Self::domain_alert_status_to_db_alert_status(alert.status),
+                assigned_to_person_id: alert.assigned_to_person_id,
+                resolved_at: alert.resolved_at,
+                resolved_by_person_id: alert.resolved_by_person_id,
+                resolution_notes: alert.resolution_notes,
+                metadata: alert.metadata,
+                created_at: alert.created_at,
+                last_updated_at: alert.last_updated_at,
+            },
         }
     }
 
@@ -181,25 +193,7 @@ impl ComplianceMapper {
         }
     }
 
-    /// Legacy compatibility - Map from domain KycResult to database KycRecordModel 
-    pub fn kyc_result_to_record_model(kyc_result: KycResult) -> KycRecordModel {
-        KycRecordModel {
-            id: Uuid::new_v4(),
-            customer_id: kyc_result.customer_id,
-            status: Self::domain_kyc_status_to_db_kyc_status(kyc_result.status),
-            risk_assessment: HeaplessString::try_from("Standard").unwrap_or_default(),
-            verification_level: HeaplessString::try_from("Basic").unwrap_or_default(),
-            documents_verified: HeaplessString::try_from("[]").unwrap_or_default(), // JSON array
-            last_review_date: None,
-            next_review_date: None,
-            reviewed_by: None,
-            verification_notes: None,
-            created_at: Utc::now(),
-            last_updated_at: Utc::now(),
-            updated_by_person_id: HeaplessString::try_from("system").unwrap_or_default(),
-        }
-    }
-
+    /// Legacy compatibility - Map from domain KycResult to database KycRecordModel
     /// Legacy compatibility - Map from domain ScreeningResult to database SanctionsScreeningModel
     pub fn screening_result_to_screening_model(screening_result: ScreeningResult) -> SanctionsScreeningModel {
         SanctionsScreeningModel {
@@ -286,6 +280,36 @@ impl ComplianceMapper {
             AlertStatus::Investigated => DbAlertStatus::Investigated,
             AlertStatus::Cleared => DbAlertStatus::Cleared,
             AlertStatus::Escalated => DbAlertStatus::Escalated,
+        }
+    }
+
+    pub fn db_alert_type_to_domain_alert_type(alert_type: DbAlertType) -> AlertType {
+        match alert_type {
+            DbAlertType::StructuringDetection => AlertType::StructuringDetection,
+            DbAlertType::VelocityCheck => AlertType::VelocityCheck,
+            DbAlertType::LargeCashTransaction => AlertType::LargeCashTransaction,
+            DbAlertType::SuspiciousPattern => AlertType::SuspiciousPattern,
+            DbAlertType::GeographicAnomaly => AlertType::GeographicAnomaly,
+            DbAlertType::CrossBorderTransaction => AlertType::CrossBorderTransaction,
+        }
+    }
+
+    pub fn db_severity_to_domain_severity(severity: DbSeverity) -> Severity {
+        match severity {
+            DbSeverity::Low => Severity::Low,
+            DbSeverity::Medium => Severity::Medium,
+            DbSeverity::High => Severity::High,
+            DbSeverity::Critical => Severity::Critical,
+        }
+    }
+
+    pub fn db_alert_status_to_domain_alert_status(status: DbAlertStatus) -> AlertStatus {
+        match status {
+            DbAlertStatus::New => AlertStatus::New,
+            DbAlertStatus::InReview => AlertStatus::InReview,
+            DbAlertStatus::Investigated => AlertStatus::Investigated,
+            DbAlertStatus::Cleared => AlertStatus::Cleared,
+            DbAlertStatus::Escalated => AlertStatus::Escalated,
         }
     }
 

@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 /// Database model for address type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "address_type", rename_all = "lowercase")]
+#[sqlx(type_name = "address_type", rename_all = "PascalCase")]
 pub enum AddressType {
     Residential,
     Business,
@@ -20,7 +20,7 @@ pub enum AddressType {
 
 /// Database model for messaging type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "messaging_type", rename_all = "lowercase")]
+#[sqlx(type_name = "messaging_type", rename_all = "PascalCase")]
 pub enum MessagingType {
     Email,
     Phone,
@@ -41,7 +41,7 @@ pub enum MessagingType {
 
 /// Database model for person type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "person_type", rename_all = "lowercase")]
+#[sqlx(type_name = "person_type", rename_all = "PascalCase")]
 pub enum PersonType {
     Natural,
     Legal,
@@ -64,7 +64,7 @@ impl std::fmt::Display for PersonType {
 
 /// Database model for person entity type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "person_entity_type", rename_all = "lowercase")]
+#[sqlx(type_name = "person_entity_type", rename_all = "PascalCase")]
 pub enum RelationshipRole {
     Customer,
     Employee,

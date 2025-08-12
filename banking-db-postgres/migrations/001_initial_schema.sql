@@ -68,12 +68,18 @@ CREATE TYPE account_type AS ENUM ('Savings', 'Current', 'Loan');
 CREATE TYPE account_status AS ENUM ('PendingApproval', 'Active', 'Dormant', 'Frozen', 'PendingClosure', 'Closed', 'PendingReactivation');
 CREATE TYPE signing_condition AS ENUM ('None', 'AnyOwner', 'AllOwners');
 CREATE TYPE disbursement_method AS ENUM ('Transfer', 'CashWithdrawal', 'Check', 'HoldFunds', 'OverdraftFacility', 'StagedRelease');
+-- hold_type has been updated to match the domain definition
+DROP TYPE IF EXISTS hold_type CASCADE;
 CREATE TYPE hold_type AS ENUM ('UnclearedFunds', 'JudicialLien', 'LoanPledge', 'ComplianceHold', 'AdministrativeHold', 'FraudHold', 'PendingAuthorization', 'OverdraftReserve', 'CardAuthorization', 'Other');
+-- hold_status has been updated to match the domain definition
+DROP TYPE IF EXISTS hold_status CASCADE;
 CREATE TYPE hold_status AS ENUM ('Active', 'Released', 'Expired', 'Cancelled', 'PartiallyReleased');
+-- hold_priority has been updated to match the domain definition
+DROP TYPE IF EXISTS hold_priority CASCADE;
 CREATE TYPE hold_priority AS ENUM ('Critical', 'High', 'Standard', 'Medium', 'Low');
 CREATE TYPE ownership_type AS ENUM ('Single', 'Joint', 'Corporate');
 CREATE TYPE entity_type AS ENUM ('Branch', 'Agent', 'RiskManager', 'ComplianceOfficer', 'CustomerService');
-CREATE TYPE relationship_type AS ENUM ('PrimaryHandler', 'BackupHandler', 'RiskOversight', 'ComplianceOversight');
+CREATE TYPE relationship_type AS ENUM ('PrimaryHandler', 'BackupHandler', 'RiskOversight', 'ComplianceOversight', 'Accountant');
 CREATE TYPE relationship_status AS ENUM ('Active', 'Inactive', 'Suspended');
 CREATE TYPE permission_type AS ENUM ('ViewOnly', 'LimitedWithdrawal', 'JointApproval', 'FullAccess');
 CREATE TYPE mandate_status AS ENUM ('Active', 'Suspended', 'Revoked', 'Expired');
@@ -151,13 +157,9 @@ CREATE TYPE restructuring_type AS ENUM ('Rescheduling', 'Renewal', 'Refinancing'
 DROP TYPE IF EXISTS transaction_audit_action CASCADE;
 CREATE TYPE transaction_audit_action AS ENUM ('Create', 'Approve', 'Reject', 'Cancel', 'Reverse', 'Modify', 'StatusChange');
 
--- Update existing hold_type to match API enum  
-DROP TYPE IF EXISTS hold_type CASCADE;
-CREATE TYPE hold_type AS ENUM ('Regulatory', 'Legal', 'Credit', 'Administrative', 'Collateral', 'Temporary');
+-- The hold_type enum is now aligned with the domain model.
 
--- Update existing hold_status to match API enum
-DROP TYPE IF EXISTS hold_status CASCADE;
-CREATE TYPE hold_status AS ENUM ('Active', 'Released', 'Expired', 'Cancelled', 'PartiallyReleased');
+-- The hold_status enum is now aligned with the domain model.
 
 -- Update existing sar_status to match API enum
 DROP TYPE IF EXISTS sar_status CASCADE;
@@ -181,6 +183,9 @@ CREATE TYPE collection_record_status AS ENUM ('pending', 'processed', 'failed', 
 CREATE TYPE biometric_method AS ENUM ('fingerprint', 'facerecognition', 'voiceprint', 'combined');
 CREATE TYPE batch_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'partiallyprocessed', 'requiresreconciliation');
 CREATE TYPE fee_frequency AS ENUM ('percollection', 'daily', 'weekly', 'monthly', 'onetime');
+
+-- Product catalogue enums
+CREATE TYPE product_type AS ENUM ('CASA', 'LOAN');
 
 -- =============================================================================
 -- UTILITY FUNCTIONS
@@ -586,13 +591,14 @@ CREATE TABLE ultimate_beneficial_owners (
 -- Comprehensive accounts table supporting all banking products
 CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    product_code VARCHAR(12) NOT NULL,
+    product_id UUID NOT NULL,
     account_type account_type NOT NULL,
     account_status account_status NOT NULL DEFAULT 'Active',
     signing_condition signing_condition NOT NULL DEFAULT 'None',
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     open_date DATE NOT NULL DEFAULT CURRENT_DATE,
     domicile_agency_branch_id UUID NOT NULL,
+    gl_code_suffix VARCHAR(10),
     
     -- Balance fields - core to all account types
     current_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
@@ -610,7 +616,7 @@ CREATE TABLE accounts (
     installment_amount DECIMAL(15,2), -- Monthly payment amount
     next_due_date DATE, -- Next installment due date
     penalty_rate DECIMAL(8,6), -- Late payment penalty rate
-    collateral_id VARCHAR(100), -- Reference to collateral
+    collateral_id UUID, -- Reference to collateral
     loan_purpose_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for loan purpose
     
     -- Account lifecycle management (from enhancements)
@@ -1268,6 +1274,37 @@ CREATE TABLE business_day_cache (
 );
 
 -- =============================================================================
+-- PRODUCT CATALOGUE
+-- =============================================================================
+
+CREATE TABLE products (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_type product_type NOT NULL,
+    product_code VARCHAR(50) NOT NULL,
+    name_l1 VARCHAR(100) NOT NULL,
+    name_l2 VARCHAR(100),
+    name_l3 VARCHAR(100),
+    description VARCHAR(255),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    valid_from DATE NOT NULL,
+    valid_to DATE,
+    rules JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_person_id UUID NOT NULL REFERENCES persons(id),
+
+    CONSTRAINT ck_product_dates CHECK (valid_to IS NULL OR valid_to >= valid_from)
+);
+
+CREATE INDEX idx_products_type ON products(product_type);
+CREATE INDEX idx_products_active ON products(is_active) WHERE is_active = TRUE;
+
+CREATE TRIGGER update_products_updated_at
+    BEFORE UPDATE ON products
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================================
 -- WORKFLOW AND APPROVAL MANAGEMENT
 -- =============================================================================
 
@@ -1312,7 +1349,7 @@ CREATE TABLE account_opening_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workflow_id UUID NOT NULL REFERENCES account_workflows(id) ON DELETE CASCADE,
     customer_id UUID NOT NULL REFERENCES customers(id),
-    product_code VARCHAR(12) NOT NULL,
+    product_id UUID NOT NULL REFERENCES products(id),
     initial_deposit DECIMAL(15,2),
     channel VARCHAR(50) NOT NULL,
     initiated_by UUID NOT NULL REFERENCES persons(id),
@@ -1380,12 +1417,12 @@ CREATE TABLE transaction_approvals (
 );
 
 -- Account status history with enhanced tracking
-CREATE TABLE account_status_history (
+CREATE TABLE account_status_change_records (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     old_status VARCHAR(30),
     new_status VARCHAR(30) NOT NULL,
-    change_reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for status change
+    reason_id UUID REFERENCES reason_and_purpose(id), -- References reason_and_purpose(id) for status change
     additional_context VARCHAR(200), -- Additional context beyond the standard reason
     changed_by_person_id UUID NOT NULL REFERENCES persons(id),
     changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1436,11 +1473,15 @@ CREATE TABLE compliance_alerts (
     alert_type alert_type NOT NULL,
     severity severity NOT NULL,
     description VARCHAR(500) NOT NULL,
+    triggered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     status alert_status NOT NULL DEFAULT 'New',
-    assigned_to UUID REFERENCES persons(id),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    resolved_at TIMESTAMP WITH TIME ZONE,
-    resolution_notes VARCHAR(500)
+    assigned_to_person_id UUID REFERENCES persons(id),
+    resolved_at TIMESTAMPTZ,
+    resolved_by_person_id UUID REFERENCES persons(id),
+    resolution_notes VARCHAR(500),
+    metadata VARCHAR(1000),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Risk scoring for customers
@@ -1645,7 +1686,7 @@ CREATE TABLE fee_applications (
     transaction_id UUID REFERENCES transactions(id),
     fee_type VARCHAR(20) NOT NULL CHECK (fee_type IN ('EventBased', 'Periodic')),
     fee_category VARCHAR(30) NOT NULL CHECK (fee_category IN ('Transaction', 'Maintenance', 'Service', 'Penalty', 'Card', 'Loan', 'Regulatory')),
-    product_code VARCHAR(12) NOT NULL,
+    product_id UUID NOT NULL,
     fee_code VARCHAR(12) NOT NULL,
     description VARCHAR(200) NOT NULL,
     amount DECIMAL(15,2) NOT NULL,
@@ -2672,7 +2713,7 @@ CREATE INDEX idx_customers_status ON customers(status);
 CREATE INDEX idx_customers_updated_by_person_id ON customers(updated_by_person_id);
 
 -- Account table indexes
-CREATE INDEX idx_accounts_customer_product ON accounts(product_code);
+CREATE INDEX idx_accounts_customer_product ON accounts(product_id);
 CREATE INDEX idx_accounts_status ON accounts(account_status);
 CREATE INDEX idx_accounts_type ON accounts(account_type);
 CREATE INDEX idx_accounts_branch ON accounts(domicile_agency_branch_id);
@@ -2953,6 +2994,46 @@ CREATE TRIGGER update_collateral_enforcement_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+
+CREATE TABLE gl_mappings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID NOT NULL REFERENCES products(id),
+    customer_account_code VARCHAR(50) NOT NULL,
+    interest_expense_code VARCHAR(50) NOT NULL,
+    fee_income_code VARCHAR(50) NOT NULL,
+    overdraft_code VARCHAR(50),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_gl_mappings_product FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE INDEX idx_gl_mappings_product_id ON gl_mappings(product_id);
+
+CREATE TRIGGER update_gl_mappings_updated_at
+    BEFORE UPDATE ON gl_mappings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE interest_rate_tiers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID NOT NULL REFERENCES products(id),
+    minimum_balance DECIMAL NOT NULL,
+    maximum_balance DECIMAL,
+    interest_rate DECIMAL NOT NULL,
+    tier_name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_interest_rate_tiers_product FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE INDEX idx_interest_rate_tiers_product_id ON interest_rate_tiers(product_id);
+
+CREATE TRIGGER update_interest_rate_tiers_updated_at
+    BEFORE UPDATE ON interest_rate_tiers
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+
 -- =============================================================================
 -- DAILY COLLECTION TABLES
 -- =============================================================================
@@ -3098,3 +3179,77 @@ COMMENT ON TABLE business_day_cache IS 'Performance optimization cache for busin
 -- 2. Account Domain: Added disbursement_instructions table and last_disbursement_instruction_id field
 -- 3. Person Domain: Individual messaging fields, entity_reference table, removed entity fields from persons
 -- 4. All new enum types: service_type, certification_status, person_entity_type, disbursement_status
+
+-- =============================================================================
+-- CONSOLIDATED FROM 002_account_model_updates.sql
+-- =============================================================================
+
+-- Create AccountBalanceCalculation Table
+CREATE TABLE "AccountBalanceCalculation" (
+    "id" UUID NOT NULL,
+    "account_id" UUID NOT NULL,
+    "current_balance" DECIMAL NOT NULL,
+    "available_balance" DECIMAL NOT NULL,
+    "overdraft_limit" DECIMAL,
+    "total_holds" DECIMAL NOT NULL,
+    "active_hold_count" INTEGER NOT NULL,
+    "calculation_timestamp" TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT "AccountBalanceCalculation_pkey" PRIMARY KEY ("id")
+);
+
+-- Create AccountHoldSummary Table
+CREATE TABLE "AccountHoldSummary" (
+    "id" UUID NOT NULL,
+    "account_balance_calculation_id" UUID NOT NULL,
+    "hold_type" hold_type NOT NULL,
+    "total_amount" DECIMAL NOT NULL,
+    "hold_count" INTEGER NOT NULL,
+    "priority" hold_priority NOT NULL,
+
+    CONSTRAINT "AccountHoldSummary_pkey" PRIMARY KEY ("id")
+);
+
+-- Create AccountHoldReleaseRequest Table
+CREATE TABLE "AccountHoldReleaseRequest" (
+    "id" UUID NOT NULL,
+    "hold_id" UUID NOT NULL,
+    "release_amount" DECIMAL,
+    "release_reason_id" UUID NOT NULL,
+    "release_additional_details" VARCHAR(200),
+    "released_by_person_id" UUID NOT NULL,
+    "override_authorization" BOOLEAN NOT NULL,
+
+    CONSTRAINT "AccountHoldReleaseRequest_pkey" PRIMARY KEY ("id")
+);
+
+-- Create AccountHoldExpiryJob Table
+CREATE TABLE "AccountHoldExpiryJob" (
+    "id" UUID NOT NULL,
+    "processing_date" DATE NOT NULL,
+    "expired_holds_count" INTEGER NOT NULL,
+    "total_released_amount" DECIMAL NOT NULL,
+    "processed_at" TIMESTAMPTZ NOT NULL,
+    "errors" VARCHAR(100)[],
+
+    CONSTRAINT "AccountHoldExpiryJob_pkey" PRIMARY KEY ("id")
+);
+
+-- Create PlaceHoldRequest Table
+CREATE TABLE "PlaceHoldRequest" (
+    "id" UUID NOT NULL,
+    "account_id" UUID NOT NULL,
+    "hold_type" hold_type NOT NULL,
+    "amount" DECIMAL NOT NULL,
+    "reason_id" UUID NOT NULL,
+    "additional_details" VARCHAR(200),
+    "placed_by_person_id" UUID NOT NULL,
+    "expires_at" TIMESTAMPTZ,
+    "priority" hold_priority NOT NULL,
+    "source_reference" VARCHAR(100),
+
+    CONSTRAINT "PlaceHoldRequest_pkey" PRIMARY KEY ("id")
+);
+
+-- Add foreign key constraints
+ALTER TABLE "AccountHoldSummary" ADD CONSTRAINT "AccountHoldSummary_account_balance_calculation_id_fkey" FOREIGN KEY ("account_balance_calculation_id") REFERENCES "AccountBalanceCalculation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

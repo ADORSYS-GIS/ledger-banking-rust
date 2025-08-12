@@ -47,12 +47,7 @@ impl TryFromRow<sqlx::postgres::PgRow> for FeeApplicationModel {
                     message: "Invalid fee category".to_string(),
                 }
             )?,
-            product_code: HeaplessString::try_from(
-                row.get::<String, _>("product_code").as_str()
-            ).map_err(|_| BankingError::ValidationError {
-                field: "product_code".to_string(),
-                message: "Product code too long".to_string(),
-            })?,
+            product_id: row.get("product_id"),
             fee_code: HeaplessString::try_from(
                 row.get::<String, _>("fee_code").as_str()
             ).map_err(|_| BankingError::ValidationError {
@@ -134,11 +129,34 @@ impl TryFromRow<sqlx::postgres::PgRow> for FeeProcessingJobModel {
                 }
             )?,
             job_name: row.get("job_name"),
-            schedule_expression: row.get("schedule_expression"),
-            target_fee_categories: row.get("target_fee_categories"),
-            target_products: row.get("target_products"),
+            schedule_expression: HeaplessString::try_from(row.get::<String, _>("schedule_expression").as_str()).unwrap_or_default(),
+            target_fee_categories_01: row.get::<String, _>("target_fee_categories_01").parse().map_err(|_| BankingError::ValidationError {
+                field: "target_fee_categories_01".to_string(),
+                message: "Invalid fee category".to_string(),
+            })?,
+            target_fee_categories_02: row.get::<String, _>("target_fee_categories_02").parse().map_err(|_| BankingError::ValidationError {
+                field: "target_fee_categories_02".to_string(),
+                message: "Invalid fee category".to_string(),
+            })?,
+            target_fee_categories_03: row.get::<String, _>("target_fee_categories_03").parse().map_err(|_| BankingError::ValidationError {
+                field: "target_fee_categories_03".to_string(),
+                message: "Invalid fee category".to_string(),
+            })?,
+            target_fee_categories_04: row.get::<String, _>("target_fee_categories_04").parse().map_err(|_| BankingError::ValidationError {
+                field: "target_fee_categories_04".to_string(),
+                message: "Invalid fee category".to_string(),
+            })?,
+            target_fee_categories_05: row.get::<String, _>("target_fee_categories_05").parse().map_err(|_| BankingError::ValidationError {
+                field: "target_fee_categories_05".to_string(),
+                message: "Invalid fee category".to_string(),
+            })?,
+            target_product_id_01: row.get("target_product_id_01"),
+            target_product_id_02: row.get("target_product_id_02"),
+            target_product_id_03: row.get("target_product_id_03"),
+            target_product_id_04: row.get("target_product_id_04"),
+            target_product_id_05: row.get("target_product_id_05"),
             processing_date: row.get("processing_date"),
-            status: row.get::<String, _>("status").parse().map_err(|_| 
+            status: row.get::<String, _>("status").parse().map_err(|_|
                 BankingError::ValidationError {
                     field: "status".to_string(),
                     message: "Invalid status".to_string(),
@@ -149,7 +167,11 @@ impl TryFromRow<sqlx::postgres::PgRow> for FeeProcessingJobModel {
             accounts_processed: row.get("accounts_processed"),
             fees_applied: row.get("fees_applied"),
             total_amount: row.get("total_amount"),
-            errors: row.get("errors"),
+            errors_01: HeaplessString::try_from(row.get::<String, _>("errors_01").as_str()).unwrap_or_default(),
+            errors_02: HeaplessString::try_from(row.get::<String, _>("errors_02").as_str()).unwrap_or_default(),
+            errors_03: HeaplessString::try_from(row.get::<String, _>("errors_03").as_str()).unwrap_or_default(),
+            errors_04: HeaplessString::try_from(row.get::<String, _>("errors_04").as_str()).unwrap_or_default(),
+            errors_05: HeaplessString::try_from(row.get::<String, _>("errors_05").as_str()).unwrap_or_default(),
             created_at: row.get("created_at"),
         })
     }
@@ -176,13 +198,13 @@ impl FeeRepository for FeeRepositoryImpl {
             r#"
             INSERT INTO fee_applications (
                 id, account_id, transaction_id, fee_type, fee_category,
-                product_code, fee_code, description, amount, currency, calculation_method,
+                product_id, fee_code, description, amount, currency, calculation_method,
                 calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                 value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
             RETURNING id, account_id, transaction_id, fee_type, fee_category,
-                     product_code, fee_code, description, amount, currency, calculation_method,
+                     product_id, fee_code, description, amount, currency, calculation_method,
                      calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                      value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
             "#
@@ -192,7 +214,7 @@ impl FeeRepository for FeeRepositoryImpl {
         .bind(fee_application.transaction_id)
         .bind(fee_application.fee_type.to_string())
         .bind(fee_application.fee_category.to_string())
-        .bind(fee_application.product_code.as_str())
+        .bind(fee_application.product_id)
         .bind(fee_application.fee_code.as_str())
         .bind(fee_application.description.as_str())
         .bind(fee_application.amount)
@@ -223,14 +245,14 @@ impl FeeRepository for FeeRepositoryImpl {
             r#"
             UPDATE fee_applications SET
                 account_id = $2, transaction_id = $3, fee_type = $4, fee_category = $5,
-                product_code = $6, fee_code = $7, description = $8, amount = $9, currency = $10,
+                product_id = $6, fee_code = $7, description = $8, amount = $9, currency = $10,
                 calculation_method = $11, calculation_base_amount = $12, fee_rate = $13,
                 trigger_event = $14, status = $15, applied_at = $16, value_date = $17,
                 reversal_deadline = $18, waived = $19, waived_by = $20, waived_reason_id = $21,
                 applied_by = $22
             WHERE id = $1
             RETURNING id, account_id, transaction_id, fee_type, fee_category,
-                     product_code, fee_code, description, amount, currency, calculation_method,
+                     product_id, fee_code, description, amount, currency, calculation_method,
                      calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                      value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
             "#
@@ -240,7 +262,7 @@ impl FeeRepository for FeeRepositoryImpl {
         .bind(fee_application.transaction_id)
         .bind(fee_application.fee_type.to_string())
         .bind(fee_application.fee_category.to_string())
-        .bind(fee_application.product_code.as_str())
+        .bind(fee_application.product_id)
         .bind(fee_application.fee_code.as_str())
         .bind(fee_application.description.as_str())
         .bind(fee_application.amount)
@@ -403,13 +425,13 @@ impl FeeRepository for FeeRepositoryImpl {
                 r#"
                 INSERT INTO fee_applications (
                     id, account_id, transaction_id, fee_type, fee_category,
-                    product_code, fee_code, description, amount, currency, calculation_method,
+                    product_id, fee_code, description, amount, currency, calculation_method,
                     calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                     value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
                 RETURNING id, account_id, transaction_id, fee_type, fee_category,
-                         product_code, fee_code, description, amount, currency, calculation_method,
+                         product_id, fee_code, description, amount, currency, calculation_method,
                          calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                          value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
                 "#
@@ -419,7 +441,7 @@ impl FeeRepository for FeeRepositoryImpl {
             .bind(app.transaction_id)
             .bind(app.fee_type.to_string())
             .bind(app.fee_category.to_string())
-            .bind(app.product_code.as_str())
+            .bind(app.product_id)
             .bind(app.fee_code.as_str())
             .bind(app.description.as_str())
             .bind(app.amount)
@@ -618,7 +640,7 @@ impl FeeRepository for FeeRepositoryImpl {
     
     async fn get_accounts_eligible_for_fees(
         &self,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
         _fee_categories: Vec<String>,
         _processing_date: NaiveDate,
         offset: i32,
@@ -629,10 +651,10 @@ impl FeeRepository for FeeRepositoryImpl {
         );
         let mut param_count = 0;
         
-        if let Some(ref codes) = product_codes {
+        if let Some(ref codes) = product_ids {
             if !codes.is_empty() {
                 param_count += 1;
-                query.push_str(&format!(" AND product_code = ANY(${param_count})"));
+                query.push_str(&format!(" AND product_id = ANY(${param_count})"));
             }
         }
         
@@ -643,7 +665,7 @@ impl FeeRepository for FeeRepositoryImpl {
         
         let mut sql_query = sqlx::query(&query);
         
-        if let Some(codes) = product_codes {
+        if let Some(codes) = product_ids {
             if !codes.is_empty() {
                 sql_query = sql_query.bind(codes);
             }
@@ -676,7 +698,7 @@ impl FeeRepository for FeeRepositoryImpl {
     
     async fn get_cached_product_fee_schedule(
         &self,
-        _product_code: String,
+        _product_id: Uuid,
         _effective_date: NaiveDate,
     ) -> BankingResult<Option<ProductFeeScheduleModel>> {
         Err(BankingError::NotImplemented("Product fee schedule caching not implemented in schema".to_string()))
@@ -684,7 +706,7 @@ impl FeeRepository for FeeRepositoryImpl {
     
     async fn invalidate_fee_schedule_cache(
         &self,
-        _product_code: String,
+        _product_id: Uuid,
     ) -> BankingResult<()> {
         Err(BankingError::NotImplemented("Product fee schedule caching not implemented in schema".to_string()))
     }
@@ -722,7 +744,7 @@ impl FeeRepository for FeeRepositoryImpl {
         &self,
         from_date: NaiveDate,
         to_date: NaiveDate,
-        product_codes: Option<Vec<String>>,
+        product_ids: Option<Vec<Uuid>>,
         fee_categories: Option<Vec<String>>,
     ) -> BankingResult<FeeRevenueSummary> {
         let mut query = String::from(
@@ -738,10 +760,10 @@ impl FeeRepository for FeeRepositoryImpl {
         );
         let mut param_count = 2;
         
-        if let Some(codes) = &product_codes {
+        if let Some(codes) = &product_ids {
             if !codes.is_empty() {
                 param_count += 1;
-                query.push_str(&format!(" AND product_code = ANY(${param_count})"));
+                query.push_str(&format!(" AND product_id = ANY(${param_count})"));
             }
         }
         
@@ -756,7 +778,7 @@ impl FeeRepository for FeeRepositoryImpl {
             .bind(from_date)
             .bind(to_date);
         
-        if let Some(codes) = product_codes {
+        if let Some(codes) = product_ids {
             if !codes.is_empty() {
                 sql_query = sql_query.bind(codes);
             }
@@ -795,11 +817,11 @@ impl FeeRepository for FeeRepositoryImpl {
                 COALESCE(SUM(CASE WHEN fa.status = 'Applied' AND fa.waived = FALSE THEN fa.amount ELSE 0 END), 0) as total_fees,
                 COUNT(CASE WHEN fa.status = 'Applied' THEN 1 END) as fee_count,
                 COALESCE(AVG(CASE WHEN fa.status = 'Applied' AND fa.waived = FALSE THEN fa.amount END), 0) as avg_fee_amount,
-                a.product_code
+                a.product_id as product_id
             FROM fee_applications fa
             JOIN accounts a ON fa.account_id = a.id
             WHERE fa.value_date >= $1 AND fa.value_date <= $2
-            GROUP BY fa.account_id, a.product_code
+            GROUP BY fa.account_id, a.product_id
             ORDER BY total_fees DESC
             LIMIT $3
             "#
@@ -817,7 +839,7 @@ impl FeeRepository for FeeRepositoryImpl {
                 total_fees: row.get("total_fees"),
                 fee_count: row.get::<i64, _>("fee_count") as u32,
                 avg_fee_amount: row.get("avg_fee_amount"),
-                product_code: row.get("product_code"),
+                product_id: row.get("product_id"),
             });
         }
         
@@ -903,7 +925,7 @@ impl FeeRepository for FeeRepositoryImpl {
                 applied_by = $3
             WHERE id = $1 AND status != 'Reversed'
             RETURNING id, account_id, transaction_id, fee_type, fee_category,
-                     product_code, fee_code, description, amount, currency, calculation_method,
+                     product_id, fee_code, description, amount, currency, calculation_method,
                      calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                      value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
             "#
@@ -946,7 +968,7 @@ impl FeeRepository for FeeRepositoryImpl {
                     applied_by = $4
                 WHERE id = $1 AND account_id = $2 AND status != 'Reversed'
                 RETURNING id, account_id, transaction_id, fee_type, fee_category,
-                         product_code, fee_code, description, amount, currency, calculation_method,
+                         product_id, fee_code, description, amount, currency, calculation_method,
                          calculation_base_amount, fee_rate, trigger_event, status, applied_at,
                          value_date, reversal_deadline, waived, waived_by, waived_reason_id, applied_by, created_at
                 "#

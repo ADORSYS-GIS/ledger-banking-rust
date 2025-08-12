@@ -14,15 +14,15 @@ use banking_api::{
 use banking_db::repository::{TransactionRepository, AccountRepository};
 use crate::{
     mappers::{TransactionMapper, AccountMapper},
-    integration::ProductCatalogClient,
 };
+use banking_db::repository::ProductRepository;
 
 /// Production implementation of TransactionService
 /// Provides multi-level validation and processing with approval workflows
 pub struct TransactionServiceImpl {
     transaction_repository: Arc<dyn TransactionRepository>,
     account_repository: Arc<dyn AccountRepository>,
-    product_catalog_client: Arc<ProductCatalogClient>,
+    product_repository: Arc<dyn ProductRepository>,
     validation_cache: ValidationCache,
 }
 
@@ -30,12 +30,12 @@ impl TransactionServiceImpl {
     pub fn new(
         transaction_repository: Arc<dyn TransactionRepository>,
         account_repository: Arc<dyn AccountRepository>,
-        product_catalog_client: Arc<ProductCatalogClient>,
+        product_repository: Arc<dyn ProductRepository>,
     ) -> Self {
         Self {
             transaction_repository,
             account_repository,
-            product_catalog_client,
+            product_repository,
             validation_cache: ValidationCache::new(),
         }
     }
@@ -88,12 +88,12 @@ impl TransactionService for TransactionServiceImpl {
 
         // Stage 6: Update account activity timestamp
         if transaction.status == TransactionStatus::Posted {
-            self.update_account_activity(transaction.id).await?;
+            self.update_account_activity(transaction.account_id).await?;
         }
 
         tracing::info!(
             "Transaction {} processed with status {:?} for account {}",
-            transaction.id, transaction.status, transaction.id
+            transaction.id, transaction.status, transaction.account_id
         );
 
         TransactionMapper::from_model(created_model)
@@ -148,9 +148,9 @@ impl TransactionService for TransactionServiceImpl {
         }
 
         // Create reversal transaction
-        let reversal_transaction = Transaction {
+        let mut reversal_transaction = Transaction {
             id: Uuid::new_v4(),
-            account_id: original.id,
+            account_id: original.account_id,
             transaction_code: {
                 let rev_code = format!("REV_{}", original.transaction_code.as_str());
                 HeaplessString::try_from(rev_code.as_str()).map_err(|_| BankingError::ValidationError {
@@ -190,7 +190,7 @@ impl TransactionService for TransactionServiceImpl {
         };
 
         // Process reversal transaction
-        self.execute_financial_posting(&mut reversal_transaction.clone()).await?;
+        self.execute_financial_posting(&mut reversal_transaction).await?;
         let reversal_model = TransactionMapper::to_model(reversal_transaction);
         self.transaction_repository.create(reversal_model).await?;
 
@@ -259,9 +259,9 @@ impl TransactionService for TransactionServiceImpl {
     async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<ApprovalWorkflow> {
         // Get account information to determine required approvers
         let account = self.account_repository
-            .find_by_id(transaction.id)
+            .find_by_id(transaction.account_id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
 
         let account_domain = AccountMapper::from_model(account)?;
 
@@ -295,7 +295,7 @@ impl TransactionService for TransactionServiceImpl {
             .await?
             .ok_or(banking_api::BankingError::TransactionNotFound(transaction_id.to_string()))?;
 
-        if transaction.status != banking_db::models::TransactionStatus::AwaitingApproval {
+        if transaction.status != TransactionStatus::AwaitingApproval {
             return Err(banking_api::BankingError::ValidationError {
                 field: "status".to_string(),
                 message: format!("Transaction {transaction_id} is not awaiting approval"),
@@ -381,6 +381,7 @@ impl TransactionService for TransactionServiceImpl {
     }
 }
 
+
 impl TransactionServiceImpl {
     /// Pre-validation checks for fast failure
     async fn pre_validate_transaction(&self, transaction: &Transaction) -> BankingResult<()> {
@@ -399,14 +400,14 @@ impl TransactionServiceImpl {
         }
 
         // Account existence check (cached)
-        let account_exists = if let Some(cached) = self.validation_cache.get_account_status(transaction.id) {
-            cached != AccountStatus::Closed
+        let account_exists = if let Some(cached) = self.validation_cache.get_account_status(transaction.account_id) {
+            cached != &AccountStatus::Closed
         } else {
-            self.account_repository.exists(transaction.id).await?
+            self.account_repository.exists(transaction.account_id).await?
         };
 
         if !account_exists {
-            return Err(banking_api::BankingError::AccountNotFound(transaction.id));
+            return Err(banking_api::BankingError::AccountNotFound(transaction.account_id));
         }
 
         Ok(())
@@ -418,9 +419,9 @@ impl TransactionServiceImpl {
 
         // Get account details
         let account = self.account_repository
-            .find_by_id(transaction.id)
+            .find_by_id(transaction.account_id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
 
         let account_domain = AccountMapper::from_model(account)?;
 
@@ -463,13 +464,14 @@ impl TransactionServiceImpl {
 
         // Get account to determine product code
         let account = self.account_repository
-            .find_by_id(transaction.id)
+            .find_by_id(transaction.account_id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
 
         // Get product rules from catalog
-        match self.product_catalog_client.get_product_rules(account.product_code.as_str()).await {
-            Ok(product_rules) => {
+        match self.product_repository.find_product_by_id(account.product_id).await {
+            Ok(Some(product)) => {
+                let product_rules = product.rules;
                 // Check per-transaction limits
                 if let Some(per_txn_limit) = product_rules.per_transaction_limit {
                     if transaction.amount > per_txn_limit {
@@ -485,6 +487,9 @@ impl TransactionServiceImpl {
 
                 // Check daily limits (would need to query today's transactions)
                 result.add_check("daily_limit", true, "Daily limit check passed".to_string());
+            }
+            Ok(None) => {
+                result.add_check("product_rules", false, "Product not found".to_string());
             }
             Err(_) => {
                 result.add_check("product_rules", false, "Could not retrieve product rules".to_string());
@@ -524,9 +529,9 @@ impl TransactionServiceImpl {
     async fn requires_approval(&self, transaction: &Transaction) -> BankingResult<bool> {
         // Get account information
         let account = self.account_repository
-            .find_by_id(transaction.id)
+            .find_by_id(transaction.account_id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
 
         let account_domain = AccountMapper::from_model(account)?;
 
@@ -550,9 +555,9 @@ impl TransactionServiceImpl {
     /// Execute the financial posting (balance updates)
     async fn execute_financial_posting(&self, transaction: &mut Transaction) -> BankingResult<()> {
         let account = self.account_repository
-            .find_by_id(transaction.id)
+            .find_by_id(transaction.account_id)
             .await?
-            .ok_or(banking_api::BankingError::AccountNotFound(transaction.id))?;
+            .ok_or(banking_api::BankingError::AccountNotFound(transaction.account_id))?;
 
         // Calculate new balances based on transaction type
         let new_balance = match transaction.transaction_type {
@@ -562,13 +567,13 @@ impl TransactionServiceImpl {
 
         // Update account balance
         self.account_repository
-            .update_balance(transaction.id, new_balance, new_balance)
+            .update_balance(transaction.account_id, new_balance, new_balance)
             .await?;
 
         // Set GL code if not provided
         if transaction.gl_code.as_str().is_empty() {
             let gl_code_str = self.generate_gl_code(&account, transaction).await?;
-            transaction.set_gl_code(&gl_code_str).map_err(|e| 
+            transaction.set_gl_code(&gl_code_str).map_err(|e|
                 banking_api::BankingError::ValidationError {
                     field: "gl_code".to_string(),
                     message: e.to_string(),
@@ -578,7 +583,7 @@ impl TransactionServiceImpl {
 
         tracing::debug!(
             "Financial posting executed: Account {} balance updated to {}",
-            transaction.id, new_balance
+            transaction.account_id, new_balance
         );
 
         Ok(())
@@ -598,9 +603,14 @@ impl TransactionServiceImpl {
 
     /// Generate GL code based on account and transaction
     async fn generate_gl_code(&self, account: &banking_db::models::AccountModel, _transaction: &Transaction) -> BankingResult<String> {
-        // In production, this would be more sophisticated
-        let product_code_str = account.product_code.as_str();
-        Ok(format!("{product_code_str}001"))
+        let gl_mapping = self.product_repository
+            .find_gl_mapping_by_product_id(account.product_id)
+            .await?
+            .ok_or_else(|| BankingError::NotFound(format!("GL mapping not found for product {}", account.product_id)))?;
+
+        let suffix = account.gl_code_suffix.as_deref().unwrap_or("001");
+
+        Ok(format!("{}{}", gl_mapping.customer_account_code, suffix))
     }
 
     /// Get required approvers for a transaction
@@ -623,21 +633,33 @@ impl TransactionServiceImpl {
 }
 
 /// Validation cache for high-performance checks
+#[allow(dead_code)]
 struct ValidationCache {
     // In production, this would use a proper cache like moka
-    _cache: HashMap<Uuid, AccountStatus>,
+    cache: HashMap<Uuid, (AccountStatus, std::time::Instant)>,
+    ttl: std::time::Duration,
 }
 
 impl ValidationCache {
     fn new() -> Self {
         Self {
-            _cache: HashMap::new(),
+            cache: HashMap::new(),
+            ttl: std::time::Duration::from_secs(60), // 1 minute TTL
         }
     }
 
-    fn get_account_status(&self, _account_id: Uuid) -> Option<AccountStatus> {
-        // In production, this would return cached status
+    fn get_account_status(&self, account_id: Uuid) -> Option<&AccountStatus> {
+        if let Some((status, timestamp)) = self.cache.get(&account_id) {
+            if timestamp.elapsed() < self.ttl {
+                return Some(status);
+            }
+        }
         None
+    }
+
+    #[allow(dead_code)]
+    fn set_account_status(&mut self, account_id: Uuid, status: AccountStatus) {
+        self.cache.insert(account_id, (status, std::time::Instant::now()));
     }
 }
 

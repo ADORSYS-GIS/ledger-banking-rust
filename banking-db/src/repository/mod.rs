@@ -1,5 +1,6 @@
 pub mod customer_repository;
 pub mod account_repository;
+pub mod account_hold_repository;
 pub mod transaction_repository;
 pub mod agent_network_repository;
 pub mod compliance_repository;
@@ -11,6 +12,7 @@ pub mod person_repository;
 pub mod collateral_repository;
 pub mod channel_repository;
 pub mod daily_collection_repository;
+pub mod product_repository;
 
 pub use customer_repository::*;
 pub use account_repository::*;
@@ -25,3 +27,4 @@ pub use person_repository::*;
 pub use collateral_repository::*;
 pub use channel_repository::*;
 pub use daily_collection_repository::*;
+pub use product_repository::*;
