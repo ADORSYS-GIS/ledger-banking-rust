@@ -2,7 +2,9 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::{
-    domain::{Customer, CustomerPortfolio, RiskRating, CustomerStatus},
+    domain::{
+        Customer, CustomerAudit, CustomerDocument, CustomerPortfolio, CustomerStatus, RiskRating,
+    },
     error::BankingResult,
 };
 
@@ -41,4 +43,20 @@ pub trait CustomerService: Send + Sync {
 
     /// Get customers requiring compliance review
     async fn find_customers_requiring_review(&self) -> BankingResult<Vec<Customer>>;
+
+    /// Add a document to a customer's profile
+    async fn add_customer_document(
+        &self,
+        document: CustomerDocument,
+    ) -> BankingResult<CustomerDocument>;
+
+    /// Get all documents for a customer
+    async fn get_customer_documents(&self, customer_id: Uuid) -> BankingResult<Vec<CustomerDocument>>;
+
+    /// Add an audit trail entry for a customer
+    async fn add_customer_audit_entry(&self, audit_entry: CustomerAudit)
+        -> BankingResult<CustomerAudit>;
+
+    /// Get the audit trail for a customer
+    async fn get_customer_audit_trail(&self, customer_id: Uuid) -> BankingResult<Vec<CustomerAudit>>;
 }

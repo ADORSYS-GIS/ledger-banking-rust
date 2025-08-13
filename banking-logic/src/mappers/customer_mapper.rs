@@ -1,9 +1,13 @@
-use banking_api::domain::{Customer, CustomerType, IdentityType, RiskRating, CustomerStatus, CustomerPortfolio, KycStatus, RiskSummary, CustomerComplianceStatus};
+use banking_api::domain::{
+    Customer, CustomerAudit, CustomerComplianceStatus, CustomerDocument, CustomerPortfolio,
+    CustomerStatus, CustomerType, DocumentStatus, IdentityType, KycStatus, RiskRating,
+    RiskSummary,
+};
 use banking_db::models::{
-    CustomerModel, CustomerPortfolioModel, RiskSummaryModel, CustomerComplianceStatusModel,
-    CustomerType as DbCustomerType, IdentityType as DbIdentityType, 
-    RiskRating as DbRiskRating, CustomerStatus as DbCustomerStatus,
-    KycStatus as DbKycStatus
+    CustomerAuditModel, CustomerComplianceStatusModel, CustomerDocumentModel, CustomerModel,
+    CustomerPortfolioModel, CustomerStatus as DbCustomerStatus, CustomerType as DbCustomerType,
+    DocumentStatus as DbDocumentStatus, IdentityType as DbIdentityType, KycStatus as DbKycStatus,
+    RiskRating as DbRiskRating, RiskSummaryModel,
 };
 
 pub struct CustomerMapper;
@@ -203,23 +207,75 @@ impl CustomerMapper {
         }
     }
 
-    // Utility functions for external use (kept for backward compatibility)
-    pub fn risk_rating_to_string(risk_rating: RiskRating) -> String {
-        match risk_rating {
-            RiskRating::Low => "Low".to_string(),
-            RiskRating::Medium => "Medium".to_string(),
-            RiskRating::High => "High".to_string(),
-            RiskRating::Blacklisted => "Blacklisted".to_string(),
+    pub fn document_status_to_db(status: DocumentStatus) -> DbDocumentStatus {
+        match status {
+            DocumentStatus::Uploaded => DbDocumentStatus::Uploaded,
+            DocumentStatus::Verified => DbDocumentStatus::Verified,
+            DocumentStatus::Rejected => DbDocumentStatus::Rejected,
+            DocumentStatus::Expired => DbDocumentStatus::Expired,
         }
     }
 
-    pub fn customer_status_to_string(status: CustomerStatus) -> String {
-        match status {
-            CustomerStatus::Active => "Active".to_string(),
-            CustomerStatus::PendingVerification => "PendingVerification".to_string(),
-            CustomerStatus::Deceased => "Deceased".to_string(),
-            CustomerStatus::Dissolved => "Dissolved".to_string(),
-            CustomerStatus::Blacklisted => "Blacklisted".to_string(),
+    pub fn db_to_document_status(db_status: DbDocumentStatus) -> DocumentStatus {
+        match db_status {
+            DbDocumentStatus::Uploaded => DocumentStatus::Uploaded,
+            DbDocumentStatus::Verified => DocumentStatus::Verified,
+            DbDocumentStatus::Rejected => DocumentStatus::Rejected,
+            DbDocumentStatus::Expired => DocumentStatus::Expired,
+        }
+    }
+
+    pub fn document_to_model(document: CustomerDocument) -> CustomerDocumentModel {
+        CustomerDocumentModel {
+            id: document.id,
+            customer_id: document.customer_id,
+            document_type: document.document_type,
+            document_path: document.document_path,
+            status: Self::document_status_to_db(document.status),
+            uploaded_at: document.uploaded_at,
+            uploaded_by: document.uploaded_by,
+            verified_at: document.verified_at,
+            verified_by: document.verified_by,
+        }
+    }
+
+    pub fn document_from_model(model: CustomerDocumentModel) -> CustomerDocument {
+        CustomerDocument {
+            id: model.id,
+            customer_id: model.customer_id,
+            document_type: model.document_type,
+            document_path: model.document_path,
+            status: Self::db_to_document_status(model.status),
+            uploaded_at: model.uploaded_at,
+            uploaded_by: model.uploaded_by,
+            verified_at: model.verified_at,
+            verified_by: model.verified_by,
+        }
+    }
+
+    pub fn audit_to_model(audit: CustomerAudit) -> CustomerAuditModel {
+        CustomerAuditModel {
+            id: audit.id,
+            customer_id: audit.customer_id,
+            field_name: audit.field_name,
+            old_value: audit.old_value,
+            new_value: audit.new_value,
+            changed_at: audit.changed_at,
+            changed_by: audit.changed_by,
+            reason: audit.reason,
+        }
+    }
+
+    pub fn audit_from_model(model: CustomerAuditModel) -> CustomerAudit {
+        CustomerAudit {
+            id: model.id,
+            customer_id: model.customer_id,
+            field_name: model.field_name,
+            old_value: model.old_value,
+            new_value: model.new_value,
+            changed_at: model.changed_at,
+            changed_by: model.changed_by,
+            reason: model.reason,
         }
     }
 }

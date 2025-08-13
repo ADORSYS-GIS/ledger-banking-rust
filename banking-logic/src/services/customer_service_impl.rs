@@ -4,8 +4,11 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use banking_api::{
-    BankingResult, Customer, CustomerPortfolio, RiskRating, CustomerStatus,
+    domain::{
+        Customer, CustomerAudit, CustomerDocument, CustomerPortfolio, CustomerStatus, RiskRating,
+    },
     service::CustomerService,
+    BankingResult,
 };
 use banking_db::repository::CustomerRepository;
 use crate::mappers::CustomerMapper;
@@ -283,6 +286,79 @@ impl CustomerService for CustomerServiceImpl {
         }
         
         Ok(customers)
+    }
+
+    async fn add_customer_document(
+        &self,
+        document: CustomerDocument,
+    ) -> BankingResult<CustomerDocument> {
+        if !self
+            .customer_repository
+            .exists(document.customer_id)
+            .await?
+        {
+            return Err(banking_api::BankingError::CustomerNotFound(
+                document.customer_id,
+            ));
+        }
+        let document_model = CustomerMapper::document_to_model(document);
+        let created_model = self
+            .customer_repository
+            .add_document(document_model)
+            .await?;
+        Ok(CustomerMapper::document_from_model(created_model))
+    }
+
+    async fn get_customer_documents(
+        &self,
+        customer_id: Uuid,
+    ) -> BankingResult<Vec<CustomerDocument>> {
+        if !self.customer_repository.exists(customer_id).await? {
+            return Err(banking_api::BankingError::CustomerNotFound(customer_id));
+        }
+        let document_models = self.customer_repository.get_documents(customer_id).await?;
+        Ok(document_models
+            .into_iter()
+            .map(CustomerMapper::document_from_model)
+            .collect())
+    }
+
+    async fn add_customer_audit_entry(
+        &self,
+        audit_entry: CustomerAudit,
+    ) -> BankingResult<CustomerAudit> {
+        if !self
+            .customer_repository
+            .exists(audit_entry.customer_id)
+            .await?
+        {
+            return Err(banking_api::BankingError::CustomerNotFound(
+                audit_entry.customer_id,
+            ));
+        }
+        let audit_model = CustomerMapper::audit_to_model(audit_entry);
+        let created_model = self
+            .customer_repository
+            .add_audit_entry(audit_model)
+            .await?;
+        Ok(CustomerMapper::audit_from_model(created_model))
+    }
+
+    async fn get_customer_audit_trail(
+        &self,
+        customer_id: Uuid,
+    ) -> BankingResult<Vec<CustomerAudit>> {
+        if !self.customer_repository.exists(customer_id).await? {
+            return Err(banking_api::BankingError::CustomerNotFound(customer_id));
+        }
+        let audit_models = self
+            .customer_repository
+            .get_audit_trail(customer_id)
+            .await?;
+        Ok(audit_models
+            .into_iter()
+            .map(CustomerMapper::audit_from_model)
+            .collect())
     }
 }
 

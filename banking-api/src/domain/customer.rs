@@ -248,6 +248,34 @@ pub struct CustomerComplianceStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomerDocument {
+    pub id: Uuid,
+    pub customer_id: Uuid,
+    pub document_type: HeaplessString<50>,
+    pub document_path: Option<HeaplessString<500>>,
+    pub status: DocumentStatus,
+    pub uploaded_at: DateTime<Utc>,
+    /// References Person.person_id
+    pub uploaded_by: Uuid,
+    pub verified_at: Option<DateTime<Utc>>,
+    /// References Person.person_id
+    pub verified_by: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomerAudit {
+    pub id: Uuid,
+    pub customer_id: Uuid,
+    pub field_name: HeaplessString<50>,
+    pub old_value: Option<HeaplessString<255>>,
+    pub new_value: Option<HeaplessString<255>>,
+    pub changed_at: DateTime<Utc>,
+    /// References Person.person_id
+    pub changed_by: Uuid,
+    pub reason: Option<HeaplessString<255>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum KycStatus {
     NotStarted,
     InProgress,

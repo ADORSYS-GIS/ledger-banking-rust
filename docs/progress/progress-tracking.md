@@ -72,6 +72,12 @@ This commit replaces `Vec<T>` with `BoundedVec<T, N>` across multiple crates to 
 
 ## Key Achievements (August 2025)
 
+### 🎉 Customer Domain Refactoring: Builder Pattern and Validation
+This commit introduces a comprehensive refactoring of the Customer domain to improve ergonomics, validation, and auditability.
+- **Builder Pattern**: Introduced `CustomerBuilder` for fluent and validated `Customer` creation, deprecating the legacy `Customer::new` function.
+- **Enhanced Validation**: Centralized validation logic within the domain and service layers for improved data integrity.
+- **Improved Auditability**: Shifted to `reason_id` for status changes, providing a clearer and more consistent audit trail.
+
 ### 🎉 Performance Refactoring: Slice-Based APIs
 This commit completes a significant performance-focused refactoring by replacing `Vec<T>` with `&[T]` in function signatures across the workspace.
 - **Performance Boost**: Reduces unnecessary heap allocations and memory copies, leading to faster execution.
