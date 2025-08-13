@@ -53,11 +53,11 @@ pub enum PersonType {
 impl std::fmt::Display for PersonType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PersonType::Natural => write!(f, "natural"),
-            PersonType::Legal => write!(f, "legal"),
-            PersonType::System => write!(f, "system"),
-            PersonType::Integration => write!(f, "integration"),
-            PersonType::Unknown => write!(f, "unknown"),
+            PersonType::Natural => write!(f, "Natural"),
+            PersonType::Legal => write!(f, "Legal"),
+            PersonType::System => write!(f, "System"),
+            PersonType::Integration => write!(f, "Integration"),
+            PersonType::Unknown => write!(f, "Unknown"),
         }
     }
 }
@@ -226,11 +226,11 @@ where
     S: serde::Serializer,
 {
     let type_str = match person_type {
-        PersonType::Natural => "natural",
-        PersonType::Legal => "legal",
-        PersonType::System => "system",
-        PersonType::Integration => "integration",
-        PersonType::Unknown => "unknown",
+        PersonType::Natural => "Natural",
+        PersonType::Legal => "Legal",
+        PersonType::System => "System",
+        PersonType::Integration => "Integration",
+        PersonType::Unknown => "Unknown",
     };
     serializer.serialize_str(type_str)
 }
@@ -241,10 +241,10 @@ where
 {
     let s = String::deserialize(deserializer)?;
     match s.as_str() {
-        "natural" => Ok(PersonType::Natural),
-        "legal" => Ok(PersonType::Legal),
-        "system" => Ok(PersonType::System),
-        "integration" => Ok(PersonType::Integration),
+        "Natural" => Ok(PersonType::Natural),
+        "Legal" => Ok(PersonType::Legal),
+        "System" => Ok(PersonType::System),
+        "Integration" => Ok(PersonType::Integration),
         "unknown" => Ok(PersonType::Unknown),
         _ => Err(serde::de::Error::custom(format!("Unknown person type: {s}"))),
     }

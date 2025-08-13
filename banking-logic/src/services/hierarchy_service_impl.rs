@@ -7,7 +7,7 @@ use uuid::Uuid;
 use banking_api::{
     BankingResult, BankingError,
     domain::{
-        AgentNetwork, AgencyBranch, AgentTerminal, ValidationResult,
+        AgentNetwork, AgencyBranch, AgentTerminal,
         NetworkStatus, BranchStatus, TerminalStatus
     },
     service::{HierarchyService, NetworkHierarchy, BranchHierarchy},
@@ -16,6 +16,7 @@ use banking_db::{
     repository::AgentNetworkRepository,
     models::agent_network::{BranchStatus as DbBranchStatus, TerminalStatus as DbTerminalStatus, NetworkStatus as DbNetworkStatus}
 };
+use banking_api::domain::transaction::TransactionValidationResult as ValidationResult;
 use banking_api::domain::TerminalLimits;
 use crate::mappers::AgentNetworkMapper;
 
@@ -104,16 +105,30 @@ impl HierarchyService for HierarchyServiceImpl {
             .ok_or_else(|| BankingError::Internal(format!("Terminal {terminal_id} not found")))?;
 
         if terminal_model.status != DbTerminalStatus::Active {
-            return Ok(ValidationResult::failure(vec![ format!("Terminal {terminal_id} is not active")
-            ]));
+            return Ok(ValidationResult::failure(
+                None,
+                vec![(
+                    Some(heapless::String::try_from("terminal_status").unwrap()),
+                    Some(heapless::String::try_from(format!("Terminal {terminal_id} is not active").as_str()).unwrap()),
+                    Some(heapless::String::try_from("TERMINAL_INACTIVE").unwrap()),
+                )],
+            ));
         }
 
         // Check terminal limit
         if terminal_model.current_daily_volume + amount > terminal_model.daily_transaction_limit {
-            return Ok(ValidationResult::failure(vec![ format!("Terminal daily limit exceeded. Current: {}, Limit: {}, Requested: {amount}", 
-                terminal_model.current_daily_volume, 
-                terminal_model.daily_transaction_limit)
-            ]));
+            return Ok(ValidationResult::failure(
+                None,
+                vec![(
+                    Some(heapless::String::try_from("terminal_limit").unwrap()),
+                    Some(heapless::String::try_from(format!(
+                        "Terminal daily limit exceeded. Current: {}, Limit: {}, Requested: {amount}",
+                        terminal_model.current_daily_volume,
+                        terminal_model.daily_transaction_limit
+                    ).as_str()).unwrap()),
+                    Some(heapless::String::try_from("TERMINAL_LIMIT_EXCEEDED").unwrap()),
+                )],
+            ));
         }
 
         // Get branch and validate it's active
@@ -123,16 +138,30 @@ impl HierarchyService for HierarchyServiceImpl {
             .ok_or_else(|| BankingError::Internal(format!("Branch {} not found", terminal_model.agency_branch_id)))?;
 
         if branch_model.status != DbBranchStatus::Active {
-            return Ok(ValidationResult::failure(vec![ format!("Branch {} is not active", terminal_model.agency_branch_id)
-            ]));
+            return Ok(ValidationResult::failure(
+                None,
+                vec![(
+                    Some(heapless::String::try_from("branch_status").unwrap()),
+                    Some(heapless::String::try_from(format!("Branch {} is not active", terminal_model.agency_branch_id).as_str()).unwrap()),
+                    Some(heapless::String::try_from("BRANCH_INACTIVE").unwrap()),
+                )],
+            ));
         }
 
         // Check branch limit
         if branch_model.current_daily_volume + amount > branch_model.daily_transaction_limit {
-            return Ok(ValidationResult::failure(vec![ format!("Branch daily limit exceeded. Current: {}, Limit: {}, Requested: {amount}", 
-                branch_model.current_daily_volume, 
-                branch_model.daily_transaction_limit)
-            ]));
+            return Ok(ValidationResult::failure(
+                None,
+                vec![(
+                    Some(heapless::String::try_from("branch_limit").unwrap()),
+                    Some(heapless::String::try_from(format!(
+                        "Branch daily limit exceeded. Current: {}, Limit: {}, Requested: {amount}",
+                        branch_model.current_daily_volume,
+                        branch_model.daily_transaction_limit
+                    ).as_str()).unwrap()),
+                    Some(heapless::String::try_from("BRANCH_LIMIT_EXCEEDED").unwrap()),
+                )],
+            ));
         }
 
         // Get network and validate it's active
@@ -142,19 +171,33 @@ impl HierarchyService for HierarchyServiceImpl {
             .ok_or_else(|| BankingError::Internal(format!("Network {} not found", branch_model.agent_network_id)))?;
 
         if network_model.status != DbNetworkStatus::Active {
-            return Ok(ValidationResult::failure(vec![ format!("Network {} is not active", branch_model.agent_network_id)
-            ]));
+            return Ok(ValidationResult::failure(
+                None,
+                vec![(
+                    Some(heapless::String::try_from("network_status").unwrap()),
+                    Some(heapless::String::try_from(format!("Network {} is not active", branch_model.agent_network_id).as_str()).unwrap()),
+                    Some(heapless::String::try_from("NETWORK_INACTIVE").unwrap()),
+                )],
+            ));
         }
 
         // Check network limit
         if network_model.current_daily_volume + amount > network_model.aggregate_daily_limit {
-            return Ok(ValidationResult::failure(vec![ format!("Network daily limit exceeded. Current: {}, Limit: {}, Requested: {amount}", 
-                    network_model.current_daily_volume, 
-                    network_model.aggregate_daily_limit)
-            ]));
+            return Ok(ValidationResult::failure(
+                None,
+                vec![(
+                    Some(heapless::String::try_from("network_limit").unwrap()),
+                    Some(heapless::String::try_from(format!(
+                        "Network daily limit exceeded. Current: {}, Limit: {}, Requested: {amount}",
+                        network_model.current_daily_volume,
+                        network_model.aggregate_daily_limit
+                    ).as_str()).unwrap()),
+                    Some(heapless::String::try_from("NETWORK_LIMIT_EXCEEDED").unwrap()),
+                )],
+            ));
         }
 
-        Ok(ValidationResult::success())
+        Ok(ValidationResult::success(None))
     }
 
     /// Get branch GL prefix for transaction coding

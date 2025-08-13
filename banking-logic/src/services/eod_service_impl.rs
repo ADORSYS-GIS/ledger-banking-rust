@@ -15,9 +15,9 @@ use banking_api::{
 use banking_db::{repository::{
     AccountRepository, CalendarRepository, ProductRepository, TransactionRepository,
     WorkflowRepository,
-}, AccountType};
+}, DbAccountType};
 
-use crate::mappers::{ApiMapper, ProductMapper};
+use crate::mappers::ProductMapper;
 
 /// Production implementation of EodService
 /// Orchestrates end-of-day processing across all banking operations
@@ -208,7 +208,7 @@ impl EodService for EodServiceImpl {
         let started_at = Utc::now();
         
         // Find loan accounts
-        let loan_accounts = self.account_repository.find_by_account_type(AccountType::Loan).await
+        let loan_accounts = self.account_repository.find_by_account_type(DbAccountType::Loan).await
             .unwrap_or_else(|_| vec![]);
         
         let mut processed = 0;

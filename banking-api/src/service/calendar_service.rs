@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use chrono::NaiveDate;
+use uuid::Uuid;
 
 use crate::{
-    domain::{BankHoliday, BusinessDayCalculation},
+    domain::{BankHoliday, BusinessDayCalculation, WeekendDays},
     error::BankingResult,
 };
 
@@ -27,7 +28,7 @@ pub trait CalendarService: Send + Sync {
     async fn add_bank_holiday(&self, holiday: BankHoliday) -> BankingResult<()>;
 
     /// Remove a bank holiday
-    async fn remove_bank_holiday(&self, holiday_id: uuid::Uuid) -> BankingResult<()>;
+    async fn remove_bank_holiday(&self, holiday_id: Uuid) -> BankingResult<()>;
 
     /// Get all holidays for a jurisdiction and year
     async fn get_holidays(&self, jurisdiction: &str, year: i32) -> BankingResult<Vec<BankHoliday>>;
@@ -41,6 +42,15 @@ pub trait CalendarService: Send + Sync {
     /// Check if date falls on weekend
     async fn is_weekend(&self, date: NaiveDate, jurisdiction: &str) -> BankingResult<bool>;
 
-    /// Get weekend days for jurisdiction
-    async fn get_weekend_days(&self, jurisdiction: &str) -> BankingResult<Vec<chrono::Weekday>>;
+    /// Create a new weekend days configuration
+    async fn create_weekend_days(&self, weekend_days: WeekendDays) -> BankingResult<WeekendDays>;
+
+    /// Get a weekend days configuration by its ID
+    async fn get_weekend_days_by_id(&self, weekend_days_id: Uuid) -> BankingResult<Option<WeekendDays>>;
+
+    /// Update an existing weekend days configuration
+    async fn update_weekend_days(&self, weekend_days: WeekendDays) -> BankingResult<WeekendDays>;
+
+    /// Delete a weekend days configuration by its ID
+    async fn delete_weekend_days(&self, weekend_days_id: Uuid) -> BankingResult<()>;
 }

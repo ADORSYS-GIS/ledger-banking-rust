@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use banking_api::BankingResult;
 use uuid::Uuid;
 
-use crate::models::channel::{ChannelModel, ChannelStatus};
+use crate::{models::channel::{ChannelModel, ChannelStatus}, ChannelType};
 
 #[async_trait]
 pub trait ChannelRepository: Send + Sync {
@@ -19,7 +19,7 @@ pub trait ChannelRepository: Send + Sync {
     async fn find_by_code(&self, channel_code: &str) -> BankingResult<Option<ChannelModel>>;
     
     /// Find channels by type
-    async fn find_by_type(&self, channel_type: &str) -> BankingResult<Vec<ChannelModel>>;
+    async fn find_by_type(&self, channel_type: ChannelType) -> BankingResult<Vec<ChannelModel>>;
     
     /// Find all active channels
     async fn find_active(&self) -> BankingResult<Vec<ChannelModel>>;

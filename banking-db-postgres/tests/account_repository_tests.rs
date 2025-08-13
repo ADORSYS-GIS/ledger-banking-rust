@@ -1,4 +1,4 @@
-use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
+use banking_db::{DbAccountStatus, DbAccountType, DbSigningCondition};
 use banking_db::models::AccountModel;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
@@ -19,9 +19,9 @@ fn create_test_account() -> AccountModel {
         id: account_id,
         product_id: Uuid::new_v4(),
         gl_code_suffix: None,
-        account_type: AccountType::Savings,
-        account_status: AccountStatus::Active,
-        signing_condition: SigningCondition::AnyOwner,
+        account_type: DbAccountType::Savings,
+        account_status: DbAccountStatus::Active,
+        signing_condition: DbSigningCondition::AnyOwner,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
         domicile_agency_branch_id: domicile_agency_branch_id,
@@ -91,9 +91,9 @@ fn create_test_loan_account() -> AccountModel {
         id: account_id,
         product_id: Uuid::new_v4(),
         gl_code_suffix: None,
-        account_type: AccountType::Loan,
-        account_status: AccountStatus::Active,
-        signing_condition: SigningCondition::None,
+        account_type: DbAccountType::Loan,
+        account_status: DbAccountStatus::Active,
+        signing_condition: DbSigningCondition::None,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
         domicile_agency_branch_id: domicile_agency_branch_id,
@@ -172,7 +172,7 @@ async fn setup_test_db() -> PgPool {
     sqlx::query(
         r#"
         INSERT INTO persons (id, person_type, display_name, external_identifier)
-        VALUES ($1, 'system', 'Test User', 'test-user')
+        VALUES ($1, 'System', 'Test User', 'test-user')
         ON CONFLICT (id) DO NOTHING
         "#
     )
@@ -323,7 +323,7 @@ async fn test_account_status_operations() {
     let updated_account = repo.find_by_id(account.id).await
         .expect("Failed to find account")
         .expect("Account not found");
-    assert_eq!(updated_account.account_status, AccountStatus::Frozen);
+    assert_eq!(updated_account.account_status, DbAccountStatus::Frozen);
     assert_eq!(updated_account.status_changed_by_person_id, Some(changed_by));
     assert!(updated_account.status_change_timestamp.is_some());
 }
@@ -349,7 +349,7 @@ async fn test_find_operations() {
     let mut account2 = create_test_account();
     account2.id = Uuid::new_v4();
     account2.product_id = Uuid::new_v4();
-    account2.account_status = AccountStatus::Dormant;
+    account2.account_status = DbAccountStatus::Dormant;
     
     // Create accounts
     repo.create(account1.clone()).await.expect("Failed to create account1");
@@ -384,7 +384,7 @@ async fn test_interest_bearing_accounts() {
     let loan_account = create_test_loan_account(); // Loan account
     let mut current_account = create_test_account();
     current_account.id = Uuid::new_v4();
-    current_account.account_type = AccountType::Current;
+    current_account.account_type = DbAccountType::Current;
     
     // Create accounts
     repo.create(savings_account.clone()).await.expect("Failed to create savings account");
@@ -541,14 +541,14 @@ async fn test_account_model_validation() {
 #[tokio::test]
 async fn test_enum_conversions() {
     // Test AccountType enum (Debug format for now)
-    assert_eq!(format!("{:?}", AccountType::Savings), "Savings");
-    assert_eq!(format!("{:?}", AccountType::Current), "Current");
-    assert_eq!(format!("{:?}", AccountType::Loan), "Loan");
+    assert_eq!(format!("{:?}", DbAccountType::Savings), "Savings");
+    assert_eq!(format!("{:?}", DbAccountType::Current), "Current");
+    assert_eq!(format!("{:?}", DbAccountType::Loan), "Loan");
     
     // Test AccountStatus enum (Debug format for now)
-    assert_eq!(format!("{:?}", AccountStatus::Active), "Active");
-    assert_eq!(format!("{:?}", AccountStatus::Frozen), "Frozen");
-    assert_eq!(format!("{:?}", AccountStatus::Closed), "Closed");
+    assert_eq!(format!("{:?}", DbAccountStatus::Active), "Active");
+    assert_eq!(format!("{:?}", DbAccountStatus::Frozen), "Frozen");
+    assert_eq!(format!("{:?}", DbAccountStatus::Closed), "Closed");
 }
 
 #[cfg(feature = "postgres_tests")]
@@ -586,8 +586,8 @@ async fn test_account_status_history() {
     let status_change = banking_db::models::AccountStatusChangeRecordModel {
         id: Uuid::new_v4(),
         account_id: account.id,
-        old_status: Some(AccountStatus::Active),
-        new_status: AccountStatus::Frozen,
+        old_status: Some(DbAccountStatus::Active),
+        new_status: DbAccountStatus::Frozen,
         reason_id: reason_id,
         additional_context: Some("Test freeze".try_into().unwrap()),
         changed_by_person_id: changed_by,
@@ -601,5 +601,5 @@ async fn test_account_status_history() {
     let history = repo.get_status_history(account.id).await.expect("Failed to get status history");
 
     assert!(!history.is_empty());
-    assert_eq!(history[0].new_status, AccountStatus::Frozen);
+    assert_eq!(history[0].new_status, DbAccountStatus::Frozen);
 }

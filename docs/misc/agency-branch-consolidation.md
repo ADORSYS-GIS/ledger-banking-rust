@@ -95,7 +95,7 @@ pub enum BranchType {
     AgentOutlet,
     StandaloneKiosk,
     PartnerAgent,
-    ATMLocation,
+    AtmLocation,
     MobileUnit,
 }
 

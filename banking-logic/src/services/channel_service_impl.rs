@@ -10,7 +10,7 @@ use banking_api::{
     },
 };
 use banking_db::repository::ChannelRepository;
-use crate::mappers::ChannelMapper;
+use crate::mappers::{ChannelMapper};
 
 /// Implementation of the ChannelProcessor service
 pub struct ChannelServiceImpl<R: ChannelRepository> {
@@ -91,6 +91,8 @@ impl<R: ChannelRepository + Send + Sync> ChannelProcessor for ChannelServiceImpl
             total_amount: rust_decimal::Decimal::ZERO,
             status: banking_api::domain::channel::ReconciliationStatus::Completed,
             generated_at: chrono::Utc::now(),
+            completed_at: None,
+            created_at: chrono::Utc::now(),
         };
         
         Ok(report)
@@ -173,8 +175,8 @@ impl<R: ChannelRepository + Send + Sync> ChannelProcessor for ChannelServiceImpl
 
     /// Get channels by type
     async fn get_channels_by_type(&self, channel_type: ChannelType) -> BankingResult<Vec<Channel>> {
-        let type_str = format!("{channel_type:?}");
-        let models = self.repository.find_by_type(&type_str).await?;
+        let db_channel_type = ChannelMapper::map_to_db_channel_type(channel_type);
+        let models = self.repository.find_by_type(db_channel_type).await?;
         let mut channels = Vec::new();
         
         for model in models {

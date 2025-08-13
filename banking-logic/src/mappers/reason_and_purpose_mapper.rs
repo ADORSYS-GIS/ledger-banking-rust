@@ -143,8 +143,8 @@ mod tests {
             compliance_metadata: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            created_by_person_id: HeaplessString::try_from("test_user").unwrap(),
-            updated_by_person_id: HeaplessString::try_from("test_user").unwrap(),
+            created_by_person_id: Uuid::new_v4(),
+            updated_by_person_id: Uuid::new_v4(),
         };
 
         // Test domain -> model -> domain roundtrip

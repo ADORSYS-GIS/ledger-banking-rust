@@ -186,72 +186,105 @@ pub enum FeeFrequency {
 // ======== Collection Agent Database Models ========
 
 /// Database model for Collection Agent
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct CollectionAgentModel {
     pub id: Uuid,
     pub person_id: Uuid,
-    pub license_number: HeaplessString<50>,
+    pub license_number: String,
     pub license_expiry: NaiveDate,
     pub status: AgentStatus,
     pub assigned_territory_id: Uuid,
-    
-    // Performance metrics fields (flattened)
-    pub performance_collection_rate: Decimal,
-    pub performance_customer_satisfaction_score: Decimal,
-    pub performance_punctuality_score: Decimal,
-    pub performance_cash_handling_accuracy: Decimal,
-    pub performance_compliance_score: Decimal,
-    pub performance_total_collections: i64,
-    pub performance_total_amount_collected: Decimal,
-    pub performance_average_collection_time_minutes: i64, // Duration as minutes
-    pub performance_customer_retention_rate: Decimal,
-    pub performance_route_efficiency: Decimal,
-    
-    // Monthly targets fields (flattened)
-    pub targets_collection_target: Decimal,
-    pub targets_customer_target: i32,
-    pub targets_satisfaction_target: Decimal,
-    pub targets_punctuality_target: Decimal,
-    pub targets_accuracy_target: Decimal,
-    
+    pub agent_performance_metrics_id: Uuid,
     pub cash_limit: Decimal,
-    
-    // Device information fields (flattened)
-    pub device_id: Uuid,
-    pub device_external_id: HeaplessString<100>,
-    pub device_type: DeviceType,
-    pub device_model: HeaplessString<50>,
-    pub device_os_version: HeaplessString<50>,
-    pub device_app_version: HeaplessString<20>,
-    pub device_last_sync: Option<DateTime<Utc>>,
-    pub device_battery_level: Option<f32>,
-    pub device_connectivity_status: ConnectivityStatus,
-    
-    // Security features fields (flattened)
-    pub security_biometric_enabled: bool,
-    pub security_pin_protection: bool,
-    pub security_encryption_enabled: bool,
-    pub security_remote_wipe_enabled: bool,
-    pub security_certificate_installed: bool,
-    pub security_last_security_scan: Option<DateTime<Utc>>,
-    
+    pub device_information_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
+/// Database model for Territory
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TerritoryModel {
+    pub id: Uuid,
+    pub territory_name: String,
+    pub coverage_area_id: Uuid,
+    pub customer_count: i32,
+    pub route_optimization_enabled: bool,
+    pub territory_manager_person_id: Option<Uuid>,
+}
+
+/// Database model for Agent Performance Metrics
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AgentPerformanceMetricsModel {
+    pub id: Uuid,
+    pub collection_rate: Decimal,
+    pub customer_satisfaction_score: Decimal,
+    pub punctuality_score: Decimal,
+    pub cash_handling_accuracy: Decimal,
+    pub compliance_score: Decimal,
+    pub total_collections: i64,
+    pub total_amount_collected: Decimal,
+    pub average_collection_time_minutes: i64,
+    pub customer_retention_rate: Decimal,
+    pub route_efficiency: Decimal,
+    pub monthly_targets_id: Uuid,
+}
+
+/// Database model for Monthly Targets
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct MonthlyTargetsModel {
+    pub id: Uuid,
+    pub collection_target: Decimal,
+    pub customer_target: i32,
+    pub satisfaction_target: Decimal,
+    pub punctuality_target: Decimal,
+    pub accuracy_target: Decimal,
+}
+
+/// Database model for Device Information
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DeviceInformationModel {
+    pub id: Uuid,
+    pub external_id: String,
+    pub device_type: DeviceType,
+    pub model: String,
+    pub os_version: String,
+    pub app_version: String,
+    pub last_sync: Option<DateTime<Utc>>,
+    pub battery_level: Option<f32>,
+    pub connectivity_status: ConnectivityStatus,
+    pub security_features_id: Uuid,
+}
+
+/// Database model for Security Features
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CollectionSecurityFeaturesModel {
+    pub id: Uuid,
+    pub biometric_enabled: bool,
+    pub pin_protection: bool,
+    pub encryption_enabled: bool,
+    pub remote_wipe_enabled: bool,
+    pub certificate_installed: bool,
+    pub last_security_scan: Option<DateTime<Utc>>,
+}
+
 /// Database model for Coverage Areas
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct CoverageAreaModel {
     pub id: Uuid,
-    pub territory_id: Uuid,
-    pub area_name: HeaplessString<100>,
+    pub area_name: String,
     pub area_type: AreaType,
-    pub boundary_coordinates: HeaplessString<2000>, // Serialized JSON coordinates
+    pub boundary_coordinates_long_1: Option<Decimal>,
+    pub boundary_coordinates_lat_1: Option<Decimal>,
+    pub boundary_coordinates_long_2: Option<Decimal>,
+    pub boundary_coordinates_lat_2: Option<Decimal>,
+    pub boundary_coordinates_long_3: Option<Decimal>,
+    pub boundary_coordinates_lat_3: Option<Decimal>,
+    pub boundary_coordinates_long_4: Option<Decimal>,
+    pub boundary_coordinates_lat_4: Option<Decimal>,
+    pub boundary_coordinates_long_5: Option<Decimal>,
+    pub boundary_coordinates_lat_5: Option<Decimal>,
     pub customer_density: CustomerDensity,
     pub transport_mode: TransportMode,
-    pub created_at: DateTime<Utc>,
 }
 
 /// Database model for Collection Operating Hours
@@ -274,7 +307,7 @@ pub struct CollectionOperatingHoursModel {
     pub saturday_close: Option<NaiveTime>,
     pub sunday_open: Option<NaiveTime>,
     pub sunday_close: Option<NaiveTime>,
-    pub timezone: HeaplessString<50>,
+    pub timezone: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -302,8 +335,8 @@ pub struct PerformanceAlertModel {
 #[derive(sqlx::FromRow)]
 pub struct CollectionProgramModel {
     pub id: Uuid,
-    pub name: HeaplessString<100>,
-    pub description: HeaplessString<500>,
+    pub name: String,
+    pub description: String,
     pub program_type: CollectionProgramType,
     pub status: ProgramStatus,
     pub start_date: NaiveDate,
@@ -355,7 +388,7 @@ pub struct CustomerCollectionProfileModel {
     // Collection schedule fields (flattened)
     pub schedule_frequency: CollectionFrequency,
     pub schedule_collection_time: NaiveTime,
-    pub schedule_timezone: HeaplessString<50>,
+    pub schedule_timezone: String,
     pub schedule_holiday_handling: HolidayHandling,
     
     pub assigned_collection_agent_id: Uuid,
@@ -402,28 +435,28 @@ pub struct CollectionRecordModel {
     pub collection_date: NaiveDate,
     pub collection_time: DateTime<Utc>,
     pub amount: Decimal,
-    pub currency: HeaplessString<3>,
+    pub currency: String,
     pub collection_method: CollectionMethod,
     pub location_address_id: Option<Uuid>,
-    pub receipt_number: HeaplessString<50>,
+    pub receipt_number: String,
     pub status: CollectionRecordStatus,
-    pub notes: Option<HeaplessString<500>>,
+    pub notes: Option<String>,
     
     // Verification data fields (flattened)
-    pub verification_customer_signature: Option<HeaplessString<200>>,
-    pub verification_agent_verification_code: Option<HeaplessString<50>>,
-    pub verification_fingerprint_hash: Option<HeaplessString<100>>,
+    pub verification_customer_signature: Option<String>,
+    pub verification_agent_verification_code: Option<String>,
+    pub verification_fingerprint_hash: Option<String>,
     pub verification_face_recognition_score: Option<f64>,
     pub verification_biometric_method: Option<BiometricMethod>,
     pub verification_confidence_level: Option<f64>,
-    pub verification_customer_photo_hash: Option<HeaplessString<100>>,
-    pub verification_receipt_photo_hash: Option<HeaplessString<100>>,
-    pub verification_location_photo_hash: Option<HeaplessString<100>>,
+    pub verification_customer_photo_hash: Option<String>,
+    pub verification_receipt_photo_hash: Option<String>,
+    pub verification_location_photo_hash: Option<String>,
     pub verification_photo_timestamp: Option<DateTime<Utc>>,
-    pub verification_witness_name: Option<HeaplessString<100>>,
-    pub verification_witness_contact: Option<HeaplessString<50>>,
-    pub verification_witness_relationship: Option<HeaplessString<50>>,
-    pub verification_witness_signature: Option<HeaplessString<200>>,
+    pub verification_witness_name: Option<String>,
+    pub verification_witness_contact: Option<String>,
+    pub verification_witness_relationship: Option<String>,
+    pub verification_witness_signature: Option<String>,
     pub verification_timestamp: Option<DateTime<Utc>>,
     
     pub created_at: DateTime<Utc>,
@@ -440,7 +473,7 @@ pub struct CollectionBatchModel {
     pub collection_date: NaiveDate,
     pub total_collections: i32,
     pub total_amount: Decimal,
-    pub currency: HeaplessString<3>,
+    pub currency: String,
     pub status: BatchStatus,
     pub collection_records: Vec<Uuid>,
     
@@ -448,7 +481,7 @@ pub struct CollectionBatchModel {
     pub reconciliation_expected_amount: Option<Decimal>,
     pub reconciliation_actual_amount: Option<Decimal>,
     pub reconciliation_variance: Option<Decimal>,
-    pub reconciliation_variance_reason: Option<HeaplessString<500>>,
+    pub reconciliation_variance_reason: Option<String>,
     pub reconciled_by_person_id: Option<Uuid>,
     pub reconciliation_timestamp: Option<DateTime<Utc>>,
     pub reconciliation_adjustment_required: Option<bool>,

@@ -127,18 +127,8 @@ impl TryFromRow<sqlx::postgres::PgRow> for ReasonAndPurposeModel {
             compliance_metadata: None, // TODO: Implement JSON parsing for compliance metadata
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            created_by_person_id: HeaplessString::try_from(
-                row.get::<String, _>("created_by_person_id").as_str()
-            ).map_err(|_| BankingError::ValidationError {
-                field: "created_by_person_id".to_string(),
-                message: "Created by too long".to_string(),
-            })?,
-            updated_by_person_id: HeaplessString::try_from(
-                row.get::<String, _>("updated_by_person_id").as_str()
-            ).map_err(|_| BankingError::ValidationError {
-                field: "updated_by_person_id".to_string(),
-                message: "Updated by too long".to_string(),
-            })?,
+            created_by_person_id: row.get("created_by_person_id"),
+            updated_by_person_id: row.get("updated_by_person_id"),
         })
     }
 }
@@ -177,8 +167,8 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         .bind(reason.display_order)
         .bind(reason.created_at)
         .bind(reason.updated_at)
-        .bind(reason.created_by_person_id.as_str())
-        .bind(reason.updated_by_person_id.as_str())
+        .bind(reason.created_by_person_id)
+        .bind(reason.updated_by_person_id)
         .fetch_one(&self.pool)
         .await
         .map_err(BankingError::from)?;
@@ -250,7 +240,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         .bind(reason.severity.as_ref().map(|s| s.to_string()))
         .bind(reason.display_order)
         .bind(reason.updated_at)
-        .bind(reason.updated_by_person_id.as_str())
+        .bind(reason.updated_by_person_id)
         .fetch_one(&self.pool)
         .await
         .map_err(BankingError::from)?;
@@ -268,7 +258,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         Ok(())
     }
     
-    async fn deactivate(&self, reason_id: Uuid, deactivated_by: &str) -> BankingResult<()> {
+    async fn deactivate(&self, reason_id: Uuid, deactivated_by: Uuid) -> BankingResult<()> {
         sqlx::query(
             "UPDATE reason_and_purpose SET is_active = false, updated_at = NOW(), updated_by_person_id = $2 WHERE id = $1"
         )
@@ -281,7 +271,7 @@ impl ReasonAndPurposeRepository for ReasonAndPurposeRepositoryImpl {
         Ok(())
     }
     
-    async fn reactivate(&self, reason_id: Uuid, reactivated_by: &str) -> BankingResult<()> {
+    async fn reactivate(&self, reason_id: Uuid, reactivated_by: Uuid) -> BankingResult<()> {
         sqlx::query(
             "UPDATE reason_and_purpose SET is_active = true, updated_at = NOW(), updated_by_person_id = $2 WHERE id = $1"
         )

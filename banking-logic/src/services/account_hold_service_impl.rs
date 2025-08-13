@@ -6,15 +6,13 @@ use banking_api::{
         AccountHold, AccountHoldExpiryJob, AccountHoldReleaseRequest, AccountHoldSummary,
         HoldPriority, HoldStatus, HoldType, PlaceHoldRequest,
     },
-
-    service::{account_hold_service::AccountHoldService, HighHoldAccount, HoldAnalytics, HoldAuthorizationLevel, JudicialHoldReport},
+    service::{
+        account_hold_service::AccountHoldService, HighHoldAccount, HoldAnalytics, HoldAuthorizationLevel,
+        JudicialHoldReport,
+    },
     BankingResult,
 };
-use banking_db::{
-    repository::{
-        AccountRepository,
-    },
-};
+use banking_db::repository::{AccountHoldRepository, AccountRepository};
 use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use uuid::Uuid;
@@ -25,22 +23,36 @@ use crate::mappers::account_hold_mapper::AccountHoldMapper;
 pub struct AccountHoldServiceImpl {
     #[allow(dead_code)]
     account_repo: Arc<dyn AccountRepository>,
+    account_hold_repo: Arc<dyn AccountHoldRepository>,
 }
 
 impl AccountHoldServiceImpl {
-    pub fn new(account_repo: Arc<dyn AccountRepository>) -> Self {
-        Self { account_repo }
+    pub fn new(
+        account_repo: Arc<dyn AccountRepository>,
+        account_hold_repo: Arc<dyn AccountHoldRepository>,
+    ) -> Self {
+        Self {
+            account_repo,
+            account_hold_repo,
+        }
     }
 }
 
 #[async_trait]
 impl AccountHoldService for AccountHoldServiceImpl {
-    async fn get_active_holds(&self, _account_id: Uuid) -> BankingResult<Vec<AccountHold>> {
-        unimplemented!()
+    async fn get_active_holds(&self, account_id: Uuid) -> BankingResult<Vec<AccountHold>> {
+        let holds = self.account_hold_repo.find_active_holds(account_id).await?;
+        let domain_holds = holds
+            .into_iter()
+            .map(AccountHoldMapper::account_hold_from_model)
+            .collect();
+        Ok(domain_holds)
     }
 
-    async fn release_hold(&self, _hold_id: Uuid, _released_by_person_id: Uuid) -> BankingResult<()> {
-        unimplemented!()
+    async fn release_hold(&self, hold_id: Uuid, released_by_person_id: Uuid) -> BankingResult<()> {
+        self.account_hold_repo
+            .release_hold(hold_id, released_by_person_id)
+            .await
     }
 
     async fn place_hold(
@@ -48,27 +60,9 @@ impl AccountHoldService for AccountHoldServiceImpl {
         request: PlaceHoldRequest,
     ) -> BankingResult<AccountHold> {
         let id = Uuid::new_v4();
-        let model = AccountHoldMapper::place_hold_request_to_model(request, id);
-        // this should be calling a repo method to create a hold, which doesn't exist yet
-        // for now, we'll just return a dummy response
-        let hold = AccountHold {
-            id,
-            account_id: model.account_id,
-            amount: model.amount,
-            hold_type: model.hold_type,
-            reason_id: model.reason_id,
-            additional_details: model.additional_details,
-            placed_by_person_id: model.placed_by_person_id,
-            placed_at: Utc::now(),
-            expires_at: model.expires_at,
-            status: HoldStatus::Active,
-            released_at: None,
-            released_by_person_id: None,
-            priority: model.priority,
-            source_reference: model.source_reference,
-            automatic_release: false,
-        };
-        Ok(hold)
+        let model = (request, id).into();
+        let created_hold = self.account_hold_repo.create_hold(model).await?;
+        Ok(AccountHoldMapper::account_hold_from_model(created_hold))
     }
 
     async fn release_hold_with_request(

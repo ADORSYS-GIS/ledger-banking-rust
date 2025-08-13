@@ -9,8 +9,7 @@ use banking_api::{
     service::ProductService,
 };
 use banking_db::repository::ProductRepository;
-use crate::mappers::{product_mapper, DBMapper};
-use crate::mappers::ApiMapper;
+use crate::mappers::product_mapper;
 
 pub struct ProductServiceImpl<R: ProductRepository> {
     product_repository: Arc<R>,

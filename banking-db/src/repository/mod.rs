@@ -16,6 +16,7 @@ pub mod product_repository;
 
 pub use customer_repository::*;
 pub use account_repository::*;
+pub use account_hold_repository::*;
 pub use transaction_repository::*;
 pub use agent_network_repository::*;
 pub use compliance_repository::*;

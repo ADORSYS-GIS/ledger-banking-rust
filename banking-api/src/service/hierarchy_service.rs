@@ -3,14 +3,14 @@ use rust_decimal::Decimal;
 use uuid::Uuid;
 
 use crate::{
-    domain::{ValidationResult, TerminalLimits, AgentNetwork, AgencyBranch, AgentTerminal},
+    domain::{TransactionValidationResult, TerminalLimits, AgentNetwork, AgencyBranch, AgentTerminal},
     error::BankingResult,
 };
 
 #[async_trait]
 pub trait HierarchyService: Send + Sync {
     /// Validate hierarchical limits (Terminal → Branch → Network)
-    async fn validate_hierarchical_limits(&self, terminal_id: Uuid, amount: Decimal) -> BankingResult<ValidationResult>;
+    async fn validate_hierarchical_limits(&self, terminal_id: Uuid, amount: Decimal) -> BankingResult<TransactionValidationResult>;
     
     /// Get branch GL prefix for transaction coding
     async fn get_branch_gl_prefix(&self, branch_id: Uuid) -> BankingResult<String>;

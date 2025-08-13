@@ -7,14 +7,15 @@ use uuid::Uuid;
 use heapless::String as HeaplessString;
 
 use banking_api::{
-    BankingResult, BankingError, Transaction, ApprovalWorkflow,
+    BankingResult, BankingError, Transaction, TransactionApprovalWorkflow,
     service::TransactionService,
-    domain::{TransactionType, TransactionStatus, AccountStatus, ValidationResult},
+    domain::{TransactionType, TransactionStatus, AccountStatus},
 };
 use banking_db::repository::{TransactionRepository, AccountRepository};
 use crate::{
     mappers::{TransactionMapper, AccountMapper},
 };
+use banking_api::domain::transaction::TransactionValidationResult as ValidationResult;
 use banking_db::repository::ProductRepository;
 
 /// Production implementation of TransactionService
@@ -64,7 +65,12 @@ impl TransactionService for TransactionServiceImpl {
             let failed_transaction = TransactionMapper::to_model(transaction.clone());
             self.transaction_repository.create(failed_transaction).await?;
             
-            let reasons = validation_result.get_failure_reasons().join(", ");
+            let reasons = validation_result
+                .get_failure_reasons()
+                .iter()
+                .map(|(field, message, code)| format!("{field}: {message} ({code})"))
+                .collect::<Vec<String>>()
+                .join(", ");
             return Err(banking_api::BankingError::ValidationFailed(reasons));
         }
 
@@ -101,25 +107,25 @@ impl TransactionService for TransactionServiceImpl {
 
     /// Validate transaction limits across multiple tiers
     async fn validate_transaction_limits(&self, transaction: &Transaction) -> BankingResult<ValidationResult> {
-        let mut validation_result = ValidationResult::success();
+        let mut validation_result = ValidationResult::success(Some(transaction.id));
 
         // Account-level validations
         let account_validation = self.validate_account_level_limits(transaction).await?;
-        validation_result.merge(account_validation);
+        validation_result.merge(&account_validation);
 
         // Product-level validations
         let product_validation = self.validate_product_level_limits(transaction).await?;
-        validation_result.merge(product_validation);
+        validation_result.merge(&product_validation);
 
         // Terminal/Agent-level validations
         if let Some(terminal_id) = transaction.terminal_id {
             let terminal_validation = self.validate_terminal_level_limits(transaction, terminal_id).await?;
-            validation_result.merge(terminal_validation);
+            validation_result.merge(&terminal_validation);
         }
 
         // Customer risk-based validations
         let risk_validation = self.validate_risk_level_limits(transaction).await?;
-        validation_result.merge(risk_validation);
+        validation_result.merge(&risk_validation);
 
         Ok(validation_result)
     }
@@ -256,7 +262,7 @@ impl TransactionService for TransactionServiceImpl {
     }
 
     /// Initiate approval workflow for multi-party authorization
-    async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<ApprovalWorkflow> {
+    async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<TransactionApprovalWorkflow> {
         // Get account information to determine required approvers
         let account = self.account_repository
             .find_by_id(transaction.account_id)
@@ -266,22 +272,22 @@ impl TransactionService for TransactionServiceImpl {
         let account_domain = AccountMapper::from_model(account)?;
 
         // Determine required approvers based on signing condition
-        let required_approvers = self.get_required_approvers(&account_domain, &transaction).await?;
+        let _required_approvers = self.get_required_approvers(&account_domain, &transaction).await?;
 
         // Create workflow
-        let workflow = ApprovalWorkflow {
+        let workflow = TransactionApprovalWorkflow {
             id: Uuid::new_v4(),
             transaction_id: transaction.id,
-            required_approvers: required_approvers.clone(),
-            received_approvals: Vec::new(),
             status: banking_api::domain::TransactionWorkflowStatus::Pending,
             timeout_at: Utc::now() + chrono::Duration::hours(24), // 24-hour timeout
+            completed_at: None,
+            created_at: Utc::now(),
         };
 
         // Persist workflow (this would typically involve a workflow repository)
         tracing::info!(
-            "Approval workflow {} initiated for transaction {} with {} required approvers",
-            workflow.id, transaction.id, required_approvers.len()
+            "Approval workflow {} initiated for transaction {}",
+            workflow.id, transaction.id
         );
 
         Ok(workflow)
@@ -295,7 +301,7 @@ impl TransactionService for TransactionServiceImpl {
             .await?
             .ok_or(banking_api::BankingError::TransactionNotFound(transaction_id.to_string()))?;
 
-        if transaction.status != TransactionStatus::AwaitingApproval {
+        if transaction.status != banking_db::TransactionStatus::AwaitingApproval {
             return Err(banking_api::BankingError::ValidationError {
                 field: "status".to_string(),
                 message: format!("Transaction {transaction_id} is not awaiting approval"),
@@ -317,7 +323,7 @@ impl TransactionService for TransactionServiceImpl {
     }
 
     /// Validate account transactional status
-    async fn validate_account_transactional_status(&self, _account_id: Uuid, _transaction_type: banking_api::domain::TransactionType) -> BankingResult<banking_api::domain::ValidationResult> {
+    async fn validate_account_transactional_status(&self, _account_id: Uuid, _transaction_type: banking_api::domain::TransactionType) -> BankingResult<banking_api::domain::TransactionValidationResult> {
         todo!("Implement validate_account_transactional_status")
     }
 
@@ -368,7 +374,12 @@ impl TransactionService for TransactionServiceImpl {
     }
 
     /// Update transaction status
-    async fn update_transaction_status(&self, transaction_id: Uuid, status: banking_api::domain::TransactionStatus, reason: String) -> BankingResult<()> {
+    async fn update_transaction_status(
+        &self,
+        transaction_id: Uuid,
+        status: banking_api::domain::TransactionStatus,
+        reason: String,
+    ) -> BankingResult<()> {
         let status_str = match status {
             TransactionStatus::Pending => "Pending",
             TransactionStatus::Posted => "Posted",
@@ -377,7 +388,9 @@ impl TransactionService for TransactionServiceImpl {
             TransactionStatus::AwaitingApproval => "AwaitingApproval",
             TransactionStatus::ApprovalRejected => "ApprovalRejected",
         };
-        self.transaction_repository.update_status(transaction_id, status_str, &reason).await
+        self.transaction_repository
+            .update_status(transaction_id, status_str, &reason)
+            .await
     }
 }
 
@@ -415,7 +428,7 @@ impl TransactionServiceImpl {
 
     /// Validate account-level transaction rules
     async fn validate_account_level_limits(&self, transaction: &Transaction) -> BankingResult<ValidationResult> {
-        let mut result = ValidationResult::success();
+        let mut result = ValidationResult::success(Some(transaction.id));
 
         // Get account details
         let account = self.account_repository
@@ -428,16 +441,36 @@ impl TransactionServiceImpl {
         // Check account status
         match account_domain.account_status {
             AccountStatus::Active => {
-                result.add_check("account_status", true, "Account is active".to_string());
+                result.add_check(
+                    "account_status",
+                    true,
+                    "Account is active".to_string(),
+                    None,
+                );
             }
             AccountStatus::Frozen => {
-                result.add_check("account_status", false, "Account is frozen".to_string());
+                result.add_check(
+                    "account_status",
+                    false,
+                    "Account is frozen".to_string(),
+                    Some("ACCOUNT_FROZEN".to_string()),
+                );
             }
             AccountStatus::Closed => {
-                result.add_check("account_status", false, "Account is closed".to_string());
+                result.add_check(
+                    "account_status",
+                    false,
+                    "Account is closed".to_string(),
+                    Some("ACCOUNT_CLOSED".to_string()),
+                );
             }
             _ => {
-                result.add_check("account_status", false, "Account is not in transactional state".to_string());
+                result.add_check(
+                    "account_status",
+                    false,
+                    "Account is not in transactional state".to_string(),
+                    Some("ACCOUNT_STATE_INVALID".to_string()),
+                );
             }
         }
 
@@ -449,9 +482,15 @@ impl TransactionServiceImpl {
                     "sufficient_funds",
                     false,
                     format!("Insufficient funds: {} requested, {} available", transaction.amount, available_balance),
+                    Some("INSUFFICIENT_FUNDS".to_string()),
                 );
             } else {
-                result.add_check("sufficient_funds", true, "Sufficient funds available".to_string());
+                result.add_check(
+                    "sufficient_funds",
+                    true,
+                    "Sufficient funds available".to_string(),
+                    None,
+                );
             }
         }
 
@@ -459,8 +498,11 @@ impl TransactionServiceImpl {
     }
 
     /// Validate product-level transaction rules
-    async fn validate_product_level_limits(&self, transaction: &Transaction) -> BankingResult<ValidationResult> {
-        let mut result = ValidationResult::success();
+    async fn validate_product_level_limits(
+        &self,
+        transaction: &Transaction,
+    ) -> BankingResult<ValidationResult> {
+        let mut result = ValidationResult::success(Some(transaction.id));
 
         // Get account to determine product code
         let account = self.account_repository
@@ -479,20 +521,36 @@ impl TransactionServiceImpl {
                             "per_transaction_limit",
                             false,
                             format!("Transaction amount {} exceeds per-transaction limit {}", transaction.amount, per_txn_limit),
+                            Some("PER_TRANSACTION_LIMIT_EXCEEDED".to_string()),
                         );
                     } else {
-                        result.add_check("per_transaction_limit", true, "Within per-transaction limit".to_string());
+                        result.add_check(
+                            "per_transaction_limit",
+                            true,
+                            "Within per-transaction limit".to_string(),
+                            None,
+                        );
                     }
                 }
 
                 // Check daily limits (would need to query today's transactions)
-                result.add_check("daily_limit", true, "Daily limit check passed".to_string());
+                result.add_check("daily_limit", true, "Daily limit check passed".to_string(), None);
             }
             Ok(None) => {
-                result.add_check("product_rules", false, "Product not found".to_string());
+                result.add_check(
+                    "product_rules",
+                    false,
+                    "Product not found".to_string(),
+                    Some("PRODUCT_NOT_FOUND".to_string()),
+                );
             }
             Err(_) => {
-                result.add_check("product_rules", false, "Could not retrieve product rules".to_string());
+                result.add_check(
+                    "product_rules",
+                    false,
+                    "Could not retrieve product rules".to_string(),
+                    Some("PRODUCT_FETCH_ERROR".to_string()),
+                );
             }
         }
 
@@ -500,28 +558,45 @@ impl TransactionServiceImpl {
     }
 
     /// Validate terminal/agent-level limits
-    async fn validate_terminal_level_limits(&self, _transaction: &Transaction, _terminal_id: Uuid) -> BankingResult<ValidationResult> {
-        let mut result = ValidationResult::success();
+    async fn validate_terminal_level_limits(
+        &self,
+        transaction: &Transaction,
+        _terminal_id: Uuid,
+    ) -> BankingResult<ValidationResult> {
+        let mut result = ValidationResult::success(Some(transaction.id));
 
         // In production, this would:
         // 1. Get terminal information
         // 2. Check daily volume limits
         // 3. Validate hierarchical limits (terminal -> branch -> network)
         
-        result.add_check("terminal_limits", true, "Terminal limits validated".to_string());
+        result.add_check(
+            "terminal_limits",
+            true,
+            "Terminal limits validated".to_string(),
+            None,
+        );
         Ok(result)
     }
 
     /// Validate customer risk-based limits
-    async fn validate_risk_level_limits(&self, _transaction: &Transaction) -> BankingResult<ValidationResult> {
-        let mut result = ValidationResult::success();
+    async fn validate_risk_level_limits(
+        &self,
+        transaction: &Transaction,
+    ) -> BankingResult<ValidationResult> {
+        let mut result = ValidationResult::success(Some(transaction.id));
 
         // In production, this would:
         // 1. Get customer risk rating
         // 2. Apply risk-based transaction limits
         // 3. Check for suspicious patterns
 
-        result.add_check("risk_limits", true, "Risk-based limits validated".to_string());
+        result.add_check(
+            "risk_limits",
+            true,
+            "Risk-based limits validated".to_string(),
+            None,
+        );
         Ok(result)
     }
 

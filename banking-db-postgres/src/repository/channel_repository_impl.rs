@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use banking_api::{BankingResult, BankingError};
 use banking_db::models::channel::{ChannelModel, ChannelStatus};
 use banking_db::repository::{ChannelRepository, ChannelStats};
+use banking_db::ChannelType;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 use heapless::String as HeaplessString;
@@ -42,13 +43,19 @@ impl TryFromRow<sqlx::postgres::PgRow> for ChannelModel {
                 field: "channel_name".to_string(),
                 message: "Channel name too long".to_string(),
             })?,
-            channel_type: row.get("channel_type"),
-            status: row.get::<String, _>("status").parse().map_err(|_| 
+            channel_type: row.get::<String, _>("channel_type").parse().map_err(|_|
                 BankingError::ValidationError {
-                    field: "status".to_string(),
-                    message: "Invalid channel status".to_string(),
+                    field: "channel_type".to_string(),
+                    message: "Invalid channel type".to_string(),
                 }
             )?,
+            status: row.get("status"),
+            // status: row.get::<String, _>("status").parse().map_err(|_| 
+            //     BankingError::ValidationError {
+            //         field: "status".to_string(),
+            //         message: "Invalid channel status".to_string(),
+            //     }
+            // )?,
             daily_limit: row.get("daily_limit"),
             per_transaction_limit: row.get("per_transaction_limit"),
             supported_currency01: row.get::<Option<String>, _>("supported_currency01")
@@ -103,13 +110,13 @@ impl ChannelRepository for ChannelRepositoryImpl {
                 supported_currency02, supported_currency03,
                 requires_additional_auth, fee_schedule_id, created_at, updated_at
             ) VALUES ($1, $2, $3, $4, $5::channel_status, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-            RETURNING id, channel_code, channel_name, channel_type, status::text, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at"
+            RETURNING id, channel_code, channel_name, channel_type, status, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at"
         )
         .bind(channel.id)
         .bind(channel.channel_code.as_str())
         .bind(channel.channel_name.as_str())
-        .bind(&channel.channel_type)
-        .bind(channel.status.to_string())
+        .bind(channel.channel_type)
+        .bind(&channel.status)
         .bind(channel.daily_limit)
         .bind(channel.per_transaction_limit)
         .bind(channel.supported_currency01.as_ref().map(|c| c.as_str()))
@@ -134,13 +141,13 @@ impl ChannelRepository for ChannelRepositoryImpl {
                 supported_currency01 = $8, supported_currency02 = $9, supported_currency03 = $10,
                 requires_additional_auth = $11, fee_schedule_id = $12, updated_at = $13
             WHERE id = $1
-            RETURNING id, channel_code, channel_name, channel_type, status::text, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at"
+            RETURNING id, channel_code, channel_name, channel_type, status, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at"
         )
         .bind(channel.id)
         .bind(channel.channel_code.as_str())
         .bind(channel.channel_name.as_str())
-        .bind(&channel.channel_type)
-        .bind(channel.status.to_string())
+        .bind(channel.channel_type)
+        .bind(&channel.status)
         .bind(channel.daily_limit)
         .bind(channel.per_transaction_limit)
         .bind(channel.supported_currency01.as_ref().map(|c| c.as_str()))
@@ -157,7 +164,7 @@ impl ChannelRepository for ChannelRepositoryImpl {
     }
     
     async fn find_by_id(&self, channel_id: Uuid) -> BankingResult<Option<ChannelModel>> {
-        let row = sqlx::query("SELECT id, channel_code, channel_name, channel_type, status::text, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE id = $1")
+        let row = sqlx::query("SELECT id, channel_code, channel_name, channel_type, status, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE id = $1")
             .bind(channel_id)
             .fetch_optional(&self.pool)
             .await
@@ -170,7 +177,7 @@ impl ChannelRepository for ChannelRepositoryImpl {
     }
     
     async fn find_by_code(&self, channel_code: &str) -> BankingResult<Option<ChannelModel>> {
-        let row = sqlx::query("SELECT id, channel_code, channel_name, channel_type, status::text, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE channel_code = $1")
+        let row = sqlx::query("SELECT id, channel_code, channel_name, channel_type, status, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE channel_code = $1")
             .bind(channel_code)
             .fetch_optional(&self.pool)
             .await
@@ -182,9 +189,9 @@ impl ChannelRepository for ChannelRepositoryImpl {
         }
     }
     
-    async fn find_by_type(&self, channel_type: &str) -> BankingResult<Vec<ChannelModel>> {
-        let rows = sqlx::query("SELECT id, channel_code, channel_name, channel_type, status::text, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE channel_type = $1 ORDER BY channel_name")
-            .bind(channel_type)
+    async fn find_by_type(&self, channel_type: ChannelType) -> BankingResult<Vec<ChannelModel>> {
+        let rows = sqlx::query("SELECT id, channel_code, channel_name, channel_type, status, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE channel_type = $1 ORDER BY channel_name")
+            .bind(channel_type.to_string())
             .fetch_all(&self.pool)
             .await
             .map_err(BankingError::from)?;
@@ -197,7 +204,7 @@ impl ChannelRepository for ChannelRepositoryImpl {
     }
     
     async fn find_active(&self) -> BankingResult<Vec<ChannelModel>> {
-        let rows = sqlx::query("SELECT id, channel_code, channel_name, channel_type, status::text, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE status = 'Active' ORDER BY channel_name")
+        let rows = sqlx::query("SELECT id, channel_code, channel_name, channel_type, status, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE status = 'Active' ORDER BY channel_name")
             .fetch_all(&self.pool)
             .await
             .map_err(BankingError::from)?;
@@ -213,7 +220,7 @@ impl ChannelRepository for ChannelRepositoryImpl {
         let rows_affected = sqlx::query(
             "UPDATE channels SET status = $1::channel_status, updated_at = NOW() WHERE id = $2"
         )
-        .bind(status.to_string())
+        .bind(&status)
         .bind(channel_id)
         .execute(&self.pool)
         .await
@@ -239,7 +246,7 @@ impl ChannelRepository for ChannelRepositoryImpl {
     
     async fn find_by_currency(&self, currency: &str) -> BankingResult<Vec<ChannelModel>> {
         let rows = sqlx::query(
-            "SELECT id, channel_code, channel_name, channel_type, status::text, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE supported_currency01 = $1 OR supported_currency02 = $1 OR supported_currency03 = $1 ORDER BY channel_name"
+            "SELECT id, channel_code, channel_name, channel_type, status, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels WHERE supported_currency01 = $1 OR supported_currency02 = $1 OR supported_currency03 = $1 ORDER BY channel_name"
         )
         .bind(currency)
         .fetch_all(&self.pool)
@@ -292,7 +299,7 @@ impl ChannelRepository for ChannelRepositoryImpl {
     
     async fn find_all_paginated(&self, limit: i64, offset: i64) -> BankingResult<Vec<ChannelModel>> {
         let rows = sqlx::query(
-            "SELECT id, channel_code, channel_name, channel_type, status::text, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels ORDER BY channel_name LIMIT $1 OFFSET $2"
+            "SELECT id, channel_code, channel_name, channel_type, status, daily_limit, per_transaction_limit, supported_currency01, supported_currency02, supported_currency03, requires_additional_auth, fee_schedule_id, created_at, updated_at FROM channels ORDER BY channel_name LIMIT $1 OFFSET $2"
         )
         .bind(limit)
         .bind(offset)

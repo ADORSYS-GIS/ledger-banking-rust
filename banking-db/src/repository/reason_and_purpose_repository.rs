@@ -30,10 +30,10 @@ pub trait ReasonAndPurposeRepository: Send + Sync {
     async fn delete(&self, reason_id: Uuid) -> BankingResult<()>;
     
     /// Soft delete (deactivate) reason
-    async fn deactivate(&self, reason_id: Uuid, deactivated_by: &str) -> BankingResult<()>;
+    async fn deactivate(&self, reason_id: Uuid, deactivated_by: Uuid) -> BankingResult<()>;
     
     /// Reactivate previously deactivated reason
-    async fn reactivate(&self, reason_id: Uuid, reactivated_by: &str) -> BankingResult<()>;
+    async fn reactivate(&self, reason_id: Uuid, reactivated_by: Uuid) -> BankingResult<()>;
     
     // ============================================================================
     // QUERY OPERATIONS

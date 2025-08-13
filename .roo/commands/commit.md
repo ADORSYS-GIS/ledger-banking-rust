@@ -49,6 +49,7 @@ When this prompt is used, the assistant should:
    - **Update "Next Steps"** to reflect new priority order
    - **Add achievement documentation** in "Recent Achievements" section
    - This ensures docs/progress/progress-tracking.md accurately reflects the current implementation state
+   - **add docs/progress/progress-tracking.md** to the commit
 
 6. **Commit with Proper Signing**:
    - Use both `-s` (DCO sign-off) and `-S` (GPG signature) flags

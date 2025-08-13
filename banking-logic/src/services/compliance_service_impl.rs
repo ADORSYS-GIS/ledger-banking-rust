@@ -223,7 +223,7 @@ impl ComplianceService for ComplianceServiceImpl {
         };
 
         self.compliance_repository
-            .update_ubo_verification_status(ubo_link_id, status_str, "system")
+            .update_ubo_verification_status(ubo_link_id, status_str, "System")
             .await?;
 
         Ok(())

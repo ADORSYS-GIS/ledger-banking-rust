@@ -4,7 +4,7 @@ use std::str::FromStr;
 use banking_db::models::{
     AccountBalanceCalculationModel, AccountHoldExpiryJobModel,
     AccountHoldModel, AccountHoldReleaseRequestModel, AccountHoldSummaryModel,
-    PlaceHoldRequestModel, HighHoldRatioAccount, HoldAgingBucket, HoldAnalyticsSummary,
+    HighHoldRatioAccount, HoldAgingBucket, HoldAnalyticsSummary,
     HoldOverrideRecord, HoldPrioritySummary, HoldValidationError,
     JudicialHoldReportData,
 };
@@ -29,17 +29,17 @@ impl TryFromRow<sqlx::postgres::PgRow> for AccountHoldModel {
             id: row.try_get("id")?,
             account_id: row.try_get("account_id")?,
             amount: row.try_get("amount")?,
-            hold_type: row.try_get::<String, _>("hold_type")?.parse::<HoldType>().unwrap(),
+            hold_type: row.try_get::<String, _>("hold_type")?.parse::<HoldType>().map_err(|_| sqlx::Error::Decode("Invalid HoldType".into()))?,
             reason_id: row.try_get("reason_id")?,
-            additional_details: row.try_get::<Option<String>, _>("additional_details")?.map(|s| heapless::String::from_str(&s).unwrap()),
+            additional_details: row.try_get::<Option<String>, _>("additional_details")?.map(|s| heapless::String::from_str(&s).map_err(|_| sqlx::Error::Decode("Invalid additional_details".into()))).transpose()?,
             placed_by_person_id: row.try_get("placed_by_person_id")?,
             placed_at: row.try_get("placed_at")?,
             expires_at: row.try_get("expires_at")?,
-            status: row.try_get::<String, _>("status")?.parse::<HoldStatus>().unwrap(),
+            status: row.try_get::<String, _>("status")?.parse::<HoldStatus>().map_err(|_| sqlx::Error::Decode("Invalid HoldStatus".into()))?,
             released_at: row.try_get("released_at")?,
             released_by_person_id: row.try_get("released_by_person_id")?,
-            priority: row.try_get::<String, _>("priority")?.parse::<HoldPriority>().unwrap(),
-            source_reference: row.try_get::<Option<String>, _>("source_reference")?.map(|s| heapless::String::from_str(&s).unwrap()),
+            priority: row.try_get::<String, _>("priority")?.parse::<HoldPriority>().map_err(|_| sqlx::Error::Decode("Invalid HoldPriority".into()))?,
+            source_reference: row.try_get::<Option<String>, _>("source_reference")?.map(|s| heapless::String::from_str(&s).map_err(|_| sqlx::Error::Decode("Invalid source_reference".into()))).transpose()?,
             automatic_release: row.try_get("automatic_release")?,
             created_at: row.try_get("created_at")?,
             updated_at: row.try_get("updated_at")?,
@@ -76,16 +76,16 @@ impl AccountHoldRepository for AccountHoldRepositoryImpl {
         .bind(hold.id)
         .bind(hold.account_id)
         .bind(hold.amount)
-        .bind(hold.hold_type.to_string())
+        .bind(hold.hold_type)
         .bind(hold.reason_id)
         .bind(hold.additional_details.as_deref())
         .bind(hold.placed_by_person_id)
         .bind(hold.placed_at)
         .bind(hold.expires_at)
-        .bind(hold.status.to_string())
+        .bind(hold.status)
         .bind(hold.released_at)
         .bind(hold.released_by_person_id)
-        .bind(hold.priority.to_string())
+        .bind(hold.priority)
         .bind(hold.source_reference.as_deref())
         .bind(hold.automatic_release)
         .fetch_one(&self.pool)
@@ -192,14 +192,14 @@ impl AccountHoldRepository for AccountHoldRepositoryImpl {
         )
         .bind(hold.id)
         .bind(hold.amount)
-        .bind(hold.hold_type.to_string())
+        .bind(hold.hold_type)
         .bind(hold.reason_id)
         .bind(hold.additional_details.as_deref())
         .bind(hold.expires_at)
-        .bind(hold.status.to_string())
+        .bind(hold.status)
         .bind(hold.released_at)
         .bind(hold.released_by_person_id)
-        .bind(hold.priority.to_string())
+        .bind(hold.priority)
         .bind(hold.source_reference.as_deref())
         .bind(hold.automatic_release)
         .fetch_one(&self.pool)
@@ -481,7 +481,7 @@ impl AccountHoldRepository for AccountHoldRepositoryImpl {
     }
 
     #[allow(unused_variables)]
-    async fn create_place_hold_request(&self, request: PlaceHoldRequestModel) -> BankingResult<PlaceHoldRequestModel> {
+    async fn create_place_hold_request(&self, request: AccountHoldModel) -> BankingResult<AccountHoldModel> {
         unimplemented!()
     }
 }

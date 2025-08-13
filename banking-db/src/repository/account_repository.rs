@@ -5,7 +5,7 @@ use rust_decimal::Decimal;
 use chrono::{NaiveDate};
 
 use crate::models::{
-    AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, AccountFinalSettlementModel, AccountType
+    AccountModel, AccountOwnershipModel, AccountRelationshipModel, AccountMandateModel, AccountFinalSettlementModel, DbAccountType,
 };
 
 #[async_trait]
@@ -29,7 +29,7 @@ pub trait AccountRepository: Send + Sync {
     async fn find_by_status(&self, status: &str) -> BankingResult<Vec<AccountModel>>;
     
     /// Find accounts by account type
-    async fn find_by_account_type(&self, account_type: AccountType) -> BankingResult<Vec<AccountModel>>;
+    async fn find_by_account_type(&self, account_type: DbAccountType) -> BankingResult<Vec<AccountModel>>;
     
     /// Find accounts eligible for dormancy
     async fn find_dormancy_candidates(&self, reference_date: NaiveDate, threshold_days: i32) -> BankingResult<Vec<AccountModel>>;

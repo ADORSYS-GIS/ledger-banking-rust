@@ -5,7 +5,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
 /// Channel status enum for database compatibility
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "channel_status")]
 pub enum ChannelStatus {
     Active,
     Inactive,
@@ -286,7 +287,7 @@ pub struct ChannelModel {
     pub id: Uuid,
     pub channel_code: HeaplessString<50>,
     pub channel_name: HeaplessString<100>,
-    pub channel_type: String,
+    pub channel_type: super::transaction::ChannelType,
     #[serde(serialize_with = "serialize_channel_status", deserialize_with = "deserialize_channel_status")]
     pub status: ChannelStatus,
     pub daily_limit: Option<Decimal>,
@@ -410,7 +411,7 @@ pub struct ReconciliationDiscrepancyModel {
     pub actual_amount: Decimal,
     pub difference: Decimal,
     pub resolved: bool,
-    pub resolution_notes: Option<HeaplessString<1000>>,
+    pub resolution_notes: Option<HeaplessString<500>>,
     pub created_at: DateTime<Utc>,
 }
 

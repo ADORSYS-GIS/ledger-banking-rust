@@ -1,16 +1,11 @@
 use banking_api::domain::{
-    Transaction, TransactionAudit, GlEntry, TransactionRequest, TransactionResult, 
-    ValidationResult, Approval, ChannelType,
-    TransactionType, TransactionStatus, TransactionApprovalStatus, TransactionAuditAction
+    self as domain, GlEntry, Transaction, TransactionAudit, TransactionRequest,
+    TransactionResult, TransactionValidationResult, TransactionType as ApiTransactionType,
 };
 use banking_db::models::{
-    TransactionModel, TransactionAuditModel, GlEntryModel, 
-    TransactionRequestModel, TransactionResultModel, ValidationResultModel,
-    ApprovalModel, ChannelType as DbChannelType,
-    TransactionType as DbTransactionType, TransactionStatus as DbTransactionStatus,
-    TransactionApprovalStatus as DbTransactionApprovalStatus, TransactionAuditAction as DbTransactionAuditAction
+    self as db, GlEntryModel, TransactionAuditModel, TransactionModel, TransactionRequestModel,
+    TransactionResultModel, TransactionValidationResultModel, TransactionType as DbTransactionType,
 };
-use std::collections::HashMap;
 
 pub struct TransactionMapper;
 
@@ -19,7 +14,7 @@ impl TransactionMapper {
     pub fn to_model(transaction: Transaction) -> TransactionModel {
         TransactionModel {
             id: transaction.id,
-            account_id: transaction.id,
+            account_id: transaction.account_id,
             transaction_code: transaction.transaction_code,
             transaction_type: Self::transaction_type_to_db(transaction.transaction_type),
             amount: transaction.amount,
@@ -35,7 +30,7 @@ impl TransactionMapper {
             external_reference: transaction.external_reference,
             gl_code: transaction.gl_code,
             requires_approval: transaction.requires_approval,
-            approval_status: transaction.approval_status.map(Self::approval_status_to_db),
+            approval_status: transaction.approval_status.map(Self::transaction_approval_status_to_db),
             risk_score: transaction.risk_score,
             created_at: transaction.created_at,
         }
@@ -45,9 +40,9 @@ impl TransactionMapper {
     pub fn from_model(model: TransactionModel) -> banking_api::BankingResult<Transaction> {
         Ok(Transaction {
             id: model.id,
-            account_id: model.id,
+            account_id: model.account_id,
             transaction_code: model.transaction_code,
-            transaction_type: Self::db_to_transaction_type(model.transaction_type),
+            transaction_type: Self::transaction_type_from_db(model.transaction_type),
             amount: model.amount,
             currency: model.currency,
             description: model.description,
@@ -56,69 +51,73 @@ impl TransactionMapper {
             agent_person_id: model.agent_person_id,
             transaction_date: model.transaction_date,
             value_date: model.value_date,
-            status: Self::db_to_transaction_status(model.status),
+            status: Self::transaction_status_from_db(model.status),
             reference_number: model.reference_number,
             external_reference: model.external_reference,
             gl_code: model.gl_code,
             requires_approval: model.requires_approval,
-            approval_status: model.approval_status.map(Self::db_to_approval_status),
+            approval_status: model.approval_status.map(Self::transaction_approval_status_from_db),
             risk_score: model.risk_score,
             created_at: model.created_at,
         })
     }
 
     // Helper methods for enum conversions
-    pub fn transaction_type_to_db(transaction_type: TransactionType) -> DbTransactionType {
-        match transaction_type {
-            TransactionType::Credit => DbTransactionType::Credit,
-            TransactionType::Debit => DbTransactionType::Debit,
+    pub fn transaction_type_to_db(t: ApiTransactionType) -> DbTransactionType {
+        match t {
+            ApiTransactionType::Credit => DbTransactionType::Credit,
+            ApiTransactionType::Debit => DbTransactionType::Debit,
         }
     }
 
-    pub fn db_to_transaction_type(db_type: DbTransactionType) -> TransactionType {
-        match db_type {
-            DbTransactionType::Credit => TransactionType::Credit,
-            DbTransactionType::Debit => TransactionType::Debit,
+    pub fn transaction_type_from_db(t: DbTransactionType) -> ApiTransactionType {
+        match t {
+            DbTransactionType::Credit => ApiTransactionType::Credit,
+            DbTransactionType::Debit => ApiTransactionType::Debit,
         }
     }
 
-    pub fn transaction_status_to_db(status: TransactionStatus) -> DbTransactionStatus {
-        match status {
-            TransactionStatus::Pending => DbTransactionStatus::Pending,
-            TransactionStatus::Posted => DbTransactionStatus::Posted,
-            TransactionStatus::Reversed => DbTransactionStatus::Reversed,
-            TransactionStatus::Failed => DbTransactionStatus::Failed,
-            TransactionStatus::AwaitingApproval => DbTransactionStatus::AwaitingApproval,
-            TransactionStatus::ApprovalRejected => DbTransactionStatus::ApprovalRejected,
+    pub fn transaction_status_to_db(t: domain::TransactionStatus) -> db::TransactionStatus {
+        match t {
+            domain::TransactionStatus::Pending => db::TransactionStatus::Pending,
+            domain::TransactionStatus::Posted => db::TransactionStatus::Posted,
+            domain::TransactionStatus::Reversed => db::TransactionStatus::Reversed,
+            domain::TransactionStatus::Failed => db::TransactionStatus::Failed,
+            domain::TransactionStatus::AwaitingApproval => db::TransactionStatus::AwaitingApproval,
+            domain::TransactionStatus::ApprovalRejected => db::TransactionStatus::ApprovalRejected,
         }
     }
 
-    pub fn db_to_transaction_status(db_status: DbTransactionStatus) -> TransactionStatus {
-        match db_status {
-            DbTransactionStatus::Pending => TransactionStatus::Pending,
-            DbTransactionStatus::Posted => TransactionStatus::Posted,
-            DbTransactionStatus::Reversed => TransactionStatus::Reversed,
-            DbTransactionStatus::Failed => TransactionStatus::Failed,
-            DbTransactionStatus::AwaitingApproval => TransactionStatus::AwaitingApproval,
-            DbTransactionStatus::ApprovalRejected => TransactionStatus::ApprovalRejected,
+    pub fn transaction_status_from_db(t: db::TransactionStatus) -> domain::TransactionStatus {
+        match t {
+            db::TransactionStatus::Pending => domain::TransactionStatus::Pending,
+            db::TransactionStatus::Posted => domain::TransactionStatus::Posted,
+            db::TransactionStatus::Reversed => domain::TransactionStatus::Reversed,
+            db::TransactionStatus::Failed => domain::TransactionStatus::Failed,
+            db::TransactionStatus::AwaitingApproval => domain::TransactionStatus::AwaitingApproval,
+            db::TransactionStatus::ApprovalRejected => domain::TransactionStatus::ApprovalRejected,
         }
     }
 
-    fn approval_status_to_db(status: TransactionApprovalStatus) -> DbTransactionApprovalStatus {
-        match status {
-            TransactionApprovalStatus::Pending => DbTransactionApprovalStatus::Pending,
-            TransactionApprovalStatus::Approved => DbTransactionApprovalStatus::Approved,
-            TransactionApprovalStatus::Rejected => DbTransactionApprovalStatus::Rejected,
-            TransactionApprovalStatus::PartiallyApproved => DbTransactionApprovalStatus::PartiallyApproved,
+    pub fn transaction_approval_status_to_db(t: domain::TransactionApprovalStatus) -> db::TransactionApprovalStatus {
+        match t {
+            domain::TransactionApprovalStatus::Pending => db::TransactionApprovalStatus::Pending,
+            domain::TransactionApprovalStatus::Approved => db::TransactionApprovalStatus::Approved,
+            domain::TransactionApprovalStatus::Rejected => db::TransactionApprovalStatus::Rejected,
+            domain::TransactionApprovalStatus::PartiallyApproved => {
+                db::TransactionApprovalStatus::PartiallyApproved
+            }
         }
     }
 
-    fn db_to_approval_status(db_status: DbTransactionApprovalStatus) -> TransactionApprovalStatus {
-        match db_status {
-            DbTransactionApprovalStatus::Pending => TransactionApprovalStatus::Pending,
-            DbTransactionApprovalStatus::Approved => TransactionApprovalStatus::Approved,
-            DbTransactionApprovalStatus::Rejected => TransactionApprovalStatus::Rejected,
-            DbTransactionApprovalStatus::PartiallyApproved => TransactionApprovalStatus::PartiallyApproved,
+    pub fn transaction_approval_status_from_db(t: db::TransactionApprovalStatus) -> domain::TransactionApprovalStatus {
+        match t {
+            db::TransactionApprovalStatus::Pending => domain::TransactionApprovalStatus::Pending,
+            db::TransactionApprovalStatus::Approved => domain::TransactionApprovalStatus::Approved,
+            db::TransactionApprovalStatus::Rejected => domain::TransactionApprovalStatus::Rejected,
+            db::TransactionApprovalStatus::PartiallyApproved => {
+                domain::TransactionApprovalStatus::PartiallyApproved
+            }
         }
     }
 }
@@ -130,8 +129,8 @@ impl TransactionAuditMapper {
     pub fn to_model(audit: TransactionAudit) -> TransactionAuditModel {
         TransactionAuditModel {
             id: audit.id,
-            transaction_id: audit.id,
-            action_type: Self::audit_action_to_db(audit.action_type),
+            transaction_id: audit.transaction_id,
+            action_type: Self::transaction_audit_action_to_db(audit.action_type),
             performed_by_person_id: audit.performed_by_person_id,
             performed_at: audit.performed_at,
             old_status: audit.old_status.map(TransactionMapper::transaction_status_to_db),
@@ -141,42 +140,46 @@ impl TransactionAuditMapper {
         }
     }
 
-    /// Map from database TransactionAuditModel to domain TransactionAudit  
+    /// Map from database TransactionAuditModel to domain TransactionAudit
     pub fn from_model(model: TransactionAuditModel) -> banking_api::BankingResult<TransactionAudit> {
         Ok(TransactionAudit {
             id: model.id,
-            transaction_id: model.id,
-            action_type: Self::db_to_audit_action(model.action_type),
+            transaction_id: model.transaction_id,
+            action_type: Self::transaction_audit_action_from_db(model.action_type),
             performed_by_person_id: model.performed_by_person_id,
             performed_at: model.performed_at,
-            old_status: model.old_status.map(TransactionMapper::db_to_transaction_status),
-            new_status: model.new_status.map(TransactionMapper::db_to_transaction_status),
+            old_status: model.old_status.map(TransactionMapper::transaction_status_from_db),
+            new_status: model.new_status.map(TransactionMapper::transaction_status_from_db),
             reason_id: model.reason_id,
             details: model.details,
         })
     }
 
-    fn audit_action_to_db(action: TransactionAuditAction) -> DbTransactionAuditAction {
-        match action {
-            TransactionAuditAction::Created => DbTransactionAuditAction::Created,
-            TransactionAuditAction::StatusChanged => DbTransactionAuditAction::StatusChanged,
-            TransactionAuditAction::Posted => DbTransactionAuditAction::Posted,
-            TransactionAuditAction::Reversed => DbTransactionAuditAction::Reversed,
-            TransactionAuditAction::Failed => DbTransactionAuditAction::Failed,
-            TransactionAuditAction::Approved => DbTransactionAuditAction::Approved,
-            TransactionAuditAction::Rejected => DbTransactionAuditAction::Rejected,
+    pub fn transaction_audit_action_to_db(t: domain::TransactionAuditAction) -> db::TransactionAuditAction {
+        match t {
+            domain::TransactionAuditAction::Created => db::TransactionAuditAction::Created,
+            domain::TransactionAuditAction::StatusChanged => {
+                db::TransactionAuditAction::StatusChanged
+            }
+            domain::TransactionAuditAction::Posted => db::TransactionAuditAction::Posted,
+            domain::TransactionAuditAction::Reversed => db::TransactionAuditAction::Reversed,
+            domain::TransactionAuditAction::Failed => db::TransactionAuditAction::Failed,
+            domain::TransactionAuditAction::Approved => db::TransactionAuditAction::Approved,
+            domain::TransactionAuditAction::Rejected => db::TransactionAuditAction::Rejected,
         }
     }
 
-    fn db_to_audit_action(db_action: DbTransactionAuditAction) -> TransactionAuditAction {
-        match db_action {
-            DbTransactionAuditAction::Created => TransactionAuditAction::Created,
-            DbTransactionAuditAction::StatusChanged => TransactionAuditAction::StatusChanged,
-            DbTransactionAuditAction::Posted => TransactionAuditAction::Posted,
-            DbTransactionAuditAction::Reversed => TransactionAuditAction::Reversed,
-            DbTransactionAuditAction::Failed => TransactionAuditAction::Failed,
-            DbTransactionAuditAction::Approved => TransactionAuditAction::Approved,
-            DbTransactionAuditAction::Rejected => TransactionAuditAction::Rejected,
+    pub fn transaction_audit_action_from_db(t: db::TransactionAuditAction) -> domain::TransactionAuditAction {
+        match t {
+            db::TransactionAuditAction::Created => domain::TransactionAuditAction::Created,
+            db::TransactionAuditAction::StatusChanged => {
+                domain::TransactionAuditAction::StatusChanged
+            }
+            db::TransactionAuditAction::Posted => domain::TransactionAuditAction::Posted,
+            db::TransactionAuditAction::Reversed => domain::TransactionAuditAction::Reversed,
+            db::TransactionAuditAction::Failed => domain::TransactionAuditAction::Failed,
+            db::TransactionAuditAction::Approved => domain::TransactionAuditAction::Approved,
+            db::TransactionAuditAction::Rejected => domain::TransactionAuditAction::Rejected,
         }
     }
 }
@@ -214,6 +217,7 @@ impl GlEntryMapper {
             transaction_id: model.id,
             value_date: model.value_date,
             posting_date: model.posting_date,
+            created_at: model.created_at
         })
     }
 }
@@ -223,65 +227,59 @@ pub struct TransactionRequestMapper;
 impl TransactionRequestMapper {
     /// Map from domain TransactionRequest to database TransactionRequestModel
     pub fn to_model(request: TransactionRequest) -> TransactionRequestModel {
-        let metadata_json = serde_json::to_string(&request.metadata)
-            .unwrap_or_else(|_| "{}".to_string());
-            
         TransactionRequestModel {
-            id: uuid::Uuid::new_v4(),
+            id: request.id,
             account_id: request.account_id,
             transaction_type: TransactionMapper::transaction_type_to_db(request.transaction_type),
             amount: request.amount,
             currency: request.currency,
             description: request.description,
-            channel: Self::map_channel_type(request.channel),
+            channel: Self::channel_type_to_db(request.channel),
             terminal_id: request.terminal_id,
             initiator_person_id: request.initiator_person_id,
             external_reference: request.external_reference,
-            metadata: metadata_json,
-            created_at: chrono::Utc::now(),
+            created_at: request.created_at,
         }
     }
 
     /// Map from database TransactionRequestModel to domain TransactionRequest
     pub fn from_model(model: TransactionRequestModel) -> banking_api::BankingResult<TransactionRequest> {
-        let metadata: HashMap<String, String> = serde_json::from_str(&model.metadata)
-            .unwrap_or_else(|_| HashMap::new());
-            
         Ok(TransactionRequest {
-            account_id: model.id,
-            transaction_type: TransactionMapper::db_to_transaction_type(model.transaction_type),
+            id: model.id,
+            account_id: model.account_id,
+            transaction_type: TransactionMapper::transaction_type_from_db(model.transaction_type),
             amount: model.amount,
             currency: model.currency,
             description: model.description,
-            channel: Self::map_db_channel_type(model.channel),
+            channel: Self::channel_type_from_db(model.channel),
             terminal_id: model.terminal_id,
             initiator_person_id: model.initiator_person_id,
             external_reference: model.external_reference,
-            metadata,
+            created_at: model.created_at,
         })
     }
-    
-    fn map_channel_type(channel: ChannelType) -> DbChannelType {
-        match channel {
-            ChannelType::MobileApp => DbChannelType::MobileApp,
-            ChannelType::AgentTerminal => DbChannelType::AgentTerminal,
-            ChannelType::ATM => DbChannelType::ATM,
-            ChannelType::InternetBanking => DbChannelType::InternetBanking,
-            ChannelType::BranchTeller => DbChannelType::BranchTeller,
-            ChannelType::USSD => DbChannelType::USSD,
-            ChannelType::ApiGateway => DbChannelType::ApiGateway,
+
+    pub fn channel_type_to_db(t: domain::ChannelType) -> db::ChannelType {
+        match t {
+            domain::ChannelType::MobileApp => db::ChannelType::MobileApp,
+            domain::ChannelType::AgentTerminal => db::ChannelType::AgentTerminal,
+            domain::ChannelType::Atm => db::ChannelType::Atm,
+            domain::ChannelType::InternetBanking => db::ChannelType::InternetBanking,
+            domain::ChannelType::BranchTeller => db::ChannelType::BranchTeller,
+            domain::ChannelType::Ussd => db::ChannelType::Ussd,
+            domain::ChannelType::ApiGateway => db::ChannelType::ApiGateway,
         }
     }
-    
-    fn map_db_channel_type(channel: DbChannelType) -> ChannelType {
-        match channel {
-            DbChannelType::MobileApp => ChannelType::MobileApp,
-            DbChannelType::AgentTerminal => ChannelType::AgentTerminal,
-            DbChannelType::ATM => ChannelType::ATM,
-            DbChannelType::InternetBanking => ChannelType::InternetBanking,
-            DbChannelType::BranchTeller => ChannelType::BranchTeller,
-            DbChannelType::USSD => ChannelType::USSD,
-            DbChannelType::ApiGateway => ChannelType::ApiGateway,
+
+    pub fn channel_type_from_db(t: db::ChannelType) -> domain::ChannelType {
+        match t {
+            db::ChannelType::MobileApp => domain::ChannelType::MobileApp,
+            db::ChannelType::AgentTerminal => domain::ChannelType::AgentTerminal,
+            db::ChannelType::Atm => domain::ChannelType::Atm,
+            db::ChannelType::InternetBanking => domain::ChannelType::InternetBanking,
+            db::ChannelType::BranchTeller => domain::ChannelType::BranchTeller,
+            db::ChannelType::Ussd => domain::ChannelType::Ussd,
+            db::ChannelType::ApiGateway => domain::ChannelType::ApiGateway,
         }
     }
 }
@@ -292,78 +290,108 @@ impl TransactionResultMapper {
     /// Map from domain TransactionResult to database TransactionResultModel
     pub fn to_model(result: TransactionResult) -> TransactionResultModel {
         TransactionResultModel {
-            id: uuid::Uuid::new_v4(),
+            id: result.id,
             transaction_id: result.transaction_id,
             reference_number: result.reference_number,
             timestamp: result.timestamp,
-            created_at: chrono::Utc::now(),
+            created_at: result.created_at,
         }
     }
 
     /// Map from database TransactionResultModel to domain TransactionResult
     pub fn from_model(model: TransactionResultModel) -> banking_api::BankingResult<TransactionResult> {
         Ok(TransactionResult {
-            transaction_id: model.id,
+            id: model.id,
+            transaction_id: model.transaction_id,
             reference_number: model.reference_number,
-            gl_entries: vec![], // GL entries would be loaded separately
             timestamp: model.timestamp,
+            created_at: model.created_at,
         })
     }
 }
 
-pub struct ValidationResultMapper;
+pub struct TransactionValidationResultMapper;
 
-impl ValidationResultMapper {
-    /// Map from domain ValidationResult to database ValidationResultModel
-    pub fn to_model(validation: ValidationResult, transaction_id: Option<uuid::Uuid>) -> ValidationResultModel {
-        let errors_json = serde_json::to_string(&validation.errors)
-            .unwrap_or_else(|_| "[]".to_string());
-        let warnings_json = serde_json::to_string(&validation.warnings)
-            .unwrap_or_else(|_| "[]".to_string());
-            
-        ValidationResultModel {
-            id: uuid::Uuid::new_v4(),
-            transaction_id,
+impl TransactionValidationResultMapper {
+    /// Map from domain TransactionValidationResult to database TransactionValidationResultModel
+    pub fn to_model(
+        validation: TransactionValidationResult,
+    ) -> TransactionValidationResultModel {
+        TransactionValidationResultModel {
+            id: validation.id,
             is_valid: validation.is_valid,
-            errors: errors_json,
-            warnings: warnings_json,
-            created_at: chrono::Utc::now(),
+            transaction_id: validation.transaction_id,
+            validation_error_01_field: validation.validation_error_01_field,
+            validation_error_01_message: validation.validation_error_01_message,
+            validation_error_01_error_code: validation.validation_error_01_error_code,
+            validation_error_02_field: validation.validation_error_02_field,
+            validation_error_02_message: validation.validation_error_02_message,
+            validation_error_02_error_code: validation.validation_error_02_error_code,
+            validation_error_03_field: validation.validation_error_03_field,
+            validation_error_03_message: validation.validation_error_03_message,
+            validation_error_03_error_code: validation.validation_error_03_error_code,
+            warning_01: validation.warning_01,
+            warning_02: validation.warning_02,
+            warning_03: validation.warning_03,
+            created_at: validation.created_at,
         }
     }
 
     /// Map from database ValidationResultModel to domain ValidationResult
-    pub fn from_model(model: ValidationResultModel) -> banking_api::BankingResult<ValidationResult> {
-        let errors: Vec<String> = serde_json::from_str(&model.errors)
-            .unwrap_or_else(|_| vec![]);
-        let warnings: Vec<String> = serde_json::from_str(&model.warnings)
-            .unwrap_or_else(|_| vec![]);
-            
-        Ok(ValidationResult::new(model.is_valid, errors, warnings))
+    pub fn from_model(
+        model: TransactionValidationResultModel,
+    ) -> banking_api::BankingResult<TransactionValidationResult> {
+        Ok(TransactionValidationResult {
+            id: model.id,
+            is_valid: model.is_valid,
+            transaction_id: model.transaction_id,
+            validation_error_01_field: model.validation_error_01_field,
+            validation_error_01_message: model.validation_error_01_message,
+            validation_error_01_error_code: model.validation_error_01_error_code,
+            validation_error_02_field: model.validation_error_02_field,
+            validation_error_02_message: model.validation_error_02_message,
+            validation_error_02_error_code: model.validation_error_02_error_code,
+            validation_error_03_field: model.validation_error_03_field,
+            validation_error_03_message: model.validation_error_03_message,
+            validation_error_03_error_code: model.validation_error_03_error_code,
+            warning_01: model.warning_01,
+            warning_02: model.warning_02,
+            warning_03: model.warning_03,
+            created_at: model.created_at,
+        })
     }
 }
 
-pub struct ApprovalMapper;
+pub struct TransactionApprovalMapper;
 
-impl ApprovalMapper {
-    /// Map from domain Approval to database ApprovalModel
-    pub fn to_model(approval: Approval, transaction_id: uuid::Uuid) -> ApprovalModel {
-        ApprovalModel {
+impl TransactionApprovalMapper {
+    /// Map from domain TransactionApproval to database TransactionApprovalModel
+    pub fn to_model(approval: domain::TransactionApproval) -> db::TransactionApprovalModel {
+        db::TransactionApprovalModel {
             id: approval.id,
-            transaction_id,
+            transaction_id: approval.transaction_id,
+            required: approval.required,
             approver_person_id: approval.approver_person_id,
+            approval_status: TransactionMapper::transaction_approval_status_to_db(approval.approval_status),
             approved_at: approval.approved_at,
             notes: approval.notes,
-            created_at: chrono::Utc::now(),
+            created_at: approval.created_at,
         }
     }
 
-    /// Map from database ApprovalModel to domain Approval
-    pub fn from_model(model: ApprovalModel) -> banking_api::BankingResult<Approval> {
-        Ok(Approval {
+    /// Map from database TransactionApprovalModel to domain TransactionApproval
+    pub fn from_model(
+        model: db::TransactionApprovalModel,
+    ) -> banking_api::BankingResult<domain::TransactionApproval> {
+        Ok(domain::TransactionApproval {
             id: model.id,
+            transaction_id: model.transaction_id,
+            required: model.required,
             approver_person_id: model.approver_person_id,
+            approval_status: TransactionMapper::transaction_approval_status_from_db(model.approval_status),
             approved_at: model.approved_at,
             notes: model.notes,
+            created_at: model.created_at,
         })
     }
 }

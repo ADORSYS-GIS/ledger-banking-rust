@@ -217,7 +217,9 @@ pub struct CasaTransactionValidation {
     pub post_transaction_balance: Decimal,
     pub overdraft_utilization: Option<Decimal>,
     pub validation_result: CasaValidationResult,
-    pub validation_messages: Vec<HeaplessString<200>>,
+    pub validation_message_01: HeaplessString<200>,
+    pub validation_message_02: HeaplessString<200>,
+    pub validation_message_03: HeaplessString<200>,
     pub requires_authorization: bool,
     pub authorization_level: Option<AuthorizationLevel>,
 }

@@ -14,46 +14,46 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =============================================================================
 
 -- Person type enum for referenced persons
-CREATE TYPE person_type AS ENUM ('natural', 'legal', 'system', 'integration', 'unknown');
+CREATE TYPE person_type AS ENUM ('Natural', 'Legal', 'System', 'Integration', 'Unknown');
 
 -- Address type enum
-CREATE TYPE address_type AS ENUM ('residential', 'business', 'mailing', 'temporary', 'branch', 'community', 'other');
+CREATE TYPE address_type AS ENUM ('Residential', 'Business', 'Mailing', 'Temporary', 'Branch', 'Community', 'Other');
 
 -- Messaging type enum
-CREATE TYPE messaging_type AS ENUM ('email', 'phone', 'sms', 'whatsapp', 'telegram', 'skype', 'teams', 'signal', 'wechat', 'viber', 'messenger', 'linkedin', 'slack', 'discord', 'other');
+CREATE TYPE messaging_type AS ENUM ('Email', 'Phone', 'Sms', 'Whatsapp', 'Telegram', 'Skype', 'Teams', 'Signal', 'Wechat', 'Viber', 'Messenger', 'Linkedin', 'Slack', 'Discord', 'Other');
 
 -- Service type enum for branch capabilities
-CREATE TYPE service_type AS ENUM ('cash_withdrawal', 'cash_deposit', 'cash_transfer', 'bill_payment', 'account_opening', 'card_services', 'check_deposit', 'foreign_exchange', 'remittance_collection', 'agent_banking');
+CREATE TYPE service_type AS ENUM ('CashWithdrawal', 'CashDeposit', 'CashTransfer', 'BillPayment', 'AccountOpening', 'CardServices', 'CheckDeposit', 'ForeignExchange', 'RemittanceCollection', 'AgentBanking');
 
 -- Certification status enum
-CREATE TYPE certification_status AS ENUM ('active', 'expired', 'suspended', 'revoked');
+CREATE TYPE certification_status AS ENUM ('Active', 'Expired', 'Suspended', 'Revoked');
 
 -- Person entity type enum
-CREATE TYPE person_entity_type AS ENUM ('customer', 'employee', 'shareholder', 'director', 'beneficialowner', 'agent', 'vendor', 'partner', 'regulatorycontact', 'emergencycontact', 'systemadmin', 'other');
+CREATE TYPE person_entity_type AS ENUM ('Customer', 'Employee', 'Shareholder', 'Director', 'BeneficialOwner', 'Agent', 'Vendor', 'Partner', 'RegulatoryContact', 'EmergencyContact', 'SystemAdmin', 'Other');
 
 -- Disbursement status enum
 CREATE TYPE disbursement_status AS ENUM ('Pending', 'Approved', 'Executed', 'Cancelled', 'Failed', 'PartiallyExecuted');
 
 -- Agent network type enum
-CREATE TYPE network_type AS ENUM ('internal', 'partner', 'thirdparty');
+CREATE TYPE network_type AS ENUM ('Internal', 'Partner', 'ThirdParty');
 
 -- Agent network status enum
-CREATE TYPE network_status AS ENUM ('active', 'suspended', 'terminated');
+CREATE TYPE network_status AS ENUM ('Active', 'Suspended', 'Terminated');
 
 -- Branch status enum
-CREATE TYPE branch_status AS ENUM ('active', 'suspended', 'closed', 'temporarilyclosed');
+CREATE TYPE branch_status AS ENUM ('Active', 'Suspended', 'Closed', 'TemporarilyClosed');
 
 -- Branch type enum
-CREATE TYPE branch_type AS ENUM ('main_branch', 'sub_branch', 'agent_outlet', 'standalone_kiosk', 'partner_agent', 'atm_location', 'mobile_unit');
+CREATE TYPE branch_type AS ENUM ('MainBranch', 'SubBranch', 'AgentOutlet', 'StandaloneKiosk', 'PartnerAgent', 'AtmLocation', 'MobileUnit');
 
 -- Terminal type enum
-CREATE TYPE terminal_type AS ENUM ('pos', 'mobile', 'atm', 'webportal');
+CREATE TYPE terminal_type AS ENUM ('Pos', 'Mobile', 'Atm', 'WebPortal');
 
 -- Terminal status enum
-CREATE TYPE terminal_status AS ENUM ('active', 'maintenance', 'suspended', 'decommissioned');
+CREATE TYPE terminal_status AS ENUM ('Active', 'Maintenance', 'Suspended', 'Decommissioned');
 
 -- Branch risk rating enum
-CREATE TYPE branch_risk_rating AS ENUM ('low', 'medium', 'high', 'critical');
+CREATE TYPE branch_risk_rating AS ENUM ('Low', 'Medium', 'High', 'Critical');
 
 -- Customer related enums
 CREATE TYPE customer_type AS ENUM ('Individual', 'Corporate');
@@ -69,13 +69,10 @@ CREATE TYPE account_status AS ENUM ('PendingApproval', 'Active', 'Dormant', 'Fro
 CREATE TYPE signing_condition AS ENUM ('None', 'AnyOwner', 'AllOwners');
 CREATE TYPE disbursement_method AS ENUM ('Transfer', 'CashWithdrawal', 'Check', 'HoldFunds', 'OverdraftFacility', 'StagedRelease');
 -- hold_type has been updated to match the domain definition
-DROP TYPE IF EXISTS hold_type CASCADE;
 CREATE TYPE hold_type AS ENUM ('UnclearedFunds', 'JudicialLien', 'LoanPledge', 'ComplianceHold', 'AdministrativeHold', 'FraudHold', 'PendingAuthorization', 'OverdraftReserve', 'CardAuthorization', 'Other');
 -- hold_status has been updated to match the domain definition
-DROP TYPE IF EXISTS hold_status CASCADE;
 CREATE TYPE hold_status AS ENUM ('Active', 'Released', 'Expired', 'Cancelled', 'PartiallyReleased');
 -- hold_priority has been updated to match the domain definition
-DROP TYPE IF EXISTS hold_priority CASCADE;
 CREATE TYPE hold_priority AS ENUM ('Critical', 'High', 'Standard', 'Medium', 'Low');
 CREATE TYPE ownership_type AS ENUM ('Single', 'Joint', 'Corporate');
 CREATE TYPE entity_type AS ENUM ('Branch', 'Agent', 'RiskManager', 'ComplianceOfficer', 'CustomerService');
@@ -89,8 +86,7 @@ CREATE TYPE transaction_type AS ENUM ('Credit', 'Debit');
 CREATE TYPE transaction_status AS ENUM ('Pending', 'Posted', 'Reversed', 'Failed', 'AwaitingApproval', 'ApprovalRejected');
 CREATE TYPE transaction_approval_status AS ENUM ('Pending', 'Approved', 'Rejected', 'PartiallyApproved');
 CREATE TYPE transaction_workflow_status AS ENUM ('Pending', 'Approved', 'Rejected', 'TimedOut');
-CREATE TYPE transaction_audit_action AS ENUM ('Created', 'StatusChanged', 'Posted', 'Reversed', 'Failed', 'Approved', 'Rejected');
-CREATE TYPE channel_type AS ENUM ('MobileApp', 'AgentTerminal', 'ATM', 'InternetBanking', 'BranchTeller', 'USSD', 'ApiGateway');
+CREATE TYPE channel_type AS ENUM ('MobileApp', 'AgentTerminal', 'Atm', 'InternetBanking', 'BranchTeller', 'Ussd', 'ApiGateway');
 CREATE TYPE channel_status AS ENUM ('Active', 'Inactive', 'Maintenance', 'Suspended');
 CREATE TYPE channel_fee_type AS ENUM ('TransactionFee', 'MaintenanceFee', 'ServiceFee', 'PenaltyFee', 'ProcessingFee', 'ComplianceFee', 'InterchangeFee', 'NetworkFee');
 CREATE TYPE channel_fee_calculation_method AS ENUM ('Fixed', 'Percentage', 'Tiered', 'BalanceBased', 'RuleBased', 'Hybrid');
@@ -105,7 +101,6 @@ CREATE TYPE risk_level AS ENUM ('Low', 'Medium', 'High', 'Critical');
 CREATE TYPE alert_type AS ENUM ('StructuringDetection', 'VelocityCheck', 'LargeCashTransaction', 'SuspiciousPattern', 'GeographicAnomaly', 'CrossBorderTransaction');
 CREATE TYPE severity AS ENUM ('Low', 'Medium', 'High', 'Critical');
 CREATE TYPE alert_status AS ENUM ('New', 'InReview', 'Investigated', 'Cleared', 'Escalated');
-CREATE TYPE sar_status AS ENUM ('Draft', 'Filed', 'Acknowledged');
 CREATE TYPE compliance_status AS ENUM ('Passed', 'Failed', 'RequiresReview', 'Pending');
 CREATE TYPE control_type AS ENUM ('DirectOwnership', 'IndirectOwnership', 'SignificantInfluence', 'SeniorManagement');
 CREATE TYPE verification_status AS ENUM ('Pending', 'Verified', 'Rejected', 'RequiresUpdate');
@@ -113,7 +108,6 @@ CREATE TYPE verification_status AS ENUM ('Pending', 'Verified', 'Rejected', 'Req
 -- Calendar enums
 CREATE TYPE holiday_type AS ENUM ('National', 'Regional', 'Religious', 'Banking');
 CREATE TYPE date_shift_rule AS ENUM ('NextBusinessDay', 'PreviousBusinessDay', 'NoShift');
-CREATE TYPE weekend_treatment AS ENUM ('SaturdaySunday', 'FridayOnly', 'Custom');
 CREATE TYPE import_status AS ENUM ('Success', 'Partial', 'Failed');
 
 -- Collateral related enums
@@ -154,35 +148,28 @@ CREATE TYPE workflow_status AS ENUM ('Pending', 'InProgress', 'Approved', 'Rejec
 CREATE TYPE restructuring_type AS ENUM ('Rescheduling', 'Renewal', 'Refinancing', 'Restructuring', 'WriteOff');
 
 -- Update existing transaction_audit_action to match API enum
-DROP TYPE IF EXISTS transaction_audit_action CASCADE;
-CREATE TYPE transaction_audit_action AS ENUM ('Create', 'Approve', 'Reject', 'Cancel', 'Reverse', 'Modify', 'StatusChange');
+CREATE TYPE transaction_audit_action AS ENUM ('Created', 'StatusChanged', 'Posted', 'Reversed', 'Failed', 'Approved', 'Rejected');
 
--- The hold_type enum is now aligned with the domain model.
-
--- The hold_status enum is now aligned with the domain model.
-
--- Update existing sar_status to match API enum
-DROP TYPE IF EXISTS sar_status CASCADE;
-CREATE TYPE sar_status AS ENUM ('Draft', 'Submitted', 'Acknowledged', 'UnderReview', 'Closed');
+CREATE TYPE sar_status AS ENUM ('Draft', 'Filed', 'Acknowledged', 'UnderReview', 'Closed');
 
 -- Daily Collection Service related enums
-CREATE TYPE agent_status AS ENUM ('active', 'suspended', 'training', 'onleave', 'terminated');
-CREATE TYPE area_type AS ENUM ('urban', 'suburban', 'rural', 'commercial', 'industrial', 'mixed');
-CREATE TYPE customer_density AS ENUM ('high', 'medium', 'low');
-CREATE TYPE transport_mode AS ENUM ('walking', 'bicycle', 'motorcycle', 'car', 'publictransport', 'mixed');
-CREATE TYPE device_type AS ENUM ('smartphone', 'tablet', 'portableterminal', 'smartwatch');
-CREATE TYPE connectivity_status AS ENUM ('online', 'offline', 'limitedconnectivity', 'syncpending');
-CREATE TYPE collection_program_type AS ENUM ('fixedamount', 'variableamount', 'targetbased', 'durationbased');
-CREATE TYPE program_status AS ENUM ('active', 'suspended', 'closed', 'underreview');
-CREATE TYPE collection_frequency AS ENUM ('daily', 'weekly', 'monthly', 'quarterly', 'yearly');
-CREATE TYPE collection_status AS ENUM ('active', 'suspended', 'defaulted', 'graduated', 'terminated');
-CREATE TYPE holiday_handling AS ENUM ('skip', 'nextbusinessday', 'previousbusinessday', 'collectdouble');
-CREATE TYPE reliability_rating AS ENUM ('excellent', 'good', 'fair', 'poor', 'critical');
-CREATE TYPE collection_method AS ENUM ('cash', 'mobilepayment', 'banktransfer', 'digitalwallet');
-CREATE TYPE collection_record_status AS ENUM ('pending', 'processed', 'failed', 'reversed', 'underreview');
-CREATE TYPE biometric_method AS ENUM ('fingerprint', 'facerecognition', 'voiceprint', 'combined');
-CREATE TYPE batch_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'partiallyprocessed', 'requiresreconciliation');
-CREATE TYPE fee_frequency AS ENUM ('percollection', 'daily', 'weekly', 'monthly', 'onetime');
+CREATE TYPE agent_status AS ENUM ('Active', 'Suspended', 'Training', 'OnLeave', 'Terminated');
+CREATE TYPE area_type AS ENUM ('Urban', 'Suburban', 'Rural', 'Commercial', 'Industrial', 'Mixed');
+CREATE TYPE customer_density AS ENUM ('High', 'Medium', 'Low');
+CREATE TYPE transport_mode AS ENUM ('Walking', 'Bicycle', 'Motorcycle', 'Car', 'PublicTransport', 'Mixed');
+CREATE TYPE device_type AS ENUM ('Smartphone', 'Tablet', 'PortableTerminal', 'Smartwatch');
+CREATE TYPE connectivity_status AS ENUM ('Online', 'Offline', 'LimitedConnectivity', 'SyncPending');
+CREATE TYPE collection_program_type AS ENUM ('FixedAmount', 'VariableAmount', 'TargetBased', 'DurationBased');
+CREATE TYPE program_status AS ENUM ('Active', 'Suspended', 'Closed', 'UnderReview');
+CREATE TYPE collection_frequency AS ENUM ('Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly');
+CREATE TYPE collection_status AS ENUM ('Active', 'Suspended', 'Defaulted', 'Graduated', 'Terminated');
+CREATE TYPE holiday_handling AS ENUM ('Skip', 'NextBusinessDay', 'PreviousBusinessDay', 'CollectDouble');
+CREATE TYPE reliability_rating AS ENUM ('Excellent', 'Good', 'Fair', 'Poor', 'Critical');
+CREATE TYPE collection_method AS ENUM ('Cash', 'MobilePayment', 'BankTransfer', 'DigitalWallet');
+CREATE TYPE collection_record_status AS ENUM ('Pending', 'Processed', 'Failed', 'Reversed', 'UnderReview');
+CREATE TYPE biometric_method AS ENUM ('Fingerprint', 'FaceRecognition', 'Voiceprint', 'Combined');
+CREATE TYPE batch_status AS ENUM ('Pending', 'Processing', 'Completed', 'Failed', 'PartiallyProcessed', 'RequiresReconciliation');
+CREATE TYPE fee_frequency AS ENUM ('PerCollection', 'Daily', 'Weekly', 'Monthly', 'OneTime');
 
 -- Product catalogue enums
 CREATE TYPE product_type AS ENUM ('CASA', 'LOAN');
@@ -473,8 +460,8 @@ CREATE TABLE reason_and_purpose (
     -- Audit fields
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    created_by_person_id VARCHAR(100) NOT NULL,
-    updated_by_person_id VARCHAR(100) NOT NULL
+    created_by_person_id UUID NOT NULL,
+    updated_by_person_id UUID NOT NULL
 );
 
 -- Create indexes for efficient querying
@@ -742,7 +729,7 @@ CREATE TABLE transactions (
     description VARCHAR(200) NOT NULL,
     
     -- Multi-channel processing support
-    channel_id VARCHAR(50) NOT NULL, -- 'BranchTeller', 'ATM', 'OnlineBanking', 'MobileBanking', 'AgentBanking'
+    channel_id VARCHAR(50) NOT NULL, 
     terminal_id UUID, -- For ATM/POS transactions, references terminals table
     agent_person_id UUID, -- For agent banking transactions
     
@@ -815,7 +802,7 @@ CREATE TABLE transaction_requests (
     amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     description VARCHAR(200) NOT NULL,
-    channel VARCHAR(20) NOT NULL CHECK (channel IN ('MobileApp', 'AgentTerminal', 'ATM', 'InternetBanking', 'BranchTeller', 'USSD', 'ApiGateway')),
+    channel VARCHAR(20) NOT NULL CHECK (channel IN ('MobileApp', 'AgentTerminal', 'Atm', 'InternetBanking', 'BranchTeller', 'Ussd', 'ApiGateway')),
     terminal_id UUID,
     initiator_person_id UUID NOT NULL REFERENCES persons(id),
     external_reference VARCHAR(100),
@@ -839,8 +826,18 @@ CREATE TABLE validation_results (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_id UUID REFERENCES transactions(id),
     is_valid BOOLEAN NOT NULL DEFAULT FALSE,
-    errors JSONB, -- JSON array of error messages
-    warnings JSONB, -- JSON array of warning messages
+    validation_error_01_field VARCHAR(50),
+    validation_error_01_message VARCHAR(200),
+    validation_error_01_error_code VARCHAR(50),
+    validation_error_02_field VARCHAR(50),
+    validation_error_02_message VARCHAR(200),
+    validation_error_02_error_code VARCHAR(50),
+    validation_error_03_field VARCHAR(50),
+    validation_error_03_message VARCHAR(200),
+    validation_error_03_error_code VARCHAR(50),
+    warning_01 VARCHAR(200),
+    warning_02 VARCHAR(200),
+    warning_03 VARCHAR(200),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -923,7 +920,7 @@ CREATE TABLE compliance_cert (
     issuer_person_id UUID NOT NULL REFERENCES persons(id),
     issue_date DATE NOT NULL,
     expiry_date DATE,
-    status certification_status NOT NULL DEFAULT 'active'
+    status certification_status NOT NULL DEFAULT 'Active'
 );
 
 -- Operating Hours standalone table
@@ -1063,7 +1060,7 @@ CREATE TABLE agent_networks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     network_name VARCHAR(100) NOT NULL,
     network_type network_type NOT NULL,
-    status network_status NOT NULL DEFAULT 'active',
+    status network_status NOT NULL DEFAULT 'Active',
     contract_external_id VARCHAR(50),
     aggregate_daily_limit DECIMAL(15,2) NOT NULL,
     current_daily_volume DECIMAL(15,2) NOT NULL DEFAULT 0,
@@ -1080,7 +1077,7 @@ CREATE TABLE agent_branches (
     branch_code VARCHAR(8) NOT NULL,
     branch_level INTEGER NOT NULL DEFAULT 1,
     gl_code_prefix VARCHAR(6) NOT NULL,
-    status branch_status NOT NULL DEFAULT 'active',
+    status branch_status NOT NULL DEFAULT 'Active',
     daily_transaction_limit DECIMAL(15,2) NOT NULL,
     current_daily_volume DECIMAL(15,2) NOT NULL DEFAULT 0,
     max_cash_limit DECIMAL(15,2) NOT NULL,
@@ -1126,7 +1123,7 @@ CREATE TABLE agent_branches (
     monthly_transaction_limit DECIMAL(15,2),
     
     -- Compliance and risk
-    risk_rating branch_risk_rating NOT NULL DEFAULT 'low',
+    risk_rating branch_risk_rating NOT NULL DEFAULT 'Low',
     last_audit_date DATE,
     last_compliance_certification_id UUID REFERENCES compliance_cert(id),
     
@@ -1150,7 +1147,7 @@ CREATE TABLE agent_terminals (
     max_cash_limit DECIMAL(15,2) NOT NULL,
     current_cash_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
     minimum_cash_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
-    status terminal_status NOT NULL DEFAULT 'active',
+    status terminal_status NOT NULL DEFAULT 'Active',
     last_sync_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -1229,7 +1226,7 @@ CREATE TABLE date_calculation_rules (
     rule_name VARCHAR(100) NOT NULL,
     rule_type VARCHAR(30) NOT NULL CHECK (rule_type IN ('DateShift', 'MaturityCalculation', 'PaymentDue')),
     default_shift_rule date_shift_rule NOT NULL,
-    weekend_treatment weekend_treatment NOT NULL,
+    weekend_days UUID NOT NULL,
     product_specific_overrides VARCHAR(1000), -- JSON with product-specific rules
     priority INTEGER NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -1893,7 +1890,9 @@ CREATE TABLE casa_transaction_validations (
     post_transaction_balance DECIMAL(15,2) NOT NULL,
     overdraft_utilization DECIMAL(15,2),
     validation_result VARCHAR(30) NOT NULL CHECK (validation_result IN ('Approved', 'Rejected', 'RequiresAuthorization', 'RequiresHoldRelease')),
-    validation_messages TEXT[], -- Array of validation messages
+    validation_message_01 VARCHAR(200),
+    validation_message_02 VARCHAR(200),
+    validation_message_03 VARCHAR(200),
     requires_authorization BOOLEAN NOT NULL DEFAULT FALSE,
     authorization_level VARCHAR(20) CHECK (authorization_level IN ('Teller', 'Supervisor', 'Manager', 'CreditCommittee')),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -1913,7 +1912,7 @@ CREATE TABLE channels (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     channel_code VARCHAR(50) NOT NULL UNIQUE,
     channel_name VARCHAR(100) NOT NULL,
-    channel_type VARCHAR(30) NOT NULL CHECK (channel_type IN ('BranchTeller', 'ATM', 'InternetBanking', 'MobileApp', 'AgentTerminal', 'USSD', 'ApiGateway')),
+    channel_type VARCHAR(30) NOT NULL CHECK (channel_type IN ('BranchTeller', 'Atm', 'InternetBanking', 'MobileApp', 'AgentTerminal', 'Ussd', 'ApiGateway')),
     status channel_status NOT NULL DEFAULT 'Active',
     daily_limit DECIMAL(15,2),
     per_transaction_limit DECIMAL(15,2),
@@ -1997,7 +1996,7 @@ CREATE TABLE fee_items (
 );
 
 -- Fee tiers for tiered pricing structures
-CREATE TABLE fee_tiers (
+CREATE TABLE channel_fee_tiers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     fee_item_id UUID NOT NULL REFERENCES fee_items(id) ON DELETE CASCADE,
     tier_name VARCHAR(50) NOT NULL,
@@ -2077,8 +2076,8 @@ CREATE INDEX idx_fee_schedules_effective ON fee_schedules(effective_date);
 CREATE INDEX idx_fee_items_schedule ON fee_items(schedule_id);
 CREATE INDEX idx_fee_items_code ON fee_items(fee_code);
 CREATE INDEX idx_fee_items_type ON fee_items(fee_type);
-CREATE INDEX idx_fee_tiers_item ON fee_tiers(fee_item_id);
-CREATE INDEX idx_fee_tiers_order ON fee_tiers(tier_order);
+CREATE INDEX idx_fee_tiers_item ON channel_fee_tiers(fee_item_id);
+CREATE INDEX idx_fee_tiers_order ON channel_fee_tiers(tier_order);
 CREATE INDEX idx_reconciliation_reports_channel ON channel_reconciliation_reports(channel_id);
 CREATE INDEX idx_reconciliation_reports_date ON channel_reconciliation_reports(reconciliation_date);
 CREATE INDEX idx_reconciliation_discrepancies_report ON reconciliation_discrepancies(report_id);
@@ -2391,10 +2390,10 @@ CREATE TRIGGER reason_and_purpose_updated_at
 -- Insert system persons (organization_person_id field is now UUID, set to NULL for system accounts)
 INSERT INTO persons (id, person_type, display_name, external_identifier, organization_person_id, is_active)
 VALUES 
-    ('00000000-0000-0000-0000-000000000000', 'system', 'SYSTEM', 'SYSTEM', NULL, TRUE),
-    ('00000000-0000-0000-0000-000000000001', 'system', 'MIGRATION', 'MIGRATION', NULL, TRUE),
-    ('00000000-0000-0000-0000-000000000002', 'integration', 'API_INTEGRATION', 'API', NULL, TRUE),
-    ('00000000-0000-0000-0000-000000000003', 'system', 'BATCH_PROCESSOR', 'BATCH', NULL, TRUE);
+    ('00000000-0000-0000-0000-000000000000', 'System', 'SYSTEM', 'SYSTEM', NULL, TRUE),
+    ('00000000-0000-0000-0000-000000000001', 'System', 'MIGRATION', 'MIGRATION', NULL, TRUE),
+    ('00000000-0000-0000-0000-000000000002', 'Integration', 'API_INTEGRATION', 'API', NULL, TRUE),
+    ('00000000-0000-0000-0000-000000000003', 'System', 'BATCH_PROCESSOR', 'BATCH', NULL, TRUE);
 
 -- =============================================================================
 -- SEED DATA: REASON AND PURPOSE ENTRIES
@@ -2419,7 +2418,7 @@ INSERT INTO reason_and_purpose (
     'Kununua Nyumba',
     'eng', 'fra', 'swa',
     FALSE, TRUE, NULL, 1,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2431,7 +2430,7 @@ INSERT INTO reason_and_purpose (
     'Upanuzi wa Biashara',
     'eng', 'fra', 'swa',
     TRUE, TRUE, NULL, 2,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2443,7 +2442,7 @@ INSERT INTO reason_and_purpose (
     'Elimu',
     'eng', 'fra', 'swa',
     FALSE, TRUE, NULL, 3,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- Account Closure Reasons
@@ -2457,7 +2456,7 @@ INSERT INTO reason_and_purpose (
     'Ombi la Mteja',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'Low', 1,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2469,7 +2468,7 @@ INSERT INTO reason_and_purpose (
     'Kutotumika kwa Akaunti',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Low', 2,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2481,7 +2480,7 @@ INSERT INTO reason_and_purpose (
     'Suala la Utiifu',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 3,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- AML/CTF Reasons  
@@ -2495,7 +2494,7 @@ INSERT INTO reason_and_purpose (
     'Mfumo wa shughuli za kutiliwa shaka umegundulika',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 1,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2507,7 +2506,7 @@ INSERT INTO reason_and_purpose (
     'Jina linafanana na orodha ya vikwazo',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'Critical', 1,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2519,7 +2518,7 @@ INSERT INTO reason_and_purpose (
     'Muamala unahusisha eneo lenye hatari kubwa',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 2,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- KYC Reasons
@@ -2533,7 +2532,7 @@ INSERT INTO reason_and_purpose (
     'Kitambulisho cha taifa kimepita muda',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 1,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2545,7 +2544,7 @@ INSERT INTO reason_and_purpose (
     'Uthibitisho wa makazi unahitajika',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 2,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2557,7 +2556,7 @@ INSERT INTO reason_and_purpose (
     'Hati za chanzo cha fedha zinahitajika',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 1,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- Transaction Hold Reasons
@@ -2571,7 +2570,7 @@ INSERT INTO reason_and_purpose (
     'Fedha hazitoshi',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Medium', 1,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 (
     gen_random_uuid(),
@@ -2583,7 +2582,7 @@ INSERT INTO reason_and_purpose (
     'Kuna uchunguzi wa udanganyifu',
     'eng', 'fra', 'swa',
     TRUE, TRUE, 'High', 2,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 ),
 
 -- System Generated Reasons
@@ -2597,7 +2596,7 @@ INSERT INTO reason_and_purpose (
     'Usingizi wa otomatiki kwa kutotumika',
     'eng', 'fra', 'swa',
     FALSE, TRUE, 'Low', 1,
-    'system', 'system'
+    gen_random_uuid(),gen_random_uuid()
 );
 
 -- Update compliance metadata for specific reasons
@@ -3097,6 +3096,110 @@ CREATE TABLE collection_records (
     reason_id UUID
 );
 
+-- Collection Agent table
+CREATE TABLE collection_agents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    person_id UUID NOT NULL,
+    license_number VARCHAR(50) NOT NULL,
+    license_expiry DATE NOT NULL,
+    status agent_status NOT NULL,
+    assigned_territory_id UUID NOT NULL,
+    agent_performance_metrics_id UUID NOT NULL,
+    cash_limit DECIMAL(15, 2) NOT NULL,
+    device_information_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Territory table
+CREATE TABLE territories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    territory_name VARCHAR(100) NOT NULL,
+    coverage_area_id UUID NOT NULL,
+    customer_count INTEGER NOT NULL,
+    route_optimization_enabled BOOLEAN NOT NULL,
+    territory_manager_person_id UUID
+);
+
+-- Coverage Area table
+CREATE TABLE coverage_areas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    area_name VARCHAR(100) NOT NULL,
+    area_type area_type NOT NULL,
+    boundary_coordinates_long_1 DECIMAL(11, 8),
+    boundary_coordinates_lat_1 DECIMAL(10, 8),
+    boundary_coordinates_long_2 DECIMAL(11, 8),
+    boundary_coordinates_lat_2 DECIMAL(10, 8),
+    boundary_coordinates_long_3 DECIMAL(11, 8),
+    boundary_coordinates_lat_3 DECIMAL(10, 8),
+    boundary_coordinates_long_4 DECIMAL(11, 8),
+    boundary_coordinates_lat_4 DECIMAL(10, 8),
+    boundary_coordinates_long_5 DECIMAL(11, 8),
+    boundary_coordinates_lat_5 DECIMAL(10, 8),
+    customer_density customer_density NOT NULL,
+    transport_mode transport_mode NOT NULL
+);
+
+-- Agent Performance Metrics table
+CREATE TABLE agent_performance_metrics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_rate DECIMAL(5, 2) NOT NULL,
+    customer_satisfaction_score DECIMAL(5, 2) NOT NULL,
+    punctuality_score DECIMAL(5, 2) NOT NULL,
+    cash_handling_accuracy DECIMAL(5, 2) NOT NULL,
+    compliance_score DECIMAL(5, 2) NOT NULL,
+    total_collections BIGINT NOT NULL,
+    total_amount_collected DECIMAL(15, 2) NOT NULL,
+    average_collection_time_minutes BIGINT NOT NULL,
+    customer_retention_rate DECIMAL(5, 2) NOT NULL,
+    route_efficiency DECIMAL(5, 2) NOT NULL,
+    monthly_targets_id UUID NOT NULL
+);
+
+-- Monthly Targets table
+CREATE TABLE monthly_targets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_target DECIMAL(15, 2) NOT NULL,
+    customer_target INTEGER NOT NULL,
+    satisfaction_target DECIMAL(5, 2) NOT NULL,
+    punctuality_target DECIMAL(5, 2) NOT NULL,
+    accuracy_target DECIMAL(5, 2) NOT NULL
+);
+
+-- Device Information table
+CREATE TABLE device_information (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    external_id VARCHAR(100) NOT NULL,
+    device_type device_type NOT NULL,
+    model VARCHAR(50) NOT NULL,
+    os_version VARCHAR(50) NOT NULL,
+    app_version VARCHAR(20) NOT NULL,
+    last_sync TIMESTAMPTZ,
+    battery_level REAL,
+    connectivity_status connectivity_status NOT NULL,
+    security_features_id UUID NOT NULL
+);
+
+-- Collection Security Features table
+CREATE TABLE collection_security_features (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    biometric_enabled BOOLEAN NOT NULL,
+    pin_protection BOOLEAN NOT NULL,
+    encryption_enabled BOOLEAN NOT NULL,
+    remote_wipe_enabled BOOLEAN NOT NULL,
+    certificate_installed BOOLEAN NOT NULL,
+    last_security_scan TIMESTAMPTZ
+);
+
+-- Foreign key constraints for daily collection tables
+ALTER TABLE collection_agents ADD CONSTRAINT fk_collection_agents_person FOREIGN KEY (person_id) REFERENCES persons(id);
+ALTER TABLE collection_agents ADD CONSTRAINT fk_collection_agents_territory FOREIGN KEY (assigned_territory_id) REFERENCES territories(id);
+ALTER TABLE collection_agents ADD CONSTRAINT fk_collection_agents_performance FOREIGN KEY (agent_performance_metrics_id) REFERENCES agent_performance_metrics(id);
+ALTER TABLE collection_agents ADD CONSTRAINT fk_collection_agents_device FOREIGN KEY (device_information_id) REFERENCES device_information(id);
+ALTER TABLE territories ADD CONSTRAINT fk_territories_coverage_area FOREIGN KEY (coverage_area_id) REFERENCES coverage_areas(id);
+ALTER TABLE agent_performance_metrics ADD CONSTRAINT fk_agent_performance_metrics_targets FOREIGN KEY (monthly_targets_id) REFERENCES monthly_targets(id);
+ALTER TABLE device_information ADD CONSTRAINT fk_device_information_security FOREIGN KEY (security_features_id) REFERENCES collection_security_features(id);
+
 -- Collection Batch table
 CREATE TABLE collection_batch (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -3107,16 +3210,202 @@ CREATE TABLE collection_batch (
     currency VARCHAR(3) NOT NULL,
     status batch_status NOT NULL,
     collection_records UUID[],
-    reconciliation_expected_amount DECIMAL(15, 2),
-    reconciliation_actual_amount DECIMAL(15, 2),
-    reconciliation_variance DECIMAL(15, 2),
-    reconciliation_variance_reason VARCHAR(500),
-    reconciliation_reconciled_by UUID,
-    reconciliation_timestamp TIMESTAMPTZ,
-    reconciliation_adjustment_required BOOLEAN,
+    reconciliation_data_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     processed_at TIMESTAMPTZ
 );
+
+-- Collection Program table
+CREATE TABLE collection_programs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    program_type collection_program_type NOT NULL,
+    status program_status NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    collection_frequency collection_frequency NOT NULL,
+    operating_hours_id UUID,
+    minimum_amount DECIMAL(15, 2) NOT NULL,
+    maximum_amount DECIMAL(15, 2) NOT NULL,
+    target_amount DECIMAL(15, 2),
+    program_duration_days INTEGER NOT NULL,
+    graduation_criteria_id UUID NOT NULL,
+    fee_structure_id UUID NOT NULL,
+    interest_rate DECIMAL(5, 2),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by_person_id UUID NOT NULL,
+    reason_id UUID
+);
+
+-- Graduation Criteria table
+CREATE TABLE graduation_criteria (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    minimum_balance DECIMAL(15, 2),
+    minimum_collection_rate DECIMAL(5, 2),
+    minimum_duration_days INTEGER,
+    consecutive_collections_required INTEGER,
+    target_achievement_required BOOLEAN NOT NULL,
+    auto_graduation_enabled BOOLEAN NOT NULL
+);
+
+-- Fee Structure table
+CREATE TABLE fee_structures (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    setup_fee DECIMAL(15, 2),
+    collection_fee DECIMAL(15, 2),
+    maintenance_fee DECIMAL(15, 2),
+    graduation_fee DECIMAL(15, 2),
+    early_termination_fee DECIMAL(15, 2),
+    fee_frequency fee_frequency NOT NULL
+);
+
+-- Customer Collection Profile table
+CREATE TABLE customer_collection_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id UUID NOT NULL,
+    collection_program_id UUID NOT NULL,
+    account_id UUID NOT NULL,
+    enrollment_date DATE NOT NULL,
+    status collection_status NOT NULL,
+    daily_amount DECIMAL(15, 2) NOT NULL,
+    collection_schedule_id UUID NOT NULL,
+    assigned_collection_agent_id UUID NOT NULL,
+    collection_location_address_id UUID NOT NULL,
+    collection_performance_metrics_id UUID NOT NULL,
+    graduation_progress_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reason_id UUID
+);
+
+-- Collection Schedule table
+CREATE TABLE collection_schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    frequency collection_frequency NOT NULL,
+    collection_time TIME NOT NULL,
+    timezone VARCHAR(50) NOT NULL,
+    holiday_handling holiday_handling NOT NULL
+);
+
+-- Collection Performance Metrics table
+CREATE TABLE collection_performance_metrics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_rate DECIMAL(5, 2) NOT NULL,
+    total_collections BIGINT NOT NULL,
+    total_amount_collected DECIMAL(15, 2) NOT NULL,
+    average_collection_amount DECIMAL(15, 2) NOT NULL,
+    consecutive_collections INTEGER NOT NULL,
+    missed_collections INTEGER NOT NULL,
+    last_collection_date DATE,
+    performance_score DECIMAL(5, 2) NOT NULL,
+    reliability_rating reliability_rating NOT NULL
+);
+
+-- Graduation Progress table
+CREATE TABLE graduation_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_collection_profile_id UUID NOT NULL,
+    current_balance DECIMAL(15, 2) NOT NULL,
+    target_balance DECIMAL(15, 2),
+    days_in_program INTEGER NOT NULL,
+    minimum_days_required INTEGER,
+    collection_consistency_rate DECIMAL(5, 2) NOT NULL,
+    minimum_consistency_required DECIMAL(5, 2),
+    graduation_eligible BOOLEAN NOT NULL,
+    graduation_date DATE,
+    next_review_date DATE NOT NULL
+);
+
+-- Collection Verification table
+CREATE TABLE collection_verifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_record_id UUID NOT NULL,
+    customer_signature VARCHAR(200),
+    agent_verification_code VARCHAR(50),
+    biometric_data_id UUID,
+    photo_evidence_id UUID,
+    witness_person_id UUID,
+    verification_timestamp TIMESTAMPTZ NOT NULL
+);
+
+-- Biometric Data table
+CREATE TABLE biometric_data (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_verification_id UUID NOT NULL,
+    fingerprint_hash VARCHAR(100),
+    face_recognition_score REAL,
+    verification_method biometric_method NOT NULL,
+    confidence_level REAL NOT NULL
+);
+
+-- Photo Evidence table
+CREATE TABLE photo_evidence (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_verification_id UUID NOT NULL,
+    customer_photo_hash VARCHAR(100),
+    receipt_photo_hash VARCHAR(100),
+    location_photo_hash VARCHAR(100),
+    photo_timestamp TIMESTAMPTZ NOT NULL
+);
+
+-- Witness Information table
+CREATE TABLE witness_information (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_verification_id UUID NOT NULL,
+    witness_name VARCHAR(100) NOT NULL,
+    witness_contact VARCHAR(50) NOT NULL,
+    witness_relationship VARCHAR(50) NOT NULL,
+    witness_signature VARCHAR(200)
+);
+
+-- Reconciliation Data table
+CREATE TABLE reconciliation_data (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_batch_id UUID NOT NULL,
+    expected_amount DECIMAL(15, 2) NOT NULL,
+    actual_amount DECIMAL(15, 2) NOT NULL,
+    variance DECIMAL(15, 2) NOT NULL,
+    variance_reason VARCHAR(500),
+    reconciled_by_person_id UUID NOT NULL,
+    reconciliation_timestamp TIMESTAMPTZ NOT NULL,
+    adjustment_required BOOLEAN NOT NULL
+);
+
+-- Performance Alert table
+CREATE TABLE performance_alerts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    agent_performance_metrics_id UUID NOT NULL,
+    alert_type alert_type NOT NULL,
+    severity alert_severity NOT NULL,
+    message VARCHAR(200) NOT NULL,
+    acknowledged BOOLEAN NOT NULL,
+    resolution_required BOOLEAN NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    acknowledged_at TIMESTAMPTZ,
+    resolved_at TIMESTAMPTZ
+);
+
+-- Foreign key constraints for daily collection tables
+ALTER TABLE collection_programs ADD CONSTRAINT fk_collection_programs_operating_hours FOREIGN KEY (operating_hours_id) REFERENCES collection_operating_hours(id);
+ALTER TABLE collection_programs ADD CONSTRAINT fk_collection_programs_graduation_criteria FOREIGN KEY (graduation_criteria_id) REFERENCES graduation_criteria(id);
+ALTER TABLE collection_programs ADD CONSTRAINT fk_collection_programs_fee_structure FOREIGN KEY (fee_structure_id) REFERENCES fee_structures(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_customer FOREIGN KEY (customer_id) REFERENCES customers(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_program FOREIGN KEY (collection_program_id) REFERENCES collection_programs(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_account FOREIGN KEY (account_id) REFERENCES accounts(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_schedule FOREIGN KEY (collection_schedule_id) REFERENCES collection_schedules(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_agent FOREIGN KEY (assigned_collection_agent_id) REFERENCES collection_agents(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_address FOREIGN KEY (collection_location_address_id) REFERENCES addresses(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_performance FOREIGN KEY (collection_performance_metrics_id) REFERENCES collection_performance_metrics(id);
+ALTER TABLE customer_collection_profiles ADD CONSTRAINT fk_customer_collection_profiles_progress FOREIGN KEY (graduation_progress_id) REFERENCES graduation_progress(id);
+ALTER TABLE graduation_progress ADD CONSTRAINT fk_graduation_progress_profile FOREIGN KEY (customer_collection_profile_id) REFERENCES customer_collection_profiles(id);
+ALTER TABLE collection_verifications ADD CONSTRAINT fk_collection_verifications_record FOREIGN KEY (collection_record_id) REFERENCES collection_records(id);
+ALTER TABLE biometric_data ADD CONSTRAINT fk_biometric_data_verification FOREIGN KEY (collection_verification_id) REFERENCES collection_verifications(id);
+ALTER TABLE photo_evidence ADD CONSTRAINT fk_photo_evidence_verification FOREIGN KEY (collection_verification_id) REFERENCES collection_verifications(id);
+ALTER TABLE witness_information ADD CONSTRAINT fk_witness_information_verification FOREIGN KEY (collection_verification_id) REFERENCES collection_verifications(id);
+ALTER TABLE reconciliation_data ADD CONSTRAINT fk_reconciliation_data_batch FOREIGN KEY (collection_batch_id) REFERENCES collection_batch(id);
+ALTER TABLE performance_alerts ADD CONSTRAINT fk_performance_alerts_metrics FOREIGN KEY (agent_performance_metrics_id) REFERENCES agent_performance_metrics(id);
 
 -- =============================================================================
 -- COMMENTS FOR DOCUMENTATION
@@ -3230,7 +3519,9 @@ CREATE TABLE "AccountHoldExpiryJob" (
     "expired_holds_count" INTEGER NOT NULL,
     "total_released_amount" DECIMAL NOT NULL,
     "processed_at" TIMESTAMPTZ NOT NULL,
-    "errors" VARCHAR(100)[],
+    "errors_01" VARCHAR(100),
+    "errors_02" VARCHAR(100),
+    "errors_03" VARCHAR(100),
 
     CONSTRAINT "AccountHoldExpiryJob_pkey" PRIMARY KEY ("id")
 );
@@ -3253,3 +3544,40 @@ CREATE TABLE "PlaceHoldRequest" (
 
 -- Add foreign key constraints
 ALTER TABLE "AccountHoldSummary" ADD CONSTRAINT "AccountHoldSummary_account_balance_calculation_id_fkey" FOREIGN KEY ("account_balance_calculation_id") REFERENCES "AccountBalanceCalculation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- =============================================================================
+-- MIGRATION FROM 002_calendar_weekend_days.sql
+-- =============================================================================
+
+-- Create the custom enum type for weekdays
+CREATE TYPE weekday AS ENUM (
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+);
+
+-- Create the weekend_days table
+CREATE TABLE weekend_days (
+    id UUID PRIMARY KEY,
+    name_l1 VARCHAR(50) NOT NULL,
+    name_l2 VARCHAR(50),
+    name_l3 VARCHAR(50),
+    weekend_day_01 weekday,
+    weekend_day_02 weekday,
+    weekend_day_03 weekday,
+    weekend_day_04 weekday,
+    weekend_day_05 weekday,
+    weekend_day_06 weekday,
+    weekend_day_07 weekday,
+    valid_from TIMESTAMPTZ NOT NULL,
+    valid_to TIMESTAMPTZ,
+    created_by_person_id UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add an index on created_by_person_id for faster lookups
+CREATE INDEX idx_weekend_days_created_by ON weekend_days(created_by_person_id);

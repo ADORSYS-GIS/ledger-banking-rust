@@ -1,4 +1,4 @@
-use banking_api::domain::{AccountType, AccountStatus, SigningCondition};
+use banking_db::{DbAccountStatus, DbAccountType, DbSigningCondition};
 use banking_db::models::{TransactionModel, TransactionType, TransactionStatus, AccountModel};
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
@@ -20,7 +20,7 @@ fn create_test_transaction(account_id: Uuid) -> TransactionModel {
         amount: Decimal::from_str("100.00").unwrap(),
         currency: HeaplessString::try_from("USD").unwrap(),
         description: HeaplessString::try_from("Test deposit transaction").unwrap(),
-        channel_id: HeaplessString::try_from("ATM").unwrap(),
+        channel_id: HeaplessString::try_from("Atm").unwrap(),
         terminal_id: Some(Uuid::new_v4()),
         agent_person_id: None,
         transaction_date: Utc::now(),
@@ -58,9 +58,9 @@ fn create_test_account() -> AccountModel {
         id: account_id,
         product_id: Uuid::new_v4(),
         gl_code_suffix: None,
-        account_type: AccountType::Savings,
-        account_status: AccountStatus::Active,
-        signing_condition: SigningCondition::AnyOwner,
+        account_type: DbAccountType::Savings,
+        account_status: DbAccountStatus::Active,
+        signing_condition: DbSigningCondition::AnyOwner,
         currency: HeaplessString::try_from("USD").unwrap(),
         open_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
         domicile_agency_branch_id: domicile_agency_branch_id,
@@ -139,7 +139,7 @@ async fn setup_test_db() -> PgPool {
     sqlx::query(
         r#"
         INSERT INTO persons (id, person_type, display_name, external_identifier)
-        VALUES ($1, 'system', 'Test User', 'test-user')
+        VALUES ($1, 'System', 'Test User', 'test-user')
         ON CONFLICT (id) DO NOTHING
         "#
     )
@@ -173,9 +173,9 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
     )
     .bind(account.id)
     .bind(account.product_id)
-    .bind(account.account_type.to_string())
-    .bind(account.account_status.to_string())
-    .bind(account.signing_condition.to_string())
+    .bind(format!("{:?}", account.account_type))
+    .bind(format!("{:?}", account.account_status))
+    .bind(format!("{:?}", account.signing_condition))
     .bind(account.currency.as_str())
     .bind(account.open_date)
     .bind(account.domicile_agency_branch_id)
@@ -501,7 +501,7 @@ async fn test_transaction_find_by_channel() {
     transaction2.reference_number = HeaplessString::try_from(
         format!("ATM{}", Utc::now().timestamp_micros() % 100000).as_str()
     ).unwrap();
-    transaction2.channel_id = HeaplessString::try_from("ATM").unwrap();
+    transaction2.channel_id = HeaplessString::try_from("Atm").unwrap();
     
     repo.create(transaction1.clone()).await
         .expect("Failed to create mobile transaction");
@@ -628,7 +628,7 @@ async fn test_transaction_reconciliation() {
     let account_id = create_test_account_in_db(&pool).await;
     
     // Create transactions for reconciliation
-    let channel = "ATM";
+    let channel = "Atm";
     let reconciliation_date = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
     
     let mut transaction1 = create_test_transaction(account_id);

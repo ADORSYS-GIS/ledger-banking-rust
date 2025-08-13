@@ -6,8 +6,8 @@ use uuid::Uuid;
 use crate::{
     BankingResult,
     domain::{
-        CollectionProgram, DailyCollectionProgramStatus as ProgramStatus, CustomerCollectionProfile, DailyCollectionStatus as CollectionStatus,
-        CollectionRecord, CollectionRecordStatus, CollectionAgent, DailyCollectionAgentStatus as AgentStatus,
+        CollectionProgram, ProgramStatus, CustomerCollectionProfile, CollectionStatus,
+        CollectionRecord, CollectionRecordStatus, CollectionAgent, AgentStatus,
         CollectionBatch, CollectionMethod
     },
 };
@@ -385,7 +385,7 @@ pub struct CollectionTrends {
     pub period_end: NaiveDate,
     pub granularity: TrendGranularity,
     pub data_points: Vec<TrendDataPoint>,
-    pub overall_trend: TrendDirection,
+    pub overall_trend: CollectionTrendDirection,
     pub growth_rate: Decimal,
 }
 
@@ -397,7 +397,7 @@ pub enum TrendGranularity {
 }
 
 #[derive(Debug, Clone)]
-pub enum TrendDirection {
+pub enum CollectionTrendDirection {
     Increasing,
     Decreasing,
     Stable,

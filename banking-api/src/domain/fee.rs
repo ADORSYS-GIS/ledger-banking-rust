@@ -146,7 +146,7 @@ pub struct ProductFee {
     pub minimum_amount: Option<Decimal>,
     pub maximum_amount: Option<Decimal>,
     pub currency: HeaplessString<3>,
-    pub frequency: FeeFrequency,
+    pub frequency: AccountFeeFrequency,
     pub tier_schedule: Option<Vec<FeeTier>>,
     pub conditions: Vec<FeeCondition>,
     pub gl_code: HeaplessString<10>,
@@ -156,7 +156,7 @@ pub struct ProductFee {
 
 /// Fee application frequency
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum FeeFrequency {
+pub enum AccountFeeFrequency {
     /// Per transaction/event
     PerEvent,
     /// Once per day maximum

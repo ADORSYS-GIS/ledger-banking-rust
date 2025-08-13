@@ -16,6 +16,7 @@ pub mod person;
 pub mod collateral;
 pub mod daily_collection;
 pub mod product;
+pub mod common;
 
 pub use customer::*;
 pub use account::*;
@@ -25,12 +26,7 @@ pub use transaction::*;
 pub use calendar::*;
 pub use workflow::*;
 pub use compliance::*;
-// Channel module exports (renamed to avoid conflicts)
-pub use channel::{
-    Channel, ChannelStatus, ChannelFeeType, ChannelFeeCalculationMethod, 
-    ChannelFeeTier, FeeSchedule, FeeItem, ReconciliationReport, 
-    Discrepancy, ReconciliationStatus, ChannelFee
-};
+pub use channel::*;
 
 // Fee module exports (original fee types)
 pub use fee::*;
@@ -41,14 +37,5 @@ pub use reason_and_purpose::*;
 pub use person::*;
 pub use collateral::*;
 pub use product::*;
-pub use daily_collection::{
-    CollectionAgent, Territory, CoverageArea, AgentPerformanceMetrics, DeviceInformation,
-    CollectionProgram, CustomerCollectionProfile, CollectionRecord, CollectionBatch,
-    AgentStatus as DailyCollectionAgentStatus, AreaType as DailyCollectionAreaType,
-    CustomerDensity, TransportMode, DeviceType, ConnectivityStatus,
-    CollectionProgramType, ProgramStatus as DailyCollectionProgramStatus,
-    CollectionFrequency, CollectionStatus as DailyCollectionStatus,
-    HolidayHandling, ReliabilityRating, CollectionMethod,
-    CollectionRecordStatus, BiometricMethod, BatchStatus as DailyCollectionBatchStatus,
-    AlertType as DailyCollectionAlertType, FeeFrequency as DailyCollectionFeeFrequency,
-};
+pub use common::*;
+pub use daily_collection::*;

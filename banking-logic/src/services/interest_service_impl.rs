@@ -243,11 +243,11 @@ impl InterestService for InterestServiceImpl {
         while current_date <= to_date {
             // Check if we should accrue interest on this date
             let should_accrue = match product_rules.accrual_frequency {
-                banking_db::models::AccrualFrequency::Daily => true,
-                banking_db::models::AccrualFrequency::BusinessDaysOnly => {
+                banking_db::models::ProductAccrualFrequency::Daily => true,
+                banking_db::models::ProductAccrualFrequency::BusinessDaysOnly => {
                     self.calendar_service.is_business_day(current_date, account.currency.as_str()).await?
                 }
-                banking_db::models::AccrualFrequency::None => false,
+                banking_db::models::ProductAccrualFrequency::None => false,
             };
 
             if should_accrue {
@@ -320,7 +320,7 @@ impl InterestService for InterestServiceImpl {
     }
 
     /// Get interest rate tiers for a product
-    async fn get_interest_rate_tiers(&self, _product_id: Uuid) -> BankingResult<Vec<banking_api::service::InterestRateTier>> {
+    async fn get_interest_rate_tiers(&self, _product_id: Uuid) -> BankingResult<Vec<banking_api::service::ServiceInterestRateTier>> {
         todo!("Implement get_interest_rate_tiers")
     }
 
@@ -589,7 +589,7 @@ mod tests {
         async fn create(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> { todo!() }
         async fn update(&self, _account: banking_db::models::AccountModel) -> BankingResult<banking_db::models::AccountModel> { todo!() }
         async fn find_by_customer_id(&self, _customer_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
-        async fn find_by_account_type(&self, _account_type: banking_db::models::AccountType) -> BankingResult<Vec<banking_db::models::AccountModel>> { Ok(vec![]) }
+        async fn find_by_account_type(&self, _account_type: banking_db::models::DbAccountType) -> BankingResult<Vec<banking_db::models::AccountModel>> { Ok(vec![]) }
         async fn find_by_product_id(&self, _product_id: Uuid) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_by_status(&self, _status: &str) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
         async fn find_dormancy_candidates(&self, _reference_date: chrono::NaiveDate, _threshold_days: i32) -> BankingResult<Vec<banking_db::models::AccountModel>> { todo!() }
@@ -784,8 +784,21 @@ mod tests {
         async fn is_weekend(&self, _date: NaiveDate, _jurisdiction: &str) -> BankingResult<bool> {
             Ok(false)
         }
-        async fn get_weekend_days(&self, _jurisdiction: &str) -> BankingResult<Vec<chrono::Weekday>> {
-            Ok(vec![chrono::Weekday::Sat, chrono::Weekday::Sun])
+        
+        async fn create_weekend_days(&self, weekend_days: banking_api::domain::WeekendDays) -> BankingResult<banking_api::domain::WeekendDays> {
+            Ok(weekend_days)
+        }
+        
+        async fn get_weekend_days_by_id(&self, _weekend_days_id: Uuid) -> BankingResult<Option<banking_api::domain::WeekendDays>> {
+            Ok(None)
+        }
+        
+        async fn update_weekend_days(&self, weekend_days: banking_api::domain::WeekendDays) -> BankingResult<banking_api::domain::WeekendDays> {
+            Ok(weekend_days)
+        }
+        
+        async fn delete_weekend_days(&self, _weekend_days_id: Uuid) -> BankingResult<()> {
+            Ok(())
         }
     }
 }

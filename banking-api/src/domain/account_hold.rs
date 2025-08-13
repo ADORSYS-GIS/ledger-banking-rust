@@ -98,7 +98,9 @@ pub struct AccountHoldExpiryJob {
     pub expired_holds_count: u32,
     pub total_released_amount: Decimal,
     pub processed_at: DateTime<Utc>,
-    pub errors: Vec<HeaplessString<100>>,
+    pub error_01: HeaplessString<100>,
+    pub error_02: HeaplessString<100>,
+    pub error_03: HeaplessString<100>,
 }
 
 /// Request parameters for placing a hold on an account

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use async_trait::async_trait;
+use banking_db::DbAccountType;
 use chrono::{NaiveDate, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -60,7 +61,7 @@ impl CasaService for CasaServiceImpl {
             .await?
             .ok_or(BankingError::AccountNotFound(request.account_id))?;
 
-        if account.account_type != banking_api::domain::AccountType::Current {
+        if account.account_type != DbAccountType::Current {
             return Err(BankingError::ValidationError {
                 field: "account_type".to_string(),
                 message: "Overdraft facilities are only available for current accounts".to_string(),
@@ -197,7 +198,9 @@ impl CasaService for CasaServiceImpl {
                                account.overdraft_limit.unwrap_or(Decimal::ZERO) - 
                                balance_calc;
 
-        let mut validation_messages: Vec<HeaplessString<200>> = Vec::new();
+        let mut validation_message_01 = HeaplessString::<200>::new();
+        let validation_message_02 = HeaplessString::<200>::new();
+        let validation_message_03 = HeaplessString::<200>::new();
         let mut requires_authorization = false;
         let mut authorization_level = None;
 
@@ -222,7 +225,7 @@ impl CasaService for CasaServiceImpl {
             } else if overdraft_utilization.is_some() {
                 // Transaction will utilize overdraft
                 if let Ok(msg) = HeaplessString::try_from("Transaction will utilize overdraft facility") {
-                    validation_messages.push(msg);
+                    validation_message_01 = msg;
                 }
                 
                 let overdraft_amount = overdraft_utilization.unwrap();
@@ -261,7 +264,9 @@ impl CasaService for CasaServiceImpl {
             post_transaction_balance,
             overdraft_utilization,
             validation_result,
-            validation_messages,
+            validation_message_01,
+            validation_message_02,
+            validation_message_03,
             requires_authorization,
             authorization_level,
         };

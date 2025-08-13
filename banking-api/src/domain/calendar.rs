@@ -1,7 +1,39 @@
-use chrono::{DateTime, NaiveDate, Utc, Weekday};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use heapless::String as HeaplessString;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum Weekday {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WeekendDays {
+    pub id: Uuid,
+    pub name_l1: HeaplessString<50>,
+    pub name_l2: Option<HeaplessString<50>>,
+    pub name_l3: Option<HeaplessString<50>>,
+    pub weekend_day_01: Option<Weekday>,
+    pub weekend_day_02: Option<Weekday>,
+    pub weekend_day_03: Option<Weekday>,
+    pub weekend_day_04: Option<Weekday>,
+    pub weekend_day_05: Option<Weekday>,
+    pub weekend_day_06: Option<Weekday>,
+    pub weekend_day_07: Option<Weekday>,
+    pub valid_from: DateTime<Utc>,
+    pub valid_to: Option<DateTime<Utc>>,
+    pub created_by_person_id: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BankHoliday {
@@ -180,24 +212,24 @@ impl BankHolidayBuilder {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum HolidayType { 
-    National, 
+pub enum HolidayType {
+    National,
     Regional,
-    Religious, 
+    Religious,
     Banking
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DateCalculationRules {
     pub default_shift_rule: DateShiftRule,
-    pub weekend_treatment: WeekendTreatment,
+    pub weekend_days: Uuid,
     pub jurisdiction: HeaplessString<10>,
 }
 
 impl DateCalculationRules {
     pub fn new(
         default_shift_rule: DateShiftRule,
-        weekend_treatment: WeekendTreatment,
+        weekend_days: Uuid,
         jurisdiction: &str,
     ) -> Result<Self, &'static str> {
         if jurisdiction.len() < 2 {
@@ -209,7 +241,7 @@ impl DateCalculationRules {
 
         Ok(DateCalculationRules {
             default_shift_rule,
-            weekend_treatment,
+            weekend_days,
             jurisdiction,
         })
     }
@@ -223,17 +255,10 @@ impl DateCalculationRules {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DateShiftRule { 
+pub enum DateShiftRule {
     NextBusinessDay,
     PreviousBusinessDay,
     NoShift,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum WeekendTreatment { 
-    SaturdaySunday, 
-    FridayOnly, 
-    Custom(Vec<Weekday>) 
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

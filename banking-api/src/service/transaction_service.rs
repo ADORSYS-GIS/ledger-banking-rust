@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     domain::{
-        Transaction, TransactionType, ValidationResult, ApprovalWorkflow, 
+        Transaction, TransactionType, TransactionValidationResult, TransactionApprovalWorkflow,
         PermittedOperation, TransactionRequest, TransactionResult, FinalSettlement
     },
     error::BankingResult,
@@ -16,7 +16,7 @@ pub trait TransactionService: Send + Sync {
     async fn process_transaction(&self, transaction: Transaction) -> BankingResult<Transaction>;
     
     /// Validate transaction limits
-    async fn validate_transaction_limits(&self, transaction: &Transaction) -> BankingResult<ValidationResult>;
+    async fn validate_transaction_limits(&self, transaction: &Transaction) -> BankingResult<TransactionValidationResult>;
     
     /// Reverse a posted transaction with reason ID validation
     async fn reverse_transaction(&self, transaction_id: Uuid, reason_id: Uuid, additional_details: Option<&str>) -> BankingResult<()>;
@@ -29,11 +29,11 @@ pub trait TransactionService: Send + Sync {
     async fn find_transactions_by_account(&self, account_id: Uuid, from: NaiveDate, to: NaiveDate) -> BankingResult<Vec<Transaction>>;
     
     /// Multi-party authorization workflow
-    async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<ApprovalWorkflow>;
+    async fn initiate_approval_workflow(&self, transaction: Transaction) -> BankingResult<TransactionApprovalWorkflow>;
     async fn approve_transaction(&self, transaction_id: Uuid, approver_person_id: Uuid) -> BankingResult<()>;
 
     /// Status-aware transaction validation (from enhancements)
-    async fn validate_account_transactional_status(&self, account_id: Uuid, transaction_type: TransactionType) -> BankingResult<ValidationResult>;
+    async fn validate_account_transactional_status(&self, account_id: Uuid, transaction_type: TransactionType) -> BankingResult<TransactionValidationResult>;
     
     /// Get permitted operations for an account
     async fn get_permitted_operations(&self, account_id: Uuid) -> BankingResult<Vec<PermittedOperation>>;
@@ -60,7 +60,7 @@ pub trait TransactionService: Send + Sync {
     async fn get_transaction_audit_trail(&self, transaction_id: Uuid) -> BankingResult<Vec<TransactionAuditEntry>>;
 
     /// Update transaction status
-    async fn update_transaction_status(&self, transaction_id: Uuid, status: crate::domain::TransactionStatus, updated_by_person_id: String) -> BankingResult<()>;
+    async fn update_transaction_status(&self, transaction_id: Uuid, status: crate::domain::TransactionStatus, reason: String) -> BankingResult<()>;
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
