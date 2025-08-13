@@ -25,9 +25,9 @@ When this prompt is used, the assistant should:
    - Run `git diff --stat` to understand the scope of changes
    - Identify the primary purpose and scope of the changes
 
-2. **Create Commit Template** (if requested):
+2. **Create Commit Template**:
    - Generate a comprehensive commit template
-   - Store it in `prompts/commit.md`
+   - Store it in `target/commit.md`
 
 3. **Stage Relevant Changes**:
    - Use `git add` to stage files related to the main task

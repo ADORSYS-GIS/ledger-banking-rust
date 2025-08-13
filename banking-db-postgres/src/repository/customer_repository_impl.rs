@@ -4,6 +4,7 @@ use banking_db::models::{
     CustomerModel, CustomerPortfolioModel, CustomerDocumentModel, CustomerAuditModel
 };
 use banking_db::repository::CustomerRepository;
+use banking_db::{CustomerStatus, IdentityType, RiskRating};
 use sqlx::{PgPool, Row, postgres::PgRow};
 use uuid::Uuid;
 use heapless::String as HeaplessString;
@@ -24,42 +25,22 @@ impl TryFromRow<PgRow> for CustomerModel {
     fn try_from_row(row: &PgRow) -> BankingResult<Self> {
         Ok(CustomerModel {
             id: row.get("id"),
-            customer_type: row.get::<String, _>("customer_type").parse().map_err(|_| 
-                BankingError::ValidationError {
-                    field: "customer_type".to_string(),
-                    message: "Invalid customer type".to_string(),
-                }
-            )?,
+            customer_type: row.get("customer_type"),
             full_name: HeaplessString::try_from(
                 row.get::<String, _>("full_name").as_str()
             ).map_err(|_| BankingError::ValidationError {
                 field: "full_name".to_string(),
                 message: "Full name too long".to_string(),
             })?,
-            id_type: row.get::<String, _>("id_type").parse().map_err(|_| 
-                BankingError::ValidationError {
-                    field: "id_type".to_string(),
-                    message: "Invalid identity type".to_string(),
-                }
-            )?,
+            id_type: row.get("id_type"),
             id_number: HeaplessString::try_from(
                 row.get::<String, _>("id_number").as_str()
             ).map_err(|_| BankingError::ValidationError {
                 field: "id_number".to_string(),
                 message: "ID number too long".to_string(),
             })?,
-            risk_rating: row.get::<String, _>("risk_rating").parse().map_err(|_| 
-                BankingError::ValidationError {
-                    field: "risk_rating".to_string(),
-                    message: "Invalid risk rating".to_string(),
-                }
-            )?,
-            status: row.get::<String, _>("status").parse().map_err(|_| 
-                BankingError::ValidationError {
-                    field: "status".to_string(),
-                    message: "Invalid customer status".to_string(),
-                }
-            )?,
+            risk_rating: row.get("risk_rating"),
+            status: row.get("status"),
             created_at: row.get("created_at"),
             last_updated_at: row.get("last_updated_at"),
             updated_by_person_id: row.get("updated_by_person_id"),
@@ -86,12 +67,7 @@ impl TryFromRow<PgRow> for CustomerDocumentModel {
                     field: "document_path".to_string(),
                     message: "Document path too long".to_string(),
                 })?,
-            status: row.get::<String, _>("status").parse().map_err(|_| 
-                BankingError::ValidationError {
-                    field: "status".to_string(),
-                    message: "Invalid document status".to_string(),
-                }
-            )?,
+            status: row.get("status"),
             uploaded_at: row.get("uploaded_at"),
             uploaded_by: row.get("uploaded_by"),
             verified_at: row.get("verified_at"),
@@ -159,18 +135,18 @@ impl CustomerRepository for CustomerRepositoryImpl {
                 $1, $2::customer_type, $3, $4::identity_type, $5,
                 $6::risk_rating, $7::customer_status, $8, $9, $10
             )
-            RETURNING id, customer_type::text as customer_type, full_name,
-                     id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                     status::text as status, created_at, last_updated_at, updated_by_person_id 
+            RETURNING id, customer_type::customer_type as customer_type, full_name,
+                     id_type::identity_type as id_type, id_number, risk_rating::risk_rating as risk_rating,
+                     status::customer_status as status, created_at, last_updated_at, updated_by_person_id 
             "#
         )
         .bind(customer.id)
-        .bind(customer.customer_type.to_string())
+        .bind(customer.customer_type)
         .bind(customer.full_name.as_str())
-        .bind(customer.id_type.to_string())
+        .bind(customer.id_type)
         .bind(customer.id_number.as_str())
-        .bind(customer.risk_rating.to_string())
-        .bind(customer.status.to_string())
+        .bind(customer.risk_rating)
+        .bind(customer.status)
         .bind(customer.created_at)
         .bind(customer.last_updated_at)
         .bind(customer.updated_by_person_id)
@@ -190,18 +166,18 @@ impl CustomerRepository for CustomerRepositoryImpl {
                 id_number = $5, risk_rating = $6::risk_rating, status = $7::customer_status,
                 last_updated_at = $8, updated_by_person_id = $9
             WHERE id = $1
-            RETURNING id, customer_type::text as customer_type, full_name,
-                     id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                     status::text as status, created_at, last_updated_at, updated_by_person_id 
+            RETURNING id, customer_type::customer_type as customer_type, full_name,
+                     id_type::identity_type as id_type, id_number, risk_rating::risk_rating as risk_rating,
+                     status::customer_status as status, created_at, last_updated_at, updated_by_person_id 
             "#
         )
         .bind(customer.id)
-        .bind(customer.customer_type.to_string())
+        .bind(customer.customer_type)
         .bind(customer.full_name.as_str())
-        .bind(customer.id_type.to_string())
+        .bind(customer.id_type)
         .bind(customer.id_number.as_str())
-        .bind(customer.risk_rating.to_string())
-        .bind(customer.status.to_string())
+        .bind(customer.risk_rating)
+        .bind(customer.status)
         .bind(customer.last_updated_at)
         .bind(customer.updated_by_person_id)
         .fetch_one(&self.pool)
@@ -215,9 +191,9 @@ impl CustomerRepository for CustomerRepositoryImpl {
     async fn find_by_id(&self, customer_id: Uuid) -> BankingResult<Option<CustomerModel>> {
         let result = sqlx::query(
             r#"
-            SELECT id, customer_type::text as customer_type, full_name,
-                   id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by_person_id 
+            SELECT id, customer_type::customer_type as customer_type, full_name,
+                   id_type::identity_type as id_type, id_number, risk_rating::risk_rating as risk_rating,
+                   status::customer_status as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             WHERE id = $1
             "#
@@ -234,12 +210,12 @@ impl CustomerRepository for CustomerRepositoryImpl {
         }
     }
 
-    async fn find_by_identity(&self, id_type: &str, id_number: &str) -> BankingResult<Option<CustomerModel>> {
+    async fn find_by_identity(&self, id_type: IdentityType, id_number: &str) -> BankingResult<Option<CustomerModel>> {
         let result = sqlx::query(
             r#"
-            SELECT id, customer_type::text as customer_type, full_name,
-                   id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by_person_id 
+            SELECT id, customer_type::customer_type as customer_type, full_name,
+                   id_type::identity_type as id_type, id_number, risk_rating::risk_rating as risk_rating,
+                   status::customer_status as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             WHERE id_type = $1::identity_type AND id_number = $2
             "#
@@ -257,12 +233,12 @@ impl CustomerRepository for CustomerRepositoryImpl {
         }
     }
 
-    async fn find_by_risk_rating(&self, risk_rating: &str) -> BankingResult<Vec<CustomerModel>> {
+    async fn find_by_risk_rating(&self, risk_rating: RiskRating) -> BankingResult<Vec<CustomerModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT id, customer_type::text as customer_type, full_name,
-                   id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by_person_id 
+            SELECT id, customer_type::customer_type as customer_type, full_name,
+                   id_type::identity_type as id_type, id_number, risk_rating::risk_rating as risk_rating,
+                   status::customer_status as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             WHERE risk_rating = $1::risk_rating
             ORDER BY full_name
@@ -284,9 +260,9 @@ impl CustomerRepository for CustomerRepositoryImpl {
     async fn find_requiring_review(&self) -> BankingResult<Vec<CustomerModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT id, customer_type::text as customer_type, full_name,
-                   id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by_person_id 
+            SELECT id, customer_type::customer_type as customer_type, full_name,
+                   id_type::identity_type as id_type, id_number, risk_rating::risk_rating as risk_rating,
+                   status::customer_status as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             WHERE status = 'PendingVerification' OR risk_rating = 'High' OR risk_rating = 'Blacklisted'
                OR last_updated_at < NOW() - INTERVAL '1 year'
@@ -315,7 +291,7 @@ impl CustomerRepository for CustomerRepositoryImpl {
                 0::decimal as total_loan_outstanding,
                 NULL::timestamp as last_activity_date,
                 NULL::decimal as risk_score,
-                'NotStarted'::text as kyc_status,
+                'NotStarted'::kyc_status as kyc_status,
                 false as sanctions_checked,
                 NULL::timestamp as last_screening_date
             "#
@@ -335,12 +311,7 @@ impl CustomerRepository for CustomerRepositoryImpl {
                     total_loan_outstanding: row.get("total_loan_outstanding"),
                     last_activity_date: row.get("last_activity_date"),
                     risk_score: row.get("risk_score"),
-                    kyc_status: row.get::<String, _>("kyc_status").parse().map_err(|_| 
-                        BankingError::ValidationError {
-                            field: "kyc_status".to_string(),
-                            message: "Invalid KYC status".to_string(),
-                        }
-                    )?,
+                    kyc_status: row.get("kyc_status"),
                     sanctions_checked: row.get("sanctions_checked"),
                     last_screening_date: row.get("last_screening_date"),
                 }))
@@ -349,13 +320,13 @@ impl CustomerRepository for CustomerRepositoryImpl {
         }
     }
 
-    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: &str, authorized_by: Uuid) -> BankingResult<()> {
+    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: RiskRating, authorized_by: Uuid) -> BankingResult<()> {
         let mut tx = self.pool.begin().await.map_err(|e| BankingError::Internal(format!("Failed to start transaction: {e}")))?
         ;
 
         // Get current risk rating for audit
         let current_customer = sqlx::query(
-            "SELECT risk_rating::text as risk_rating FROM customers WHERE id = $1"
+            "SELECT risk_rating::risk_rating as risk_rating FROM customers WHERE id = $1"
         )
         .bind(customer_id)
         .fetch_one(&mut *tx)
@@ -363,7 +334,7 @@ impl CustomerRepository for CustomerRepositoryImpl {
         .map_err(|e| BankingError::Internal(format!("Failed to get current risk rating: {e}")))?
         ;
 
-        let old_risk_rating: String = current_customer.get("risk_rating");
+        let old_risk_rating: RiskRating = current_customer.get("risk_rating");
 
         // Update risk rating
         sqlx::query(
@@ -389,8 +360,8 @@ impl CustomerRepository for CustomerRepositoryImpl {
         .bind(Uuid::new_v4())
         .bind(customer_id)
         .bind("risk_rating")
-        .bind(&old_risk_rating)
-        .bind(risk_rating)
+        .bind(old_risk_rating.to_string())
+        .bind(risk_rating.to_string())
         .bind(authorized_by)
         .bind("Risk rating update")
         .execute(&mut *tx)
@@ -402,13 +373,13 @@ impl CustomerRepository for CustomerRepositoryImpl {
         Ok(())
     }
 
-    async fn update_status(&self, customer_id: Uuid, status: &str, reason: &str) -> BankingResult<()> {
+    async fn update_status(&self, customer_id: Uuid, status: CustomerStatus, reason: &str) -> BankingResult<()> {
         let mut tx = self.pool.begin().await.map_err(|e| BankingError::Internal(format!("Failed to start transaction: {e}")))?
         ;
 
         // Get current status for audit
         let current_customer = sqlx::query(
-            "SELECT status::text as status FROM customers WHERE id = $1"
+            "SELECT status::customer_status as status FROM customers WHERE id = $1"
         )
         .bind(customer_id)
         .fetch_one(&mut *tx)
@@ -463,14 +434,14 @@ impl CustomerRepository for CustomerRepositoryImpl {
             )
             VALUES ($1, $2, $3, $4, $5::document_status, $6, $7, $8, $9)
             RETURNING id, customer_id, document_type, document_path,
-                     status::text as status, uploaded_at, uploaded_by, verified_at, verified_by
+                     status::document_status as status, uploaded_at, uploaded_by, verified_at, verified_by
             "#
         )
         .bind(document.id)
         .bind(document.customer_id)
         .bind(document.document_type.as_str())
         .bind(document.document_path.as_ref().map(|s| s.as_str()))
-        .bind(document.status.to_string())
+        .bind(document.status)
         .bind(document.uploaded_at)
         .bind(document.uploaded_by)
         .bind(document.verified_at)
@@ -487,7 +458,7 @@ impl CustomerRepository for CustomerRepositoryImpl {
         let rows = sqlx::query(
             r#"
             SELECT id, customer_id, document_type, document_path,
-                   status::text as status, uploaded_at, uploaded_by, verified_at, verified_by
+                   status::document_status as status, uploaded_at, uploaded_by, verified_at, verified_by
             FROM customer_documents 
             WHERE customer_id = $1
             ORDER BY uploaded_at DESC
@@ -613,9 +584,9 @@ impl CustomerRepository for CustomerRepositoryImpl {
     async fn list(&self, offset: i64, limit: i64) -> BankingResult<Vec<CustomerModel>> {
         let rows = sqlx::query(
             r#"
-            SELECT id, customer_type::text as customer_type, full_name,
-                   id_type::text as id_type, id_number, risk_rating::text as risk_rating,
-                   status::text as status, created_at, last_updated_at, updated_by_person_id 
+            SELECT id, customer_type::customer_type as customer_type, full_name,
+                   id_type::identity_type as id_type, id_number, risk_rating::risk_rating as risk_rating,
+                   status::customer_status as status, created_at, last_updated_at, updated_by_person_id 
             FROM customers 
             ORDER BY full_name
             LIMIT $1 OFFSET $2

@@ -15,7 +15,7 @@ use banking_db::models::{
     CheckType as DbCheckType, CheckResult as DbCheckResult, ScreeningType as DbScreeningType,
     RiskLevel as DbRiskLevel, Severity as DbSeverity,
     compliance::AlertType as DbAlertType,
-    AlertStatus as DbAlertStatus, SarStatus as DbSarStatus, KycStatus as DbKycStatus,
+    AlertStatus as DbAlertStatus, SarStatus as DbSarStatus,
     compliance::{ControlType as DbControlType, VerificationStatus as DbVerificationStatus},
     ComplianceStatus as DbComplianceStatus
 };
@@ -30,7 +30,7 @@ impl ComplianceMapper {
     pub fn kyc_result_to_result_model(kyc_result: KycResult) -> KycResultModel {
         KycResultModel {
             customer_id: kyc_result.customer_id,
-            status: Self::domain_kyc_status_to_db_kyc_status(kyc_result.status),
+            status: kyc_result.status,
             completed_check_01: kyc_result.completed_check_01.map(Self::kyc_check_to_model),
             completed_check_02: kyc_result.completed_check_02.map(Self::kyc_check_to_model),
             completed_check_03: kyc_result.completed_check_03.map(Self::kyc_check_to_model),
@@ -213,20 +213,20 @@ impl ComplianceMapper {
     }
 
     // Enum conversion helper methods
-    fn domain_kyc_status_to_db_kyc_status(status: banking_api::domain::customer::KycStatus) -> DbKycStatus {
+    pub fn domain_kyc_status_to_db_kyc_status(status: banking_api::domain::customer::KycStatus) -> banking_db::models::customer::KycStatus {
         match status {
-            banking_api::domain::customer::KycStatus::NotStarted => DbKycStatus::NotStarted,
-            banking_api::domain::customer::KycStatus::InProgress => DbKycStatus::InProgress,
-            banking_api::domain::customer::KycStatus::Pending => DbKycStatus::Pending,
-            banking_api::domain::customer::KycStatus::Complete => DbKycStatus::Complete,
-            banking_api::domain::customer::KycStatus::Approved => DbKycStatus::Approved,
-            banking_api::domain::customer::KycStatus::Rejected => DbKycStatus::Rejected,
-            banking_api::domain::customer::KycStatus::RequiresUpdate => DbKycStatus::RequiresUpdate,
-            banking_api::domain::customer::KycStatus::Failed => DbKycStatus::Failed,
+            banking_api::domain::customer::KycStatus::NotStarted => banking_db::models::customer::KycStatus::NotStarted,
+            banking_api::domain::customer::KycStatus::InProgress => banking_db::models::customer::KycStatus::InProgress,
+            banking_api::domain::customer::KycStatus::Pending => banking_db::models::customer::KycStatus::Pending,
+            banking_api::domain::customer::KycStatus::Complete => banking_db::models::customer::KycStatus::Complete,
+            banking_api::domain::customer::KycStatus::Approved => banking_db::models::customer::KycStatus::Approved,
+            banking_api::domain::customer::KycStatus::Rejected => banking_db::models::customer::KycStatus::Rejected,
+            banking_api::domain::customer::KycStatus::RequiresUpdate => banking_db::models::customer::KycStatus::RequiresUpdate,
+            banking_api::domain::customer::KycStatus::Failed => banking_db::models::customer::KycStatus::Failed,
         }
     }
 
-    fn domain_check_result_to_db_check_result(result: CheckResult) -> DbCheckResult {
+    pub fn domain_check_result_to_db_check_result(result: CheckResult) -> DbCheckResult {
         match result {
             CheckResult::Pass => DbCheckResult::Pass,
             CheckResult::Fail => DbCheckResult::Fail,
@@ -235,7 +235,7 @@ impl ComplianceMapper {
         }
     }
 
-    fn domain_screening_type_to_db_screening_type(screening_type: ScreeningType) -> DbScreeningType {
+    pub fn domain_screening_type_to_db_screening_type(screening_type: ScreeningType) -> DbScreeningType {
         match screening_type {
             ScreeningType::Sanctions => DbScreeningType::Sanctions,
             ScreeningType::PoliticallyExposed => DbScreeningType::PoliticallyExposed,
@@ -244,7 +244,7 @@ impl ComplianceMapper {
         }
     }
 
-    fn domain_risk_level_to_db_risk_level(risk_level: RiskLevel) -> DbRiskLevel {
+    pub fn domain_risk_level_to_db_risk_level(risk_level: RiskLevel) -> DbRiskLevel {
         match risk_level {
             RiskLevel::Low => DbRiskLevel::Low,
             RiskLevel::Medium => DbRiskLevel::Medium,
@@ -253,7 +253,7 @@ impl ComplianceMapper {
         }
     }
 
-    fn domain_alert_type_to_db_alert_type(alert_type: AlertType) -> DbAlertType {
+    pub fn domain_alert_type_to_db_alert_type(alert_type: AlertType) -> DbAlertType {
         match alert_type {
             AlertType::StructuringDetection => DbAlertType::StructuringDetection,
             AlertType::VelocityCheck => DbAlertType::VelocityCheck,
@@ -264,7 +264,7 @@ impl ComplianceMapper {
         }
     }
 
-    fn domain_severity_to_db_severity(severity: Severity) -> DbSeverity {
+    pub fn domain_severity_to_db_severity(severity: Severity) -> DbSeverity {
         match severity {
             Severity::Low => DbSeverity::Low,
             Severity::Medium => DbSeverity::Medium,
@@ -273,7 +273,7 @@ impl ComplianceMapper {
         }
     }
 
-    fn domain_alert_status_to_db_alert_status(status: AlertStatus) -> DbAlertStatus {
+    pub fn domain_alert_status_to_db_alert_status(status: AlertStatus) -> DbAlertStatus {
         match status {
             AlertStatus::New => DbAlertStatus::New,
             AlertStatus::InReview => DbAlertStatus::InReview,
@@ -313,7 +313,7 @@ impl ComplianceMapper {
         }
     }
 
-    fn domain_sar_status_to_db_sar_status(status: SarStatus) -> DbSarStatus {
+    pub fn domain_sar_status_to_db_sar_status(status: SarStatus) -> DbSarStatus {
         match status {
             SarStatus::Draft => DbSarStatus::Draft,
             SarStatus::Filed => DbSarStatus::Filed,
@@ -323,7 +323,7 @@ impl ComplianceMapper {
         }
     }
 
-    fn domain_control_type_to_db_control_type(control_type: banking_api::domain::account::ControlType) -> DbControlType {
+    pub fn domain_control_type_to_db_control_type(control_type: banking_api::domain::account::ControlType) -> DbControlType {
         match control_type {
             banking_api::domain::account::ControlType::DirectOwnership => DbControlType::DirectOwnership,
             banking_api::domain::account::ControlType::IndirectOwnership => DbControlType::IndirectOwnership,
@@ -332,7 +332,7 @@ impl ComplianceMapper {
         }
     }
 
-    fn domain_verification_status_to_db_verification_status(status: banking_api::domain::account::VerificationStatus) -> DbVerificationStatus {
+    pub fn domain_verification_status_to_db_verification_status(status: banking_api::domain::account::VerificationStatus) -> DbVerificationStatus {
         match status {
             banking_api::domain::account::VerificationStatus::Pending => DbVerificationStatus::Pending,
             banking_api::domain::account::VerificationStatus::Verified => DbVerificationStatus::Verified,
@@ -342,7 +342,7 @@ impl ComplianceMapper {
     }
 
     /// Legacy helper methods for backward compatibility
-    fn screening_type_to_heapless_string(screening_type: ScreeningType) -> HeaplessString<50> {
+    pub fn screening_type_to_heapless_string(screening_type: ScreeningType) -> HeaplessString<50> {
         let type_str = match screening_type {
             ScreeningType::Sanctions => "Sanctions",
             ScreeningType::PoliticallyExposed => "PoliticallyExposed",
@@ -424,7 +424,7 @@ impl ComplianceMapper {
     }
 
     /// Helper method to convert domain ComplianceStatus to database ComplianceStatus
-    fn domain_compliance_status_to_db_compliance_status(status: banking_api::domain::compliance::ComplianceStatus) -> DbComplianceStatus {
+    pub fn domain_compliance_status_to_db_compliance_status(status: banking_api::domain::compliance::ComplianceStatus) -> DbComplianceStatus {
         match status {
             banking_api::domain::compliance::ComplianceStatus::Passed => DbComplianceStatus::Passed,
             banking_api::domain::compliance::ComplianceStatus::Failed => DbComplianceStatus::Failed,

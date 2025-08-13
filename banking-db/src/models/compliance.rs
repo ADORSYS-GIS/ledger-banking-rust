@@ -197,9 +197,6 @@ pub enum ComplianceStatus {
     Pending,
 }
 
-// Re-export KycStatus from customer model for local use
-pub use banking_api::domain::KycStatus as ComplianceKycStatus;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[sqlx(type_name = "check_type", rename_all = "PascalCase")]
 pub enum CheckType {

@@ -24,10 +24,10 @@ pub enum CustomerType {
     Corporate 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum IdentityType { 
-    NationalId, 
-    Passport, 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum IdentityType {
+    NationalId,
+    Passport,
     CompanyRegistration,
     PermanentResidentCard,
     AsylumCard,
@@ -93,6 +93,17 @@ impl std::fmt::Display for KycStatus {
             KycStatus::Rejected => write!(f, "Rejected"),
             KycStatus::RequiresUpdate => write!(f, "RequiresUpdate"),
             KycStatus::Failed => write!(f, "Failed"),
+        }
+    }
+}
+
+impl std::fmt::Display for DocumentStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DocumentStatus::Uploaded => write!(f, "Uploaded"),
+            DocumentStatus::Verified => write!(f, "Verified"),
+            DocumentStatus::Rejected => write!(f, "Rejected"),
+            DocumentStatus::Expired => write!(f, "Expired"),
         }
     }
 }
@@ -174,12 +185,26 @@ impl std::str::FromStr for KycStatus {
     }
 }
 
+impl std::str::FromStr for DocumentStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Uploaded" => Ok(DocumentStatus::Uploaded),
+            "Verified" => Ok(DocumentStatus::Verified),
+            "Rejected" => Ok(DocumentStatus::Rejected),
+            "Expired" => Ok(DocumentStatus::Expired),
+            _ => Err(format!("Invalid DocumentStatus: {s}")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub enum RiskRating { 
-    Low, 
-    Medium, 
-    High, 
-    Blacklisted
+pub enum RiskRating {
+    Low,
+    Medium,
+    High,
+    Blacklisted,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -232,6 +257,14 @@ pub enum KycStatus {
     Rejected,
     RequiresUpdate,
     Failed,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum DocumentStatus {
+    Uploaded,
+    Verified,
+    Rejected,
+    Expired,
 }
 
 /// Builder for creating Customer instances with validation

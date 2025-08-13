@@ -57,21 +57,21 @@ impl CustomerMapper {
     }
 
     // Helper methods for enum conversions between API domain and DB models
-    fn customer_type_to_db(customer_type: CustomerType) -> DbCustomerType {
+    pub fn customer_type_to_db(customer_type: CustomerType) -> DbCustomerType {
         match customer_type {
             CustomerType::Individual => DbCustomerType::Individual,
             CustomerType::Corporate => DbCustomerType::Corporate,
         }
     }
 
-    fn db_to_customer_type(db_type: DbCustomerType) -> CustomerType {
+    pub fn db_to_customer_type(db_type: DbCustomerType) -> CustomerType {
         match db_type {
             DbCustomerType::Individual => CustomerType::Individual,
             DbCustomerType::Corporate => CustomerType::Corporate,
         }
     }
 
-    fn identity_type_to_db(identity_type: IdentityType) -> DbIdentityType {
+    pub fn identity_type_to_db(identity_type: IdentityType) -> DbIdentityType {
         match identity_type {
             IdentityType::NationalId => DbIdentityType::NationalId,
             IdentityType::Passport => DbIdentityType::Passport,
@@ -83,7 +83,7 @@ impl CustomerMapper {
         }
     }
 
-    fn db_to_identity_type(db_type: DbIdentityType) -> IdentityType {
+    pub fn db_to_identity_type(db_type: DbIdentityType) -> IdentityType {
         match db_type {
             DbIdentityType::NationalId => IdentityType::NationalId,
             DbIdentityType::Passport => IdentityType::Passport,
@@ -95,7 +95,7 @@ impl CustomerMapper {
         }
     }
 
-    fn risk_rating_to_db(risk_rating: RiskRating) -> DbRiskRating {
+    pub fn risk_rating_to_db(risk_rating: RiskRating) -> DbRiskRating {
         match risk_rating {
             RiskRating::Low => DbRiskRating::Low,
             RiskRating::Medium => DbRiskRating::Medium,
@@ -104,7 +104,7 @@ impl CustomerMapper {
         }
     }
 
-    fn db_to_risk_rating(db_rating: DbRiskRating) -> RiskRating {
+    pub fn db_to_risk_rating(db_rating: DbRiskRating) -> RiskRating {
         match db_rating {
             DbRiskRating::Low => RiskRating::Low,
             DbRiskRating::Medium => RiskRating::Medium,
@@ -113,7 +113,7 @@ impl CustomerMapper {
         }
     }
 
-    fn customer_status_to_db(status: CustomerStatus) -> DbCustomerStatus {
+    pub fn customer_status_to_db(status: CustomerStatus) -> DbCustomerStatus {
         match status {
             CustomerStatus::Active => DbCustomerStatus::Active,
             CustomerStatus::PendingVerification => DbCustomerStatus::PendingVerification,
@@ -123,7 +123,7 @@ impl CustomerMapper {
         }
     }
 
-    fn db_to_customer_status(db_status: DbCustomerStatus) -> CustomerStatus {
+    pub fn db_to_customer_status(db_status: DbCustomerStatus) -> CustomerStatus {
         match db_status {
             DbCustomerStatus::Active => CustomerStatus::Active,
             DbCustomerStatus::PendingVerification => CustomerStatus::PendingVerification,
@@ -133,7 +133,7 @@ impl CustomerMapper {
         }
     }
 
-    fn db_to_kyc_status(db_status: DbKycStatus) -> KycStatus {
+    pub fn db_to_kyc_status(db_status: DbKycStatus) -> KycStatus {
         match db_status {
             DbKycStatus::NotStarted => KycStatus::NotStarted,
             DbKycStatus::InProgress => KycStatus::InProgress,
@@ -146,7 +146,7 @@ impl CustomerMapper {
         }
     }
 
-    fn kyc_status_to_db(status: KycStatus) -> DbKycStatus {
+    pub fn kyc_status_to_db(status: KycStatus) -> DbKycStatus {
         match status {
             KycStatus::NotStarted => DbKycStatus::NotStarted,
             KycStatus::InProgress => DbKycStatus::InProgress,

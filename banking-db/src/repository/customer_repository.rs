@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use banking_api::BankingResult;
 use uuid::Uuid;
 
-use crate::models::{CustomerModel, CustomerPortfolioModel, CustomerDocumentModel, CustomerAuditModel};
+use crate::{models::{CustomerAuditModel, CustomerDocumentModel, CustomerModel, CustomerPortfolioModel}, CustomerStatus, IdentityType, RiskRating};
 
 #[async_trait]
 pub trait CustomerRepository: Send + Sync {
@@ -19,10 +19,10 @@ pub trait CustomerRepository: Send + Sync {
     async fn exists(&self, customer_id: Uuid) -> BankingResult<bool>;
     
     /// Find customer by identity document
-    async fn find_by_identity(&self, id_type: &str, id_number: &str) -> BankingResult<Option<CustomerModel>>;
+    async fn find_by_identity(&self, id_type: IdentityType, id_number: &str) -> BankingResult<Option<CustomerModel>>;
     
     /// Find customers by risk rating
-    async fn find_by_risk_rating(&self, risk_rating: &str) -> BankingResult<Vec<CustomerModel>>;
+    async fn find_by_risk_rating(&self, risk_rating: RiskRating) -> BankingResult<Vec<CustomerModel>>;
     
     /// Find customers requiring compliance review
     async fn find_requiring_review(&self) -> BankingResult<Vec<CustomerModel>>;
@@ -32,10 +32,10 @@ pub trait CustomerRepository: Send + Sync {
     
     /// Update customer risk rating with audit trail
     /// @param authorized_by - References Person.person_id
-    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: &str, authorized_by: Uuid) -> BankingResult<()>;
+    async fn update_risk_rating(&self, customer_id: Uuid, risk_rating: RiskRating, authorized_by: Uuid) -> BankingResult<()>;
     
     /// Update customer status with audit trail
-    async fn update_status(&self, customer_id: Uuid, status: &str, reason: &str) -> BankingResult<()>;
+    async fn update_status(&self, customer_id: Uuid, status: CustomerStatus, reason: &str) -> BankingResult<()>;
     
     /// Add customer document
     async fn add_document(&self, document: CustomerDocumentModel) -> BankingResult<CustomerDocumentModel>;

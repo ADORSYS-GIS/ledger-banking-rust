@@ -1,12 +1,13 @@
 #[cfg(feature = "postgres_tests")]
 mod tests {
+    use banking_db::RiskRating;
     use banking_db_postgres::CustomerRepositoryImpl;
     use uuid::Uuid;
     use chrono::Utc;
     use heapless::String as HeaplessString;
     use banking_db::models::{
         CustomerModel, CustomerDocumentModel, CustomerAuditModel,
-        CustomerType, IdentityType, RiskRating, CustomerStatus, DocumentStatus
+        CustomerType, IdentityType, CustomerStatus, DocumentStatus
     };
     use banking_db::repository::CustomerRepository;
     use sqlx::PgPool;
@@ -84,7 +85,7 @@ mod tests {
 
         // Test READ by identity
         let found_by_identity = repo.find_by_identity(
-            &customer.id_type.to_string(),
+            customer.id_type,
             customer.id_number.as_str()
         ).await
             .expect("Failed to find customer by identity")
@@ -150,13 +151,13 @@ mod tests {
         repo.create(customer2.clone()).await.expect("Failed to create medium risk customer");
 
         // Test find by risk rating
-        let high_risk_customers = repo.find_by_risk_rating("High").await
+        let high_risk_customers = repo.find_by_risk_rating(RiskRating::High).await
             .expect("Failed to find high risk customers");
         
         assert!(!high_risk_customers.is_empty());
         assert!(high_risk_customers.iter().any(|c| c.id == customer1.id));
 
-        let medium_risk_customers = repo.find_by_risk_rating("Medium").await
+        let medium_risk_customers = repo.find_by_risk_rating(RiskRating::Medium).await
             .expect("Failed to find medium risk customers");
         
         assert!(!medium_risk_customers.is_empty());
@@ -179,7 +180,7 @@ mod tests {
         repo.create(customer.clone()).await.expect("Failed to create customer");
 
         // Update risk rating
-        repo.update_risk_rating(customer.id, "High", customer.updated_by_person_id).await
+        repo.update_risk_rating(customer.id, RiskRating::High, customer.updated_by_person_id).await
             .expect("Failed to update risk rating");
 
         // Verify risk rating was updated

@@ -3,7 +3,7 @@ use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
-pub use banking_api::domain::{CustomerType, IdentityType, RiskRating, CustomerStatus, KycStatus};
+use std::str::FromStr;
 
 /// Database model for Customer table
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,7 +103,70 @@ pub struct CustomerComplianceStatusModel {
 // ENUMS - Database layer specific enums
 // ============================================================================
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "customer_type", rename_all = "PascalCase")]
+pub enum CustomerType {
+    Individual,
+    Corporate,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "identity_type", rename_all = "PascalCase")]
+pub enum IdentityType {
+    NationalId,
+    Passport,
+    CompanyRegistration,
+    PermanentResidentCard,
+    AsylumCard,
+    TemporaryResidentPermit,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "risk_rating", rename_all = "PascalCase")]
+pub enum RiskRating {
+    Low,
+    Medium,
+    High,
+    Blacklisted,
+}
+
+impl std::fmt::Display for RiskRating {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RiskRating::Low => write!(f, "Low"),
+            RiskRating::Medium => write!(f, "Medium"),
+            RiskRating::High => write!(f, "High"),
+            RiskRating::Blacklisted => write!(f, "Blacklisted"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "customer_status", rename_all = "PascalCase")]
+pub enum CustomerStatus {
+    Active,
+    PendingVerification,
+    Deceased,
+    Dissolved,
+    Blacklisted,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "kyc_status", rename_all = "PascalCase")]
+pub enum KycStatus {
+    NotStarted,
+    InProgress,
+    Pending,
+    Complete,
+    Approved,
+    Rejected,
+    RequiresUpdate,
+    Failed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "document_status", rename_all = "PascalCase")]
 pub enum DocumentStatus {
     Uploaded,
     Verified,
@@ -123,8 +186,8 @@ impl std::fmt::Display for DocumentStatus {
     }
 }
 
-impl std::str::FromStr for DocumentStatus {
-    type Err = String;
+impl FromStr for DocumentStatus {
+    type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -132,7 +195,97 @@ impl std::str::FromStr for DocumentStatus {
             "Verified" => Ok(DocumentStatus::Verified),
             "Rejected" => Ok(DocumentStatus::Rejected),
             "Expired" => Ok(DocumentStatus::Expired),
-            _ => Err(format!("Invalid DocumentStatus: {s}")),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for CustomerType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Individual" => Ok(CustomerType::Individual),
+            "Corporate" => Ok(CustomerType::Corporate),
+            _ => Err(()),
+        }
+    }
+}
+
+impl std::fmt::Display for IdentityType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IdentityType::NationalId => write!(f, "NationalId"),
+            IdentityType::Passport => write!(f, "Passport"),
+            IdentityType::CompanyRegistration => write!(f, "CompanyRegistration"),
+            IdentityType::PermanentResidentCard => write!(f, "PermanentResidentCard"),
+            IdentityType::AsylumCard => write!(f, "AsylumCard"),
+            IdentityType::TemporaryResidentPermit => write!(f, "TemporaryResidentPermit"),
+            IdentityType::Unknown => write!(f, "Unknown"),
+        }
+    }
+}
+
+impl FromStr for IdentityType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NationalId" => Ok(IdentityType::NationalId),
+            "Passport" => Ok(IdentityType::Passport),
+            "CompanyRegistration" => Ok(IdentityType::CompanyRegistration),
+            "PermanentResidentCard" => Ok(IdentityType::PermanentResidentCard),
+            "AsylumCard" => Ok(IdentityType::AsylumCard),
+            "TemporaryResidentPermit" => Ok(IdentityType::TemporaryResidentPermit),
+            "Unknown" => Ok(IdentityType::Unknown),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for RiskRating {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Low" => Ok(RiskRating::Low),
+            "Medium" => Ok(RiskRating::Medium),
+            "High" => Ok(RiskRating::High),
+            "Blacklisted" => Ok(RiskRating::Blacklisted),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for CustomerStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Active" => Ok(CustomerStatus::Active),
+            "PendingVerification" => Ok(CustomerStatus::PendingVerification),
+            "Deceased" => Ok(CustomerStatus::Deceased),
+            "Dissolved" => Ok(CustomerStatus::Dissolved),
+            "Blacklisted" => Ok(CustomerStatus::Blacklisted),
+            _ => Err(()),
+        }
+    }
+}
+
+impl FromStr for KycStatus {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NotStarted" => Ok(KycStatus::NotStarted),
+            "InProgress" => Ok(KycStatus::InProgress),
+            "Pending" => Ok(KycStatus::Pending),
+            "Complete" => Ok(KycStatus::Complete),
+            "Approved" => Ok(KycStatus::Approved),
+            "Rejected" => Ok(KycStatus::Rejected),
+            "RequiresUpdate" => Ok(KycStatus::RequiresUpdate),
+            "Failed" => Ok(KycStatus::Failed),
+            _ => Err(()),
         }
     }
 }

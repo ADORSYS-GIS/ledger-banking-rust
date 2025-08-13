@@ -32,25 +32,14 @@ impl CustomerService for CustomerServiceImpl {
 
         // Validate business rules
         self.validate_customer_data(&customer)?;
-
-        // Check for duplicate identity documents
-        let id_type_str = match customer.id_type {
-            banking_api::domain::IdentityType::NationalId => "NationalId",
-            banking_api::domain::IdentityType::Passport => "Passport",
-            banking_api::domain::IdentityType::CompanyRegistration => "CompanyRegistration",
-            banking_api::domain::IdentityType::PermanentResidentCard => "PermanentResidentCard",
-            banking_api::domain::IdentityType::AsylumCard => "AsylumCard",
-            banking_api::domain::IdentityType::TemporaryResidentPermit => "TemporaryResidentPermit",
-            banking_api::domain::IdentityType::Unknown => "Unknown",
-        };
         
         if let Some(existing) = self.customer_repository
-            .find_by_identity(id_type_str, &customer.id_number)
+            .find_by_identity(CustomerMapper::identity_type_to_db(customer.id_type), &customer.id_number)
             .await? 
         {
             return Err(banking_api::BankingError::DuplicateIdentityDocument(
                 format!("Customer with {} '{}' already exists (existing customer ID: {})", 
-                    id_type_str, customer.id_number.as_str(), existing.id)
+                    customer.id_type, customer.id_number.as_str(), existing.id)
             ));
         }
 
@@ -112,7 +101,7 @@ impl CustomerService for CustomerServiceImpl {
         self.customer_repository
             .update_risk_rating(
                 customer_id,
-                &crate::mappers::CustomerMapper::risk_rating_to_string(risk_rating),
+                CustomerMapper::risk_rating_to_db(risk_rating),
                 authorized_by,
             )
             .await?;
@@ -151,7 +140,7 @@ impl CustomerService for CustomerServiceImpl {
         self.customer_repository
             .update_status(
                 customer_id,
-                &crate::mappers::CustomerMapper::customer_status_to_string(status),
+                CustomerMapper::customer_status_to_db(status),
                 &reason_string,
             )
             .await?;
@@ -194,7 +183,7 @@ impl CustomerService for CustomerServiceImpl {
         self.customer_repository
             .update_status(
                 customer_id,
-                &crate::mappers::CustomerMapper::customer_status_to_string(status),
+                CustomerMapper::customer_status_to_db(status),
                 &reason,
             )
             .await?;
@@ -233,18 +222,8 @@ impl CustomerService for CustomerServiceImpl {
 
     /// Find customers by identity document
     async fn find_customer_by_identity(&self, id_type: banking_api::domain::IdentityType, id_number: &str) -> BankingResult<Option<Customer>> {
-        let id_type_str = match id_type {
-            banking_api::domain::IdentityType::NationalId => "NationalId",
-            banking_api::domain::IdentityType::Passport => "Passport",
-            banking_api::domain::IdentityType::CompanyRegistration => "CompanyRegistration",
-            banking_api::domain::IdentityType::PermanentResidentCard => "PermanentResidentCard",
-            banking_api::domain::IdentityType::AsylumCard => "AsylumCard",
-            banking_api::domain::IdentityType::TemporaryResidentPermit => "TemporaryResidentPermit",
-            banking_api::domain::IdentityType::Unknown => "Unknown",
-        };
-        
         let customer_model = self.customer_repository
-            .find_by_identity(id_type_str, id_number)
+            .find_by_identity(CustomerMapper::identity_type_to_db(id_type), id_number)
             .await?;
         
         match customer_model {
@@ -280,15 +259,8 @@ impl CustomerService for CustomerServiceImpl {
 
     /// Get all customers for a given risk rating
     async fn find_customers_by_risk_rating(&self, risk_rating: RiskRating) -> BankingResult<Vec<Customer>> {
-        let risk_str = match risk_rating {
-            RiskRating::Low => "Low",
-            RiskRating::Medium => "Medium", 
-            RiskRating::High => "High",
-            RiskRating::Blacklisted => "Blacklisted",
-        };
-        
         let customer_models = self.customer_repository
-            .find_by_risk_rating(risk_str)
+            .find_by_risk_rating(CustomerMapper::risk_rating_to_db(risk_rating))
             .await?;
         
         let mut customers = Vec::new();
@@ -428,11 +400,11 @@ mod tests {
             unimplemented!()
         }
 
-        async fn find_by_identity(&self, _id_type: &str, _id_number: &str) -> BankingResult<Option<banking_db::models::CustomerModel>> {
+        async fn find_by_identity(&self, _id_type: banking_db::models::IdentityType, _id_number: &str) -> BankingResult<Option<banking_db::models::CustomerModel>> {
             Ok(None) // No duplicates for testing
         }
 
-        async fn find_by_risk_rating(&self, _risk_rating: &str) -> BankingResult<Vec<banking_db::models::CustomerModel>> {
+        async fn find_by_risk_rating(&self, _risk_rating: banking_db::models::RiskRating) -> BankingResult<Vec<banking_db::models::CustomerModel>> {
             unimplemented!()
         }
 
@@ -444,11 +416,11 @@ mod tests {
             unimplemented!()
         }
 
-        async fn update_risk_rating(&self, _customer_id: Uuid, _risk_rating: &str, _authorized_by: Uuid) -> BankingResult<()> {
+        async fn update_risk_rating(&self, _customer_id: Uuid, _risk_rating: banking_db::models::RiskRating, _authorized_by: Uuid) -> BankingResult<()> {
             Ok(())
         }
 
-        async fn update_status(&self, _customer_id: Uuid, _status: &str, _reason: &str) -> BankingResult<()> {
+        async fn update_status(&self, _customer_id: Uuid, _status: banking_db::models::CustomerStatus, _reason: &str) -> BankingResult<()> {
             Ok(())
         }
 
