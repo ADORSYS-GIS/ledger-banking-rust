@@ -98,9 +98,8 @@ up on approval, perfrom changes as indicated in files `target/modules/{file_name
     -   Update CHECK constraints for enum validation
 
 11.  **Update Mappers** (`banking-logic/src/mappers/{file_name}_mapper.rs`)
-    -   Provide or modify mappers for structs and enums in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects.
-    -   Update conversion functions between domain structs and models structs (struct mappers)
-    -   Update conversion functions between domain enum and models enum (enum mappers)
+    -   Provide or modify mappers for enums in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects.
+    -   Provide or modify mappers for structs in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects.
     -   Ensure bidirectional mapping works correctly
 
 12. **Update Revenue Definition**
@@ -203,7 +202,7 @@ where S: Serializer {
 ### Database Models Enum Deserialization Pattern
 Also provide deserializer.
 
-### String to Enum Conversion
+## String to Enum Conversion
 ```rust
 // BEFORE: String type allowing invalid values
 pub status: String,
@@ -212,16 +211,16 @@ pub status: String,
 pub status: StatusEnum,
 ```
 
-## Strings
-
-### HeaplessString Alignment
+## String Alignment
+Allways keep HeaplessString, do not change them toe String.
 ```rust
 // Ensure consistent HeaplessString sizes between API and DB models
 pub field_name: HeaplessString<N>, // Same N in both layers
 ```
+Allways tranlate Strings to Heapless Strings.
 
 
-### Enum Domain and Database Models Alignment Template
+## Enum Domain and Database Models Alignment Template
 
 The new database model enum must:
 1.  Have the exact same variants as its domain counterpart.
@@ -286,7 +285,7 @@ impl std::fmt::Display for HoldPriority {
     }
 }
 ```
-### Mappers
+## Mappers For Enum
 
 **Mapper Implementation (`banking-logic/src/mappers/{file_name}_mapper.rs`):**
 ```rust
@@ -312,6 +311,42 @@ impl AgentNetworkMapper {
 }
 ```
 
+## Mapper For Structs
+
+```rust
+    /// Map from domain AgentNetwork to database AgentNetworkModel
+    pub fn network_to_model(network: AgentNetwork) -> AgentNetworkModel {
+        AgentNetworkModel {
+            id: network.id,
+            network_name: network.network_name,
+            network_type: Self::network_type_to_db(network.network_type),
+            status: Self::network_status_to_db(network.status),
+            contract_external_id: network.contract_external_id,
+            aggregate_daily_limit: network.aggregate_daily_limit,
+            current_daily_volume: network.current_daily_volume,
+            settlement_gl_code: network.settlement_gl_code,
+            created_at: network.created_at,
+            last_updated_at: network.created_at,
+            updated_by_person_id: Uuid::nil(), // System UUID
+        }
+    }
+
+    /// Map from database AgentNetworkModel to domain AgentNetwork
+    pub fn network_from_model(model: AgentNetworkModel) -> AgentNetwork {
+        AgentNetwork {
+            id: model.id,
+            network_name: model.network_name,
+            network_type: Self::network_type_from_db(model.network_type),
+            status: Self::network_status_from_db(model.status),
+            contract_external_id: model.contract_external_id,
+            aggregate_daily_limit: model.aggregate_daily_limit,
+            current_daily_volume: model.current_daily_volume,
+            settlement_gl_code: model.settlement_gl_code,
+            created_at: model.created_at,
+        }
+    }
+
+```
 ## Tests
 
 ### Test Updates

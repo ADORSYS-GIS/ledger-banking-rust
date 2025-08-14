@@ -69,6 +69,6 @@ pub use daily_collection::{
     HolidayHandling as DbHolidayHandling, ReliabilityRating as DbReliabilityRating,
     CollectionMethod as DbCollectionMethod, CollectionRecordStatus as DbCollectionRecordStatus,
     BiometricMethod as DbBiometricMethod, BatchStatus as DbDailyCollectionBatchStatus,
-    AlertType as DbDailyCollectionAlertType, FeeFrequency as DbDailyCollectionFeeFrequency,
+    CollectionAlertType as DbDailyCollectionAlertType, CollectionFeeFrequency as DbDailyCollectionFeeFrequency,
 };
 pub use collateral::AlertSeverity;

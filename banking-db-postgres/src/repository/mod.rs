@@ -7,6 +7,7 @@ pub mod transaction_repository_impl;
 pub mod person_repository_impl;
 pub mod compliance_repository_impl;
 pub mod collateral_repository_impl;
+pub mod daily_collection_repository_impl;
 pub mod workflow_repository_impl;
 pub mod fee_repository_impl;
 pub mod reason_and_purpose_repository_impl;

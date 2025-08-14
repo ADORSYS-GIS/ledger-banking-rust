@@ -6,12 +6,12 @@ pub mod agent_network_repository;
 pub mod compliance_repository;
 pub mod workflow_repository;
 pub mod calendar_repository;
+pub mod daily_collection_repository;
 pub mod fee_repository;
 pub mod reason_and_purpose_repository;
 pub mod person_repository;
 pub mod collateral_repository;
 pub mod channel_repository;
-pub mod daily_collection_repository;
 pub mod product_repository;
 
 pub use customer_repository::*;

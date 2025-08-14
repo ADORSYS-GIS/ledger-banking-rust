@@ -7,13 +7,13 @@ pub mod calendar_mapper;
 pub mod person_mapper;
 pub mod compliance_mapper;
 pub mod collateral_mapper;
+pub mod daily_collection_mapper;
 pub mod workflow_mapper;
 pub mod fee_mapper;
 pub mod channel_mapper;
 pub mod casa_mapper;
 pub mod loan_mapper;
 pub mod reason_and_purpose_mapper;
-pub mod daily_collection_mapper;
 pub mod product_mapper;
 
 pub use customer_mapper::*;

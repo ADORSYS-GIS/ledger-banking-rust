@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -214,7 +214,7 @@ pub struct AgentPerformanceMetrics {
     pub compliance_score: Decimal,
     pub total_collections: i64,
     pub total_amount_collected: Decimal,
-    pub average_collection_time: Duration,
+    pub average_collection_time_minutes: u32,
     pub customer_retention_rate: Decimal,
     pub route_efficiency: Decimal,
     pub monthly_targets_id: Uuid,
@@ -247,6 +247,8 @@ pub struct PerformanceAlert {
     pub created_at: DateTime<Utc>,
     pub acknowledged: bool,
     pub resolution_required: bool,
+    pub acknowledged_at: Option<DateTime<Utc>>,
+    pub resolved_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -1069,9 +1071,6 @@ impl CollectionAgentBuilder {
     pub fn build(self) -> Result<CollectionAgent, String> {
         let now = Utc::now();
 
-        // Generate default performance metrics ID
-        let default_metrics_id = Uuid::new_v4();
-
         Ok(CollectionAgent {
             id: self.id,
             person_id: self.person_id.ok_or("Person reference is required")?,
@@ -1079,7 +1078,7 @@ impl CollectionAgentBuilder {
             license_expiry: self.license_expiry.ok_or("License expiry is required")?,
             status: self.status,
             assigned_territory_id: self.assigned_territory_id.ok_or("Territory assignment is required")?,
-            agent_performance_metrics_id: self.agent_performance_metrics_id.unwrap_or(default_metrics_id),
+            agent_performance_metrics_id: self.agent_performance_metrics_id.ok_or("Agent performance metrics ID is required")?,
             cash_limit: self.cash_limit.ok_or("Cash limit is required")?,
             device_information_id: self.device_information_id.ok_or("Device information ID is required")?,
             created_at: now,

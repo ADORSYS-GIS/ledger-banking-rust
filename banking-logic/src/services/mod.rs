@@ -7,13 +7,13 @@ pub mod interest_service_impl;
 pub mod lifecycle_service_impl;
 pub mod calendar_service_impl;
 pub mod compliance_service_impl;
+pub mod daily_collection_service_impl;
 pub mod channel_service_impl;
 pub mod loan_service_impl;
 pub mod casa_service_impl;
 pub mod collateral_service_impl;
 pub mod fee_service_impl;
 pub mod eod_service_impl;
-pub mod daily_collection_service_impl;
 pub mod product_service_impl;
 
 pub use customer_service_impl::*;

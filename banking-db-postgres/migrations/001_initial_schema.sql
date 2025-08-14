@@ -157,7 +157,7 @@ CREATE TYPE agent_status AS ENUM ('Active', 'Suspended', 'Training', 'OnLeave', 
 CREATE TYPE area_type AS ENUM ('Urban', 'Suburban', 'Rural', 'Commercial', 'Industrial', 'Mixed');
 CREATE TYPE customer_density AS ENUM ('High', 'Medium', 'Low');
 CREATE TYPE transport_mode AS ENUM ('Walking', 'Bicycle', 'Motorcycle', 'Car', 'PublicTransport', 'Mixed');
-CREATE TYPE device_type AS ENUM ('Smartphone', 'Tablet', 'PortableTerminal', 'Smartwatch');
+CREATE TYPE device_type AS ENUM ('Smartphone', 'Tablet', 'PortableTerminal', 'SmartWatch');
 CREATE TYPE connectivity_status AS ENUM ('Online', 'Offline', 'LimitedConnectivity', 'SyncPending');
 CREATE TYPE collection_program_type AS ENUM ('FixedAmount', 'VariableAmount', 'TargetBased', 'DurationBased');
 CREATE TYPE program_status AS ENUM ('Active', 'Suspended', 'Closed', 'UnderReview');
@@ -169,7 +169,9 @@ CREATE TYPE collection_method AS ENUM ('Cash', 'MobilePayment', 'BankTransfer', 
 CREATE TYPE collection_record_status AS ENUM ('Pending', 'Processed', 'Failed', 'Reversed', 'UnderReview');
 CREATE TYPE biometric_method AS ENUM ('Fingerprint', 'FaceRecognition', 'Voiceprint', 'Combined');
 CREATE TYPE batch_status AS ENUM ('Pending', 'Processing', 'Completed', 'Failed', 'PartiallyProcessed', 'RequiresReconciliation');
-CREATE TYPE fee_frequency AS ENUM ('PerCollection', 'Daily', 'Weekly', 'Monthly', 'OneTime');
+CREATE TYPE collection_fee_frequency AS ENUM ('PerCollection', 'Daily', 'Weekly', 'Monthly', 'OneTime');
+
+CREATE TYPE collection_alert_type AS ENUM ('LowCollectionRate', 'CustomerComplaint', 'CashDiscrepancy', 'MissedSchedule', 'ComplianceViolation', 'SafetyConcern', 'DeviceIssue');
 
 -- Product catalogue enums
 CREATE TYPE product_type AS ENUM ('CASA', 'LOAN');
@@ -3064,8 +3066,8 @@ CREATE TABLE collection_operating_hours (
 CREATE TABLE collection_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id UUID NOT NULL,
-    agent_id UUID NOT NULL,
-    program_id UUID NOT NULL,
+    collection_agent_id UUID NOT NULL,
+    collection_program_id UUID NOT NULL,
     account_id UUID NOT NULL,
     collection_date DATE NOT NULL,
     collection_time TIMESTAMPTZ NOT NULL,
@@ -3203,7 +3205,7 @@ ALTER TABLE device_information ADD CONSTRAINT fk_device_information_security FOR
 -- Collection Batch table
 CREATE TABLE collection_batch (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    agent_id UUID NOT NULL,
+    collection_agent_id UUID NOT NULL,
     collection_date DATE NOT NULL,
     total_collections INTEGER NOT NULL,
     total_amount DECIMAL(15, 2) NOT NULL,
@@ -3258,7 +3260,7 @@ CREATE TABLE fee_structures (
     maintenance_fee DECIMAL(15, 2),
     graduation_fee DECIMAL(15, 2),
     early_termination_fee DECIMAL(15, 2),
-    fee_frequency fee_frequency NOT NULL
+    fee_frequency collection_fee_frequency NOT NULL
 );
 
 -- Customer Collection Profile table
@@ -3377,7 +3379,7 @@ CREATE TABLE reconciliation_data (
 CREATE TABLE performance_alerts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     agent_performance_metrics_id UUID NOT NULL,
-    alert_type alert_type NOT NULL,
+    alert_type collection_alert_type NOT NULL,
     severity alert_severity NOT NULL,
     message VARCHAR(200) NOT NULL,
     acknowledged BOOLEAN NOT NULL,
