@@ -6,7 +6,7 @@ use banking_api::domain::{
     InterestPostingRecord,
     InterestType, PostingStatus, AccountType
 };
-use banking_api::domain::customer::{KycStatus, RiskRating};
+use banking_api::domain::customer::{KycStatus as DomainKycStatus, RiskRating as DomainRiskRating};
 use banking_db::models::{
     OverdraftFacility as DbOverdraftFacility, OverdraftStatus as DbOverdraftStatus,
     ReviewFrequency as DbReviewFrequency, OverdraftUtilization as DbOverdraftUtilization,
@@ -325,7 +325,7 @@ impl CasaMapper {
     }
 
     // Enum conversion helper methods
-    fn overdraft_status_to_db(status: OverdraftStatus) -> DbOverdraftStatus {
+    pub fn overdraft_status_to_db(status: OverdraftStatus) -> DbOverdraftStatus {
         match status {
             OverdraftStatus::Active => DbOverdraftStatus::Active,
             OverdraftStatus::Suspended => DbOverdraftStatus::Suspended,
@@ -335,7 +335,7 @@ impl CasaMapper {
         }
     }
 
-    fn db_to_overdraft_status(status: DbOverdraftStatus) -> OverdraftStatus {
+    pub fn db_to_overdraft_status(status: DbOverdraftStatus) -> OverdraftStatus {
         match status {
             DbOverdraftStatus::Active => OverdraftStatus::Active,
             DbOverdraftStatus::Suspended => OverdraftStatus::Suspended,
@@ -345,7 +345,7 @@ impl CasaMapper {
         }
     }
 
-    fn review_frequency_to_db(freq: ReviewFrequency) -> DbReviewFrequency {
+    pub fn review_frequency_to_db(freq: ReviewFrequency) -> DbReviewFrequency {
         match freq {
             ReviewFrequency::Monthly => DbReviewFrequency::Monthly,
             ReviewFrequency::Quarterly => DbReviewFrequency::Quarterly,
@@ -354,7 +354,7 @@ impl CasaMapper {
         }
     }
 
-    fn db_to_review_frequency(freq: DbReviewFrequency) -> ReviewFrequency {
+    pub fn db_to_review_frequency(freq: DbReviewFrequency) -> ReviewFrequency {
         match freq {
             DbReviewFrequency::Monthly => ReviewFrequency::Monthly,
             DbReviewFrequency::Quarterly => ReviewFrequency::Quarterly,
@@ -363,7 +363,7 @@ impl CasaMapper {
         }
     }
 
-    fn compounding_frequency_to_db(freq: CompoundingFrequency) -> DbCompoundingFrequency {
+    pub fn compounding_frequency_to_db(freq: CompoundingFrequency) -> DbCompoundingFrequency {
         match freq {
             CompoundingFrequency::Daily => DbCompoundingFrequency::Daily,
             CompoundingFrequency::Weekly => DbCompoundingFrequency::Weekly,
@@ -372,7 +372,7 @@ impl CasaMapper {
         }
     }
 
-    fn db_to_compounding_frequency(freq: DbCompoundingFrequency) -> CompoundingFrequency {
+    pub fn db_to_compounding_frequency(freq: DbCompoundingFrequency) -> CompoundingFrequency {
         match freq {
             DbCompoundingFrequency::Daily => CompoundingFrequency::Daily,
             DbCompoundingFrequency::Weekly => CompoundingFrequency::Weekly,
@@ -381,7 +381,7 @@ impl CasaMapper {
         }
     }
 
-    fn processing_job_status_to_db(status: ProcessingJobStatus) -> DbProcessingJobStatus {
+    pub fn processing_job_status_to_db(status: ProcessingJobStatus) -> DbProcessingJobStatus {
         match status {
             ProcessingJobStatus::Scheduled => DbProcessingJobStatus::Scheduled,
             ProcessingJobStatus::Running => DbProcessingJobStatus::Running,
@@ -391,7 +391,7 @@ impl CasaMapper {
         }
     }
 
-    fn db_to_processing_job_status(status: DbProcessingJobStatus) -> ProcessingJobStatus {
+    pub fn db_to_processing_job_status(status: DbProcessingJobStatus) -> ProcessingJobStatus {
         match status {
             DbProcessingJobStatus::Scheduled => ProcessingJobStatus::Scheduled,
             DbProcessingJobStatus::Running => ProcessingJobStatus::Running,
@@ -401,7 +401,7 @@ impl CasaMapper {
         }
     }
 
-    fn casa_approval_status_to_db(status: CasaApprovalStatus) -> DbCasaApprovalStatus {
+    pub fn casa_approval_status_to_db(status: CasaApprovalStatus) -> DbCasaApprovalStatus {
         match status {
             CasaApprovalStatus::Pending => DbCasaApprovalStatus::Pending,
             CasaApprovalStatus::Approved => DbCasaApprovalStatus::Approved,
@@ -411,7 +411,7 @@ impl CasaMapper {
         }
     }
 
-    fn db_to_casa_approval_status(status: DbCasaApprovalStatus) -> CasaApprovalStatus {
+    pub fn db_to_casa_approval_status(status: DbCasaApprovalStatus) -> CasaApprovalStatus {
         match status {
             DbCasaApprovalStatus::Pending => CasaApprovalStatus::Pending,
             DbCasaApprovalStatus::Approved => CasaApprovalStatus::Approved,
@@ -421,7 +421,7 @@ impl CasaMapper {
         }
     }
 
-    fn interest_type_to_db(interest_type: InterestType) -> DbInterestType {
+    pub fn interest_type_to_db(interest_type: InterestType) -> DbInterestType {
         match interest_type {
             InterestType::CreditInterest => DbInterestType::CreditInterest,
             InterestType::DebitInterest => DbInterestType::DebitInterest,
@@ -429,7 +429,7 @@ impl CasaMapper {
         }
     }
 
-    fn db_to_interest_type(interest_type: DbInterestType) -> InterestType {
+    pub fn db_to_interest_type(interest_type: DbInterestType) -> InterestType {
         match interest_type {
             DbInterestType::CreditInterest => InterestType::CreditInterest,
             DbInterestType::DebitInterest => InterestType::DebitInterest,
@@ -437,7 +437,7 @@ impl CasaMapper {
         }
     }
 
-    fn posting_status_to_db(status: PostingStatus) -> DbPostingStatus {
+    pub fn posting_status_to_db(status: PostingStatus) -> DbPostingStatus {
         match status {
             PostingStatus::Calculated => DbPostingStatus::Calculated,
             PostingStatus::Posted => DbPostingStatus::Posted,
@@ -446,7 +446,7 @@ impl CasaMapper {
         }
     }
 
-    fn db_to_posting_status(status: DbPostingStatus) -> PostingStatus {
+    pub fn db_to_posting_status(status: DbPostingStatus) -> PostingStatus {
         match status {
             DbPostingStatus::Calculated => PostingStatus::Calculated,
             DbPostingStatus::Posted => PostingStatus::Posted,
@@ -455,17 +455,17 @@ impl CasaMapper {
         }
     }
 
-    fn account_type_to_db(account_type: AccountType) -> AccountType {
+    pub fn account_type_to_db(account_type: AccountType) -> AccountType {
         // AccountType is used directly from banking_api, no conversion needed
         account_type
     }
 
-    fn db_to_account_type(account_type: AccountType) -> AccountType {
+    pub fn db_to_account_type(account_type: AccountType) -> AccountType {
         // AccountType is used directly from banking_api, no conversion needed
         account_type
     }
 
-    fn dormancy_risk_to_db(risk: DormancyRisk) -> DbDormancyRisk {
+    pub fn dormancy_risk_to_db(risk: DormancyRisk) -> DbDormancyRisk {
         match risk {
             DormancyRisk::Active => DbDormancyRisk::Active,
             DormancyRisk::AtRisk => DbDormancyRisk::AtRisk,
@@ -474,7 +474,7 @@ impl CasaMapper {
         }
     }
 
-    fn db_to_dormancy_risk(risk: DbDormancyRisk) -> DormancyRisk {
+    pub fn db_to_dormancy_risk(risk: DbDormancyRisk) -> DormancyRisk {
         match risk {
             DbDormancyRisk::Active => DormancyRisk::Active,
             DbDormancyRisk::AtRisk => DormancyRisk::AtRisk,
@@ -483,11 +483,11 @@ impl CasaMapper {
         }
     }
 
-    fn casa_compliance_status_to_model(status: CasaComplianceStatus) -> DbCasaComplianceStatus {
+    pub fn casa_compliance_status_to_model(status: CasaComplianceStatus) -> DbCasaComplianceStatus {
         DbCasaComplianceStatus {
-            kyc_status: Self::kyc_status_to_db(status.kyc_status),
+            kyc_status: status.kyc_status,
             last_kyc_update: status.last_kyc_update,
-            aml_risk_rating: Self::risk_rating_to_db(status.aml_risk_rating),
+            aml_risk_rating: status.aml_risk_rating,
             regulatory_alerts_01: status.regulatory_alerts_01,
             regulatory_alerts_02: status.regulatory_alerts_02,
             regulatory_alerts_03: status.regulatory_alerts_03,
@@ -496,11 +496,11 @@ impl CasaMapper {
         }
     }
 
-    fn casa_compliance_status_from_model(status: DbCasaComplianceStatus) -> CasaComplianceStatus {
+    pub fn casa_compliance_status_from_model(status: DbCasaComplianceStatus) -> CasaComplianceStatus {
         CasaComplianceStatus {
-            kyc_status: Self::kyc_status_from_db(status.kyc_status),
+            kyc_status: status.kyc_status,
             last_kyc_update: status.last_kyc_update,
-            aml_risk_rating: Self::risk_rating_from_db(status.aml_risk_rating),
+            aml_risk_rating: status.aml_risk_rating,
             regulatory_alerts_01: status.regulatory_alerts_01,
             regulatory_alerts_02: status.regulatory_alerts_02,
             regulatory_alerts_03: status.regulatory_alerts_03,
@@ -510,47 +510,47 @@ impl CasaMapper {
     }
 
     // Enum conversion helper methods
-    fn kyc_status_to_db(status: KycStatus) -> DbKycStatus {
+    pub fn kyc_status_to_db(status: DomainKycStatus) -> DbKycStatus {
         match status {
-            KycStatus::NotStarted => DbKycStatus::NotStarted,
-            KycStatus::InProgress => DbKycStatus::InProgress,
-            KycStatus::Pending => DbKycStatus::Pending,
-            KycStatus::Complete => DbKycStatus::Complete,
-            KycStatus::Approved => DbKycStatus::Approved,
-            KycStatus::Rejected => DbKycStatus::Rejected,
-            KycStatus::RequiresUpdate => DbKycStatus::RequiresUpdate,
-            KycStatus::Failed => DbKycStatus::Failed,
+            DomainKycStatus::NotStarted => DbKycStatus::NotStarted,
+            DomainKycStatus::InProgress => DbKycStatus::InProgress,
+            DomainKycStatus::Pending => DbKycStatus::Pending,
+            DomainKycStatus::Complete => DbKycStatus::Complete,
+            DomainKycStatus::Approved => DbKycStatus::Approved,
+            DomainKycStatus::Rejected => DbKycStatus::Rejected,
+            DomainKycStatus::RequiresUpdate => DbKycStatus::RequiresUpdate,
+            DomainKycStatus::Failed => DbKycStatus::Failed,
         }
     }
 
-    fn kyc_status_from_db(status: DbKycStatus) -> KycStatus {
+    pub fn kyc_status_from_db(status: DbKycStatus) -> DomainKycStatus {
         match status {
-            DbKycStatus::NotStarted => KycStatus::NotStarted,
-            DbKycStatus::InProgress => KycStatus::InProgress,
-            DbKycStatus::Pending => KycStatus::Pending,
-            DbKycStatus::Complete => KycStatus::Complete,
-            DbKycStatus::Approved => KycStatus::Approved,
-            DbKycStatus::Rejected => KycStatus::Rejected,
-            DbKycStatus::RequiresUpdate => KycStatus::RequiresUpdate,
-            DbKycStatus::Failed => KycStatus::Failed,
+            DbKycStatus::NotStarted => DomainKycStatus::NotStarted,
+            DbKycStatus::InProgress => DomainKycStatus::InProgress,
+            DbKycStatus::Pending => DomainKycStatus::Pending,
+            DbKycStatus::Complete => DomainKycStatus::Complete,
+            DbKycStatus::Approved => DomainKycStatus::Approved,
+            DbKycStatus::Rejected => DomainKycStatus::Rejected,
+            DbKycStatus::RequiresUpdate => DomainKycStatus::RequiresUpdate,
+            DbKycStatus::Failed => DomainKycStatus::Failed,
         }
     }
 
-    fn risk_rating_to_db(rating: RiskRating) -> DbRiskRating {
+    pub fn risk_rating_to_db(rating: DomainRiskRating) -> DbRiskRating {
         match rating {
-            RiskRating::Low => DbRiskRating::Low,
-            RiskRating::Medium => DbRiskRating::Medium,
-            RiskRating::High => DbRiskRating::High,
-            RiskRating::Blacklisted => DbRiskRating::Blacklisted,
+            DomainRiskRating::Low => DbRiskRating::Low,
+            DomainRiskRating::Medium => DbRiskRating::Medium,
+            DomainRiskRating::High => DbRiskRating::High,
+            DomainRiskRating::Blacklisted => DbRiskRating::Blacklisted,
         }
     }
 
-    fn risk_rating_from_db(rating: DbRiskRating) -> RiskRating {
+    pub fn risk_rating_from_db(rating: DbRiskRating) -> DomainRiskRating {
         match rating {
-            DbRiskRating::Low => RiskRating::Low,
-            DbRiskRating::Medium => RiskRating::Medium,
-            DbRiskRating::High => RiskRating::High,
-            DbRiskRating::Blacklisted => RiskRating::Blacklisted,
+            DbRiskRating::Low => DomainRiskRating::Low,
+            DbRiskRating::Medium => DomainRiskRating::Medium,
+            DbRiskRating::High => DomainRiskRating::High,
+            DbRiskRating::Blacklisted => DomainRiskRating::Blacklisted,
         }
     }
 }
