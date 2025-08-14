@@ -72,6 +72,12 @@ This commit replaces `Vec<T>` with `BoundedVec<T, N>` across multiple crates to 
 
 ## Key Achievements (August 2025)
 
+### 🎉 Docs & Commands Refactoring: Streamlined Normalization
+This commit streamlines the developer workflow by consolidating multiple normalization-related commands and documentation into a single, unified `normalize.md` command.
+- **Simplified Workflow**: Replaced several outdated command files with a single, comprehensive command.
+- **Removed Clutter**: Deleted obsolete documentation to reduce repository size and improve clarity.
+- **Centralized Logic**: All normalization-related instructions are now in one place.
+
 ### 🎉 Customer Domain Refactoring: Builder Pattern and Validation
 This commit introduces a comprehensive refactoring of the Customer domain to improve ergonomics, validation, and auditability.
 - **Builder Pattern**: Introduced `CustomerBuilder` for fluent and validated `Customer` creation, deprecating the legacy `Customer::new` function.
