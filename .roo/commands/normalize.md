@@ -19,7 +19,7 @@ Replace `{file_name}` with the actual module name (e.g., customer, account, tran
 ## Prompt Template
 
 ```
-Align all structs and enum in @banking-db/src/models/{file_name}.rs with their counterpart in @banking-api/src/domain/{file_name}.rs and vice versa. Provided or modify service traits in @/banking-api/src/service/{file_name}_service.rs to use domain structs and enums. Provide or modify mappers for structs and enums in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects. Also modify @banking-db-postgres/migrations/001_initial_schema.sql to fit the new data definition. Modify repository definition in @/banking-db/src/repository/{file_name}_repository.rs and the corresponding implementation @/banking-db-postgres/src/repository/{file_name}_repository_impl.rs. Modify the service implementation in @/banking-logic/src/services/{file_name}_service_impl.rs. 
+Align all structs and enum in @banking-db/src/models/{file_name}.rs with their counterpart in @banking-api/src/domain/{file_name}.rs and vice versa. Provided or modify service traits in @/banking-api/src/service/{file_name}_service.rs to use domain structs and enums. Provide or modify mappers for structs and enums in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects. Also modify @banking-db-postgres/migrations/*.sql to fit the new data definition. Modify repository definition in @/banking-db/src/repository/{file_name}_repository.rs and the corresponding implementation @/banking-db-postgres/src/repository/{file_name}_repository_impl.rs. Modify the service implementation in @/banking-logic/src/services/{file_name}_service_impl.rs. 
 ```
 
 ## Steps Performed : Analysis
@@ -34,7 +34,7 @@ Align all structs and enum in @banking-db/src/models/{file_name}.rs with their c
     -   Identify mismatches in field types
     -   Note missing enums
 
-3.  **Read Database Schema** (`banking-db-postgres/migrations/001_initial_schema.sql`)
+3.  **Read Database Schema** (`banking-db-postgres/migrations/*.sql`)
     -   Look for database tables
     -   Look for column definitions that match new enum types
     -   Look for constraints that reflect enum values
@@ -91,8 +91,8 @@ up on approval, perfrom changes as indicated in files `target/modules/{file_name
 9.  **Update Service Traits**
     - Provided or modify service traits in @/banking-api/src/service/{file_name}_service.rs to use domain structs and enums.
 
-10.  **Update Database Schema** (`banking-db-postgres/migrations/001_initial_schema.sql`)
-    -   Also modify @banking-db-postgres/migrations/001_initial_schema.sql to fit the new data definition. 
+10.  **Update Database Schema** (`banking-db-postgres/migrations/*.sql`)
+    -   Also modify @banking-db-postgres/migrations/.sql to fit the new data definition. 
     -   Update column definitions to match new enum types and struct fields
     -   Ensure constraints reflect enum values
     -   Update CHECK constraints for enum validation
@@ -102,7 +102,7 @@ up on approval, perfrom changes as indicated in files `target/modules/{file_name
     -   Provide or modify mappers for structs in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects.
     -   Ensure bidirectional mapping works correctly
 
-12. **Update Revenue Definition**
+12. **Update Repository Definition**
     -   Modify repository definition in @/banking-db/src/repository/{file_name}_repository.rs and the corresponding implementation @/banking-db-postgres/src/repository/{file_name}_repository_impl.rs.
 
 13.  **Update Service Implementations** (if needed)
@@ -147,40 +147,6 @@ Fields that already follow the explicit entity reference pattern should not be m
 - If field already includes target entity name (e.g., `created_by_person_id`, `updated_by_person_id`), keep unchanged
 - Only modify fields that lack explicit entity reference (e.g., `approved_by` → `approved_by_person_id`, `imported_by` → `imported_by_person_id`)
 
-## Foreign Key Reference Alignment
-
-## Naming Convention Rules
-
-1. **Explicit Entity Reference Required**
-When the field name doesn't clearly indicate the target rust file, include the target struct name:
-- `domicile_branch_id: Uuid` → `domicile_agency_branch_id: Uuid` (target: `AgencyBranch`)
-- `updated_by_person_id: Uuid` → `updated_by_person_id: Uuid` (target: `Person`)
-- `controlled_by`  → `controlled_by_person_id: Uuid` (target: `Person`)
-The method comment shall indicate the tartget struct:
--     /// References Person.person_id
--     `agent_user_id`   → `agent_person_id: Uuid` (target: `Person`)
-
-
-2. **Keep Existing When Clear**
-When the field name already matches or clearly indicates the target entity:
-- `collateral_id: Option<Uuid>` → **KEEP AS IS** (target: `Collateral`)
-- `customer_id: Uuid` → **KEEP AS IS** (target: `Customer`)
-
-3. **Compound Names Exception**
-For fields with compound qualifiers that don't have individual target structs:
-- `loan_purpose_id: Option<Uuid>` → **KEEP AS IS** (target: `ReasonAndPurpose`, no `Purpose` struct exists)
-- `transaction_reason_id: Option<Uuid>` → **KEEP AS IS** (target: `ReasonAndPurpose`, no `Reason` struct exists)
-
-4. **Person Reference Pattern**
-All `*_by` fields reference `Person` and should include explicit `_person_id` suffix:
-- `created_by_person_id: Uuid` → **KEEP AS IS** (already follows correct pattern)
-- `updated_by_person_id: Uuid` → **KEEP AS IS** (already follows correct pattern)
-- `approved_by: Option<Uuid>` → `approved_by_person_id: Option<Uuid>`
-
-5. **Preserve Existing Correct Patterns**
-Fields that already follow the explicit entity reference pattern should not be modified:
-- If field already includes target entity name (e.g., `created_by_person_id`, `updated_by_person_id`), keep unchanged
-- Only modify fields that lack explicit entity reference (e.g., `approved_by` → `approved_by_person_id`, `imported_by` → `imported_by_person_id`)
 
 ## Serialization
 
@@ -212,141 +178,15 @@ pub status: StatusEnum,
 ```
 
 ## String Alignment
-Allways keep HeaplessString, do not change them toe String.
+Always keep HeaplessString, do not change them to String.
 ```rust
 // Ensure consistent HeaplessString sizes between API and DB models
 pub field_name: HeaplessString<N>, // Same N in both layers
 ```
-Allways tranlate Strings to Heapless Strings.
+Always translate Strings to Heapless Strings.
 
 
-## Enum Domain and Database Models Alignment Template
 
-The new database model enum must:
-1.  Have the exact same variants as its domain counterpart.
-2.  Be decorated with the necessary `sqlx` attributes for database mapping.
-3.  Implement the required traits for database interaction.
-
-Use the following transformation as a template:
-
-**Source Domain Enum (`banking-api/src/domain/{file_name}.rs`):**
-```rust
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum EnumName {
-    Internal,
-    Partner,
-    ThirdParty,
-}
-```
-
-**Target Database Model Enum (`banking-db/src/models/{file_name}.rs`):**
-```rust
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "enum_name", rename_all = "PascalCase")]
-pub enum EnumName {
-    Internal,
-    Partner,
-    ThirdParty,
-}
-```
-
-Additionally, implement the `FromStr` and `Display` trait for the database model enum to allow for conversion from and to a string. This is useful for serialization, deserialization and other contexts where the enum is represented as a string.
-
-**`FromStr` Implementation (`banking-db/src/models/{file_name}.rs`):**
-```rust
-use std::str::FromStr;
-
-impl FromStr for HoldPriority {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Critical" => Ok(HoldPriority::Critical),
-            "High" => Ok(HoldPriority::High),
-            "Standard" => Ok(HoldPriority::Standard),
-            "Medium" => Ok(HoldPriority::Medium),
-            "Low" => Ok(HoldPriority::Low),
-            _ => Err(()),
-        }
-    }
-}
-```
-
-```rust
-impl std::fmt::Display for HoldPriority {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            HoldPriority::Critical => write!(f, "Critical"),
-            HoldPriority::High => write!(f, "High"),
-            HoldPriority::Standard => write!(f, "Standard"),
-            HoldPriority::Medium => write!(f, "Medium"),
-            HoldPriority::Low => write!(f, "Low"),
-        }
-    }
-}
-```
-## Mappers For Enum
-
-**Mapper Implementation (`banking-logic/src/mappers/{file_name}_mapper.rs`):**
-```rust
-impl AgentNetworkMapper {
-    // ... other mapping functions
-
-    // Mapper for Enums
-    fn network_type_to_db(network_type: NetworkType) -> DbNetworkType {
-        match network_type {
-            NetworkType::Internal => DbNetworkType::Internal,
-            NetworkType::Partner => DbNetworkType::Partner,
-            NetworkType::ThirdParty => DbNetworkType::ThirdParty,
-        }
-    }
-
-    fn network_type_from_db(db_type: DbNetworkType) -> NetworkType {
-        match db_type {
-            DbNetworkType::Internal => NetworkType::Internal,
-            DbNetworkType::Partner => NetworkType::Partner,
-            DbNetworkType::ThirdParty => NetworkType::ThirdParty,
-        }
-    }
-}
-```
-
-## Mapper For Structs
-
-```rust
-    /// Map from domain AgentNetwork to database AgentNetworkModel
-    pub fn network_to_model(network: AgentNetwork) -> AgentNetworkModel {
-        AgentNetworkModel {
-            id: network.id,
-            network_name: network.network_name,
-            network_type: Self::network_type_to_db(network.network_type),
-            status: Self::network_status_to_db(network.status),
-            contract_external_id: network.contract_external_id,
-            aggregate_daily_limit: network.aggregate_daily_limit,
-            current_daily_volume: network.current_daily_volume,
-            settlement_gl_code: network.settlement_gl_code,
-            created_at: network.created_at,
-            last_updated_at: network.created_at,
-            updated_by_person_id: Uuid::nil(), // System UUID
-        }
-    }
-
-    /// Map from database AgentNetworkModel to domain AgentNetwork
-    pub fn network_from_model(model: AgentNetworkModel) -> AgentNetwork {
-        AgentNetwork {
-            id: model.id,
-            network_name: model.network_name,
-            network_type: Self::network_type_from_db(model.network_type),
-            status: Self::network_status_from_db(model.status),
-            contract_external_id: model.contract_external_id,
-            aggregate_daily_limit: model.aggregate_daily_limit,
-            current_daily_volume: model.current_daily_volume,
-            settlement_gl_code: model.settlement_gl_code,
-            created_at: model.created_at,
-        }
-    }
-
-```
 ## Tests
 
 ### Test Updates

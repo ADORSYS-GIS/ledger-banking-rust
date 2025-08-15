@@ -1,6 +1,148 @@
-## Development Guidelines
+# Implementation Patterns & Best Practices
 
-### Code Patterns
+## Domain and Database Models for Enum Types
+
+Assuming the file containing the module uses the file name pattern <file_name>, eg.  for the module file_name=`account`, `banking-api/src/domain/{file_name}.rs` will be represented as `banking-api/src/domain/account.rs` 
+
+The new database model enum must:
+1.  Have the exact same variants as its domain counterpart.
+2.  Be decorated with the necessary `sqlx` attributes for database mapping.
+3.  Implement the required traits for database interaction.
+
+Use the following transformation as a template:
+
+**Source Domain Enum (`banking-api/src/domain/{file_name}.rs`):**
+```rust
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum EnumName {
+    Internal,
+    Partner,
+    ThirdParty,
+}
+```
+
+**Target Database Model Enum (`banking-db/src/models/{file_name}.rs`):**
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "enum_name", rename_all = "PascalCase")]
+pub enum EnumName {
+    Internal,
+    Partner,
+    ThirdParty,
+}
+```
+
+Additionally, implement the `FromStr` and `Display` trait for the database model enum to allow for conversion from and to a string. This is useful for serialization, deserialization and other contexts where the enum is represented as a string.
+
+**`FromStr` Implementation (`banking-db/src/models/{file_name}.rs`):**
+```rust
+use std::str::FromStr;
+
+impl FromStr for HoldPriority {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Critical" => Ok(HoldPriority::Critical),
+            "High" => Ok(HoldPriority::High),
+            "Standard" => Ok(HoldPriority::Standard),
+            "Medium" => Ok(HoldPriority::Medium),
+            "Low" => Ok(HoldPriority::Low),
+            _ => Err(()),
+        }
+    }
+}
+```
+
+**`Display` Implementation (`banking-db/src/models/{file_name}.rs`):**
+```rust
+impl std::fmt::Display for HoldPriority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HoldPriority::Critical => write!(f, "Critical"),
+            HoldPriority::High => write!(f, "High"),
+            HoldPriority::Standard => write!(f, "Standard"),
+            HoldPriority::Medium => write!(f, "Medium"),
+            HoldPriority::Low => write!(f, "Low"),
+        }
+    }
+}
+```
+
+**Mapper Implementation (`banking-logic/src/mappers/{file_name}_mapper.rs`):**
+```rust
+impl AgentNetworkMapper {
+    // ... other mapping functions
+
+    // Mapper for Enums
+    pub fn network_type_to_db(network_type: NetworkType) -> DbNetworkType {
+        match network_type {
+            NetworkType::Internal => DbNetworkType::Internal,
+            NetworkType::Partner => DbNetworkType::Partner,
+            NetworkType::ThirdParty => DbNetworkType::ThirdParty,
+        }
+    }
+
+    pub fn network_type_from_db(db_type: DbNetworkType) -> NetworkType {
+        match db_type {
+            DbNetworkType::Internal => NetworkType::Internal,
+            DbNetworkType::Partner => NetworkType::Partner,
+            DbNetworkType::ThirdParty => NetworkType::ThirdParty,
+        }
+    }
+}
+```
+
+**SQLx with PostgreSQL Enums**
+```rust
+// ✅ Use sqlx::query with manual binding for enums
+sqlx::query(
+    "INSERT INTO accounts (account_type, account_status) VALUES ($1::account_type, $2::account_status)"
+)
+.bind(account.account_type)
+.bind(account.account_status)
+.execute(&pool).await?
+```
+
+## Domain and Database Models for struct Types
+
+**Mappers For Structs (`banking-logic/src/mappers/{file_name}_mapper.rs`):**
+
+```rust
+    /// Map from domain AgentNetwork to database AgentNetworkModel
+    pub fn network_to_model(network: AgentNetwork) -> AgentNetworkModel {
+        AgentNetworkModel {
+            id: network.id,
+            network_name: network.network_name,
+            network_type: Self::network_type_to_db(network.network_type),
+            status: Self::network_status_to_db(network.status),
+            contract_external_id: network.contract_external_id,
+            aggregate_daily_limit: network.aggregate_daily_limit,
+            current_daily_volume: network.current_daily_volume,
+            settlement_gl_code: network.settlement_gl_code,
+            created_at: network.created_at,
+            last_updated_at: network.created_at,
+            updated_by_person_id: Uuid::nil(), // System UUID
+        }
+    }
+
+    /// Map from database AgentNetworkModel to domain AgentNetwork
+    pub fn network_from_model(model: AgentNetworkModel) -> AgentNetwork {
+        AgentNetwork {
+            id: model.id,
+            network_name: model.network_name,
+            network_type: Self::network_type_from_db(model.network_type),
+            status: Self::network_status_from_db(model.status),
+            contract_external_id: model.contract_external_id,
+            aggregate_daily_limit: model.aggregate_daily_limit,
+            current_daily_volume: model.current_daily_volume,
+            settlement_gl_code: model.settlement_gl_code,
+            created_at: model.created_at,
+        }
+    }
+```
+
+**Code Patterns**
 ```rust
 // Builder pattern for domain models
 let customer = Customer::builder(uuid, CustomerType::Corporate)
@@ -11,52 +153,158 @@ let customer = Customer::builder(uuid, CustomerType::Corporate)
 // Memory-optimized types
 pub id: Uuid,
 pub currency: HeaplessString<3>,           // ISO 4217 codes
-pub product_id: Uuid,                      // Replaces product_code
+pub product_id: Uuid,                      // Foreign key
 pub name_l1: HeaplessString<100>,             // Names/descriptions
 pub account_status: AccountStatus,         // Type-safe enums vs String
 pub description: Option<HeaplessString<200>>,
 ```
 
-// Multi-language 'name' support
+**Multi-language 'name' support**
 - whenever we find a field named 'name' suggest change to 3 language fields.
 pub name_l1: HeaplessString<100>,
 pub name_l2: HeaplessString<100>,
 pub name_l3: HeaplessString<100>,
 
-
-### Key Rules
-1. **Use builders** for domain models (>4 parameters)
-2. **HeaplessString<N>** for bounded text fields  
-3. **Enums** for status/type fields instead of String
-4. **References (&T)** for function parameters
-5. **PostgreSQL Enum Casting**: Use `$N::enum_name` in SQL with `.to_string()` binding
-
-
-### Type Mappings (Rust → PostgreSQL)
+**Type Mappings (Rust → PostgreSQL)**
 - `Uuid` → `UUID`
 - `HeaplessString<N>` → `VARCHAR(N)`
 - `Decimal` → `DECIMAL(15,2)`
 - `DateTime<Utc>` → `TIMESTAMP WITH TIME ZONE`
 
-## Implementation Patterns & Best Practices
+## Database Mapping Rules
+- Foreign key constraints must be enforced in the repository layer, not the database. Use database schema for structure only, with no foreign key constraints.
+- Date fields (e.g. `created_at`, `updated_at`) must be initialized in the domain layer. Database triggers for timestamp management are prohibited.
 
-### SQLx with PostgreSQL Enums
+## Key Rules
+1. **Use builders** for domain models (>4 parameters)
+2. **HeaplessString<N>** for bounded text fields  
+3. **Enums** for status/type fields instead of String
+4. **References (&T)** for function parameters
+5. **PostgreSQL Enum Casting**: Use `$N::enum_name`
+
+## Architectural Strategy: Distributed Data & Application-Layer Logic
+
+To ensure high scalability and resilience, this system is designed to support a distributed data architecture. This means data can be partitioned across multiple databases and even stored in different types of storage systems (Polyglot Persistence). To achieve this, logic traditionally handled by a monolithic database is moved into the application layer.
+
+### 1. Application-Managed Indexes for Finder Methods
+
+Instead of relying on database indexes for finder methods (e.g., `find_by_status`), we will create and manage our own indexes in the model layer. This is the key to querying data that may be partitioned across multiple data stores.
+
+**Core Principles:**
+
+*   **Index Tables:** For each entity that requires complex finders (especially static or infrequently updated entities like `Person`), a corresponding index table (e.g., `person_idx`) will be created in the database. This table stores the indexed values and the `Uuid` of the corresponding entity.
+*   **Transactional Consistency:** The index table MUST be updated within the same database transaction as the main entity table to ensure data is always consistent.
+*   **In-Memory Loading:** The repository layer is responsible for loading the index table into an in-memory cache (e.g., Moka) on application startup or on-demand.
+*   **Repository Implementation:** Repository finder methods should first consult the in-memory index to retrieve a `Vec<Uuid>` of matching entities. Pagination should be performed on this vector of IDs. Finally, the repository will fetch the full records for the paginated IDs using a `find_by_ids` method.
+
+**Example: Indexing `Person` by `is_active` status**
+
+**Database Schema (`person_idx` table):**
+```sql
+CREATE TABLE person_idx (
+    person_id UUID PRIMARY KEY,
+    is_active BOOLEAN NOT NULL
+    -- other indexed fields...
+);
+
+CREATE INDEX idx_person_idx_is_active ON person_idx(is_active);
+```
+
+**Repository Logic (Conceptual):**
 ```rust
-// ✅ Use sqlx::query with manual binding for enums
-sqlx::query(
-    "INSERT INTO accounts (account_type, account_status) VALUES ($1::account_type, $2::account_status)"
-)
-.bind(account.account_type.to_string())
-.bind(account.account_status.to_string())
-.execute(&pool).await?
+// In PersonRepository implementation
 
-// ✅ Implement Display for all domain enums
-impl std::fmt::Display for AccountStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AccountStatus::Active => write!(f, "Active"),
-            AccountStatus::Frozen => write!(f, "Frozen"),
-        }
+// 1. Load the index into an in-memory cache
+async fn load_index_cache(&self) -> Result<Arc<InMemoryPersonIndex>, Error> {
+    // ... logic to load all records from `person_idx` table into a structured cache
+}
+
+// 2. Implement finder using the cache
+async fn find_active_persons(&self, page: u32, page_size: u32) -> Result<Vec<Person>, Error> {
+    let index_cache = self.get_index_cache().await?; // Get or load the cache
+
+    // 3. Resolve IDs and paginate in-memory
+    let all_active_ids = index_cache.get_ids_by_active_status(true);
+    let page_size = page_size as usize;
+    let start = ((page - 1) as usize) * page_size;
+    
+    if start >= all_active_ids.len() {
+        return Ok(vec![]);
     }
+
+    let end = std::cmp::min(start + page_size, all_active_ids.len());
+    let ids_for_page = &all_active_ids[start..end];
+
+    // 4. Fetch only the required records
+    self.find_persons_by_ids(ids_for_page).await
+}
+```
+
+### 2. Application-Layer Referential Integrity
+
+To support data partitioning and polyglot persistence, **no foreign key constraints** should be defined in the database schema.
+
+*   **Responsibility:** The application's repository and service layers are responsible for enforcing referential integrity.
+*   **Implementation:** Before creating or updating an entity with a foreign key (e.g., an `Account` with a `customer_id`), the repository must first verify that the referenced entity (the `Customer`) exists by performing an `exists_by_id(customer_id)` check. The method for this check should be:
+    *   **In-Memory Check (Preferred):** If an in-memory index is available for the referenced entity (e.g., `Person`), the `exists_by_id` check should be performed against the in-memory cache. This is the most efficient method and should be used whenever possible.
+    *   **Database Check (Fallback):** If no in-memory index is available (e.g., for highly dynamic or non-indexed entities), the repository should fall back to a direct database lookup to verify existence.
+*   **Database Schema:** Database schemas should define table structures and native data types only. All relationships and business rules are managed by the application.
+
+### 3. Repository Trait Design (`banking-db/src/repository/`)
+
+To ensure consistency and correctly implement the architectural patterns of application-managed indexes and referential integrity, all repository traits must follow these design guidelines.
+
+#### Standard Repository Methods
+
+Every repository trait for an entity (e.g., `ProductRepository` for `ProductModel`) must define a standard set of methods for basic operations and existence checks.
+
+```rust
+// Example: banking-db/src/repository/product_repository.rs
+use uuid::Uuid;
+use std::error::Error;
+use crate::models::product::{ProductModel, DbProductType};
+
+pub trait ProductRepository: Send + Sync {
+    /// Saves a new or updated product model.
+    async fn save(&self, product: ProductModel) -> Result<ProductModel, Box<dyn Error + Send + Sync>>;
+
+    /// Finds a single product by its primary key.
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<ProductModel>, Box<dyn Error + Send + Sync>>;
+
+    /// Finds multiple products by a list of primary keys.
+    /// This is crucial for fetching paginated data after an index lookup.
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<ProductModel>, Box<dyn Error + Send + Sync>>;
+
+    /// Checks for the existence of a product by its primary key.
+    /// This is the primary method for enforcing referential integrity.
+    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>>;
+}
+```
+
+#### Finder Methods and Index-Based Lookups
+
+For every finder method that queries entities based on their attributes (e.g., finding products by type), two corresponding methods must be defined in the trait. This pattern separates the index lookup from the final data retrieval.
+
+1.  **The ID-based Index Finder:** Returns a `Vec<Uuid>` of all matching entities. This method is responsible for querying the in-memory index or the `_idx` database table. Its name must be prefixed with `find_ids_by_`.
+2.  **The Public Entity Finder:** Returns a paginated `Vec<FooModel>`. This method uses the ID-based finder internally to get all relevant IDs, performs pagination logic on the resulting vector, and then uses `find_by_ids` to fetch the data for the current page.
+
+```rust
+// Example: extending ProductRepository with a finder
+
+pub trait ProductRepository: Send + Sync {
+    // ... (standard methods from above)
+
+    /// INDEX FINDER: Finds all product IDs for a given product type.
+    /// This method queries the index and should be used internally by `find_by_type`.
+    async fn find_ids_by_type(&self, product_type: DbProductType) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
+
+    /// PUBLIC FINDER: Finds a paginated list of products for a given product type.
+    /// This method uses `find_ids_by_type` and `find_by_ids` internally.
+    async fn find_by_type(
+        &self,
+        product_type: DbProductType,
+        page: u32,
+        page_size: u32,
+    ) -> Result<Vec<ProductModel>, Box<dyn Error + Send + Sync>>;
 }
 ```

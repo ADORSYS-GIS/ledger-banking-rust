@@ -96,7 +96,7 @@ impl LoanMapper {
             closing_principal_balance: model.closing_principal_balance,
             cumulative_principal_paid: model.cumulative_principal_paid,
             cumulative_interest_paid: model.cumulative_interest_paid,
-            payment_status: Self::db_to_installment_status(model.payment_status),
+            payment_status: Self::installment_status_from_db(model.payment_status),
             paid_date: model.paid_date,
             paid_amount: model.paid_amount,
             days_overdue: model.days_overdue,
@@ -135,7 +135,7 @@ impl LoanMapper {
             delinquency_start_date: model.delinquency_start_date,
             current_dpd: model.current_dpd,
             highest_dpd: model.highest_dpd,
-            delinquency_stage: Self::db_to_delinquency_stage(model.delinquency_stage),
+            delinquency_stage: Self::delinquency_stage_from_db(model.delinquency_stage),
             overdue_principal: model.overdue_principal,
             overdue_interest: model.overdue_interest,
             penalty_interest_accrued: model.penalty_interest_accrued,
@@ -180,7 +180,7 @@ impl LoanMapper {
             id: model.id,
             delinquency_id: model.delinquency_id,
             loan_account_id: model.loan_account_id,
-            action_type: Self::db_to_collection_action_type(model.action_type),
+            action_type: Self::collection_action_type_from_db(model.action_type),
             action_date: model.action_date,
             due_date: model.due_date,
             description: model.description,
@@ -190,7 +190,7 @@ impl LoanMapper {
             response_details: model.response_details,
             follow_up_required: model.follow_up_required,
             follow_up_date: model.follow_up_date,
-            action_status: Self::db_to_action_status(model.action_status),
+            action_status: Self::action_status_from_db(model.action_status),
             assigned_to: model.assigned_to,
             created_by_person_id: model.created_by_person_id,
             created_at: model.created_at,
@@ -222,10 +222,10 @@ impl LoanMapper {
             loan_account_id: model.loan_account_id,
             payment_date: model.payment_date,
             payment_amount: model.payment_amount,
-            payment_type: Self::db_to_payment_type(model.payment_type),
-            payment_method: Self::db_to_payment_method(model.payment_method),
+            payment_type: Self::payment_type_from_db(model.payment_type),
+            payment_method: Self::payment_method_from_db(model.payment_method),
             allocation: Self::payment_allocation_from_model(model.allocation),
-            payment_status: Self::db_to_payment_status(model.payment_status),
+            payment_status: Self::payment_status_from_db(model.payment_status),
             external_reference: model.external_reference,
             processed_by: model.processed_by,
             processed_at: model.processed_at,
@@ -282,7 +282,7 @@ impl LoanMapper {
     /// Map from database PrepaymentHandling to domain model
     pub fn prepayment_handling_from_model(model: DbPrepaymentHandling) -> PrepaymentHandling {
         PrepaymentHandling {
-            handling_type: Self::db_to_prepayment_type(model.handling_type),
+            handling_type: Self::prepayment_type_from_db(model.handling_type),
             excess_amount: model.excess_amount,
             new_outstanding_principal: model.new_outstanding_principal,
             term_reduction_months: model.term_reduction_months,
@@ -357,7 +357,7 @@ impl LoanMapper {
         LoanRestructuring {
             id: model.id,
             loan_account_id: model.loan_account_id,
-            restructuring_type: Self::db_to_restructuring_type(model.restructuring_type),
+            restructuring_type: Self::restructuring_type_from_db(model.restructuring_type),
             request_date: model.request_date,
             effective_date: model.effective_date,
             restructuring_reason_id: model.restructuring_reason_id,
@@ -374,7 +374,7 @@ impl LoanMapper {
             moratorium_period: model.moratorium_period,
             capitalized_interest: model.capitalized_interest,
             waived_penalty_amount: model.waived_penalty_amount,
-            approval_status: Self::db_to_loan_approval_status(model.approval_status),
+            approval_status: Self::loan_approval_status_from_db(model.approval_status),
             approved_by: model.approved_by,
             approved_at: model.approved_at,
             conditions: model.conditions,
@@ -433,7 +433,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_installment_status(status: DbInstallmentStatus) -> InstallmentStatus {
+    fn installment_status_from_db(status: DbInstallmentStatus) -> InstallmentStatus {
         match status {
             DbInstallmentStatus::Scheduled => InstallmentStatus::Scheduled,
             DbInstallmentStatus::Due => InstallmentStatus::Due,
@@ -455,7 +455,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_delinquency_stage(stage: DbDelinquencyStage) -> DelinquencyStage {
+    fn delinquency_stage_from_db(stage: DbDelinquencyStage) -> DelinquencyStage {
         match stage {
             DbDelinquencyStage::Current => DelinquencyStage::Current,
             DbDelinquencyStage::Stage1 => DelinquencyStage::Stage1,
@@ -481,7 +481,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_collection_action_type(action_type: DbCollectionActionType) -> CollectionActionType {
+    fn collection_action_type_from_db(action_type: DbCollectionActionType) -> CollectionActionType {
         match action_type {
             DbCollectionActionType::EmailReminder => CollectionActionType::EmailReminder,
             DbCollectionActionType::SmsNotification => CollectionActionType::SmsNotification,
@@ -506,7 +506,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_action_status(status: DbActionStatus) -> ActionStatus {
+    fn action_status_from_db(status: DbActionStatus) -> ActionStatus {
         match status {
             DbActionStatus::Planned => ActionStatus::Planned,
             DbActionStatus::InProgress => ActionStatus::InProgress,
@@ -527,7 +527,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_payment_type(payment_type: DbPaymentType) -> PaymentType {
+    fn payment_type_from_db(payment_type: DbPaymentType) -> PaymentType {
         match payment_type {
             DbPaymentType::Regular => PaymentType::Regular,
             DbPaymentType::Prepayment => PaymentType::Prepayment,
@@ -550,7 +550,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_payment_method(method: DbPaymentMethod) -> PaymentMethod {
+    fn payment_method_from_db(method: DbPaymentMethod) -> PaymentMethod {
         match method {
             DbPaymentMethod::BankTransfer => PaymentMethod::BankTransfer,
             DbPaymentMethod::DirectDebit => PaymentMethod::DirectDebit,
@@ -571,7 +571,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_prepayment_type(prepayment_type: DbPrepaymentType) -> PrepaymentType {
+    fn prepayment_type_from_db(prepayment_type: DbPrepaymentType) -> PrepaymentType {
         match prepayment_type {
             DbPrepaymentType::TermReduction => PrepaymentType::TermReduction,
             DbPrepaymentType::InstallmentReduction => PrepaymentType::InstallmentReduction,
@@ -590,7 +590,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_payment_status(status: DbPaymentStatus) -> PaymentStatus {
+    fn payment_status_from_db(status: DbPaymentStatus) -> PaymentStatus {
         match status {
             DbPaymentStatus::Processed => PaymentStatus::Processed,
             DbPaymentStatus::Pending => PaymentStatus::Pending,
@@ -612,7 +612,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_restructuring_type(restructuring_type: DbRestructuringType) -> RestructuringType {
+    fn restructuring_type_from_db(restructuring_type: DbRestructuringType) -> RestructuringType {
         match restructuring_type {
             DbRestructuringType::PaymentHoliday => RestructuringType::PaymentHoliday,
             DbRestructuringType::TermExtension => RestructuringType::TermExtension,
@@ -634,7 +634,7 @@ impl LoanMapper {
         }
     }
 
-    fn db_to_loan_approval_status(status: DbLoanApprovalStatus) -> LoanApprovalStatus {
+    fn loan_approval_status_from_db(status: DbLoanApprovalStatus) -> LoanApprovalStatus {
         match status {
             DbLoanApprovalStatus::Pending => LoanApprovalStatus::Pending,
             DbLoanApprovalStatus::Approved => LoanApprovalStatus::Approved,

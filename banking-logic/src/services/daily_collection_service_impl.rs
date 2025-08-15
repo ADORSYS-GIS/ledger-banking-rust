@@ -9,21 +9,23 @@ use banking_api::service::daily_collection_service::{
     DailyCollectionService, ProgramPerformanceReport, RankingCriteria, ScheduledCollection,
     TrendGranularity,
 };
-use banking_api::BankingResult;
+use banking_api::{error::BankingError, BankingResult};
 use banking_db::repository::daily_collection_repository::DailyCollectionRepository;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::mappers::daily_collection_mapper::DailyCollectionMapper;
+
 pub struct DailyCollectionServiceImpl {
-    _daily_collection_repository: Arc<dyn DailyCollectionRepository>,
+    daily_collection_repository: Arc<dyn DailyCollectionRepository>,
 }
 
 impl DailyCollectionServiceImpl {
     pub fn new(daily_collection_repository: Arc<dyn DailyCollectionRepository>) -> Self {
         Self {
-            _daily_collection_repository: daily_collection_repository,
+            daily_collection_repository,
         }
     }
 }
@@ -217,32 +219,60 @@ impl DailyCollectionService for DailyCollectionServiceImpl {
 
     async fn create_collection_agent(
         &self,
-        _agent: CollectionAgent,
+        agent: CollectionAgent,
     ) -> BankingResult<CollectionAgent> {
-        unimplemented!()
+        let agent_model = DailyCollectionMapper::collection_agent_to_db(agent);
+        let result = self
+            .daily_collection_repository
+            .create_collection_agent(agent_model)
+            .await
+            .map_err(BankingError::Internal)?;
+        Ok(DailyCollectionMapper::collection_agent_from_db(result))
     }
 
     async fn update_collection_agent(
         &self,
-        _agent_id: Uuid,
-        _agent: CollectionAgent,
+        agent_id: Uuid,
+        agent: CollectionAgent,
     ) -> BankingResult<CollectionAgent> {
-        unimplemented!()
+        let agent_model = DailyCollectionMapper::collection_agent_to_db(agent);
+        let result = self
+            .daily_collection_repository
+            .update_collection_agent(agent_id, agent_model)
+            .await
+            .map_err(BankingError::Internal)?;
+        Ok(DailyCollectionMapper::collection_agent_from_db(result))
     }
 
-    async fn get_collection_agent(&self, _agent_id: Uuid) -> BankingResult<Option<CollectionAgent>> {
-        unimplemented!()
+    async fn get_collection_agent(&self, agent_id: Uuid) -> BankingResult<Option<CollectionAgent>> {
+        let result = self
+            .daily_collection_repository
+            .get_collection_agent(agent_id)
+            .await
+            .map_err(BankingError::Internal)?;
+
+        Ok(result.map(DailyCollectionMapper::collection_agent_from_db))
     }
 
     async fn find_agents_by_status(
         &self,
-        _status: AgentStatus,
+        status: AgentStatus,
     ) -> BankingResult<Vec<CollectionAgent>> {
-        unimplemented!()
+        let db_status = DailyCollectionMapper::agent_status_to_db(status);
+        let result = self
+            .daily_collection_repository
+            .find_agents_by_status(db_status)
+            .await
+            .map_err(BankingError::Internal)?;
+
+        Ok(result
+            .into_iter()
+            .map(DailyCollectionMapper::collection_agent_from_db)
+            .collect())
     }
 
     async fn find_active_agents(&self) -> BankingResult<Vec<CollectionAgent>> {
-        unimplemented!()
+        self.find_agents_by_status(AgentStatus::Active).await
     }
 
     async fn assign_agent_to_customers(
@@ -279,11 +309,15 @@ impl DailyCollectionService for DailyCollectionServiceImpl {
 
     async fn update_agent_status(
         &self,
-        _agent_id: Uuid,
-        _status: AgentStatus,
+        agent_id: Uuid,
+        status: AgentStatus,
         _reason_id: Option<Uuid>,
     ) -> BankingResult<()> {
-        unimplemented!()
+        let db_status = DailyCollectionMapper::agent_status_to_db(status);
+        self.daily_collection_repository
+            .update_agent_status(agent_id, db_status)
+            .await
+            .map_err(BankingError::Internal)
     }
 
     async fn find_agents_by_territory(

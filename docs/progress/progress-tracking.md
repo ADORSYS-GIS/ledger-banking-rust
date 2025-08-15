@@ -31,7 +31,7 @@
 - **AccountHoldRepositoryImpl** - Account balance hold management
 
 ### Database Schema
-- **Single Migration**: `001_initial_schema.sql` with consolidated schema
+- **Single Migration**: `*.sql` with consolidated schema
 - **Native UUIDs**: PostgreSQL UUID type for all primary keys
 - **25+ Tables**: Complete schema with foreign keys, constraints, indexes
 
@@ -107,7 +107,7 @@ This commit introduces a major refactoring to remove ambiguous types and align d
 ### 🎉 ID Normalization and Daily Collection Refactoring
 This commit introduces a major refactoring to normalize ID references across the workspace and enhances the daily collection functionality.
 - **ID Normalization**: Replaced `id: i32` with `id: Uuid` across all relevant domain models, repositories, and mappers for improved data integrity.
-- **Schema Update**: The database schema (`001_initial_schema.sql`) was updated to use native `UUID` primary keys.
+- **Schema Update**: The database schema (`00banking-db-postgres/migrations/*.sql`) was updated to use native `UUID` primary keys.
 - **Daily Collection Enhancements**: The daily collection models, repositories, and mappers were refactored for better performance and consistency.
 - **Code Consistency**: Ensured that all components now adhere to a standardized `Uuid`-based identifier system.
 
@@ -120,7 +120,7 @@ This update marks a significant milestone with the removal of simplified reposit
 ### 🎉 Product Domain Refactoring and DB Schema Alignment
 A major refactoring of the product, account, and fee domains to align with the new database schema.
 - **New Features**: Introduced `AccountHold` to manage balance holds and a dedicated `ProductRepository` for data access.
-- **Schema Alignment**: Updated `001_initial_schema.sql` to reflect the new, more robust schema.
+- **Schema Alignment**: Updated `banking-db-postgres/migrations/*.sql` to reflect the new, more robust schema.
 - **Code Cleanup**: Removed significant amounts of outdated documentation and dead code.
 
 ## Key Achievements (January 2025)

@@ -186,7 +186,8 @@ pub enum CollectionFeeFrequency {
 // ======== Collection Agent Database Models ========
 
 /// Database model for Collection Agent
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct CollectionAgentModel {
     pub id: Uuid,
     pub person_id: Uuid,
@@ -202,7 +203,8 @@ pub struct CollectionAgentModel {
 }
 
 /// Database model for Territory
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct TerritoryModel {
     pub id: Uuid,
     pub territory_name: HeaplessString<100>,
@@ -213,7 +215,8 @@ pub struct TerritoryModel {
 }
 
 /// Database model for Agent Performance Metrics
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct AgentPerformanceMetricsModel {
     pub id: Uuid,
     pub collection_rate: Decimal,
@@ -230,7 +233,8 @@ pub struct AgentPerformanceMetricsModel {
 }
 
 /// Database model for Monthly Targets
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct MonthlyTargetsModel {
     pub id: Uuid,
     pub collection_target: Decimal,
@@ -241,7 +245,8 @@ pub struct MonthlyTargetsModel {
 }
 
 /// Database model for Device Information
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct DeviceInformationModel {
     pub id: Uuid,
     pub external_id: HeaplessString<100>,
@@ -256,7 +261,8 @@ pub struct DeviceInformationModel {
 }
 
 /// Database model for Security Features
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct CollectionSecurityFeaturesModel {
     pub id: Uuid,
     pub biometric_enabled: bool,
@@ -268,7 +274,8 @@ pub struct CollectionSecurityFeaturesModel {
 }
 
 /// Database model for Coverage Areas
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::FromRow))]
 pub struct CoverageAreaModel {
     pub id: Uuid,
     pub area_name: HeaplessString<100>,

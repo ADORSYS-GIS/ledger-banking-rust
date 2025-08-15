@@ -415,7 +415,7 @@ pub struct CollectionProgram {
     pub reason_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionProgramType {
     FixedAmount,
     VariableAmount,
@@ -448,7 +448,7 @@ impl std::str::FromStr for CollectionProgramType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ProgramStatus {
     Active,
     Suspended,
@@ -481,7 +481,7 @@ impl std::str::FromStr for ProgramStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CollectionFrequency {
     Daily,
     Weekly,
@@ -542,7 +542,7 @@ pub struct FeeStructure {
     pub fee_frequency: CollectionFeeFrequency,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionFeeFrequency {
     PerCollection,
     Daily,
@@ -601,7 +601,7 @@ pub struct CustomerCollectionProfile {
     pub reason_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionStatus {
     Active,
     Suspended,
@@ -647,7 +647,7 @@ pub struct CollectionSchedule {
     pub holiday_handling: HolidayHandling,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum HolidayHandling {
     Skip,
     NextBusinessDay,
@@ -699,7 +699,7 @@ pub struct CollectionPerformanceMetrics {
     pub reliability_rating: ReliabilityRating,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ReliabilityRating {
     Excellent,
     Good,
@@ -777,7 +777,7 @@ pub struct CollectionRecord {
     pub reason_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionMethod {
     Cash,
     MobilePayment,
@@ -810,7 +810,7 @@ impl std::str::FromStr for CollectionMethod {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionRecordStatus {
     Pending,
     Processed,
@@ -870,7 +870,7 @@ pub struct BiometricData {
     pub confidence_level: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum BiometricMethod {
     Fingerprint,
     FaceRecognition,
@@ -941,7 +941,7 @@ pub struct CollectionBatch {
     pub processed_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum BatchStatus {
     Pending,
     Processing,
