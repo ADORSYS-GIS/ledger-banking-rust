@@ -1,4 +1,4 @@
-#[cfg(feature = "postgres_tests")]
+
 mod reason_and_purpose_repository_tests {
     use banking_api::domain::{ReasonCategory, ReasonContext, ReasonSeverity};
     use banking_db::models::ReasonAndPurpose as ReasonAndPurposeModel;

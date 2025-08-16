@@ -10,7 +10,7 @@
 - **ProductServiceImpl** - Core product management
 - **AccountHoldServiceImpl** - Manages account balance holds
 - **EodServiceImpl** - End-of-day processing service
-- **PersonServiceImpl** - Comprehensive person/entity management
+- **PersonServiceImpl** - Comprehensive person/entity management (Now with full unit test coverage)
 
 **❌ Missing:**
 - ReasonServiceImpl
@@ -22,7 +22,7 @@
 - **FeeRepositoryImpl** - Complete fee management system (17/17 tests)
 - **ReasonAndPurposeRepositoryImpl** - Regulatory compliance framework (18/18 tests)
 - **ChannelRepositoryImpl** - Banking channel management (15/15 tests)
-- **PersonRepositoryImpl** - Full CRUD + Business Logic (rewritten with new test suite, 8/8 tests)
+- **PersonRepositoryImpl** - Full CRUD + Business Logic (rewritten with new test suite, 6/6 tests)
 - **ComplianceRepositoryImpl** - KYC/AML framework with enum handling
 - **CollateralRepositoryImpl** - Comprehensive collateral management
 - **TransactionRepositoryImpl** - Full transaction processing
@@ -92,6 +92,14 @@ This commit introduces a comprehensive refactoring of the Person domain and a co
 - **Test Suite Architecture**: Replaced dozens of individual test files with a structured, suite-based integration testing approach under `tests/suites/`.
 - **Code Quality**: Enhances maintainability, testability, and consistency across the person-related components.
 
+### 🎉 Comprehensive Testing Overhaul: Service Mocks & Guidelines
+This commit introduces a major overhaul of the testing strategy, including comprehensive guidelines and the first full suite of service-level unit tests using mock repositories.
+- **New Testing Guidelines**: The `docs/guidelines/testing.md` document now provides a detailed, step-by-step guide for writing both repository integration tests and service-level unit tests.
+- **Service-Level Mocking**: Introduced a complete suite of mock repositories for the `PersonService` tests, enabling true unit testing of the service layer in isolation from the database.
+- **`PersonService` Test Suite**: Added a comprehensive test suite for `PersonServiceImpl` in `banking-logic/tests/person_service_tests.rs`, with over 35 tests covering every public method.
+- **Enhanced Repository Tests**: The `person_repository_tests` have been refactored for clarity and now follow the new testing guidelines.
+- **Code Quality**: This establishes a clear pattern for future service-level testing, significantly improving the project's test coverage and reliability.
+
 ### 🎉 Docs & Commands Refactoring: Streamlined Normalization
 This commit streamlines the developer workflow by consolidating multiple normalization-related commands and documentation into a single, unified `normalize.md` command.
 - **Simplified Workflow**: Replaced several outdated command files with a single, comprehensive command.
@@ -140,7 +148,7 @@ A major refactoring of the product, account, and fee domains to align with the n
 ## Key Achievements (January 2025)
 
 ### 🎉 100% PostgreSQL Repository Implementation Complete
-All 13 PostgreSQL repositories implemented with 298+ tests passing. Major technical achievements:
+All 13 PostgreSQL repositories implemented with 340+ tests passing. Major technical achievements:
 - **Test Infrastructure Resolved**: Database enum validation, schema corrections, test isolation
 - **Production Ready**: Connection pooling, prepared statements, comprehensive error handling
 - **Zero Compilation Issues**: All missing traits implemented, clippy compliant

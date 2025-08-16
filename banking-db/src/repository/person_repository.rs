@@ -221,6 +221,10 @@ pub trait AddressRepository: Send + Sync {
         page: u32,
         page_size: u32,
     ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_ids_by_street_line1(
+        &self,
+        street_line1: &str,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
 }
 
 #[async_trait]
@@ -255,6 +259,10 @@ pub trait MessagingRepository: Send + Sync {
         page: u32,
         page_size: u32,
     ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_ids_by_value(
+        &self,
+        value: &str,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
 }
 
 #[async_trait]

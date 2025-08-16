@@ -99,7 +99,7 @@ fn create_test_address_model(city_id: Uuid, created_by: Uuid) -> AddressModel {
     AddressModel {
         id: Uuid::new_v4(),
         address_type: AddressType::Residential,
-        street_line1: HeaplessString::try_from("123 Main St").unwrap(),
+        street_line1: HeaplessString::try_from(format!("123 Main St {}", Uuid::new_v4()).as_str()).unwrap(),
         street_line2: None,
         street_line3: None,
         street_line4: None,
@@ -120,7 +120,7 @@ fn create_test_messaging_model() -> MessagingModel {
     MessagingModel {
         id: Uuid::new_v4(),
         messaging_type: MessagingType::Email,
-        value: HeaplessString::try_from("test@example.com").unwrap(),
+        value: HeaplessString::try_from(format!("test_{}@example.com", Uuid::new_v4()).as_str()).unwrap(),
         other_type: None,
         is_active: true,
         priority: Some(1),
@@ -298,6 +298,13 @@ async fn test_address_repository() {
     // Test find_by_city_id
     let addresses_in_city = repo.find_by_city_id(city.id, 1, 10).await.unwrap();
     assert_eq!(addresses_in_city.len(), 1);
+
+    // Test find_ids_by_street_line1
+    let ids = repo
+        .find_ids_by_street_line1(new_address.street_line1.as_str())
+        .await
+        .unwrap();
+    assert_eq!(ids.len(), 1);
 }
 
 #[tokio::test]
@@ -320,4 +327,11 @@ async fn test_messaging_repository() {
         .await
         .unwrap();
     assert!(!emails.is_empty());
+
+    // Test find_ids_by_value
+    let ids = repo
+        .find_ids_by_value(new_messaging.value.as_str())
+        .await
+        .unwrap();
+    assert_eq!(ids.len(), 1);
 }

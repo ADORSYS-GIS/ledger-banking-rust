@@ -27,7 +27,7 @@ fn create_workflow_for_test(workflow_id: Uuid, account_id: Uuid, person_id: Uuid
     }
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_workflow_crud_with_cleanup() {
     // Setup database 
@@ -66,7 +66,7 @@ async fn test_workflow_crud_with_cleanup() {
     cleanup_database(&pool).await;
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_multiple_workflows_isolated() {
     use banking_db::WorkflowRepository;
@@ -106,7 +106,7 @@ async fn test_multiple_workflows_isolated() {
     cleanup_database(&pool).await;
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_workflow_pagination_isolated() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -150,7 +150,7 @@ async fn test_workflow_pagination_isolated() {
     cleanup_database(&pool).await;
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_workflow_count_operations_isolated() {
     use banking_db::WorkflowRepository;

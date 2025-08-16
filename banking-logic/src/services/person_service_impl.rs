@@ -138,9 +138,14 @@ impl PersonService for PersonServiceImpl {
 
     async fn find_addresses_by_street_line1(
         &self,
-        _street_line1: HeaplessString<50>,
+        street_line1: HeaplessString<50>,
     ) -> BankingResult<Vec<Address>> {
-        todo!()
+        let ids = self
+            .address_repository
+            .find_ids_by_street_line1(street_line1.as_str())
+            .await?;
+        let models = self.address_repository.find_by_ids(&ids).await?;
+        Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
     async fn find_addresses_by_city_id(&self, city_id: Uuid) -> BankingResult<Vec<Address>> {
@@ -171,9 +176,18 @@ impl PersonService for PersonServiceImpl {
 
     async fn find_messaging_by_value(
         &self,
-        _value: HeaplessString<100>,
+        value: HeaplessString<100>,
     ) -> BankingResult<Option<Messaging>> {
-        todo!()
+        let ids = self
+            .messaging_repository
+            .find_ids_by_value(value.as_str())
+            .await?;
+        if let Some(id) = ids.first() {
+            let model = self.messaging_repository.find_by_id(*id).await?;
+            Ok(model.map(|m| m.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn create_entity_reference(&self, entity_reference: EntityReference) -> BankingResult<EntityReference> {

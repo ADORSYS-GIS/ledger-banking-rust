@@ -98,7 +98,8 @@ CREATE TABLE address_idx (
     address_id UUID PRIMARY KEY,
     address_type address_type NOT NULL,
     is_active BOOLEAN NOT NULL,
-    city_id UUID
+    city_id UUID,
+    street_line1_hash BIGINT
 );
 
 -- Main table for model MessagingModel
@@ -117,7 +118,8 @@ CREATE TABLE messaging (
 CREATE TABLE messaging_idx (
     messaging_id UUID PRIMARY KEY,
     messaging_type messaging_type NOT NULL,
-    is_active BOOLEAN NOT NULL
+    is_active BOOLEAN NOT NULL,
+    value_hash BIGINT
 );
 
 -- Main table for model EntityReferenceModel

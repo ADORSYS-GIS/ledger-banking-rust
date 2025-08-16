@@ -190,7 +190,7 @@ async fn create_test_account_in_db(pool: &PgPool) -> Uuid {
     account_id
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_crud_operations() {
     use banking_db::TransactionRepository;
@@ -239,7 +239,7 @@ async fn test_transaction_crud_operations() {
     assert!(!not_exists);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_find_by_reference() {
     use banking_db::TransactionRepository;
@@ -269,7 +269,7 @@ async fn test_transaction_find_by_reference() {
     assert!(not_found.is_none());
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_find_by_account_id() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -314,7 +314,7 @@ async fn test_transaction_find_by_account_id() {
     assert_eq!(filtered_transactions[0].amount, Decimal::from_str("200.00").unwrap());
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_find_by_external_reference() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -356,7 +356,7 @@ async fn test_transaction_find_by_external_reference() {
     }
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_find_by_status() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -399,7 +399,7 @@ async fn test_transaction_find_by_status() {
     assert!(posted_count >= 1);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_requiring_approval() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -437,7 +437,7 @@ async fn test_transaction_requiring_approval() {
     assert_eq!(found_transaction.approval_status, Some(TransactionApprovalStatus::Pending));
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_status_updates() {
     use banking_db::TransactionApprovalStatus;
@@ -477,7 +477,7 @@ async fn test_transaction_status_updates() {
     assert_eq!(approved_transaction.approval_status, Some(TransactionApprovalStatus::Approved));
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_find_by_channel() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -519,7 +519,7 @@ async fn test_transaction_find_by_channel() {
     assert_eq!(our_transaction.unwrap().channel_id.as_str(), channel);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_find_last_customer_transaction() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -561,7 +561,7 @@ async fn test_transaction_find_last_customer_transaction() {
     assert_eq!(last_transaction.channel_id.as_str(), "MobileApp");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_reverse_transaction() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -615,7 +615,7 @@ async fn test_transaction_reverse_transaction() {
     assert_eq!(updated_original.status, TransactionStatus::Reversed);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_reconciliation() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -666,7 +666,7 @@ async fn test_transaction_reconciliation() {
     assert!(found_txn2.is_some());
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_count_operations() {
     use banking_db_postgres::TransactionRepositoryImpl;
@@ -731,7 +731,7 @@ async fn test_transaction_count_operations() {
     assert!(total_count >= 2, "Total count should be at least 2 (our transactions)");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_with_approval_workflow() {
     use banking_db::TransactionApprovalStatus;
@@ -803,7 +803,7 @@ async fn test_transaction_with_approval_workflow() {
     assert_eq!(updated_workflow.status, WorkflowStatusModel::Completed);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_transaction_approval_operations() {
     use banking_db::{ApprovalWorkflowModel, WorkflowStatusModel, WorkflowTransactionApprovalModel};

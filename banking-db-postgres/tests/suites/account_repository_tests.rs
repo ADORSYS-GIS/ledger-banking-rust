@@ -184,7 +184,7 @@ async fn setup_test_db() -> PgPool {
     pool
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_account_crud_operations() {
     use banking_db::AccountRepository;
@@ -228,7 +228,7 @@ async fn test_account_crud_operations() {
     assert!(!not_exists);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_account_balance_operations() {
     use banking_db::AccountRepository;
@@ -259,7 +259,7 @@ async fn test_account_balance_operations() {
     assert_eq!(updated_account.available_balance, new_available);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_accrued_interest_operations() {
     use banking_db_postgres::AccountRepositoryImpl;
@@ -296,7 +296,7 @@ async fn test_accrued_interest_operations() {
     assert_eq!(reset_account.accrued_interest, Decimal::from_str("0.00").unwrap());
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_account_status_operations() {
     use banking_db::AccountRepository;
@@ -328,7 +328,7 @@ async fn test_account_status_operations() {
     assert!(updated_account.status_change_timestamp.is_some());
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_operations() {
     use banking_db_postgres::AccountRepositoryImpl;
@@ -371,7 +371,7 @@ async fn test_find_operations() {
     assert!(dormant_accounts.iter().any(|a| a.id == account2.id));
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_interest_bearing_accounts() {
     use banking_db_postgres::AccountRepositoryImpl;
@@ -402,7 +402,7 @@ async fn test_interest_bearing_accounts() {
     assert!(!account_ids.contains(&current_account.id));
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_dormancy_candidates() {
     use banking_db_postgres::AccountRepositoryImpl;
@@ -433,7 +433,7 @@ async fn test_dormancy_candidates() {
     assert!(!candidate_ids.contains(&recent_account.id));
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_count_operations() {
     use banking_db_postgres::AccountRepositoryImpl;
@@ -469,7 +469,7 @@ async fn test_count_operations() {
     assert!(sav02_count >= 1);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_list_with_pagination() {
     use banking_db_postgres::AccountRepositoryImpl;
@@ -503,7 +503,7 @@ async fn test_list_with_pagination() {
                "Same pagination parameters should return same number of results");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_last_activity_date_update() {
     use banking_db::AccountRepository;
@@ -551,7 +551,7 @@ async fn test_enum_conversions() {
     assert_eq!(format!("{:?}", DbAccountStatus::Closed), "Closed");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_account_status_history() {
     use banking_db_postgres::AccountRepositoryImpl;

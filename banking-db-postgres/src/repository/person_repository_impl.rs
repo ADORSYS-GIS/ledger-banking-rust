@@ -836,16 +836,23 @@ impl AddressRepository for AddressRepositoryImpl {
         .execute(&*self.pool)
         .await?;
 
+        let street_line1_hash = {
+            let mut hasher = XxHash64::with_seed(0);
+            hasher.write(address.street_line1.as_bytes());
+            hasher.finish() as i64
+        };
+
         sqlx::query(
             r#"
-            INSERT INTO address_idx (address_id, address_type, city_id, is_active)
-            VALUES ($1, $2::address_type, $3, $4)
+            INSERT INTO address_idx (address_id, address_type, city_id, is_active, street_line1_hash)
+            VALUES ($1, $2::address_type, $3, $4, $5)
             "#,
         )
         .bind(address.id)
         .bind(address.address_type)
         .bind(address.city_id)
         .bind(address.is_active)
+        .bind(street_line1_hash)
         .execute(&*self.pool)
         .await?;
 
@@ -943,6 +950,20 @@ impl AddressRepository for AddressRepositoryImpl {
             return Ok(vec![]);
         }
         self.find_by_ids(&ids[start..end]).await
+    }
+    async fn find_ids_by_street_line1(
+        &self,
+        street_line1: &str,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write(street_line1.as_bytes());
+        let hash = hasher.finish() as i64;
+
+        let ids = sqlx::query_scalar("SELECT address_id FROM address_idx WHERE street_line1_hash = $1")
+            .bind(hash)
+            .fetch_all(&*self.pool)
+            .await?;
+        Ok(ids)
     }
 }
 
@@ -1082,15 +1103,22 @@ impl MessagingRepository for MessagingRepositoryImpl {
         .execute(&*self.pool)
         .await?;
 
+        let value_hash = {
+            let mut hasher = XxHash64::with_seed(0);
+            hasher.write(messaging.value.as_bytes());
+            hasher.finish() as i64
+        };
+
         sqlx::query(
             r#"
-            INSERT INTO messaging_idx (messaging_id, messaging_type, is_active)
-            VALUES ($1, $2::messaging_type, $3)
+            INSERT INTO messaging_idx (messaging_id, messaging_type, is_active, value_hash)
+            VALUES ($1, $2::messaging_type, $3, $4)
             "#,
         )
         .bind(messaging.id)
         .bind(messaging.messaging_type)
         .bind(messaging.is_active)
+        .bind(value_hash)
         .execute(&*self.pool)
         .await?;
 
@@ -1173,6 +1201,20 @@ impl MessagingRepository for MessagingRepositoryImpl {
             return Ok(vec![]);
         }
         self.find_by_ids(&ids[start..end]).await
+    }
+    async fn find_ids_by_value(
+        &self,
+        value: &str,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write(value.as_bytes());
+        let hash = hasher.finish() as i64;
+
+        let ids = sqlx::query_scalar("SELECT messaging_id FROM messaging_idx WHERE value_hash = $1")
+            .bind(hash)
+            .fetch_all(&*self.pool)
+            .await?;
+        Ok(ids)
     }
 }
 

@@ -27,7 +27,7 @@ fn create_workflow_for_test(workflow_id: Uuid, account_id: Uuid, person_id: Uuid
     }
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_cleanup_isolation_demo() {
     // Initial setup
@@ -73,7 +73,7 @@ async fn test_cleanup_isolation_demo() {
     cleanup_database(&pool).await;
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_workflow_crud_basic() {
     // Setup with clean environment
@@ -142,7 +142,7 @@ async fn test_workflow_crud_basic() {
     cleanup_database(&pool).await;
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_multiple_workflows_with_cleanup() {
     // Clean start
