@@ -36,7 +36,7 @@ pub async fn establish_connection() -> PgPool {
         .expect(&format!("Error connecting to {}", database_url));
     
     // Run migrations to ensure schema is up to date
-    sqlx::migrate!("../banking-db-postgres/migrations")
+    sqlx::migrate!("../banking-db-postgres/migrations/")
         .run(&pool)
         .await
         .expect("Failed to run migrations");
@@ -169,76 +169,6 @@ async fn ensure_docker_database_running() {
     }
 }
 
-/// Create standard test person for foreign key references
-/// 
-/// Many tests need a person record for foreign key constraints.
-/// This function creates a standard test person that can be reused.
-pub async fn create_test_person(pool: &PgPool) -> uuid::Uuid {
-    let test_person_id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
-    
-    sqlx::query(
-        r#"
-        INSERT INTO persons (id, person_type, display_name, external_identifier)
-        VALUES ($1, 'System', 'Test User', 'test-user')
-        ON CONFLICT (id) DO NOTHING
-        "#
-    )
-    .bind(test_person_id)
-    .execute(pool)
-    .await
-    .expect("Failed to create test person");
-    
-    test_person_id
-}
-
-/// Create standard test account for foreign key references
-/// 
-/// Many workflow and transaction tests need an account record.
-/// This function creates a standard test account that can be reused.
-pub async fn create_test_account(pool: &PgPool, created_by_person_id: uuid::Uuid) -> uuid::Uuid {
-    let test_account_id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
-    
-    sqlx::query(
-        r#"
-        INSERT INTO accounts (
-            id, product_id, account_type, account_status,
-            signing_condition, currency, open_date, domicile_agency_branch_id,
-            current_balance, available_balance, accrued_interest,
-            created_at, last_updated_at, updated_by_person_id
-        ) VALUES (
-            $1, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Savings', 'Active',
-            'AnyOwner', 'USD', '2024-01-01', $2,
-            0.00, 0.00, 0.00,
-            NOW(), NOW(), $3
-        )
-        ON CONFLICT (id) DO NOTHING
-        "#
-    )
-    .bind(test_account_id)
-    .bind(uuid::Uuid::new_v4()) // domicile_agency_branch_id - random is fine for tests
-    .bind(created_by_person_id)
-    .execute(pool)
-    .await
-    .expect("Failed to create test account");
-    
-    test_account_id
-}
-
-/// Initialize test database with standard test data
-/// 
-/// This function sets up the minimal required test data that most tests need:
-/// - Test person for foreign key references
-/// - Test account for workflow and transaction tests
-/// 
-/// Returns (person_id, account_id) for use in tests
-pub async fn setup_test_db() -> (PgPool, uuid::Uuid, uuid::Uuid) {
-    let pool = establish_connection().await;
-    let person_id = create_test_person(&pool).await;
-    let account_id = create_test_account(&pool, person_id).await;
-    
-    (pool, person_id, account_id)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -263,33 +193,5 @@ mod tests {
         
         // Test that cleanup works without errors
         cleanup_database(&pool).await;
-    }
-    
-    #[tokio::test]
-    async fn test_setup_test_db() {
-        let (pool, person_id, account_id) = setup_test_db().await;
-        let _guard = TestDatabaseGuard::new(pool.clone());
-        
-        // Verify test person exists
-        let person_count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM persons WHERE id = $1"
-        )
-        .bind(person_id)
-        .fetch_one(&pool)
-        .await
-        .expect("Failed to count persons");
-        
-        assert_eq!(person_count.0, 1);
-        
-        // Verify test account exists
-        let account_count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM accounts WHERE id = $1"
-        )
-        .bind(account_id)
-        .fetch_one(&pool)
-        .await
-        .expect("Failed to count accounts");
-        
-        assert_eq!(account_count.0, 1);
     }
 }

@@ -207,7 +207,6 @@ CREATE TABLE person_idx (
     -- other indexed fields...
 );
 
-CREATE INDEX idx_person_idx_is_active ON person_idx(is_active);
 ```
 
 **Repository Logic (Conceptual):**

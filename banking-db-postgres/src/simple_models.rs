@@ -1,52 +1,29 @@
-// Temporary simplified models that match the current database schema
-// These should eventually be moved to the proper models crate
-
+use banking_db::models::person::{MessagingType, PersonType};
 use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SimpleBranchModel {
-    pub branch_id: Uuid,
-    pub network_id: Uuid,
-    pub branch_code: String,
-    pub branch_name: String,
-    pub contact_person: Option<String>,
-    pub phone_number: Option<String>,
-    pub email: Option<String>,
-    pub physical_address: Option<String>,
-    pub status: String,
-    pub max_transaction_limit: Decimal,
-    pub max_daily_limit: Decimal,
-    pub settlement_account_id: Option<Uuid>,
+#[derive(Debug, Clone, FromRow)]
+pub struct PersonModelSqlx {
+    pub id: Uuid,
+    pub person_type: PersonType,
+    pub display_name: String,
+    pub external_identifier: Option<String>,
+    pub organization_person_id: Option<Uuid>,
+    pub messaging1_id: Option<Uuid>,
+    pub messaging1_type: Option<MessagingType>,
+    pub messaging2_id: Option<Uuid>,
+    pub messaging2_type: Option<MessagingType>,
+    pub messaging3_id: Option<Uuid>,
+    pub messaging3_type: Option<MessagingType>,
+    pub messaging4_id: Option<Uuid>,
+    pub messaging4_type: Option<MessagingType>,
+    pub messaging5_id: Option<Uuid>,
+    pub messaging5_type: Option<MessagingType>,
+    pub department: Option<String>,
+    pub location_address_id: Option<Uuid>,
+    pub duplicate_of_person_id: Option<Uuid>,
+    pub is_active: bool,
     pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SimpleTerminalModel {
-    pub terminal_id: Uuid,
-    pub branch_id: Uuid,
-    pub terminal_code: String,
-    pub terminal_type: String,
-    pub agent_user_id: Uuid,
-    pub status: String,
-    pub max_transaction_limit: Decimal,
-    pub max_daily_limit: Decimal,
-    pub last_activity_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SimpleNetworkModel {
-    pub network_id: Uuid,
-    pub network_code: String,
-    pub network_name: String,
-    pub network_type: String,
-    pub status: String,
-    pub max_transaction_limit: Decimal,
-    pub max_daily_limit: Decimal,
-    pub commission_rate: Decimal,
-    pub settlement_gl_code: String,
-    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }

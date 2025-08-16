@@ -417,3 +417,62 @@ where
     }
 }
 
+
+/// Index model for Country
+#[derive(Debug, Clone, FromRow)]
+pub struct CountryIdxModel {
+    pub country_id: Uuid,
+    pub iso2: HeaplessString<2>,
+    pub is_active: bool,
+}
+
+/// Index model for StateProvince
+#[derive(Debug, Clone, FromRow)]
+pub struct StateProvinceIdxModel {
+    pub state_province_id: Uuid,
+    pub country_id: Uuid,
+    pub is_active: bool,
+}
+
+/// Index model for City
+#[derive(Debug, Clone, FromRow)]
+pub struct CityIdxModel {
+    pub city_id: Uuid,
+    pub country_id: Uuid,
+    pub state_id: Option<Uuid>,
+    pub is_active: bool,
+}
+
+/// Index model for Address
+#[derive(Debug, Clone, FromRow)]
+pub struct AddressIdxModel {
+    pub address_id: Uuid,
+    pub address_type: AddressType,
+    pub is_active: bool,
+    pub city_id: Option<Uuid>,
+}
+
+/// Index model for Messaging
+#[derive(Debug, Clone, FromRow)]
+pub struct MessagingIdxModel {
+    pub messaging_id: Uuid,
+    pub messaging_type: MessagingType,
+    pub is_active: bool,
+}
+
+/// Index model for EntityReference
+#[derive(Debug, Clone, FromRow)]
+pub struct EntityReferenceIdxModel {
+    pub entity_reference_id: Uuid,
+    pub person_id: Uuid,
+    pub entity_role: RelationshipRole,
+    pub is_active: bool,
+}
+
+/// Index model for Person
+#[derive(Debug, Clone, FromRow)]
+pub struct PersonIdxModel {
+    pub person_id: Uuid,
+    pub person_type: PersonType,
+    pub is_active: bool,
+}

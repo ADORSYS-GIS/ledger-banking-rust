@@ -7,10 +7,41 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = []
+default = [
+    "account_hold_repository",
+    "account_repository",
+    "agent_network_repository",
+    "calendar_repository",
+    "channel_repository",
+    "collateral_repository",
+    "compliance_repository",
+    "customer_repository",
+    "daily_collection_repository",
+    "fee_repository",
+    "person_repository",
+    "product_repository",
+    "reason_and_purpose_repository",
+    "transaction_repository",
+    "workflow_repository",
+]
 postgres_tests = []
 offline = []
 full_sqlx = []
+account_hold_repository = []
+account_repository = []
+agent_network_repository = []
+calendar_repository = []
+channel_repository = []
+collateral_repository = []
+compliance_repository = []
+customer_repository = []
+daily_collection_repository = []
+fee_repository = []
+person_repository = []
+product_repository = []
+reason_and_purpose_repository = []
+transaction_repository = []
+workflow_repository = []
 
 [dependencies]
 # Workspace dependencies
@@ -45,26 +76,39 @@ sqlx = { workspace = true, features = ["migrate"] }
 [package.metadata.sqlx]
 migrations = "./migrations"
 
-[[test]]
-name = "workflow_repository_tests"
-path = "tests/workflow_repository_tests.rs"
 
 [[test]]
 name = "account_repository_tests"
-path = "tests/account_repository_tests.rs"
+required-features = ["account_repository"]
 
 [[test]]
-name = "transaction_repository_tests"
-path = "tests/transaction_repository_tests.rs"
+name = "channel_repository_tests"
+required-features = ["channel_repository"]
 
 [[test]]
-name = "example_with_cleanup"
-path = "tests/example_with_cleanup.rs"
+name = "compliance_repository_tests"
+required-features = ["compliance_repository"]
 
 [[test]]
-name = "cleanup_demo"
-path = "tests/cleanup_demo.rs"
+name = "customer_repository_tests"
+required-features = ["customer_repository"]
 
 [[test]]
 name = "fee_repository_tests"
-path = "tests/fee_repository_tests.rs"
+required-features = ["fee_repository"]
+
+[[test]]
+name = "person_repository_tests"
+required-features = ["person_repository"]
+
+[[test]]
+name = "reason_and_purpose_repository_tests"
+required-features = ["reason_and_purpose_repository"]
+
+[[test]]
+name = "transaction_repository_tests"
+required-features = ["transaction_repository"]
+
+[[test]]
+name = "workflow_repository_tests"
+required-features = ["workflow_repository"]

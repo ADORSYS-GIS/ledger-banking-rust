@@ -43,22 +43,17 @@ done
 
 #### Run Integration Tests
 ```bash
-# Set environment variables
+# Set environment variables (from project root)
 export DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
 
-# Run migrations first
-cd banking-db-postgres
-sqlx migrate run --source migrations
+# Run migrations first (from project root)
+sqlx migrate run --source banking-db-postgres/migrations
 
-# Run integration tests
-cargo test --features postgres_tests --test account_repository_tests -- --test-threads=1
-```
+# Run a specific test with its required features
+cargo test -p banking-db-postgres --test person_repository_tests --features person_repository -- --test-threads=1
 
-#### Automated Setup
-Use the provided script for automated setup:
-```bash
-# Run the test setup script
-./test_setup.sh
+# Run all tests for the package
+cargo test -p banking-db-postgres -- --test-threads=1
 ```
 
 ## Test Coverage
@@ -175,7 +170,7 @@ Error: Failed to connect to PostgreSQL database
 Error: Failed to run migrations
 ```
 - Ensure migrations directory exists: `banking-db-postgres/migrations`
-- Run manually: `sqlx migrate run --source migrations`
+- Run manually from project root: `sqlx migrate run --source banking-db-postgres/migrations`
 
 **3. Feature Flag Missing**
 ```
@@ -207,13 +202,12 @@ For CI/CD pipelines, add these steps:
 
 - name: Run migrations
   run: |
-    cd banking-db-postgres
-    sqlx migrate run --source migrations
+    sqlx migrate run --source banking-db-postgres/migrations
   env:
     DATABASE_URL: postgresql://user:password@localhost:5432/mydb
 
 - name: Run tests
-  run: cargo test --features postgres_tests --test account_repository_tests -- --test-threads=1
+  run: cargo test -p banking-db-postgres -- --test-threads=1
   env:
     DATABASE_URL: postgresql://user:password@localhost:5432/mydb
 ```
