@@ -29,6 +29,7 @@ CREATE TABLE country_idx (
 CREATE TABLE state_province (
     id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
+    state_province_code VARCHAR(10) NOT NULL,
     name_l1 VARCHAR(100) NOT NULL,
     name_l2 VARCHAR(100),
     name_l3 VARCHAR(100),
@@ -43,6 +44,7 @@ CREATE TABLE state_province (
 CREATE TABLE state_province_idx (
     state_province_id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
+    state_province_code VARCHAR(10) NOT NULL,
     is_active BOOLEAN NOT NULL
 );
 
@@ -51,9 +53,10 @@ CREATE TABLE city (
     id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
     state_id UUID,
-    name_l1 VARCHAR(100) NOT NULL,
-    name_l2 VARCHAR(100),
-    name_l3 VARCHAR(100),
+    city_code VARCHAR(50) NOT NULL,
+    name_l1 VARCHAR(50) NOT NULL,
+    name_l2 VARCHAR(50),
+    name_l3 VARCHAR(50),
     is_active BOOLEAN NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -66,6 +69,7 @@ CREATE TABLE city_idx (
     city_id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
     state_id UUID,
+    city_code VARCHAR(50) NOT NULL,
     is_active BOOLEAN NOT NULL
 );
 
@@ -76,7 +80,7 @@ CREATE TABLE address (
     street_line2 VARCHAR(50),
     street_line3 VARCHAR(50),
     street_line4 VARCHAR(50),
-    city_id UUID,
+    city_id UUID NOT NULL,
     postal_code VARCHAR(20),
     latitude DECIMAL(15,10),
     longitude DECIMAL(15,10),

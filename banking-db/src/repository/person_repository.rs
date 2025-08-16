@@ -140,6 +140,11 @@ pub trait StateProvinceRepository: Send + Sync {
         page: u32,
         page_size: u32,
     ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_state_province_by_state_province_code(
+        &self,
+        country_id: Uuid,
+        state_province_code: &str,
+    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>>;
     async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
     async fn find_by_is_active(
         &self,
@@ -172,6 +177,11 @@ pub trait CityRepository: Send + Sync {
         page: u32,
         page_size: u32,
     ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_city_by_city_code(
+        &self,
+        country_id: Uuid,
+        city_code: &str,
+    ) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>>;
     async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
     async fn find_by_is_active(
         &self,

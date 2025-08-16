@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use banking_api::BankingError;
 use banking_db::models::person::{
     AddressModel, CityModel, CountryModel, EntityReferenceModel, MessagingModel, PersonModel,
-    PersonType, RelationshipRole, StateProvinceModel,
+    PersonType, RelationshipRole, StateProvinceModel, AddressType, MessagingType,
 };
 use banking_db::repository::{
     AddressRepository, CityRepository, CountryRepository, EntityReferenceRepository,
@@ -361,57 +361,372 @@ impl CountryRepositoryImpl {
 impl CountryRepository for CountryRepositoryImpl {
     async fn save(
         &self,
-        country: CountryModel,
+        _country: CountryModel,
     ) -> Result<CountryModel, Box<dyn Error + Send + Sync>> {
         // Implementation for save
         todo!()
     }
     async fn find_by_id(
         &self,
-        id: Uuid,
+        _id: Uuid,
     ) -> Result<Option<CountryModel>, Box<dyn Error + Send + Sync>> {
         // Implementation for find_by_id
         todo!()
     }
     async fn find_by_ids(
         &self,
-        ids: &[Uuid],
+        _ids: &[Uuid],
     ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>> {
         // Implementation for find_by_ids
         todo!()
     }
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
         // Implementation for exists_by_id
         todo!()
     }
-    async fn find_ids_by_iso2(&self, iso2: &str) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    async fn find_ids_by_iso2(&self, _iso2: &str) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
         // Implementation for find_ids_by_iso2
         todo!()
     }
     async fn find_by_iso2(
         &self,
-        iso2: &str,
-        page: u32,
-        page_size: u32,
+        _iso2: &str,
+        _page: u32,
+        _page_size: u32,
     ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>> {
         // Implementation for find_by_iso2
         todo!()
     }
     async fn find_ids_by_is_active(
         &self,
-        is_active: bool,
+        _is_active: bool,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
         // Implementation for find_ids_by_is_active
         todo!()
     }
     async fn find_by_is_active(
         &self,
-        is_active: bool,
-        page: u32,
-        page_size: u32,
+        _is_active: bool,
+        _page: u32,
+        _page_size: u32,
     ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>> {
         // Implementation for find_by_is_active
         todo!()
+    }
+}
+
+pub struct StateProvinceRepositoryImpl {
+    pool: Arc<PgPool>,
+}
+impl StateProvinceRepositoryImpl {
+    pub fn new(pool: Arc<PgPool>) -> Self {
+        Self { pool }
+    }
+}
+#[async_trait]
+impl StateProvinceRepository for StateProvinceRepositoryImpl {
+    async fn save(
+        &self,
+        state: StateProvinceModel,
+    ) -> Result<StateProvinceModel, Box<dyn Error + Send + Sync>> {
+        sqlx::query(
+            r#"
+            INSERT INTO state_province (id, country_id, state_province_code, name_l1, name_l2, name_l3, is_active, created_at, updated_at, created_by_person_id, updated_by_person_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            "#,
+        )
+        .bind(state.id)
+        .bind(state.country_id)
+        .bind(state.state_province_code.as_str())
+        .bind(state.name_l1.as_str())
+        .bind(state.name_l2.as_ref().map(|s| s.as_str()))
+        .bind(state.name_l3.as_ref().map(|s| s.as_str()))
+        .bind(state.is_active)
+        .bind(state.created_at)
+        .bind(state.updated_at)
+        .bind(state.created_by_person_id)
+        .bind(state.updated_by_person_id)
+        .execute(&*self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO state_province_idx (state_province_id, country_id, state_province_code, is_active)
+            VALUES ($1, $2, $3, $4)
+            "#,
+        )
+        .bind(state.id)
+        .bind(state.country_id)
+        .bind(state.state_province_code.as_str())
+        .bind(state.is_active)
+        .execute(&*self.pool)
+        .await?;
+
+        Ok(state)
+    }
+    async fn find_by_id(
+        &self,
+        _id: Uuid,
+    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_ids(
+        &self,
+        _ids: &[Uuid],
+    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_ids_by_country_id(
+        &self,
+        _country_id: Uuid,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_country_id(
+        &self,
+        _country_id: Uuid,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_state_province_by_state_province_code(
+        &self,
+        country_id: Uuid,
+        state_province_code: &str,
+    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM state_province WHERE country_id = $1 AND state_province_code = $2
+            "#,
+        )
+        .bind(country_id)
+        .bind(state_province_code)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        match row {
+            Some(row) => Ok(Some(StateProvinceModel::try_from_row(&row)?)),
+            None => Ok(None),
+        }
+    }
+    async fn find_ids_by_is_active(
+        &self,
+        _is_active: bool,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_is_active(
+        &self,
+        _is_active: bool,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+}
+
+pub struct CityRepositoryImpl {
+    pool: Arc<PgPool>,
+}
+impl CityRepositoryImpl {
+    pub fn new(pool: Arc<PgPool>) -> Self {
+        Self { pool }
+    }
+}
+#[async_trait]
+impl CityRepository for CityRepositoryImpl {
+    async fn save(&self, city: CityModel) -> Result<CityModel, Box<dyn Error + Send + Sync>> {
+        sqlx::query(
+            r#"
+            INSERT INTO city (id, country_id, state_id, city_code, name_l1, name_l2, name_l3, is_active, created_at, updated_at, created_by_person_id, updated_by_person_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            "#,
+        )
+        .bind(city.id)
+        .bind(city.country_id)
+        .bind(city.state_id)
+        .bind(city.city_code.as_str())
+        .bind(city.name_l1.as_str())
+        .bind(city.name_l2.as_ref().map(|s| s.as_str()))
+        .bind(city.name_l3.as_ref().map(|s| s.as_str()))
+        .bind(city.is_active)
+        .bind(city.created_at)
+        .bind(city.updated_at)
+        .bind(city.created_by_person_id)
+        .bind(city.updated_by_person_id)
+        .execute(&*self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO city_idx (city_id, country_id, state_id, city_code, is_active)
+            VALUES ($1, $2, $3, $4, $5)
+            "#,
+        )
+        .bind(city.id)
+        .bind(city.country_id)
+        .bind(city.state_id)
+        .bind(city.city_code.as_str())
+        .bind(city.is_active)
+        .execute(&*self.pool)
+        .await?;
+
+        Ok(city)
+    }
+    async fn find_by_id(&self, _id: Uuid) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_ids(&self, _ids: &[Uuid]) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_ids_by_country_id(
+        &self,
+        _country_id: Uuid,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_country_id(
+        &self,
+        _country_id: Uuid,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_ids_by_state_id(&self, _state_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_state_id(
+        &self,
+        _state_id: Uuid,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_city_by_city_code(
+        &self,
+        country_id: Uuid,
+        city_code: &str,
+    ) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>> {
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM city WHERE country_id = $1 AND city_code = $2
+            "#,
+        )
+        .bind(country_id)
+        .bind(city_code)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        match row {
+            Some(row) => Ok(Some(CityModel::try_from_row(&row)?)),
+            None => Ok(None),
+        }
+    }
+    async fn find_ids_by_is_active(
+        &self,
+        _is_active: bool,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_is_active(
+        &self,
+        _is_active: bool,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+}
+
+pub struct AddressRepositoryImpl {
+    pool: Arc<PgPool>,
+}
+impl AddressRepositoryImpl {
+    pub fn new(pool: Arc<PgPool>) -> Self {
+        Self { pool }
+    }
+}
+#[async_trait]
+impl AddressRepository for AddressRepositoryImpl {
+    async fn save(&self, _address: AddressModel) -> Result<AddressModel, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_id(&self, _id: Uuid) -> Result<Option<AddressModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_ids(&self, _ids: &[Uuid]) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_ids_by_address_type(
+        &self,
+        _address_type: AddressType,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_address_type(
+        &self,
+        _address_type: AddressType,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_ids_by_city_id(&self, _city_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_city_id(
+        &self,
+        _city_id: Uuid,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_ids_by_is_active(&self, _is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_is_active(
+        &self,
+        _is_active: bool,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+}
+
+impl TryFromRow<PgRow> for AddressModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(AddressModel {
+            id: row.get("id"),
+            address_type: row.get("address_type"),
+            street_line1: get_heapless_string(row, "street_line1")?,
+            street_line2: get_optional_heapless_string(row, "street_line2")?,
+            street_line3: get_optional_heapless_string(row, "street_line3")?,
+            street_line4: get_optional_heapless_string(row, "street_line4")?,
+            city_id: row.get("city_id"),
+            postal_code: get_optional_heapless_string(row, "postal_code")?,
+            latitude: row.get("latitude"),
+            longitude: row.get("longitude"),
+            accuracy_meters: row.get("accuracy_meters"),
+            is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            created_by_person_id: row.get("created_by_person_id"),
+            updated_by_person_id: row.get("updated_by_person_id"),
+        })
     }
 }
 
@@ -433,10 +748,137 @@ impl TryFromRow<PgRow> for PersonModel {
             messaging4_type: row.get("messaging4_type"),
             messaging5_id: row.get("messaging5_id"),
             messaging5_type: row.get("messaging5_type"),
-            department: get_optional_heapless_string(row, "external_identifier")?,
+            department: get_optional_heapless_string(row, "department")?,
             location_address_id: row.get("location_address_id"),
             duplicate_of_person_id: row.get("duplicate_of_person_id"),
             is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for CountryModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(CountryModel {
+            id: row.get("id"),
+            iso2: get_heapless_string(row, "iso2")?,
+            name_l1: get_heapless_string(row, "name_l1")?,
+            name_l2: get_optional_heapless_string(row, "name_l2")?,
+            name_l3: get_optional_heapless_string(row, "name_l3")?,
+            is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            created_by_person_id: row.get("created_by_person_id"),
+            updated_by_person_id: row.get("updated_by_person_id"),
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for StateProvinceModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(StateProvinceModel {
+            id: row.get("id"),
+            country_id: row.get("country_id"),
+            state_province_code: get_heapless_string(row, "state_province_code")?,
+            name_l1: get_heapless_string(row, "name_l1")?,
+            name_l2: get_optional_heapless_string(row, "name_l2")?,
+            name_l3: get_optional_heapless_string(row, "name_l3")?,
+            is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            created_by_person_id: row.get("created_by_person_id"),
+            updated_by_person_id: row.get("updated_by_person_id"),
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for CityModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(CityModel {
+            id: row.get("id"),
+            country_id: row.get("country_id"),
+            state_id: row.get("state_id"),
+            city_code: get_heapless_string(row, "city_code")?,
+            name_l1: get_heapless_string(row, "name_l1")?,
+            name_l2: get_optional_heapless_string(row, "name_l2")?,
+            name_l3: get_optional_heapless_string(row, "name_l3")?,
+            is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            created_by_person_id: row.get("created_by_person_id"),
+            updated_by_person_id: row.get("updated_by_person_id"),
+        })
+    }
+}
+
+pub struct MessagingRepositoryImpl {
+    pool: Arc<PgPool>,
+}
+impl MessagingRepositoryImpl {
+    pub fn new(pool: Arc<PgPool>) -> Self {
+        Self { pool }
+    }
+}
+#[async_trait]
+impl MessagingRepository for MessagingRepositoryImpl {
+    async fn save(
+        &self,
+        _messaging: MessagingModel,
+    ) -> Result<MessagingModel, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_id(
+        &self,
+        _id: Uuid,
+    ) -> Result<Option<MessagingModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_ids(
+        &self,
+        _ids: &[Uuid],
+    ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_ids_by_messaging_type(
+        &self,
+        _messaging_type: MessagingType,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_messaging_type(
+        &self,
+        _messaging_type: MessagingType,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_ids_by_is_active(&self, _is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+    async fn find_by_is_active(
+        &self,
+        _is_active: bool,
+        _page: u32,
+        _page_size: u32,
+    ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>> {
+        todo!()
+    }
+}
+
+impl TryFromRow<PgRow> for MessagingModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(MessagingModel {
+            id: row.get("id"),
+            messaging_type: row.get("messaging_type"),
+            value: get_heapless_string(row, "value")?,
+            other_type: get_optional_heapless_string(row, "other_type")?,
+            is_active: row.get("is_active"),
+            priority: row.try_get::<Option<i16>, _>("priority")?.map(|p| p as u8),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
         })

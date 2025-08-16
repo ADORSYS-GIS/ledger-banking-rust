@@ -241,6 +241,12 @@ impl From<sqlx::Error> for BankingError {
         }
     }
 }
+impl From<Box<dyn std::error::Error + Send + Sync>> for BankingError {
+    fn from(err: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        BankingError::Internal(err.to_string())
+    }
+}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LimitType { 

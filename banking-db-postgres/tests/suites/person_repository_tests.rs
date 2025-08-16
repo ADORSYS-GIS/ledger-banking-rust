@@ -6,9 +6,6 @@ use heapless::String as HeaplessString;
 use std::sync::Arc;
 use uuid::Uuid;
 
-mod commons;
-#[cfg(feature = "person_repository")]
-mod person_init;
 
 #[tokio::test]
 #[cfg(feature = "person_repository")]

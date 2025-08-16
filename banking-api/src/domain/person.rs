@@ -7,8 +7,10 @@ use uuid::Uuid;
 /// Country structure with ISO 3166-1 alpha-2 code
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Country {
+    // find_country_by_id
     pub id: Uuid,
     /// ISO 3166-1 alpha-2 country code (e.g., "CM", "US", "GB")
+    /// find_country_by_iso2
     pub iso2: HeaplessString<2>,
     /// Country name in primary language
     pub name_l1: HeaplessString<100>,
@@ -30,9 +32,15 @@ pub struct Country {
 /// State/Province structure with multilingual support
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StateProvince {
+    /// find_state_province_by_id
     pub id: Uuid,
     /// References Country.country_id
+    /// find_state_province_by_country_id
     pub country_id: Uuid,
+    /// Code unique to the province in the context of the country
+    /// If not provided, we us the first 10 chars of the name_l1
+    /// find_state_province_by_state_province_code
+    pub state_province_code: HeaplessString<10>,
     /// State/province name in primary language
     pub name_l1: HeaplessString<100>,
     /// State/province name in second language
@@ -53,17 +61,23 @@ pub struct StateProvince {
 /// City structure with multilingual support
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct City {
+    /// find_city_by_id
     pub id: Uuid,
     /// References Country.country_id
+    /// find_city_by_country_id
     pub country_id: Uuid,
     /// References StateProvince.state_id (optional for countries without states/provinces)
+    /// find_city_by_state_id
     pub state_id: Option<Uuid>,
+    /// If empty, normalized value of the primary language name_l1
+    /// find_city_by_city_code
+    pub city_code: HeaplessString<50>,
     /// City name in primary language
-    pub name_l1: HeaplessString<100>,
+    pub name_l1: HeaplessString<50>,
     /// City name in second language
-    pub name_l2: Option<HeaplessString<100>>,
+    pub name_l2: Option<HeaplessString<50>>,
     /// City name in third language
-    pub name_l3: Option<HeaplessString<100>>,
+    pub name_l3: Option<HeaplessString<50>>,
     /// Whether this city is currently active
     pub is_active: bool,
     /// Audit fields
@@ -78,14 +92,17 @@ pub struct City {
 /// Address structure for geographical locations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Address {
+    /// find_address_by_id
     pub id: Uuid,
     /// Structured address components - 4 street lines
+    /// find_address_by_street_line1
     pub street_line1: HeaplessString<50>,
-    pub street_line2: HeaplessString<50>,
-    pub street_line3: HeaplessString<50>,
-    pub street_line4: HeaplessString<50>,
+    pub street_line2: Option<HeaplessString<50>>,
+    pub street_line3: Option<HeaplessString<50>>,
+    pub street_line4: Option<HeaplessString<50>>,
     /// References City.city_id (city contains country and state references)
-    pub city_id: Option<Uuid>,
+    /// find_address_by_city_id
+    pub city_id: Uuid,
     pub postal_code: Option<HeaplessString<20>>,
     
     /// Geographical coordinates (decimal degrees)
@@ -95,6 +112,7 @@ pub struct Address {
     
     
     /// Address type for categorization
+    /// find_address_by_address_type_and_city_id
     pub address_type: AddressType,
     
     /// Whether this address is currently active/valid
@@ -119,10 +137,10 @@ impl Address {
         Self {
             id,
             street_line1: HeaplessString::new(),
-            street_line2: HeaplessString::new(),
-            street_line3: HeaplessString::new(),
-            street_line4: HeaplessString::new(),
-            city_id: None,
+            street_line2: None,
+            street_line3: None,
+            street_line4: None,
+            city_id: Uuid::new_v4(),
             postal_code: None,
             latitude: None,
             longitude: None,
@@ -173,7 +191,7 @@ pub struct AddressBuilder {
     street_line2: Option<String>,
     street_line3: Option<String>,
     street_line4: Option<String>,
-    city_id: Option<Uuid>,
+    city_id: Uuid,
     postal_code: Option<String>,
     latitude: Option<Decimal>,
     longitude: Option<Decimal>,
@@ -195,7 +213,7 @@ impl AddressBuilder {
             street_line2: None,
             street_line3: None,
             street_line4: None,
-            city_id: None,
+            city_id: Uuid::new_v4(),
             postal_code: None,
             latitude: None,
             longitude: None,
@@ -227,7 +245,7 @@ impl AddressBuilder {
     }
     
     pub fn city_id(mut self, city_id: Uuid) -> Self {
-        self.city_id = Some(city_id);
+        self.city_id = city_id;
         self
     }
     
@@ -265,20 +283,17 @@ impl AddressBuilder {
         let street_line2 = self.street_line2
             .map(|s| HeaplessString::try_from(s.as_str()))
             .transpose()
-            .map_err(|_| "Street line 2 exceeds maximum length")?
-            .unwrap_or_default();
+            .map_err(|_| "Street line 2 exceeds maximum length")?;
             
         let street_line3 = self.street_line3
             .map(|s| HeaplessString::try_from(s.as_str()))
             .transpose()
-            .map_err(|_| "Street line 3 exceeds maximum length")?
-            .unwrap_or_default();
+            .map_err(|_| "Street line 3 exceeds maximum length")?;
             
         let street_line4 = self.street_line4
             .map(|s| HeaplessString::try_from(s.as_str()))
             .transpose()
-            .map_err(|_| "Street line 4 exceeds maximum length")?
-            .unwrap_or_default();
+            .map_err(|_| "Street line 4 exceeds maximum length")?;
             
         let postal_code = self.postal_code
             .map(|s| HeaplessString::try_from(s.as_str()))
@@ -364,10 +379,12 @@ pub enum MessagingType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Messaging {
     /// Unique identifier for this messaging record
+    /// find_messaging_by_id
     pub id: Uuid,
     /// Type of messaging/communication method
     pub messaging_type: MessagingType,
     /// The actual messaging identifier/address (email, phone, username, etc.)
+    /// find_messaging_by_value
     pub value: HeaplessString<100>,
     /// Description of the messaging type when MessagingType::Other is used
     pub other_type: Option<HeaplessString<20>>,
@@ -484,10 +501,13 @@ pub enum RelationshipRole {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityReference {
     /// Unique identifier for this entity reference
+    /// find_entity_reference_by_id
     pub id: Uuid,
     /// References Person.person_id
+    /// find_entity_reference_by_person_id
     pub person_id: Uuid,
     /// Type of entity relationship
+    /// find_entity_reference_by_person_id_and_entity_role
     pub entity_role: RelationshipRole,
     /// External identifier for the reference (e.g., customer ID, employee ID)
     pub reference_external_id: Option<HeaplessString<50>>,
@@ -498,6 +518,7 @@ pub struct EntityReference {
     /// Reference details in language 3
     pub reference_details_l3: Option<HeaplessString<50>>,
     /// Whether this entity reference is currently active
+    /// find_entity_reference__by_is_active
     pub is_active: bool,
     /// When this reference was created
     pub created_at: DateTime<Utc>,
@@ -568,15 +589,18 @@ impl EntityReference {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Person {
     /// Unique identifier for this person reference
+    /// find_by_id
     pub id: Uuid,
     
     /// Type of person (natural, legal, system, etc.)
+    /// find_by_person_type
     pub person_type: PersonType,
     
     /// Display name of the person
     pub display_name: HeaplessString<100>,
     
     /// External identifier (e.g., employee ID, badge number, system ID)
+    /// get_by_external_identifier
     pub external_identifier: Option<HeaplessString<50>>,
     
     /// References another Person.person_id for organizational hierarchy
@@ -602,7 +626,6 @@ pub struct Person {
     
     /// Reference to another Person if this is a duplicate
     pub duplicate_of_person_id: Option<Uuid>,
-    
     
     /// Whether this person reference is currently active
     pub is_active: bool,

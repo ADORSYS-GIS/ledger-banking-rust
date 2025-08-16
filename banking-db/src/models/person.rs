@@ -100,6 +100,7 @@ pub struct CountryModel {
 pub struct StateProvinceModel {
     pub id: Uuid,
     pub country_id: Uuid,
+    pub state_province_code: HeaplessString<10>,
     pub name_l1: HeaplessString<100>,
     pub name_l2: Option<HeaplessString<100>>,
     pub name_l3: Option<HeaplessString<100>>,
@@ -116,9 +117,10 @@ pub struct CityModel {
     pub id: Uuid,
     pub country_id: Uuid,
     pub state_id: Option<Uuid>,
-    pub name_l1: HeaplessString<100>,
-    pub name_l2: Option<HeaplessString<100>>,
-    pub name_l3: Option<HeaplessString<100>>,
+    pub city_code: HeaplessString<50>,
+    pub name_l1: HeaplessString<50>,
+    pub name_l2: Option<HeaplessString<50>>,
+    pub name_l3: Option<HeaplessString<50>>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -131,10 +133,10 @@ pub struct CityModel {
 pub struct AddressModel {
     pub id: Uuid,
     pub street_line1: HeaplessString<50>,
-    pub street_line2: HeaplessString<50>,
-    pub street_line3: HeaplessString<50>,
-    pub street_line4: HeaplessString<50>,
-    pub city_id: Option<Uuid>,
+    pub street_line2: Option<HeaplessString<50>>,
+    pub street_line3: Option<HeaplessString<50>>,
+    pub street_line4: Option<HeaplessString<50>>,
+    pub city_id: Uuid,
     pub postal_code: Option<HeaplessString<20>>,
     pub latitude: Option<Decimal>,
     pub longitude: Option<Decimal>,
@@ -431,6 +433,7 @@ pub struct CountryIdxModel {
 pub struct StateProvinceIdxModel {
     pub state_province_id: Uuid,
     pub country_id: Uuid,
+    pub state_province_code: HeaplessString<10>,
     pub is_active: bool,
 }
 
@@ -440,6 +443,7 @@ pub struct CityIdxModel {
     pub city_id: Uuid,
     pub country_id: Uuid,
     pub state_id: Option<Uuid>,
+    pub city_code: HeaplessString<50>,
     pub is_active: bool,
 }
 
