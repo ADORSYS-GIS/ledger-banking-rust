@@ -66,6 +66,7 @@ async-trait.workspace = true
 
 # Stack optimization
 heapless.workspace = true
+twox-hash = "2.1.1"
 
 # Logging
 

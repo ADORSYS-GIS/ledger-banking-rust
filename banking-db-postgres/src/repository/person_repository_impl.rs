@@ -1,18 +1,28 @@
 use async_trait::async_trait;
+use banking_api::BankingError;
 use banking_db::models::person::{
-    AddressModel, AddressType, CityModel, CountryModel, EntityReferenceModel, MessagingModel,
-    MessagingType, PersonModel, PersonType, RelationshipRole, StateProvinceModel,
+    AddressModel, CityModel, CountryModel, EntityReferenceModel, MessagingModel, PersonModel,
+    PersonType, RelationshipRole, StateProvinceModel,
 };
 use banking_db::repository::{
     AddressRepository, CityRepository, CountryRepository, EntityReferenceRepository,
     MessagingRepository, PersonRepository, StateProvinceRepository,
 };
-use crate::simple_models::PersonModelSqlx;
-use sqlx::{PgPool, Row};
+use sqlx::{postgres::PgRow, PgPool, Row};
 use std::error::Error;
+use std::hash::Hasher;
 use std::str::FromStr;
 use std::sync::Arc;
+use twox_hash::XxHash64;
 use uuid::Uuid;
+
+use crate::utils::{get_heapless_string, get_optional_heapless_string};
+
+trait TryFromRow<R> {
+    fn try_from_row(row: &R) -> Result<Self, Box<dyn Error + Send + Sync>>
+    where
+        Self: Sized;
+}
 
 pub struct PersonRepositoryImpl {
     pool: Arc<PgPool>,
@@ -27,7 +37,7 @@ impl PersonRepositoryImpl {
 #[async_trait]
 impl PersonRepository for PersonRepositoryImpl {
     async fn save(&self, person: PersonModel) -> Result<PersonModel, Box<dyn Error + Send + Sync>> {
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO person (
                 id, person_type, display_name, external_identifier, organization_person_id,
@@ -35,65 +45,49 @@ impl PersonRepository for PersonRepositoryImpl {
                 messaging4_id, messaging4_type, messaging5_id, messaging5_type,
                 department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-            ON CONFLICT (id) DO UPDATE SET
-                person_type = EXCLUDED.person_type,
-                display_name = EXCLUDED.display_name,
-                external_identifier = EXCLUDED.external_identifier,
-                organization_person_id = EXCLUDED.organization_person_id,
-                messaging1_id = EXCLUDED.messaging1_id,
-                messaging1_type = EXCLUDED.messaging1_type,
-                messaging2_id = EXCLUDED.messaging2_id,
-                messaging2_type = EXCLUDED.messaging2_type,
-                messaging3_id = EXCLUDED.messaging3_id,
-                messaging3_type = EXCLUDED.messaging3_type,
-                messaging4_id = EXCLUDED.messaging4_id,
-                messaging4_type = EXCLUDED.messaging4_type,
-                messaging5_id = EXCLUDED.messaging5_id,
-                messaging5_type = EXCLUDED.messaging5_type,
-                department = EXCLUDED.department,
-                location_address_id = EXCLUDED.location_address_id,
-                duplicate_of_person_id = EXCLUDED.duplicate_of_person_id,
-                is_active = EXCLUDED.is_active,
-                updated_at = EXCLUDED.updated_at
-            "#,
-            person.id,
-            person.person_type as _,
-            person.display_name.as_str(),
-            person.external_identifier.as_ref().map(|s| s.as_str()),
-            person.organization_person_id,
-            person.messaging1_id,
-            person.messaging1_type as _,
-            person.messaging2_id,
-            person.messaging2_type as _,
-            person.messaging3_id,
-            person.messaging3_type as _,
-            person.messaging4_id,
-            person.messaging4_type as _,
-            person.messaging5_id,
-            person.messaging5_type as _,
-            person.department.as_ref().map(|s| s.as_str()),
-            person.location_address_id,
-            person.duplicate_of_person_id,
-            person.is_active,
-            person.created_at,
-            person.updated_at
+            VALUES ($1, $2::person_type, $3, $4, $5, $6, $7::messaging_type, $8, $9::messaging_type, $10, $11::messaging_type, $12, $13::messaging_type, $14, $15::messaging_type, $16, $17, $18, $19, $20, $21)
+           "#,
         )
+        .bind(person.id)
+        .bind(person.person_type)
+        .bind(person.display_name.as_str())
+        .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
+        .bind(person.organization_person_id)
+        .bind(person.messaging1_id)
+        .bind(person.messaging1_type)
+        .bind(person.messaging2_id)
+        .bind(person.messaging2_type)
+        .bind(person.messaging3_id)
+        .bind(person.messaging3_type)
+        .bind(person.messaging4_id)
+        .bind(person.messaging4_type)
+        .bind(person.messaging5_id)
+        .bind(person.messaging5_type)
+        .bind(person.department.as_ref().map(|s| s.as_str()))
+        .bind(person.location_address_id)
+        .bind(person.duplicate_of_person_id)
+        .bind(person.is_active)
+        .bind(person.created_at)
+        .bind(person.updated_at)
         .execute(&*self.pool)
         .await?;
 
-        sqlx::query!(
+        let external_identifier_hash = person.external_identifier.as_ref().map(|s| {
+            let mut hasher = XxHash64::with_seed(0);
+            hasher.write(s.as_bytes());
+            hasher.finish() as i64
+        });
+
+        sqlx::query(
             r#"
-            INSERT INTO person_idx (person_id, person_type, is_active)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (person_id) DO UPDATE SET
-                person_type = EXCLUDED.person_type,
-                is_active = EXCLUDED.is_active
+            INSERT INTO person_idx (person_id, person_type, external_identifier_hash, is_active)
+            VALUES ($1, $2::person_type, $3, $4)
             "#,
-            person.id,
-            person.person_type as _,
-            person.is_active
         )
+        .bind(person.id)
+        .bind(person.person_type)
+        .bind(external_identifier_hash)
+        .bind(person.is_active)
         .execute(&*self.pool)
         .await?;
 
@@ -104,49 +98,18 @@ impl PersonRepository for PersonRepositoryImpl {
         &self,
         id: Uuid,
     ) -> Result<Option<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let person_sqlx = sqlx::query_as!(
-            PersonModelSqlx,
+        let row = sqlx::query(
             r#"
-            SELECT id, person_type as "person_type: _", display_name, external_identifier, organization_person_id,
-                messaging1_id, messaging1_type as "messaging1_type: _", messaging2_id, messaging2_type as "messaging2_type: _",
-                messaging3_id, messaging3_type as "messaging3_type: _", messaging4_id, messaging4_type as "messaging4_type: _",
-                messaging5_id, messaging5_type as "messaging5_type: _", department, location_address_id,
-                duplicate_of_person_id, is_active, created_at, updated_at
-            FROM person WHERE id = $1
+            SELECT * FROM person WHERE id = $1
             "#,
-            id
         )
+        .bind(id)
         .fetch_optional(&*self.pool)
         .await?;
 
-        if let Some(p) = person_sqlx {
-            Ok(Some(PersonModel {
-                id: p.id,
-                person_type: p.person_type,
-                display_name: heapless::String::from_str(&p.display_name).unwrap(),
-                external_identifier: p
-                    .external_identifier
-                    .map(|s| heapless::String::from_str(&s).unwrap()),
-                organization_person_id: p.organization_person_id,
-                messaging1_id: p.messaging1_id,
-                messaging1_type: p.messaging1_type,
-                messaging2_id: p.messaging2_id,
-                messaging2_type: p.messaging2_type,
-                messaging3_id: p.messaging3_id,
-                messaging3_type: p.messaging3_type,
-                messaging4_id: p.messaging4_id,
-                messaging4_type: p.messaging4_type,
-                messaging5_id: p.messaging5_id,
-                messaging5_type: p.messaging5_type,
-                department: p.department.map(|s| heapless::String::from_str(&s).unwrap()),
-                location_address_id: p.location_address_id,
-                duplicate_of_person_id: p.duplicate_of_person_id,
-                is_active: p.is_active,
-                created_at: p.created_at,
-                updated_at: p.updated_at,
-            }))
-        } else {
-            Ok(None)
+        match row {
+            Some(row) => Ok(Some(PersonModel::try_from_row(&row)?)),
+            None => Ok(None),
         }
     }
 
@@ -154,50 +117,19 @@ impl PersonRepository for PersonRepositoryImpl {
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let persons_sqlx = sqlx::query_as!(
-            PersonModelSqlx,
+        let rows = sqlx::query(
             r#"
-            SELECT id, person_type as "person_type: _", display_name, external_identifier, organization_person_id,
-                messaging1_id, messaging1_type as "messaging1_type: _", messaging2_id, messaging2_type as "messaging2_type: _",
-                messaging3_id, messaging3_type as "messaging3_type: _", messaging4_id, messaging4_type as "messaging4_type: _",
-                messaging5_id, messaging5_type as "messaging5_type: _", department, location_address_id,
-                duplicate_of_person_id, is_active, created_at, updated_at
-            FROM person WHERE id = ANY($1)
+            SELECT * FROM person WHERE id = ANY($1)
             "#,
-            ids
         )
+        .bind(ids)
         .fetch_all(&*self.pool)
         .await?;
 
-        let persons = persons_sqlx
-            .into_iter()
-            .map(|p| PersonModel {
-                id: p.id,
-                person_type: p.person_type,
-                display_name: heapless::String::from_str(&p.display_name).unwrap(),
-                external_identifier: p
-                    .external_identifier
-                    .map(|s| heapless::String::from_str(&s).unwrap()),
-                organization_person_id: p.organization_person_id,
-                messaging1_id: p.messaging1_id,
-                messaging1_type: p.messaging1_type,
-                messaging2_id: p.messaging2_id,
-                messaging2_type: p.messaging2_type,
-                messaging3_id: p.messaging3_id,
-                messaging3_type: p.messaging3_type,
-                messaging4_id: p.messaging4_id,
-                messaging4_type: p.messaging4_type,
-                messaging5_id: p.messaging5_id,
-                messaging5_type: p.messaging5_type,
-                department: p.department.map(|s| heapless::String::from_str(&s).unwrap()),
-                location_address_id: p.location_address_id,
-                duplicate_of_person_id: p.duplicate_of_person_id,
-                is_active: p.is_active,
-                created_at: p.created_at,
-                updated_at: p.updated_at,
-            })
-            .collect();
-
+        let mut persons = Vec::new();
+        for row in rows {
+            persons.push(PersonModel::try_from_row(&row)?);
+        }
         Ok(persons)
     }
 
@@ -215,10 +147,10 @@ impl PersonRepository for PersonRepositoryImpl {
         &self,
         person_type: PersonType,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar!(
-            "SELECT person_id FROM person_idx WHERE person_type = $1",
-            person_type as _
+        let ids = sqlx::query_scalar(
+            "SELECT person_id FROM person_idx WHERE person_type = $1::person_type"
         )
+        .bind(person_type)
         .fetch_all(&*self.pool)
         .await?;
         Ok(ids)
@@ -243,10 +175,10 @@ impl PersonRepository for PersonRepositoryImpl {
         &self,
         is_active: bool,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar!(
-            "SELECT person_id FROM person_idx WHERE is_active = $1",
-            is_active
+        let ids = sqlx::query_scalar(
+            "SELECT person_id FROM person_idx WHERE is_active = $1"
         )
+        .bind(is_active)
         .fetch_all(&*self.pool)
         .await?;
         Ok(ids)
@@ -267,55 +199,37 @@ impl PersonRepository for PersonRepositoryImpl {
         self.find_by_ids(&ids[start..end]).await
     }
 
+    async fn get_ids_by_external_identifier(
+        &self,
+        identifier: &str,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write(identifier.as_bytes());
+        let hash = hasher.finish() as i64;
+
+        let ids = sqlx::query_scalar(
+            "SELECT person_id FROM person_idx WHERE external_identifier_hash = $1",
+        )
+        .bind(hash)
+        .fetch_all(&*self.pool)
+        .await?;
+        Ok(ids)
+    }
+
     async fn get_by_external_identifier(
         &self,
         identifier: &str,
     ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let persons_sqlx = sqlx::query_as!(
-            PersonModelSqlx,
-            r#"
-            SELECT id, person_type as "person_type: _", display_name, external_identifier, organization_person_id,
-                messaging1_id, messaging1_type as "messaging1_type: _", messaging2_id, messaging2_type as "messaging2_type: _",
-                messaging3_id, messaging3_type as "messaging3_type: _", messaging4_id, messaging4_type as "messaging4_type: _",
-                messaging5_id, messaging5_type as "messaging5_type: _", department, location_address_id,
-                duplicate_of_person_id, is_active, created_at, updated_at
-            FROM person WHERE external_identifier = $1
-            "#,
-            identifier
-        )
-        .fetch_all(&*self.pool)
-        .await?;
-
-        let persons = persons_sqlx
+        let ids = self.get_ids_by_external_identifier(identifier).await?;
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let persons = self.find_by_ids(&ids).await?;
+        let filtered_persons = persons
             .into_iter()
-            .map(|p| PersonModel {
-                id: p.id,
-                person_type: p.person_type,
-                display_name: heapless::String::from_str(&p.display_name).unwrap(),
-                external_identifier: p
-                    .external_identifier
-                    .map(|s| heapless::String::from_str(&s).unwrap()),
-                organization_person_id: p.organization_person_id,
-                messaging1_id: p.messaging1_id,
-                messaging1_type: p.messaging1_type,
-                messaging2_id: p.messaging2_id,
-                messaging2_type: p.messaging2_type,
-                messaging3_id: p.messaging3_id,
-                messaging3_type: p.messaging3_type,
-                messaging4_id: p.messaging4_id,
-                messaging4_type: p.messaging4_type,
-                messaging5_id: p.messaging5_id,
-                messaging5_type: p.messaging5_type,
-                department: p.department.map(|s| heapless::String::from_str(&s).unwrap()),
-                location_address_id: p.location_address_id,
-                duplicate_of_person_id: p.duplicate_of_person_id,
-                is_active: p.is_active,
-                created_at: p.created_at,
-                updated_at: p.updated_at,
-            })
+            .filter(|p| p.external_identifier.as_deref() == Some(identifier))
             .collect();
-
-        Ok(persons)
+        Ok(filtered_persons)
     }
 
     async fn get_by_entity_reference(
@@ -323,57 +237,27 @@ impl PersonRepository for PersonRepositoryImpl {
         entity_id: Uuid,
         entity_type: RelationshipRole,
     ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let persons_sqlx = sqlx::query_as!(
-            PersonModelSqlx,
+        let rows = sqlx::query(
             r#"
-            SELECT p.id, p.person_type as "person_type: _", p.display_name, p.external_identifier, p.organization_person_id,
-                p.messaging1_id, p.messaging1_type as "messaging1_type: _", p.messaging2_id, p.messaging2_type as "messaging2_type: _",
-                p.messaging3_id, p.messaging3_type as "messaging3_type: _", p.messaging4_id, p.messaging4_type as "messaging4_type: _",
-                p.messaging5_id, p.messaging5_type as "messaging5_type: _", p.department, p.location_address_id,
-                p.duplicate_of_person_id, p.is_active, p.created_at, p.updated_at
+            SELECT p.*
             FROM person p
             INNER JOIN entity_reference er ON p.id = er.person_id
-            WHERE er.id = $1 AND er.entity_role = $2
+            WHERE er.id = $1 AND er.entity_role:relationship_role = $2
             "#,
-            entity_id,
-            entity_type as _
         )
+        .bind(entity_id)
+        .bind(entity_type)
         .fetch_all(&*self.pool)
         .await?;
 
-        let persons = persons_sqlx
-            .into_iter()
-            .map(|p| PersonModel {
-                id: p.id,
-                person_type: p.person_type,
-                display_name: heapless::String::from_str(&p.display_name).unwrap(),
-                external_identifier: p
-                    .external_identifier
-                    .map(|s| heapless::String::from_str(&s).unwrap()),
-                organization_person_id: p.organization_person_id,
-                messaging1_id: p.messaging1_id,
-                messaging1_type: p.messaging1_type,
-                messaging2_id: p.messaging2_id,
-                messaging2_type: p.messaging2_type,
-                messaging3_id: p.messaging3_id,
-                messaging3_type: p.messaging3_type,
-                messaging4_id: p.messaging4_id,
-                messaging4_type: p.messaging4_type,
-                messaging5_id: p.messaging5_id,
-                messaging5_type: p.messaging5_type,
-                department: p.department.map(|s| heapless::String::from_str(&s).unwrap()),
-                location_address_id: p.location_address_id,
-                duplicate_of_person_id: p.duplicate_of_person_id,
-                is_active: p.is_active,
-                created_at: p.created_at,
-                updated_at: p.updated_at,
-            })
-            .collect();
-
+        let mut persons = Vec::new();
+        for row in rows {
+            persons.push(PersonModel::try_from_row(&row)?);
+        }
         Ok(persons)
     }
 
-    async fn find_or_create(
+    async fn create(
         &self,
         display_name: &str,
         person_type: PersonType,
@@ -381,8 +265,10 @@ impl PersonRepository for PersonRepositoryImpl {
     ) -> Result<PersonModel, Box<dyn Error + Send + Sync>> {
         if let Some(ext_id) = external_identifier {
             let existing = self.get_by_external_identifier(ext_id).await?;
-            if let Some(person) = existing.into_iter().find(|p| p.person_type == person_type) {
-                return Ok(person);
+            if !existing.is_empty() {
+                return Err(Box::new(BankingError::DuplicatePerson(
+                    "Person with the same external identifier already exists".to_string(),
+                )));
             }
         }
 
@@ -435,50 +321,19 @@ impl PersonRepository for PersonRepositoryImpl {
         &self,
         query: &str,
     ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let persons_sqlx = sqlx::query_as!(
-            PersonModelSqlx,
+        let rows = sqlx::query(
             r#"
-            SELECT id, person_type as "person_type: _", display_name, external_identifier, organization_person_id,
-                messaging1_id, messaging1_type as "messaging1_type: _", messaging2_id, messaging2_type as "messaging2_type: _",
-                messaging3_id, messaging3_type as "messaging3_type: _", messaging4_id, messaging4_type as "messaging4_type: _",
-                messaging5_id, messaging5_type as "messaging5_type: _", department, location_address_id,
-                duplicate_of_person_id, is_active, created_at, updated_at
-            FROM person WHERE display_name ILIKE $1
+            SELECT * FROM person WHERE display_name ILIKE $1
             "#,
-            format!("%{query}%")
         )
+        .bind(format!("%{query}%"))
         .fetch_all(&*self.pool)
         .await?;
 
-        let persons = persons_sqlx
-            .into_iter()
-            .map(|p| PersonModel {
-                id: p.id,
-                person_type: p.person_type,
-                display_name: heapless::String::from_str(&p.display_name).unwrap(),
-                external_identifier: p
-                    .external_identifier
-                    .map(|s| heapless::String::from_str(&s).unwrap()),
-                organization_person_id: p.organization_person_id,
-                messaging1_id: p.messaging1_id,
-                messaging1_type: p.messaging1_type,
-                messaging2_id: p.messaging2_id,
-                messaging2_type: p.messaging2_type,
-                messaging3_id: p.messaging3_id,
-                messaging3_type: p.messaging3_type,
-                messaging4_id: p.messaging4_id,
-                messaging4_type: p.messaging4_type,
-                messaging5_id: p.messaging5_id,
-                messaging5_type: p.messaging5_type,
-                department: p.department.map(|s| heapless::String::from_str(&s).unwrap()),
-                location_address_id: p.location_address_id,
-                duplicate_of_person_id: p.duplicate_of_person_id,
-                is_active: p.is_active,
-                created_at: p.created_at,
-                updated_at: p.updated_at,
-            })
-            .collect();
-
+        let mut persons = Vec::new();
+        for row in rows {
+            persons.push(PersonModel::try_from_row(&row)?);
+        }
         Ok(persons)
     }
 
@@ -557,5 +412,33 @@ impl CountryRepository for CountryRepositoryImpl {
     ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>> {
         // Implementation for find_by_is_active
         todo!()
+    }
+}
+
+impl TryFromRow<PgRow> for PersonModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(PersonModel {
+            id: row.get("id"),
+            person_type: row.get("person_type"),
+            display_name: get_heapless_string(row, "display_name")?,
+            external_identifier: get_optional_heapless_string(row, "external_identifier")?,
+            organization_person_id: row.get("organization_person_id"),
+            messaging1_id: row.get("messaging1_id"),
+            messaging1_type: row.get("messaging1_type"),
+            messaging2_id: row.get("messaging2_id"),
+            messaging2_type: row.get("messaging2_type"),
+            messaging3_id: row.get("messaging3_id"),
+            messaging3_type: row.get("messaging3_type"),
+            messaging4_id: row.get("messaging4_id"),
+            messaging4_type: row.get("messaging4_type"),
+            messaging5_id: row.get("messaging5_id"),
+            messaging5_type: row.get("messaging5_type"),
+            department: get_optional_heapless_string(row, "external_identifier")?,
+            location_address_id: row.get("location_address_id"),
+            duplicate_of_person_id: row.get("duplicate_of_person_id"),
+            is_active: row.get("is_active"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
     }
 }

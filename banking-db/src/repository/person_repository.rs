@@ -46,6 +46,12 @@ pub trait PersonRepository: Send + Sync {
         page_size: u32,
     ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>>;
 
+    /// INDEX FINDER: Finds person IDs by external identifier hash.
+    async fn get_ids_by_external_identifier(
+        &self,
+        identifier: &str,
+    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
+
     /// Get persons by external identifier
     async fn get_by_external_identifier(
         &self,
@@ -59,8 +65,8 @@ pub trait PersonRepository: Send + Sync {
         entity_type: RelationshipRole,
     ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
 
-    /// Find or create a person by display name and type
-    async fn find_or_create(
+    /// Create a person
+    async fn create(
         &self,
         display_name: &str,
         person_type: crate::models::person::PersonType,

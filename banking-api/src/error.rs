@@ -211,6 +211,9 @@ pub enum BankingError {
     // Not implemented features
     #[error("Feature not implemented: {0}")]
     NotImplemented(String),
+
+    #[error("Duplicate person: {0}")]
+    DuplicatePerson(String),
 }
 
 impl From<anyhow::Error> for BankingError {

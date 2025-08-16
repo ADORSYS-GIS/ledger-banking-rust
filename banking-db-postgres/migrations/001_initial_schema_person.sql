@@ -169,5 +169,6 @@ CREATE TABLE person (
 CREATE TABLE person_idx (
     person_id UUID PRIMARY KEY,
     person_type person_type NOT NULL,
+    external_identifier_hash BIGINT,
     is_active BOOLEAN NOT NULL
 );

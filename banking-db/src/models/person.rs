@@ -474,5 +474,6 @@ pub struct EntityReferenceIdxModel {
 pub struct PersonIdxModel {
     pub person_id: Uuid,
     pub person_type: PersonType,
+    pub external_identifier_hash: Option<i64>,
     pub is_active: bool,
 }

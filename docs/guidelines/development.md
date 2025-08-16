@@ -307,3 +307,49 @@ pub trait ProductRepository: Send + Sync {
     ) -> Result<Vec<ProductModel>, Box<dyn Error + Send + Sync>>;
 }
 ```
+
+
+### 4. Advanced Indexing Strategies and Patterns
+
+Building upon the principle of application-managed indexes, several patterns ensure consistency, performance, and maintainability.
+
+#### 4.1. The `<ModelName>IdxModel` Pattern
+
+For every main database model (e.g., `PersonModel`) that requires indexed lookups, a corresponding struct named `<ModelName>IdxModel` (e.g., `PersonIdxModel`) must be created in `banking-db/src/models/`. This struct is a lightweight representation containing only the fields needed for indexing.
+
+#### 4.2. When to Create an Index
+
+An index field should be added to the `<ModelName>IdxModel` and its corresponding `_idx` table whenever a repository trait defines a finder method that queries by that field.
+
+-   **`find_by...` methods:** Methods that retrieve full, paginated models based on a field.
+-   **`get_by...` methods:** Methods that retrieve one or more models based on a specific, often unique, field.
+
+#### 4.3. Synchronous Index Management in `save`
+
+To guarantee data consistency, the index model (`<ModelName>IdxModel`) **must** be created or updated within the same database transaction as the main model (`<ModelName>Model`). This logic is centralized in the `save` method of the repository implementation. The `save` method is responsible for persisting both the main entity and its corresponding index entry.
+
+```rust
+// Example from PersonRepositoryImpl::save
+// 1. Insert into the main 'person' table
+sqlx::query("INSERT INTO person (...) VALUES (...)").await?;
+
+// 2. Within the same method, insert into the 'person_idx' table
+sqlx::query("INSERT INTO person_idx (...) VALUES (...)").await?;
+```
+
+#### 4.4. Hashing String-Based Indexes
+
+For performance and storage efficiency, long or sensitive string fields used for lookups (e.g., `external_identifier`) should be hashed before being stored in the index table.
+
+**Principles:**
+-   **Algorithm:** Use a fast, non-cryptographic hashing algorithm like `xxhash`. The hash should produce a `i64` or `i128` value that can be stored efficiently as a `BIGINT` or `NUMERIC` in the database.
+-   **Collision Handling:** Hash collisions are possible. The `get_by...` or `find_by...` method must handle this by first retrieving all records matching the hash, and then performing a final in-memory filter on the full, unhashed string value to find the exact match.
+-   **Implementation:** The hashing logic is implemented within the repository. The `save` method calculates the hash before saving to the index, and the `get_ids_by...` or `find_ids_by...` method calculate the same hash from the input string to perform the lookup.
+
+**Example Flow for `get_by_external_identifier`:**
+1.  `get_by_external_identifier(identifier: &str)` is called.
+2.  It calls `get_ids_by_external_identifier(identifier)`, which hashes the `identifier` string.
+3.  `get_ids_by_external_identifier` queries the `person_idx` table for all `person_id`s matching the hash. This is a fast integer-based lookup.
+4.  It returns a `Vec<Uuid>` (which may contain IDs from hash collisions).
+5.  `get_by_external_identifier` then calls `find_by_ids` with these IDs to fetch the full `PersonModel` objects.
+6.  Finally, it filters the resulting `Vec<PersonModel>` to find the one where `person.external_identifier` exactly matches the original `identifier` string.

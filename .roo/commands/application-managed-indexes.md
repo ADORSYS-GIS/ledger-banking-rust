@@ -85,3 +85,10 @@ CREATE TABLE person_idx (
     is_active BOOLEAN NOT NULL
     -- ... other indexed fields
 );
+
+
+---
+
+### Step 4: Hashing String-Based Indexes
+
+For string-based index fields, apply the hashing strategy as defined in the "Hashing String-Based Indexes" section of `docs/guidelines/development.md`. This involves using a fast hashing algorithm (e.g., `xxhash`), storing the hash in the index table, and handling potential collisions in the repository.
