@@ -10,6 +10,7 @@ repository.workspace = true
 # Workspace dependencies
 banking-api = { path = "../banking-api", features = ["sqlx"] }
 banking-db = { path = "../banking-db" }
+banking-logic = { path = "../banking-logic" }
 
 # Database
 sqlx = { workspace = true, features = ["rust_decimal"] }

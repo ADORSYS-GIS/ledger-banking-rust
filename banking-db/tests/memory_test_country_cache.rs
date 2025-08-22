@@ -15,7 +15,7 @@ pub struct CountryCache {
 
 #[test]
 fn test_country_idx_model_size() {
-    const EXPECTED_SIZE: usize = 40;
+    const EXPECTED_SIZE: usize = 32;
     let actual_size = mem::size_of::<CountryIdxModel>();
 
     println!("--- CountryIdxModel Memory Layout ---");
@@ -23,7 +23,6 @@ fn test_country_idx_model_size() {
     println!("--------------------------|--------------|-----------------");
     println!("{:<25} | {:<12} | {:<14}", "country_id (Uuid)", mem::size_of::<Uuid>(), mem::align_of::<Uuid>());
     println!("{:<25} | {:<12} | {:<14}", "iso2 (HeaplessString<2>)", mem::size_of::<HeaplessString<2>>(), mem::align_of::<HeaplessString<2>>());
-    println!("{:<25} | {:<12} | {:<14}", "is_active (bool)", mem::size_of::<bool>(), mem::align_of::<bool>());
     println!("-----------------------------------------------------");
     println!("Actual size: {} bytes", actual_size);
     println!("Expected size: {} bytes", EXPECTED_SIZE);

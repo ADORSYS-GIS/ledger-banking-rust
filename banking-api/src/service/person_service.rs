@@ -2,7 +2,7 @@ use crate::domain::person::{
     Location, LocationType, Locality, Country, EntityReference, Messaging, Person, CountrySubdivision,
 };
 use crate::domain::AuditLog;
-use crate::{BankingResult, PersonAudit};
+use crate::BankingResult;
 use async_trait::async_trait;
 use heapless::String as HeaplessString;
 use uuid::Uuid;
@@ -72,22 +72,10 @@ pub trait PersonService: Send + Sync {
         reference_external_id: HeaplessString<50>,
     ) -> BankingResult<Vec<EntityReference>>;
 
-    // EntityReferenceAudit methods
-    async fn find_entity_reference_audits_by_id(&self, id: Uuid) -> BankingResult<Vec<EntityReference>>;
-    async fn find_entity_reference_audits_by_person_id(&self, person_id: Uuid) -> BankingResult<Vec<EntityReference>>;
-
     // Person methods
     async fn create_person(&self, person: Person) -> BankingResult<Person>;
     async fn find_person_by_id(&self, id: Uuid) -> BankingResult<Option<Person>>;
     async fn get_persons_by_external_identifier(
-        &self,
-        external_identifier: HeaplessString<50>,
-    ) -> BankingResult<Vec<Person>>;
-
-    // Person methods
-    async fn create_person_audit(&self, person: PersonAudit) -> BankingResult<Person>;
-    async fn find_person_audit_by_id(&self, id: Uuid) -> BankingResult<Option<Person>>;
-    async fn get_persons_audit_by_external_identifier(
         &self,
         external_identifier: HeaplessString<50>,
     ) -> BankingResult<Vec<Person>>;

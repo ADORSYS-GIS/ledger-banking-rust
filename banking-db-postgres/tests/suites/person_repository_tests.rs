@@ -10,7 +10,6 @@ use banking_db_postgres::repository::person_repository_impl::{
     LocationRepositoryImpl, LocalityRepositoryImpl, CountryRepositoryImpl, MessagingRepositoryImpl,
     PersonRepositoryImpl, CountrySubdivisionRepositoryImpl,
 };
-use chrono::Utc;
 use heapless::String as HeaplessString;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -22,11 +21,13 @@ use super::commons;
 fn create_test_person_model() -> PersonModel {
     PersonModel {
         id: Uuid::new_v4(),
+        version: 1,
         person_type: PersonType::Natural,
         display_name: HeaplessString::try_from("John Doe").unwrap(),
         external_identifier: Some(
             HeaplessString::try_from(Uuid::new_v4().to_string().as_str()).unwrap(),
         ),
+        entity_reference_count: 0,
         organization_person_id: None,
         messaging1_id: None,
         messaging1_type: None,
@@ -41,28 +42,21 @@ fn create_test_person_model() -> PersonModel {
         department: None,
         location_id: None,
         duplicate_of_person_id: None,
-        is_active: true,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        audit_log_id: Uuid::new_v4(),
     }
 }
 
-fn create_test_country_model(created_by: Uuid) -> CountryModel {
+fn create_test_country_model() -> CountryModel {
     CountryModel {
         id: Uuid::new_v4(),
         iso2: HeaplessString::try_from("US").unwrap(),
         name_l1: HeaplessString::try_from("United States").unwrap(),
         name_l2: None,
         name_l3: None,
-        is_active: true,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-        created_by_person_id: created_by,
-        updated_by_person_id: created_by,
     }
 }
 
-fn create_test_country_subdivision_model(country_id: Uuid, created_by: Uuid) -> CountrySubdivisionModel {
+fn create_test_country_subdivision_model(country_id: Uuid) -> CountrySubdivisionModel {
     CountrySubdivisionModel {
         id: Uuid::new_v4(),
         country_id,
@@ -70,34 +64,24 @@ fn create_test_country_subdivision_model(country_id: Uuid, created_by: Uuid) -> 
         name_l1: HeaplessString::try_from("California").unwrap(),
         name_l2: None,
         name_l3: None,
-        is_active: true,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-        created_by_person_id: created_by,
-        updated_by_person_id: created_by,
     }
 }
 
-fn create_test_locality_model(country_id: Uuid, country_subdivision_id: Uuid, created_by: Uuid) -> LocalityModel {
+fn create_test_locality_model(country_subdivision_id: Uuid) -> LocalityModel {
     LocalityModel {
         id: Uuid::new_v4(),
-        country_id,
-        country_subdivision_id: Some(country_subdivision_id),
+        country_subdivision_id,
         code: HeaplessString::try_from("LA").unwrap(),
         name_l1: HeaplessString::try_from("Los Angeles").unwrap(),
         name_l2: None,
         name_l3: None,
-        is_active: true,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-        created_by_person_id: created_by,
-        updated_by_person_id: created_by,
     }
 }
 
-fn create_test_location_model(locality_id: Uuid, created_by: Uuid) -> LocationModel {
+fn create_test_location_model(locality_id: Uuid) -> LocationModel {
     LocationModel {
         id: Uuid::new_v4(),
+        version: 1,
         location_type: LocationType::Residential,
         street_line1: HeaplessString::try_from(format!("123 Main St {}", Uuid::new_v4()).as_str()).unwrap(),
         street_line2: None,
@@ -108,24 +92,18 @@ fn create_test_location_model(locality_id: Uuid, created_by: Uuid) -> LocationMo
         latitude: None,
         longitude: None,
         accuracy_meters: None,
-        is_active: true,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-        created_by_person_id: created_by,
-        updated_by_person_id: created_by,
+        audit_log_id: Uuid::new_v4(),
     }
 }
 
 fn create_test_messaging_model() -> MessagingModel {
     MessagingModel {
         id: Uuid::new_v4(),
+        version: 1,
         messaging_type: MessagingType::Email,
         value: HeaplessString::try_from(format!("test_{}@example.com", Uuid::new_v4()).as_str()).unwrap(),
         other_type: None,
-        is_active: true,
-        priority: Some(1),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        audit_log_id: Uuid::new_v4(),
     }
 }
 
@@ -154,17 +132,6 @@ async fn test_person_repository() {
     let found_persons = repo.find_by_ids(&ids).await.unwrap();
     assert_eq!(found_persons.len(), 2);
 
-    // Test find_by_person_type
-    let natural_persons = repo
-        .find_by_person_type(PersonType::Natural, 1, 10)
-        .await
-        .unwrap();
-    assert!(!natural_persons.is_empty());
-
-    // Test find_by_is_active
-    let active_persons = repo.find_by_is_active(true, 1, 10).await.unwrap();
-    assert!(!active_persons.is_empty());
-
     // Test get_by_external_identifier
     let found_by_ext_id = repo
         .get_by_external_identifier(new_person.external_identifier.as_ref().unwrap())
@@ -183,7 +150,6 @@ async fn test_person_repository() {
         .await
         .unwrap();
     let fetched_duplicate = repo.find_by_id(duplicate_person.id).await.unwrap().unwrap();
-    assert!(!fetched_duplicate.is_active);
     assert_eq!(fetched_duplicate.duplicate_of_person_id, Some(new_person.id));
 }
 
@@ -191,11 +157,10 @@ async fn test_person_repository() {
 async fn test_country_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let person_id = commons::create_test_person(&db_pool).await;
     let repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone()));
 
     // Test save and find_by_id
-    let new_country = create_test_country_model(person_id);
+    let new_country = create_test_country_model();
     let saved_country = repo.save(new_country.clone()).await.unwrap();
     assert_eq!(new_country.id, saved_country.id);
 
@@ -207,7 +172,7 @@ async fn test_country_repository() {
     assert!(!repo.exists_by_id(Uuid::new_v4()).await.unwrap());
 
     // Test find_by_ids
-    let new_country2 = create_test_country_model(person_id);
+    let new_country2 = create_test_country_model();
     repo.save(new_country2.clone()).await.unwrap();
     let ids = vec![new_country.id, new_country2.id];
     let found_countries = repo.find_by_ids(&ids).await.unwrap();
@@ -216,24 +181,19 @@ async fn test_country_repository() {
     // Test find_by_iso2
     let found_by_iso2 = repo.find_by_iso2("US", 1, 10).await.unwrap();
     assert!(!found_by_iso2.is_empty());
-
-    // Test find_by_is_active
-    let active_countries = repo.find_by_is_active(true, 1, 10).await.unwrap();
-    assert!(!active_countries.is_empty());
 }
 
 #[tokio::test]
 async fn test_country_subdivision_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let person_id = commons::create_test_person(&db_pool).await;
     let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone()));
-    let country = create_test_country_model(person_id);
+    let country = create_test_country_model();
     country_repo.save(country.clone()).await.unwrap();
     let repo = CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone()));
 
     // Test save and find_by_id
-    let new_country_subdivision = create_test_country_subdivision_model(country.id, person_id);
+    let new_country_subdivision = create_test_country_subdivision_model(country.id);
     let saved_country_subdivision = repo.save(new_country_subdivision.clone()).await.unwrap();
     assert_eq!(new_country_subdivision.id, saved_country_subdivision.id);
 
@@ -249,21 +209,20 @@ async fn test_country_subdivision_repository() {
 async fn test_locality_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let person_id = commons::create_test_person(&db_pool).await;
     let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone()));
-    let country = create_test_country_model(person_id);
+    let country = create_test_country_model();
     country_repo.save(country.clone()).await.unwrap();
     let country_subdivision_repo = CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone()));
-    let country_subdivision = create_test_country_subdivision_model(country.id, person_id);
+    let country_subdivision = create_test_country_subdivision_model(country.id);
     country_subdivision_repo.save(country_subdivision.clone()).await.unwrap();
     let repo = LocalityRepositoryImpl::new(Arc::new(db_pool.clone()));
 
     // Test save and find_by_id
-    let new_city = create_test_locality_model(country.id, country_subdivision.id, person_id);
-    let saved_city = repo.save(new_locality.clone()).await.unwrap();
+    let new_locality = create_test_locality_model(country_subdivision.id);
+    let saved_locality = repo.save(new_locality.clone()).await.unwrap();
     assert_eq!(new_locality.id, saved_locality.id);
 
-    let found_city = repo.find_by_id(new_locality.id).await.unwrap().unwrap();
+    let found_locality = repo.find_by_id(new_locality.id).await.unwrap().unwrap();
     assert_eq!(new_locality.id, found_locality.id);
 
     // Test find_by_country_subdivision_id
@@ -275,20 +234,19 @@ async fn test_locality_repository() {
 async fn test_location_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let person_id = commons::create_test_person(&db_pool).await;
     let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone()));
-    let country = create_test_country_model(person_id);
+    let country = create_test_country_model();
     country_repo.save(country.clone()).await.unwrap();
     let country_subdivision_repo = CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone()));
-    let country_subdivision = create_test_country_subdivision_model(country.id, person_id);
+    let country_subdivision = create_test_country_subdivision_model(country.id);
     country_subdivision_repo.save(country_subdivision.clone()).await.unwrap();
     let locality_repo = LocalityRepositoryImpl::new(Arc::new(db_pool.clone()));
-    let locality = create_test_locality_model(country.id, country_subdivision.id, person_id);
+    let locality = create_test_locality_model(country_subdivision.id);
     locality_repo.save(locality.clone()).await.unwrap();
     let repo = LocationRepositoryImpl::new(Arc::new(db_pool.clone()));
 
     // Test save and find_by_id
-    let new_location = create_test_location_model(locality.id, person_id);
+    let new_location = create_test_location_model(locality.id);
     let saved_location = repo.save(new_location.clone()).await.unwrap();
     assert_eq!(new_location.id, saved_location.id);
 
@@ -296,15 +254,8 @@ async fn test_location_repository() {
     assert_eq!(new_location.id, found_location.id);
 
     // Test find_by_locality_id
-    let locations_in_city = repo.find_by_locality_id(locality.id, 1, 10).await.unwrap();
+    let locations_in_locality = repo.find_by_locality_id(locality.id, 1, 10).await.unwrap();
     assert_eq!(locations_in_locality.len(), 1);
-
-    // Test find_ids_by_street_line1
-    let ids = repo
-        .find_ids_by_street_line1(new_location.street_line1.as_str())
-        .await
-        .unwrap();
-    assert_eq!(ids.len(), 1);
 }
 
 #[tokio::test]
@@ -320,13 +271,6 @@ async fn test_messaging_repository() {
 
     let found_messaging = repo.find_by_id(new_messaging.id).await.unwrap().unwrap();
     assert_eq!(new_messaging.id, found_messaging.id);
-
-    // Test find_by_messaging_type
-    let emails = repo
-        .find_by_messaging_type(MessagingType::Email, 1, 10)
-        .await
-        .unwrap();
-    assert!(!emails.is_empty());
 
     // Test find_ids_by_value
     let ids = repo

@@ -23,11 +23,6 @@ impl ToDomain<Country> for CountryModel {
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
         }
     }
 }
@@ -40,11 +35,6 @@ impl ToModel<CountryModel> for Country {
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
         }
     }
 }
@@ -58,11 +48,6 @@ impl ToDomain<CountrySubdivision> for CountrySubdivisionModel {
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
         }
     }
 }
@@ -76,11 +61,6 @@ impl ToModel<CountrySubdivisionModel> for CountrySubdivision {
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
         }
     }
 }
@@ -89,17 +69,11 @@ impl ToDomain<Locality> for LocalityModel {
     fn to_domain(self) -> Locality {
         Locality {
             id: self.id,
-            country_id: self.country_id,
             country_subdivision_id: self.country_subdivision_id,
             code: self.code,
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
         }
     }
 }
@@ -108,17 +82,11 @@ impl ToModel<LocalityModel> for Locality {
     fn to_model(self) -> LocalityModel {
         LocalityModel {
             id: self.id,
-            country_id: self.country_id,
             country_subdivision_id: self.country_subdivision_id,
             code: self.code,
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
         }
     }
 }
@@ -127,6 +95,7 @@ impl ToDomain<Location> for LocationModel {
     fn to_domain(self) -> Location {
         Location {
             id: self.id,
+            version: self.version,
             street_line1: self.street_line1,
             street_line2: self.street_line2,
             street_line3: self.street_line3,
@@ -137,11 +106,7 @@ impl ToDomain<Location> for LocationModel {
             longitude: self.longitude,
             accuracy_meters: self.accuracy_meters,
             location_type: self.location_type.to_domain(),
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
+            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -150,6 +115,7 @@ impl ToModel<LocationModel> for Location {
     fn to_model(self) -> LocationModel {
         LocationModel {
             id: self.id,
+            version: self.version,
             street_line1: self.street_line1,
             street_line2: self.street_line2,
             street_line3: self.street_line3,
@@ -160,11 +126,7 @@ impl ToModel<LocationModel> for Location {
             longitude: self.longitude,
             accuracy_meters: self.accuracy_meters,
             location_type: self.location_type.to_model(),
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
+            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -173,13 +135,11 @@ impl ToDomain<Messaging> for MessagingModel {
     fn to_domain(self) -> Messaging {
         Messaging {
             id: self.id,
+            version: self.version,
             messaging_type: self.messaging_type.to_domain(),
             value: self.value,
             other_type: self.other_type,
-            is_active: self.is_active,
-            priority: self.priority,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
+            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -188,13 +148,11 @@ impl ToModel<MessagingModel> for Messaging {
     fn to_model(self) -> MessagingModel {
         MessagingModel {
             id: self.id,
+            version: self.version,
             messaging_type: self.messaging_type.to_model(),
             value: self.value,
             other_type: self.other_type,
-            is_active: self.is_active,
-            priority: self.priority,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
+            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -203,17 +161,14 @@ impl ToDomain<EntityReference> for EntityReferenceModel {
     fn to_domain(self) -> EntityReference {
         EntityReference {
             id: self.id,
+            version: self.version,
             person_id: self.person_id,
             entity_role: self.entity_role.to_domain(),
             reference_external_id: self.reference_external_id,
             reference_details_l1: self.reference_details_l1,
             reference_details_l2: self.reference_details_l2,
             reference_details_l3: self.reference_details_l3,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
+            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -222,17 +177,14 @@ impl ToModel<EntityReferenceModel> for EntityReference {
     fn to_model(self) -> EntityReferenceModel {
         EntityReferenceModel {
             id: self.id,
+            version: self.version,
             person_id: self.person_id,
             entity_role: self.entity_role.to_model(),
             reference_external_id: self.reference_external_id,
             reference_details_l1: self.reference_details_l1,
             reference_details_l2: self.reference_details_l2,
             reference_details_l3: self.reference_details_l3,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.updated_by_person_id,
+            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -241,10 +193,12 @@ impl ToDomain<Person> for PersonModel {
     fn to_domain(self) -> Person {
         Person {
             id: self.id,
+            version: self.version,
             person_type: self.person_type.to_domain(),
             display_name: self.display_name,
             external_identifier: self.external_identifier,
             organization_person_id: self.organization_person_id,
+            entity_reference_count: self.entity_reference_count,
             messaging1_id: self.messaging1_id,
             messaging1_type: self.messaging1_type.map(|t| t.to_domain()),
             messaging2_id: self.messaging2_id,
@@ -258,9 +212,7 @@ impl ToDomain<Person> for PersonModel {
             department: self.department,
             location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
+            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -269,10 +221,12 @@ impl ToModel<PersonModel> for Person {
     fn to_model(self) -> PersonModel {
         PersonModel {
             id: self.id,
+            version: self.version,
             person_type: self.person_type.to_model(),
             display_name: self.display_name,
             external_identifier: self.external_identifier,
             organization_person_id: self.organization_person_id,
+            entity_reference_count: self.entity_reference_count,
             messaging1_id: self.messaging1_id,
             messaging1_type: self.messaging1_type.map(|t| t.to_model()),
             messaging2_id: self.messaging2_id,
@@ -286,9 +240,7 @@ impl ToModel<PersonModel> for Person {
             department: self.department,
             location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
-            is_active: self.is_active,
-            created_at: self.created_at,
-            updated_at: self.updated_at,
+            audit_log_id: self.audit_log_id,
         }
     }
 }

@@ -213,7 +213,7 @@ pub struct LocalityModel {
     /// # Index
     /// ## Nature
     /// - secondary
-    pub country_subdivision_id: Option<Uuid>,
+    pub country_subdivision_id: Uuid,
 
     /// # Documentation
     /// - If non existant, country subdivision code '_' the first 10 chars of the name_l1
@@ -274,7 +274,7 @@ pub struct LocationModel {
     /// # Audit
     /// ## Nature
     /// - compound-primary with self.id
-    pub version: u16,
+    pub version: i16,
 
     /// # Trait method
     /// - find_ids_by_street_line1
@@ -356,7 +356,7 @@ pub struct MessagingModel {
     /// # Audit
     /// ## Nature
     /// - compound-primary with self.id
-    pub version: u16,
+    pub version: i16,
 
     /// # Documentation
     /// - Type of messaging/communication method
@@ -430,7 +430,7 @@ pub struct EntityReferenceModel {
     /// # Audit
     /// ## Nature
     /// - compound-primary with self.id
-    pub version: u16,
+    pub version: i16,
 
     /// # Documentation
     /// - References PersonModel.person_id
@@ -485,7 +485,7 @@ pub struct EntityReferenceAuditModel {
 
     /// # Nature
     /// - compound-primary with self.id
-    pub version: u16,
+    pub version: i16,
 
     /// # Trait method
     /// - find_audits_by_person_id
@@ -550,7 +550,7 @@ pub struct PersonModel {
     /// # Audit
     /// ## Nature
     /// - compound-primary with self.id
-    pub version: u16,
+    pub version: i16,
 
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
     pub person_type: PersonType,
@@ -579,7 +579,7 @@ pub struct PersonModel {
     /// # Audit
     /// ## Trait method
     /// - get_audits_by_entity_reference
-    pub entity_reference_count: u8,
+    pub entity_reference_count: i16,
     
     /// # Documentation
     /// References PersonModel.person_id for organizational hierarchy
@@ -612,6 +612,8 @@ pub struct PersonModel {
     pub location_id: Option<Uuid>,
     
     pub duplicate_of_person_id: Option<Uuid>,
+
+    pub audit_log_id: Uuid,
 }
 
 /// # Repository Trait
@@ -628,7 +630,7 @@ pub struct PersonAuditModel {
     
     /// # Nature
     /// - compound-primary with self.id
-    pub version: u16,
+    pub version: i16,
 
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
     pub person_type: PersonType,
@@ -641,7 +643,7 @@ pub struct PersonAuditModel {
 
     /// # Trait method
     /// - get_audits_by_entity_reference
-    pub entity_reference_count: u8,
+    pub entity_reference_count: i16,
     
     pub organization_person_id: Option<Uuid>,
     
@@ -666,6 +668,8 @@ pub struct PersonAuditModel {
     pub location_id: Option<Uuid>,
     
     pub duplicate_of_person_id: Option<Uuid>,
+
+    pub audit_log_id: Uuid,
 }
 
 // Serialization functions for PersonType

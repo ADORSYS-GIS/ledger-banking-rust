@@ -130,7 +130,7 @@ pub trait LocalityRepository: Send + Sync {
     ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>>;
     async fn find_by_code(
         &self,
-        country_id: Uuid,
+        country_subdivision_id: Uuid,
         code: &str,
     ) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>>;
 }

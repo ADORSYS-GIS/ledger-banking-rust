@@ -20,7 +20,7 @@ heapless = { workspace = true }
 # Banking crates
 banking-api = { path = "../banking-api" }
 banking-db = { path = "../banking-db" }
-banking-db-postgres = {path="../banking-db-postgres"}
+# banking-db-postgres = {path="../banking-db-postgres"}
 
 # External integrations
 reqwest = { workspace = true }
@@ -33,6 +33,7 @@ rand = { workspace = true }
 
 [dev-dependencies]
 banking-db-postgres = { path = "../banking-db-postgres" }
+sqlx = { version = "0.8.0", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "bigdecimal"] }
 
 [features]
 postgres_tests = []

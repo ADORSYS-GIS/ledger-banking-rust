@@ -14,7 +14,7 @@ pub struct CountrySubdivisionCache {
 
 #[test]
 fn test_country_subdivision_idx_model_size() {
-    const EXPECTED_SIZE: usize = 64;
+    const EXPECTED_SIZE: usize = 40;
     let actual_size = mem::size_of::<CountrySubdivisionIdxModel>();
     println!("--- CountrySubdivisionIdxModel Memory Layout ---");
     println!("{:<25} | {:<12} | {:<14}", "Field", "Size (bytes)", "Align (bytes)");
@@ -22,7 +22,6 @@ fn test_country_subdivision_idx_model_size() {
     println!("{:<25} | {:<12} | {:<14}", "country_subdivision_id (Uuid)", mem::size_of::<Uuid>(), mem::align_of::<Uuid>());
     println!("{:<25} | {:<12} | {:<14}", "country_id (Uuid)", mem::size_of::<Uuid>(), mem::align_of::<Uuid>());
     println!("{:<25} | {:<12} | {:<14}", "code", mem::size_of_val(""), mem::align_of_val(""));
-    println!("{:<25} | {:<12} | {:<14}", "is_active (bool)", mem::size_of::<bool>(), mem::align_of::<bool>());
     println!("-----------------------------------------------------");
     println!("Actual size: {} bytes", actual_size);
     println!("Expected size: {} bytes", EXPECTED_SIZE);

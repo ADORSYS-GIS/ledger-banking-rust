@@ -1,32 +1,39 @@
+use banking_logic::services::repositories::Repositories;
+use sqlx::PgPool;
+use std::sync::Arc;
+
 pub mod repository;
 pub mod utils;
 
-// #[cfg(feature = "account_hold")]
-// pub use repository::account_hold_repository_impl::AccountHoldRepositoryImpl;
-// #[cfg(feature = "account")]
-// pub use repository::account_repository_impl::AccountRepositoryImpl;
-// #[cfg(feature = "agent_network")]
-// pub use repository::agent_network_repository_impl::AgentNetworkRepositoryImpl;
-// #[cfg(feature = "calendar")]
-// pub use repository::calendar_repository_impl::CalendarRepositoryImpl;
-// #[cfg(feature = "channel")]
-// pub use repository::channel_repository_impl::ChannelRepositoryImpl;
-// #[cfg(feature = "collateral")]
-// pub use repository::collateral_repository_impl::CollateralRepositoryImpl;
-// #[cfg(feature = "compliance")]
-// pub use repository::compliance_repository_impl::ComplianceRepositoryImpl;
-// #[cfg(feature = "customer")]
-// pub use repository::customer_repository_impl::CustomerRepositoryImpl;
-// #[cfg(feature = "daily_collection")]
-// pub use repository::daily_collection_repository_impl::DailyCollectionRepositoryImpl;
-// #[cfg(feature = "fee")]
-// pub use repository::fee_repository_impl::FeeRepositoryImpl;
-pub use repository::person_repository_impl::*;
-// #[cfg(feature = "product")]
-// pub use repository::product_repository_impl::ProductRepositoryImpl;
-// #[cfg(feature = "reason_and_purpose")]
-// pub use repository::reason_and_purpose_repository_impl::ReasonAndPurposeRepositoryImpl;
-// #[cfg(feature = "transaction")]
-// pub use repository::transaction_repository_impl::TransactionRepositoryImpl;
-// #[cfg(feature = "workflow")]
-// pub use repository::workflow_repository_impl::WorkflowRepositoryImpl;
+use repository::person_repository_impl::{
+    CountryRepositoryImpl, CountrySubdivisionRepositoryImpl, LocalityRepositoryImpl,
+    LocationRepositoryImpl, MessagingRepositoryImpl, PersonRepositoryImpl, EntityReferenceRepositoryImpl
+};
+use repository::audit_repository_impl::AuditLogRepositoryImpl;
+
+pub struct PostgresRepositories {
+    pool: Arc<PgPool>,
+}
+
+impl PostgresRepositories {
+    pub fn new(pool: Arc<PgPool>) -> Self {
+        Self { pool }
+    }
+
+    pub fn create_person_service_repositories(&self) -> Repositories {
+        Repositories {
+            person_repository: Arc::new(PersonRepositoryImpl::new(self.pool.clone())),
+            audit_log_repository: Arc::new(AuditLogRepositoryImpl::new(self.pool.clone())),
+            country_repository: Arc::new(CountryRepositoryImpl::new(self.pool.clone())),
+            country_subdivision_repository: Arc::new(CountrySubdivisionRepositoryImpl::new(
+                self.pool.clone(),
+            )),
+            locality_repository: Arc::new(LocalityRepositoryImpl::new(self.pool.clone())),
+            location_repository: Arc::new(LocationRepositoryImpl::new(self.pool.clone())),
+            messaging_repository: Arc::new(MessagingRepositoryImpl::new(self.pool.clone())),
+            entity_reference_repository: Arc::new(EntityReferenceRepositoryImpl::new(
+                self.pool.clone(),
+            )),
+        }
+    }
+}

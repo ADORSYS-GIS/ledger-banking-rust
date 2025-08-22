@@ -1,3 +1,4 @@
+pub mod audit;
 pub mod person;
 // pub mod customer;
 // pub mod account;
@@ -18,6 +19,7 @@ pub mod person;
 // pub mod daily_collection;
 // pub mod product;
 
+pub use audit::*;
 pub use person::*;
 // pub use customer::*;
 // pub use account::{

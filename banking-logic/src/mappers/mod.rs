@@ -32,3 +32,4 @@ pub use person_mapper::*;
 // pub use reason_and_purpose_mapper::*;
 // pub use daily_collection_mapper::*;
 // pub use product_mapper::*;
+pub mod audit_mapper;

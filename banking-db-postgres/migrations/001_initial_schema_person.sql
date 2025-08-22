@@ -10,12 +10,7 @@ CREATE TABLE country (
     iso2 VARCHAR(2) NOT NULL,
     name_l1 VARCHAR(100) NOT NULL,
     name_l2 VARCHAR(100),
-    name_l3 VARCHAR(100),
-    is_active BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_by_person_id UUID NOT NULL,
-    updated_by_person_id UUID NOT NULL
+    name_l3 VARCHAR(100)
 );
 
 -- Index table for Country
@@ -31,12 +26,7 @@ CREATE TABLE country_subdivision (
     code VARCHAR(10) NOT NULL,
     name_l1 VARCHAR(100) NOT NULL,
     name_l2 VARCHAR(100),
-    name_l3 VARCHAR(100),
-    is_active BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_by_person_id UUID NOT NULL,
-    updated_by_person_id UUID NOT NULL
+    name_l3 VARCHAR(100)
 );
 
 -- Index table for CountrySubdivision
@@ -49,24 +39,17 @@ CREATE TABLE country_subdivision_idx (
 -- Main table for model LocalityModel
 CREATE TABLE locality (
     id UUID PRIMARY KEY,
-    country_id UUID NOT NULL,
-    country_subdivision_id UUID,
+    country_subdivision_id UUID NOT NULL,
     code VARCHAR(50) NOT NULL,
     name_l1 VARCHAR(50) NOT NULL,
     name_l2 VARCHAR(50),
-    name_l3 VARCHAR(50),
-    is_active BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_by_person_id UUID NOT NULL,
-    updated_by_person_id UUID NOT NULL
+    name_l3 VARCHAR(50)
 );
 
 -- Index table for Locality
 CREATE TABLE locality_idx (
     locality_id UUID PRIMARY KEY,
-    country_id UUID NOT NULL,
-    country_subdivision_id UUID,
+    country_subdivision_id UUID NOT NULL,
     code_hash BIGINT NOT NULL
 );
 
@@ -82,12 +65,7 @@ CREATE TABLE location (
     latitude DECIMAL(15,10),
     longitude DECIMAL(15,10),
     accuracy_meters REAL,
-    location_type location_type NOT NULL,
-    is_active BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_by_person_id UUID NOT NULL,
-    updated_by_person_id UUID NOT NULL
+    location_type location_type NOT NULL
 );
 
 -- Index table for Location
@@ -102,11 +80,7 @@ CREATE TABLE messaging (
     id UUID PRIMARY KEY,
     messaging_type messaging_type NOT NULL,
     value VARCHAR(100) NOT NULL,
-    other_type VARCHAR(20),
-    is_active BOOLEAN NOT NULL,
-    priority SMALLINT,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    other_type VARCHAR(20)
 );
 
 -- Index table for Messaging
@@ -123,12 +97,7 @@ CREATE TABLE entity_reference (
     reference_external_id VARCHAR(50),
     reference_details_l1 VARCHAR(50),
     reference_details_l2 VARCHAR(50),
-    reference_details_l3 VARCHAR(50),
-    is_active BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_by_person_id UUID NOT NULL,
-    updated_by_person_id UUID NOT NULL
+    reference_details_l3 VARCHAR(50)
 );
 
 -- Index table for EntityReference
@@ -157,14 +126,18 @@ CREATE TABLE person (
     messaging5_type messaging_type,
     department VARCHAR(50),
     location_id UUID,
-    duplicate_of_person_id UUID,
-    is_active BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    duplicate_of_person_id UUID
 );
 
 -- Index table for Person
 CREATE TABLE person_idx (
     person_id UUID PRIMARY KEY,
     external_identifier_hash BIGINT
+);
+
+-- Main table for model AuditLogModel
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_by_person_id UUID NOT NULL
 );
