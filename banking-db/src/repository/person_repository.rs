@@ -81,7 +81,6 @@ pub trait CountryRepository: Send + Sync {
         page: u32,
         page_size: u32,
     ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
 }
 
 #[async_trait]

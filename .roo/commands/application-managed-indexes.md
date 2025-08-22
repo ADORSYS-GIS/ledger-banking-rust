@@ -2,9 +2,10 @@
 
 Apply the rules defined in 'docs/guidelines/development.md' to generate the necessary code and database schema for application-managed indexes for a given module.
 
+**Rule Precedence:** All generation logic is driven by structured comments within the source `...Model` struct. These in-code instructions always take precedence over general guidelines.
+
 **Inputs:**
 -   `<file_name>`: The name of the module (e.g., `person`).
--   `<init_order>`: The numerical prefix for the database migration file (e.g., `001`).
 
 **Infered Parameter**
 -   `<ModelName>`: stands for each struct `<ModelName>Model` defined in the module (e.g. PersonModel, LocationModel). 
@@ -12,29 +13,55 @@ Apply the rules defined in 'docs/guidelines/development.md' to generate the nece
 ---
 
 
-### Step 1: Generate Index Model Object
+### Step 1: Generate Index Model from Comment Instructions
 
 **File:** `banking-db/src/models/<file_name>.rs`
 
-For each model (e.g., `PersonModel`), create a corresponding index model struct named `<ModelName>IdxModel` within the same module file. This model is used exclusively for indexing and does not have a counterpart in the domain layer.
+For each main model (e.g., `CountryModel`), generate the corresponding `<ModelName>IdxModel` struct based on structured comments within the main model's definition. The generation is triggered by a top-level `/// # Index: <ModelName>IdxModel` comment.
 
-**Requirements:**
-1.  The struct must be named by appending `Idx` to the ModelName (e.g., `PersonModel` -> `PersonIdxModel`).
-2.  It must include the primary key of the parent model, named as `<model_name>_id` (e.g., `person_id`).
-3.  It must include all fields from the parent model that will be used for finder methods (e.g., `is_active`, `status`, `type`).
-4.  Decorate the struct with `#[derive(Debug, Clone, sqlx::FromRow)]`.
+**Parsing Requirements:**
+1.  **Trigger:** Identify the main model struct that has a `/// # Index: <ModelName>IdxModel` comment block.
+2.  **Idempotency Check:** Before generating any code, scan the target file for the existence of `pub struct <ModelName>IdxModel`. If this struct already exists, the script must halt execution for this model to ensure idempotency.
+3.  **Fields:** Parse the doc comments for each field within that main model.
+4.  **Primary Index:** A field is the primary key for the index if its comment contains `/// # Index: <field_name>` and `/// ## Nature` followed by `- primary`. The `id` field of the main model is typically renamed to `<model_name>_id` in the index model.
+5.  **Secondary Index:** A field is a secondary index if its comment contains `/// # Index` and `/// ## Nature` followed by `- secondary`.
+    *   If the original field is a string type (e.g., `HeaplessString<N>`), the index field should be the specified hash (e.g., `code_hash: i64`).
+    *   Otherwise, use the field name and type as is.
+6.  **Decoration:** The generated struct must be decorated with `#[derive(Debug, Clone, FromRow)]`.
 
-**Example (`PersonIdxModel`):**
+**Example (Derived from `CountryModel` in `person.rs`):**
+
+**Source Comments in `CountryModel`:**
 ```rust
-// In banking-db/src/models/person.rs
+/// # Index: CountryIdxModel
+// ...
+pub struct CountryModel {
+    /// # Index: country_id
+    /// ## Nature
+    /// - primary
+    pub id: Uuid,
+    
+    /// # Index: iso2: HeaplessString<2>
+    /// ## Nature
+    /// - secondary
+    /// - unique
+    pub iso2: HeaplessString<2>,
+    // ... other fields
+}
+```
 
-// ... existing PersonModel struct ...
+**Generated `CountryIdxModel`:**
+```rust
+#[derive(Debug, Clone, FromRow)]
+pub struct CountryIdxModel {
+    /// # Nature
+    /// - primary
+    pub country_id: Uuid,
 
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct PersonIdxModel {
-    pub person_id: Uuid,
-    pub is_active: bool,
-    // ... other indexed fields
+    /// # Nature
+    /// - secondary
+    /// - unique
+    pub iso2: HeaplessString<2>,
 }
 ```
 
@@ -47,8 +74,37 @@ pub struct PersonIdxModel {
 Update the repository trait for the module to include methods for referential integrity checks and index-based finders, as per the "Application-Layer Referential Integrity" and "Repository Trait Design" sections of the guidelines.
 
 **Requirements:**
+1. Use comment instructions to specify that index is managed by the same repositoy and the corresponding model object. e.g.
+banking-db/src/models/person.rs:1023-1040
+```
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonModelRepository
+/// # Cache
+/// ...
+/// # Trait method
+/// - get_all
+/// ...
+#[derive(Debug, Clone, FromRow)]
+pub struct PersonIdxModel {
+    pub person_id: Uuid,
+    /// # Nature
+    /// - Mutable
+    pub external_identifier_hash: Option<i64>,
+}
+```
 
+2. If the index cache contains the `Pg Trigger`
+```
+/// ...
+/// # Pg Trigger
+/// - CREATE
+/// - UPDATE
+...
+pub struct EntityReferenceIdxModel {
+...
+```
 
+add postgress PostgreSQL users: LISTEN/NOTIFY functionality, for the listed database operations.
 
 ---
 

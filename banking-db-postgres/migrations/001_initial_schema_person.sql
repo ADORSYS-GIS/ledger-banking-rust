@@ -21,8 +21,7 @@ CREATE TABLE country (
 -- Index table for Country
 CREATE TABLE country_idx (
     country_id UUID PRIMARY KEY,
-    iso2 VARCHAR(2) NOT NULL,
-    is_active BOOLEAN NOT NULL
+    iso2 VARCHAR(2) NOT NULL
 );
 
 -- Main table for model CountrySubdivisionModel
@@ -44,8 +43,7 @@ CREATE TABLE country_subdivision (
 CREATE TABLE country_subdivision_idx (
     country_subdivision_id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
-    code VARCHAR(10) NOT NULL,
-    is_active BOOLEAN NOT NULL
+    code_hash BIGINT NOT NULL
 );
 
 -- Main table for model LocalityModel
@@ -69,8 +67,7 @@ CREATE TABLE locality_idx (
     locality_id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
     country_subdivision_id UUID,
-    code VARCHAR(50) NOT NULL,
-    is_active BOOLEAN NOT NULL
+    code_hash BIGINT NOT NULL
 );
 
 -- Main table for model LocationModel
@@ -97,9 +94,7 @@ CREATE TABLE location (
 CREATE TABLE location_idx (
     location_id UUID PRIMARY KEY,
     location_type location_type NOT NULL,
-    is_active BOOLEAN NOT NULL,
-    locality_id UUID,
-    street_line1_hash BIGINT
+    locality_id UUID
 );
 
 -- Main table for model MessagingModel
@@ -117,9 +112,7 @@ CREATE TABLE messaging (
 -- Index table for Messaging
 CREATE TABLE messaging_idx (
     messaging_id UUID PRIMARY KEY,
-    messaging_type messaging_type NOT NULL,
-    is_active BOOLEAN NOT NULL,
-    value_hash BIGINT
+    value_hash BIGINT NOT NULL
 );
 
 -- Main table for model EntityReferenceModel
@@ -142,8 +135,7 @@ CREATE TABLE entity_reference (
 CREATE TABLE entity_reference_idx (
     entity_reference_id UUID PRIMARY KEY,
     person_id UUID NOT NULL,
-    entity_role person_entity_type NOT NULL,
-    is_active BOOLEAN NOT NULL
+    entity_role person_entity_type NOT NULL
 );
 
 -- Main table for model PersonModel
@@ -174,7 +166,5 @@ CREATE TABLE person (
 -- Index table for Person
 CREATE TABLE person_idx (
     person_id UUID PRIMARY KEY,
-    person_type person_type NOT NULL,
-    external_identifier_hash BIGINT,
-    is_active BOOLEAN NOT NULL
+    external_identifier_hash BIGINT
 );

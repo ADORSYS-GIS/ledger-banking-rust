@@ -194,7 +194,7 @@ Instead of relying on database indexes for finder methods (e.g., `find_by_status
 
 *   **Index Tables:** For each entity that requires complex finders (especially static or infrequently updated entities like `Person`), a corresponding index table (e.g., `person_idx`) will be created in the database. This table stores the indexed values and the `Uuid` of the corresponding entity.
 *   **Transactional Consistency:** The index table MUST be updated within the same database transaction as the main entity table to ensure data is always consistent.
-*   **In-Memory Loading:** The repository layer is responsible for loading the index table into an in-memory cache (e.g., Moka) on application startup or on-demand.
+*   **In-Memory Loading:** The repository layer is responsible for loading the index table into an in-memory, `HashMap`-based cache on application startup or on-demand.
 *   **Repository Implementation:** Repository finder methods should first consult the in-memory index to retrieve a `Vec<Uuid>` of matching entities. Pagination should be performed on this vector of IDs. Finally, the repository will fetch the full records for the paginated IDs using a `find_by_ids` method.
 
 **Example: Indexing `Person` by `is_active` status**
@@ -313,9 +313,16 @@ pub trait ProductRepository: Send + Sync {
 
 Building upon the principle of application-managed indexes, several patterns ensure consistency, performance, and maintainability.
 
-#### 4.1. The `<ModelName>IdxModel` Pattern
+#### 4.1. The `<ModelName>IdxModel` Pattern (Comment-Driven)
 
-For every main database model (e.g., `PersonModel`) that requires indexed lookups, a corresponding struct named `<ModelName>IdxModel` (e.g., `PersonIdxModel`) must be created in `banking-db/src/models/`. This struct is a lightweight representation containing only the fields needed for indexing.
+For every main database model (e.g., `CountryModel`) that requires indexed lookups, a corresponding `<ModelName>IdxModel` struct is generated based on structured comments. This ensures that the index definition lives directly alongside the data model it supports.
+
+**Generation Rules:**
+-   **Trigger:** The generation is triggered by a `/// # Index: <ModelName>IdxModel` comment above the main model struct.
+-   **Fields:** The fields of the `IdxModel` are derived from fields in the main model that are explicitly annotated for indexing with `/// # Index: ...`.
+-   **Primary vs. Secondary:** The nature of the index (primary or secondary) is defined under a `/// ## Nature` sub-comment.
+
+This pattern centralizes the definition of the model and its associated index, improving maintainability and ensuring consistency.
 
 #### 4.2. When to Create an Index
 

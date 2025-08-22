@@ -114,7 +114,7 @@ git commit -s -S -F target/commit.md
 ## Pre-Commit Verification
 
 Before committing, ensure:
-- [ ] All tests pass (`cargo test --workspace`)
+- [ ] All tests pass (`cargo test --workspace -- --test-threads=1`)
 - [ ] Code compiles without warnings (`cargo check --workspace`)
 - [ ] Changes are logically grouped
 - [ ] Commit message is comprehensive and follows format

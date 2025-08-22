@@ -83,9 +83,19 @@ pub enum RelationshipRole {
 
 /// # Repository Trait
 /// - FQN: banking-db/src/repository/person_repository.rs/CountryRepository
-/// # Nature
-/// - RuntimeImmutable: Creation, Modification requires reload of caches
-/// - Cacheable: ApplicationScope
+/// 
+/// # Index: CountryIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountryRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// ## Cache: CountryIdxModelCache
+/// - Immutable Set of Immutable Records Cache
+/// - Concurent
+/// 
 /// # Documentation
 /// - Country structure with ISO 3166-1 alpha-2 code
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -94,48 +104,72 @@ pub struct CountryModel {
     /// - find_by_id
     /// - find_by_ids
     /// - exists_by_id
-    /// # Nature
-    /// - primary index
+    /// 
+    /// # Index: country_id
+    /// ## Nature
+    /// - primary
     pub id: Uuid,
+    
     /// # Documentation
     /// - ISO 3166-1 alpha-2 country code (e.g., "CM", "US", "GB")
     /// # Trait method
     /// - find_ids_by_iso2
     /// - find_by_iso2
-    /// # Nature
+    /// 
+    /// # Index: iso2: HeaplessString<2>
+    /// ## Nature
+    /// - secondary
     /// - unique
     pub iso2: HeaplessString<2>,
+
     pub name_l1: HeaplessString<100>,
     pub name_l2: Option<HeaplessString<100>>,
     pub name_l3: Option<HeaplessString<100>>,
 }
 
-/// # Service Trait
+/// # Repository Trait
 /// - FQN: banking-db/src/repository/person_repository.rs/CountrySubdivisionRepository
-/// # Nature
-/// - RuntimeImmutable: Creation, Modification requires reload of caches
-/// # Documentation
-/// - Database model for CountrySubdivision
-/// - CountrySubdivision structure with multilingual support
+/// 
+/// # Index: CountrySubdivisionIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountrySubdivisionRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// ## Cache: CountrySubdivisionIdxModelCache
+/// - Immutable Set of Immutable Records Cache
+/// - Concurent
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CountrySubdivisionModel {
     /// # Trait methods
     /// - find_by_id
     /// - find_by_ids
     /// - exists_by_id
-    /// # Nature
-    /// - primary index
+    /// 
+    /// # Index: country_subdivision_id
+    /// ## Nature
+    /// - primary
     pub id: Uuid,
     /// # Trait method
     /// - find_ids_by_country_id
     /// - find_by_country_id
+    /// 
+    /// # Index
+    /// ## Nature
+    /// - secondary
     pub country_id: Uuid,
+
     /// # Documentation
     /// - if non existant the first 10 chars of the name_l1
     /// # Trait method
     /// - find_by_code
     ///     - code: self.code
-    /// # Nature
+    /// 
+    /// # Index: code_hash: i64
+    /// ## Nature
+    /// - secondary
     /// - unique
     pub code: HeaplessString<10>,
     pub name_l1: HeaplessString<100>,
@@ -143,10 +177,21 @@ pub struct CountrySubdivisionModel {
     pub name_l3: Option<HeaplessString<100>>,
 }
 
-/// # Service Trait
+/// # Repository Trait
 /// - FQN: banking-db/src/repository/person_repository.rs/LocalityRepository
-/// # Nature
-/// - RuntimeImmutable: Creation, Modification requires reload of caches
+/// 
+/// # Index: LocalityIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocalityRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// ## Cache: LocalityIdxModelCache
+/// - Mutable Set of Immutable Records
+/// - Concurent
+/// 
 /// # Documentation
 /// - Database model for Locality
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -155,19 +200,31 @@ pub struct LocalityModel {
     /// - find_by_id
     /// - find_by_ids
     /// - exists_by_id
-    /// # Nature
-    /// - primary index
+    /// 
+    /// # Index: locality_id
+    /// ## Nature
+    /// - primary
     pub id: Uuid,
+
     /// # Trait method
     /// - find_ids_by_country_subdivision_id
     /// - find_by_country_subdivision_id
+    /// 
+    /// # Index
+    /// ## Nature
+    /// - secondary
     pub country_subdivision_id: Option<Uuid>,
+
     /// # Documentation
     /// - If non existant, country subdivision code '_' the first 10 chars of the name_l1
+    /// 
     /// # Trait method
     /// - find_by_code
     ///     - code: self.code
-    /// # Nature
+    /// 
+    /// # Index: code_hash: i64
+    /// ## Nature
+    /// - secondary
     /// - unique
     pub code: HeaplessString<50>,
     pub name_l1: HeaplessString<50>,
@@ -175,25 +232,50 @@ pub struct LocalityModel {
     pub name_l3: Option<HeaplessString<50>>,
 }
 
-/// # Service Trait
+/// # Repository Trait
 /// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
-/// # Nature
-/// - Immutable: 
-///     - A location can be fixed if eroneous, but does not change base on the holder.  
-///     - A customer changing address receives a new location.
-///     - Many customers can share the same location object 
-/// - AuditLog
-/// # Documentation
-/// - Database model for Location
+/// 
+/// # Index: LocationIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// ## Cache: LocationIdxModelCache
+/// - Mutable Set of Mutable Records
+/// - Concurent
+/// 
+/// # Audit: LocationAuditModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
+/// ## Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LocationModel {
     /// # Trait method
     /// - find_by_id
     /// - find_by_ids
     /// - exists_by_id
-    /// # Nature
-    /// - primary index
+    /// 
+    /// # Index: location_id
+    /// ## Nature
+    /// - primary
+    /// 
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.version
+    /// ## Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
+
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.id
+    pub version: u16,
+
     /// # Trait method
     /// - find_ids_by_street_line1
     /// # Documentation
@@ -202,9 +284,14 @@ pub struct LocationModel {
     pub street_line2: Option<HeaplessString<50>>,
     pub street_line3: Option<HeaplessString<50>>,
     pub street_line4: Option<HeaplessString<50>>,
+
     /// # Trait method
     /// - find_ids_by_locality_id
     /// - find_by_locality_id
+    /// 
+    /// # Index:
+    /// ## Nature
+    /// - secondary
     pub locality_id: Uuid,
     pub postal_code: Option<HeaplessString<20>>,
 
@@ -218,40 +305,80 @@ pub struct LocationModel {
     /// - find_ids_by_location_type
     /// - find_by_location_type
     /// - find_location_by_type_and_locality
+    /// 
     /// # Documentation
     /// - Location type for categorization
     #[serde(serialize_with = "serialize_location_type", deserialize_with = "deserialize_location_type")]
     pub location_type: LocationType,
+
+    pub audit_log_id: Uuid,
 }
 
-/// # Service Trait
+/// # Repository Trait
 /// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
-/// # Nature
-/// - Immutable: 
-///     - A location can be fixed if eroneous, but does not change base on the holder.  
-///     - A customer changing phone number receives an association with a new record.
-///     - Many customers can share the same messaging object 
-/// - AuditLog
-/// # Documentation
-/// - Database model for Messaging
+/// 
+/// # Index: MessagingIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// ## Cache: MessagingIdxModelCache
+/// - Mutable Set of Immutable Records
+/// - Concurent
+/// 
+/// # Audit: MessagingAuditModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
+/// ## Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct MessagingModel {
     /// # Trait method
     /// - find_by_id
     /// - find_by_ids
     /// - exists_by_id
-    /// # Nature
-    /// - primary index
+    /// 
+    /// # Index: messaging_id
+    /// ## Nature
+    /// - primary
+    /// 
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.version
+    /// ## Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
+
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.id
+    pub version: u16,
+
     /// # Documentation
     /// - Type of messaging/communication method
     #[serde(serialize_with = "serialize_messaging_type", deserialize_with = "deserialize_messaging_type")]
     pub messaging_type: MessagingType,
-    /// # Trait method
-    /// - find_ids_by_value
+    
     /// # Documentation
     /// - The actual messaging identifier/location (email, phone, username, etc.)
+    /// 
+    /// # Trait method
+    /// - find_ids_by_value
+    /// 
+    /// # Index: value_hash: i64
+    /// ## Nature
+    /// - secondary
+    /// - unique
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - find_audits_by_value
     pub value: HeaplessString<100>,
+
     /// # Documentation
     /// - Description of the messaging type when MessagingType::Other is used
     pub other_type: Option<HeaplessString<20>>,
@@ -259,36 +386,66 @@ pub struct MessagingModel {
     pub audit_log_id: Uuid,
 }
 
-/// # Service Trait
+/// # Repository Trait
 /// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
 /// # Documentation
 /// - Entity reference table for managing person-to-entity relationships
 /// - Database model for EntityReference
-/// # Nature
-/// - Mutable 
-///     - version field used to track changes.
-///     - store a copy in table EntityReferenceAuditModel during modification. 
-/// - AuditLog
+/// 
+/// # Index: EntityReferenceIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// ## Cache
+/// - Mutable Set of Mutable Records
+/// 
+/// # Audit: EntityReferenceAuditModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// ## Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct EntityReferenceModel {
     /// # Trait method
     /// - find_by_id
     /// - find_by_ids
     /// - exists_by_id
-    /// # Nature
-    /// - primary index
+    /// 
+    /// # Index: entity_reference_id
+    /// ## Nature
+    /// - primary
+    /// 
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.version
+    /// ## Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
 
-    /// # Documentation
-    /// - version number, increased whenever a reference changes.
-    /// - change triggers storage of old version in an audit database.
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.id
     pub version: u16,
 
     /// # Documentation
     /// - References PersonModel.person_id
+    /// 
     /// # Trait method
     /// - find_ids_by_person_id
     /// - find_by_person_id
+    /// 
+    /// # Index
+    /// ## Nature
+    /// - secondary
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - find_audits_by_person_id
     pub person_id: Uuid,
 
     /// # Documentation
@@ -298,8 +455,13 @@ pub struct EntityReferenceModel {
 
     /// # Documentation
     /// - External identifier for the reference (e.g., customer ID, employee ID)
+    /// 
     /// # Trait method
     /// - find_by_reference_external_id
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - find_audits_by_reference_external_id
     pub reference_external_id: HeaplessString<50>,
 
     pub reference_details_l1: Option<HeaplessString<50>>,
@@ -309,39 +471,31 @@ pub struct EntityReferenceModel {
     pub audit_log_id: Uuid,
 }
 
-/// # Service Trait
-/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceAuditRepository
-/// # Documentation
-/// - Entity reference audit table for storing changes on entity references.
-/// # Nature
-/// - Immutable 
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// # Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct EntityReferenceAuditModel {
-    /// # Trait method
-    /// - find_by_id
-    /// - find_by_ids
     /// # Nature
-    /// - Coumpound primary index with self.version
+    /// - compound-primary with self.version
+    /// # Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
 
-    /// # Documentation
-    /// - Coumpound primary index with self.version
+    /// # Nature
+    /// - compound-primary with self.id
     pub version: u16,
 
-    /// # Documentation
-    /// - find_ids_by_person_id
-    /// - find_by_person_id
+    /// # Trait method
+    /// - find_audits_by_person_id
     pub person_id: Uuid,
 
-    /// # Documentation
-    /// - Type of entity relationship
     #[serde(serialize_with = "serialize_person_entity_type", deserialize_with = "deserialize_person_entity_type")]
     pub entity_role: RelationshipRole,
 
-    /// # Documentation
-    /// - External identifier for the reference (e.g., customer ID, employee ID)
     /// # Trait method
-    /// - find_by_reference_external_id
+    /// - find_audits_by_reference_external_id
     pub reference_external_id: HeaplessString<50>,
 
     pub reference_details_l1: Option<HeaplessString<50>>,
@@ -351,26 +505,51 @@ pub struct EntityReferenceAuditModel {
     pub audit_log_id: Uuid,
 }
 
-/// # Service Trait
-/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceAuditRepository
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
 /// # Documentation
-/// - Database model for person
-/// - Represents a person throughout the system for audit and tracking purposes
-/// # Nature
-/// - Mutable 
-///     - version field used to track changes.
-///     - store a copy in table EntityReferenceAudit during modification. 
-/// - AuditLog
+/// - Database model for Person
+/// - Represents a person throughout the system for bank audit and tracking purposes
+/// 
+/// # Index: PersonIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// - update_idx
+/// ## Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// ## Cache: PersonIdxModel
+/// - Mutable Set of Mutable Records
+/// 
+/// # Audit: PersonAuditModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// ## Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PersonModel {
     /// # Trait method
     /// - find_by_id
     /// - find_by_ids
     /// - exists_by_id
-    /// # Nature
-    /// - Primary index
+    /// 
+    /// # Index: person_id
+    /// ## Nature
+    /// - primary
+    /// 
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.version
+    /// ## Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
     
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.id
     pub version: u16,
 
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
@@ -378,15 +557,28 @@ pub struct PersonModel {
     
     pub display_name: HeaplessString<100>,
 
+    /// # Documentation
+    /// External identifier (e.g., employee ID, badge number, system ID)
+    /// 
     /// # Trait method
     /// - get_ids_by_external_identifier
     /// - get_by_external_identifier
-    /// # Documentation
-    /// External identifier (e.g., employee ID, badge number, system ID)
+    /// 
+    /// # Index: external_identifier_hash: Option<i64>
+    /// ## Nature
+    /// - secondary
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - get_audits_by_external_identifier
     pub external_identifier: Option<HeaplessString<50>>,
 
     /// # Trait method
     /// - get_by_entity_reference
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - get_audits_by_entity_reference
     pub entity_reference_count: u8,
     
     /// # Documentation
@@ -417,6 +609,60 @@ pub struct PersonModel {
 
     /// # Documentation
     /// References LocationModel.location_id for person's location
+    pub location_id: Option<Uuid>,
+    
+    pub duplicate_of_person_id: Option<Uuid>,
+}
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// # Trait method
+/// - create_audit
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PersonAuditModel {
+    /// # Nature
+    /// - compound-primary with self.version
+    /// # Trait method
+    /// - find_audits_by_id
+    pub id: Uuid,
+    
+    /// # Nature
+    /// - compound-primary with self.id
+    pub version: u16,
+
+    #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
+    pub person_type: PersonType,
+    
+    pub display_name: HeaplessString<100>,
+
+    /// # Trait method
+    /// - get_audits_by_external_identifier
+    pub external_identifier: Option<HeaplessString<50>>,
+
+    /// # Trait method
+    /// - get_audits_by_entity_reference
+    pub entity_reference_count: u8,
+    
+    pub organization_person_id: Option<Uuid>,
+    
+    pub messaging1_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging1_type: Option<MessagingType>,
+    pub messaging2_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging2_type: Option<MessagingType>,
+    pub messaging3_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging3_type: Option<MessagingType>,
+    pub messaging4_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging4_type: Option<MessagingType>,
+    pub messaging5_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging5_type: Option<MessagingType>,
+    
+    pub department: Option<HeaplessString<50>>,
+
     pub location_id: Option<Uuid>,
     
     pub duplicate_of_person_id: Option<Uuid>,
@@ -619,19 +865,25 @@ where
     }
 }
 
-/// # Cache
-/// - Immutable Set of Immutable Records
-/// - Application Scope
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountryRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// # Cache: CountryIdxModelCache
+/// - Immutable Set of Immutable Records Cache
 /// - Concurent
-/// - Primary
-///     - country_id
-/// - Unique Mandatory Lookup Fields
-///     - iso2
-/// # Documentation
-/// - Index model for Country
 #[derive(Debug, Clone, FromRow)]
 pub struct CountryIdxModel {
+    /// # Nature
+    /// - primary
     pub country_id: Uuid,
+
+    /// # Nature
+    /// - secondary
+    /// - unique
     pub iso2: HeaplessString<2>,
 }
 
@@ -681,22 +933,29 @@ impl CountryIdxModelCache {
 }
 
 
-/// # Cache
-/// - Immutable Set of Immutable Records
-/// - Application Scope
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountrySubdivisionRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// # Cache: CountrySubdivisionIdxModelCache
+/// - Immutable Set of Immutable Records Cache
 /// - Concurent
-/// - Primary
-///     - country_subdivision_id
-/// - Unique Mandatory Lookup Fields
-///     - code_hash
-/// - Non Unique Mandatory Lookup Fields
-///     - country_id
-/// # Documentation
-/// - Index model for CountrySubdivisionIdxModel
 #[derive(Debug, Clone, FromRow)]
 pub struct CountrySubdivisionIdxModel {
+    /// # Nature
+    /// - primary
     pub country_subdivision_id: Uuid,
+
+    /// # Nature
+    /// - secondary
     pub country_id: Uuid,
+
+    /// # Nature
+    /// - secondary
+    /// - unique
     pub code_hash: i64,
 }
 
@@ -757,23 +1016,27 @@ impl CountrySubdivisionIdxModelCache {
     }
 }
 
-/// # Cache
-/// - Immutable Set of Immutable Records
-/// - Application Scope
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocalityRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// # Cache: LocationIdxModelCache
+/// - Mutable Set of Immutable Records
 /// - Concurent
-/// - Primary
-///     - locality_id
-/// - Unique Mandatory Lookup Fields
-///     - code_hash
-/// - Non Unique Mandatory Lookup Fields
-///     - country_subdivision_id
-/// # Documentation
-/// - Index model for Locality
-/// - Application Scope Cache
 #[derive(Debug, Clone, FromRow)]
 pub struct LocalityIdxModel {
+    /// # Nature
+    /// - primary
     pub locality_id: Uuid,
-    pub country_subdivision_id: Uuid,
+    /// # Nature
+    /// - secondary
+    pub country_subdivision_id: Option<Uuid>,
+    /// # Nature
+    /// - secondary
+    /// - unique
     pub code_hash: i64,
 }
 
@@ -802,10 +1065,12 @@ impl LocalityIdxModelCache {
             }
             by_code_hash.insert(item.code_hash, primary_key);
 
-            by_country_subdivision_id
-                .entry(item.country_subdivision_id)
-                .or_insert_with(Vec::new)
-                .push(primary_key);
+            if let Some(country_subdivision_id) = item.country_subdivision_id {
+                by_country_subdivision_id
+                    .entry(country_subdivision_id)
+                    .or_insert_with(Vec::new)
+                    .push(primary_key);
+            }
             
             by_id.insert(primary_key, item);
         }
@@ -835,18 +1100,24 @@ impl LocalityIdxModelCache {
 }
 
 
-/// # Cache
-/// - Mutable Set of Immutable Records
-/// - Application Scope + Notification DB Table (new records)
-/// - Primary 
-///     - location_id
-/// - Non Unique Lookup Fields
-///     - locality_id
-/// # Documentation
-/// - Index model for Location
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// # Cache: LocationIdxModelCache
+/// - Mutable Set of Mutable Records
+/// - Concurent
 #[derive(Debug, Clone, FromRow)]
 pub struct LocationIdxModel {
+    /// # Nature
+    /// - primary
     pub location_id: Uuid,
+    /// # Nature
+    /// - secondary
     pub locality_id: Option<Uuid>,
 }
 
@@ -898,18 +1169,24 @@ impl LocationIdxModelCache {
 }
 
 
-/// # Cache
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// # Cache: MessagingIdxModelCache
+/// - Concurent
 /// - Mutable Set of Immutable Records
-/// - Application Scope + Notification DB Table (new records)
-/// - Primary 
-///     - messaging_id
-/// - Unique Mandatory Lookup Fields
-///     - value_hash
-/// # Documentation
-/// - Index model for Messaging
 #[derive(Debug, Clone, FromRow)]
 pub struct MessagingIdxModel {
+    /// # Nature
+    /// - primary
     pub messaging_id: Uuid,
+    /// # Nature
+    /// - secondary
+    /// - unique
     pub value_hash: i64,
 }
 
@@ -959,18 +1236,24 @@ impl MessagingIdxModelCache {
 }
 
 
-/// # Cache
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// # Cache: EntityReferenceIdxModelCache
+/// - Concurent
 /// - Mutable Set of Mutable Records
-/// - Application Scope + Entry count hint in PersonModel.
-/// - Primary
-///     - entity_reference_id
-/// - Non Unique Mandatory Lookup Fields
-///     - person_id
-/// # Documentation
-/// - Index model for EntityReference
 #[derive(Debug, Clone, FromRow)]
 pub struct EntityReferenceIdxModel {
+    /// # Nature
+    /// - primary
     pub entity_reference_id: Uuid,
+    /// # Nature
+    /// - secondary
     pub person_id: Uuid,
 }
 
@@ -1019,21 +1302,25 @@ impl EntityReferenceIdxModelCache {
     }
 }
 
-
-/// # Cache
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// - update_idx
+/// # Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// # Cache: PersonIdxModelCache
+/// - Concurent
 /// - Mutable Set of Mutable Records
-///     - Application Scope + Notification Table (new records)
-/// - Primary 
-///     - person_id
-/// - Non Unique Optional Lookup Fields
-///     - external_identifier_hash
-/// # Documentation
-/// - Index model for Person
 #[derive(Debug, Clone, FromRow)]
 pub struct PersonIdxModel {
+    /// # Nature
+    /// - primary
     pub person_id: Uuid,
     /// # Nature
-    /// - Mutable
+    /// - secondary
     pub external_identifier_hash: Option<i64>,
 }
 
