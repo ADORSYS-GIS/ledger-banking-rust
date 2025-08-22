@@ -87,7 +87,7 @@ pub enum ComplianceCheckType {
     SanctionsCheck,
     PepScreening,
     DocumentVerification,
-    AddressVerification,
+    LocationVerification,
     IdentityVerification,
     SourceOfFunds,
     RiskAssessment,

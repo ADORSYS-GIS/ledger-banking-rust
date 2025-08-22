@@ -64,6 +64,15 @@
 - **FeeServiceImpl** - 12 todo! fee waiver/automation methods
 - **DailyCollectionServiceImpl** - 50+ todo! collection operations
 
+## Key Achievements (August 2025)
+
+### 🎉 Person Domain Auditing and Versioning
+This commit enhances the Person domain by introducing versioning and audit trails for key entities.
+- **Versioning**: Added `version` fields to `Person` and `EntityReference` to track changes over time.
+- **Auditability**: Included `audit_log_id` to link changes to specific audit log entries.
+- **Mutability**: `Person` and `EntityReference` are now explicitly marked as mutable and auditable, improving data governance.
+- **Data Integrity**: These changes provide a clear history of modifications, enhancing data integrity and compliance.
+
 ### 🎉 Stack Optimization: Replaced Vec with BoundedVec
 This commit replaces `Vec<T>` with `BoundedVec<T, N>` across multiple crates to reduce heap allocations and improve memory efficiency.
 - **Memory Efficiency**: Reduces heap allocations by favoring stack-based data structures.
@@ -77,11 +86,9 @@ This commit completes the `DailyCollectionRepository` implementation and normali
 - **ID Normalization**: Replaced `daily_collection_id` with `id` across the API, DB, and logic crates.
 - **Consistency**: Ensures a uniform and predictable data model across the entire system.
 
-## Key Achievements (August 2025)
-
 ### 🎉 Person Repository Implementation and Testing
 This commit completes the implementation of all person-related repositories and adds a comprehensive test suite.
-- **Full Implementation**: `CountryRepository`, `StateProvinceRepository`, `CityRepository`, `AddressRepository`, and `MessagingRepository` are now fully implemented.
+- **Full Implementation**: `CountryRepository`, `CountrySubdivisionRepository`, `LocalityRepository`, `LocationRepository`, and `MessagingRepository` are now fully implemented.
 - **Comprehensive Testing**: A new test suite with 8 tests was added to ensure the correctness of all person-related repositories.
 - **Test Isolation**: Implemented database cleanup before each test to ensure test isolation and prevent data pollution.
 

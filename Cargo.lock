@@ -177,6 +177,7 @@ dependencies = [
  "blake3",
  "chrono",
  "heapless",
+ "moka",
  "rust_decimal",
  "serde",
  "serde_json",

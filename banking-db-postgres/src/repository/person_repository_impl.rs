@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use banking_api::BankingError;
 use banking_db::models::person::{
-    AddressModel, CityModel, CountryModel, MessagingModel, PersonModel,
-    PersonType, RelationshipRole, StateProvinceModel, AddressType, MessagingType,
+    LocationModel, LocalityModel, CountryModel, MessagingModel, PersonModel,
+    PersonType, RelationshipRole, CountrySubdivisionModel, LocationType, MessagingType,
 };
 use banking_db::repository::{
-    AddressRepository, CityRepository, CountryRepository,
-    MessagingRepository, PersonRepository, StateProvinceRepository,
+    LocationRepository, LocalityRepository, CountryRepository,
+    MessagingRepository, PersonRepository, CountrySubdivisionRepository,
 };
 use sqlx::{postgres::PgRow, PgPool, Row};
 use std::error::Error;
@@ -42,7 +42,7 @@ impl PersonRepository for PersonRepositoryImpl {
                 id, person_type, display_name, external_identifier, organization_person_id,
                 messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                 messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                department, location_address_id, duplicate_of_person_id, is_active, created_at, updated_at
+                department, location_id, duplicate_of_person_id, is_active, created_at, updated_at
             )
             VALUES ($1, $2::person_type, $3, $4, $5, $6, $7::messaging_type, $8, $9::messaging_type, $10, $11::messaging_type, $12, $13::messaging_type, $14, $15::messaging_type, $16, $17, $18, $19, $20, $21)
            "#,
@@ -63,7 +63,7 @@ impl PersonRepository for PersonRepositoryImpl {
         .bind(person.messaging5_id)
         .bind(person.messaging5_type)
         .bind(person.department.as_ref().map(|s| s.as_str()))
-        .bind(person.location_address_id)
+        .bind(person.location_id)
         .bind(person.duplicate_of_person_id)
         .bind(person.is_active)
         .bind(person.created_at)
@@ -291,7 +291,7 @@ impl PersonRepository for PersonRepositoryImpl {
             messaging5_id: None,
             messaging5_type: None,
             department: None,
-            location_address_id: None,
+            location_id: None,
             duplicate_of_person_id: None,
             is_active: true,
             created_at: chrono::Utc::now(),
@@ -482,84 +482,84 @@ impl CountryRepository for CountryRepositoryImpl {
     }
 }
 
-pub struct StateProvinceRepositoryImpl {
+pub struct CountrySubdivisionRepositoryImpl {
     pool: Arc<PgPool>,
 }
-impl StateProvinceRepositoryImpl {
+impl CountrySubdivisionRepositoryImpl {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
 }
 #[async_trait]
-impl StateProvinceRepository for StateProvinceRepositoryImpl {
+impl CountrySubdivisionRepository for CountrySubdivisionRepositoryImpl {
     async fn save(
         &self,
-        state: StateProvinceModel,
-    ) -> Result<StateProvinceModel, Box<dyn Error + Send + Sync>> {
+        country_subdivision: CountrySubdivisionModel,
+    ) -> Result<CountrySubdivisionModel, Box<dyn Error + Send + Sync>> {
         sqlx::query(
             r#"
-            INSERT INTO state_province (id, country_id, state_province_code, name_l1, name_l2, name_l3, is_active, created_at, updated_at, created_by_person_id, updated_by_person_id)
+            INSERT INTO country_subdivision (id, country_id, code, name_l1, name_l2, name_l3, is_active, created_at, updated_at, created_by_person_id, updated_by_person_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             "#,
         )
-        .bind(state.id)
-        .bind(state.country_id)
-        .bind(state.state_province_code.as_str())
-        .bind(state.name_l1.as_str())
-        .bind(state.name_l2.as_ref().map(|s| s.as_str()))
-        .bind(state.name_l3.as_ref().map(|s| s.as_str()))
-        .bind(state.is_active)
-        .bind(state.created_at)
-        .bind(state.updated_at)
-        .bind(state.created_by_person_id)
-        .bind(state.updated_by_person_id)
+        .bind(country_subdivision.id)
+        .bind(country_subdivision.country_id)
+        .bind(country_subdivision.code.as_str())
+        .bind(country_subdivision.name_l1.as_str())
+        .bind(country_subdivision.name_l2.as_ref().map(|s| s.as_str()))
+        .bind(country_subdivision.name_l3.as_ref().map(|s| s.as_str()))
+        .bind(country_subdivision.is_active)
+        .bind(country_subdivision.created_at)
+        .bind(country_subdivision.updated_at)
+        .bind(country_subdivision.created_by_person_id)
+        .bind(country_subdivision.updated_by_person_id)
         .execute(&*self.pool)
         .await?;
 
         sqlx::query(
             r#"
-            INSERT INTO state_province_idx (state_province_id, country_id, state_province_code, is_active)
+            INSERT INTO country_subdivision_idx (country_subdivision_id, country_id, code, is_active)
             VALUES ($1, $2, $3, $4)
             "#,
         )
-        .bind(state.id)
-        .bind(state.country_id)
-        .bind(state.state_province_code.as_str())
-        .bind(state.is_active)
+        .bind(country_subdivision.id)
+        .bind(country_subdivision.country_id)
+        .bind(country_subdivision.code.as_str())
+        .bind(country_subdivision.is_active)
         .execute(&*self.pool)
         .await?;
 
-        Ok(state)
+        Ok(country_subdivision)
     }
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
-        let row = sqlx::query("SELECT * FROM state_province WHERE id = $1")
+    ) -> Result<Option<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
+        let row = sqlx::query("SELECT * FROM country_subdivision WHERE id = $1")
             .bind(id)
             .fetch_optional(&*self.pool)
             .await?;
         match row {
-            Some(row) => Ok(Some(StateProvinceModel::try_from_row(&row)?)),
+            Some(row) => Ok(Some(CountrySubdivisionModel::try_from_row(&row)?)),
             None => Ok(None),
         }
     }
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query("SELECT * FROM state_province WHERE id = ANY($1)")
+    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
+        let rows = sqlx::query("SELECT * FROM country_subdivision WHERE id = ANY($1)")
             .bind(ids)
             .fetch_all(&*self.pool)
             .await?;
-        let mut states = Vec::new();
+        let mut country_subdivisions = Vec::new();
         for row in rows {
-            states.push(StateProvinceModel::try_from_row(&row)?);
+            country_subdivisions.push(CountrySubdivisionModel::try_from_row(&row)?);
         }
-        Ok(states)
+        Ok(country_subdivisions)
     }
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM state_province WHERE id = $1)", id)
+        let exists = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM country_subdivision WHERE id = $1)", id)
             .fetch_one(&*self.pool)
             .await?;
         Ok(exists.unwrap_or(false))
@@ -568,7 +568,7 @@ impl StateProvinceRepository for StateProvinceRepositoryImpl {
         &self,
         country_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar("SELECT state_province_id FROM state_province_idx WHERE country_id = $1")
+        let ids = sqlx::query_scalar("SELECT country_subdivision_id FROM country_subdivision_idx WHERE country_id = $1")
             .bind(country_id)
             .fetch_all(&*self.pool)
             .await?;
@@ -579,7 +579,7 @@ impl StateProvinceRepository for StateProvinceRepositoryImpl {
         country_id: Uuid,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
         let ids = self.find_ids_by_country_id(country_id).await?;
         let start = (page.saturating_sub(1) * page_size) as usize;
         let end = (start + page_size as usize).min(ids.len());
@@ -588,23 +588,23 @@ impl StateProvinceRepository for StateProvinceRepositoryImpl {
         }
         self.find_by_ids(&ids[start..end]).await
     }
-    async fn find_state_province_by_state_province_code(
+    async fn find_country_subdivision_by_code(
         &self,
         country_id: Uuid,
-        state_province_code: &str,
-    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+        code: &str,
+    ) -> Result<Option<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
         let row = sqlx::query(
             r#"
-            SELECT * FROM state_province WHERE country_id = $1 AND state_province_code = $2
+            SELECT * FROM country_subdivision WHERE country_id = $1 AND code = $2
             "#,
         )
         .bind(country_id)
-        .bind(state_province_code)
+        .bind(code)
         .fetch_optional(&*self.pool)
         .await?;
 
         match row {
-            Some(row) => Ok(Some(StateProvinceModel::try_from_row(&row)?)),
+            Some(row) => Ok(Some(CountrySubdivisionModel::try_from_row(&row)?)),
             None => Ok(None),
         }
     }
@@ -612,7 +612,7 @@ impl StateProvinceRepository for StateProvinceRepositoryImpl {
         &self,
         is_active: bool,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar("SELECT state_province_id FROM state_province_idx WHERE is_active = $1")
+        let ids = sqlx::query_scalar("SELECT country_subdivision_id FROM country_subdivision_idx WHERE is_active = $1")
             .bind(is_active)
             .fetch_all(&*self.pool)
             .await?;
@@ -623,7 +623,7 @@ impl StateProvinceRepository for StateProvinceRepositoryImpl {
         is_active: bool,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
         let ids = self.find_ids_by_is_active(is_active).await?;
         let start = (page.saturating_sub(1) * page_size) as usize;
         let end = (start + page_size as usize).min(ids.len());
@@ -634,77 +634,77 @@ impl StateProvinceRepository for StateProvinceRepositoryImpl {
     }
 }
 
-pub struct CityRepositoryImpl {
+pub struct LocalityRepositoryImpl {
     pool: Arc<PgPool>,
 }
-impl CityRepositoryImpl {
+impl LocalityRepositoryImpl {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
 }
 #[async_trait]
-impl CityRepository for CityRepositoryImpl {
-    async fn save(&self, city: CityModel) -> Result<CityModel, Box<dyn Error + Send + Sync>> {
+impl LocalityRepository for LocalityRepositoryImpl {
+    async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, Box<dyn Error + Send + Sync>> {
         sqlx::query(
             r#"
-            INSERT INTO city (id, country_id, state_id, city_code, name_l1, name_l2, name_l3, is_active, created_at, updated_at, created_by_person_id, updated_by_person_id)
+            INSERT INTO locality (id, country_id, country_subdivision_id, code, name_l1, name_l2, name_l3, is_active, created_at, updated_at, created_by_person_id, updated_by_person_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             "#,
         )
-        .bind(city.id)
-        .bind(city.country_id)
-        .bind(city.state_id)
-        .bind(city.city_code.as_str())
-        .bind(city.name_l1.as_str())
-        .bind(city.name_l2.as_ref().map(|s| s.as_str()))
-        .bind(city.name_l3.as_ref().map(|s| s.as_str()))
-        .bind(city.is_active)
-        .bind(city.created_at)
-        .bind(city.updated_at)
-        .bind(city.created_by_person_id)
-        .bind(city.updated_by_person_id)
+        .bind(locality.id)
+        .bind(locality.country_id)
+        .bind(locality.country_subdivision_id)
+        .bind(locality.code.as_str())
+        .bind(locality.name_l1.as_str())
+        .bind(locality.name_l2.as_ref().map(|s| s.as_str()))
+        .bind(locality.name_l3.as_ref().map(|s| s.as_str()))
+        .bind(locality.is_active)
+        .bind(locality.created_at)
+        .bind(locality.updated_at)
+        .bind(locality.created_by_person_id)
+        .bind(locality.updated_by_person_id)
         .execute(&*self.pool)
         .await?;
 
         sqlx::query(
             r#"
-            INSERT INTO city_idx (city_id, country_id, state_id, city_code, is_active)
+            INSERT INTO locality_idx (locality_id, country_id, country_subdivision_id, code, is_active)
             VALUES ($1, $2, $3, $4, $5)
             "#,
         )
-        .bind(city.id)
-        .bind(city.country_id)
-        .bind(city.state_id)
-        .bind(city.city_code.as_str())
-        .bind(city.is_active)
+        .bind(locality.id)
+        .bind(locality.country_id)
+        .bind(locality.country_subdivision_id)
+        .bind(locality.code.as_str())
+        .bind(locality.is_active)
         .execute(&*self.pool)
         .await?;
 
         Ok(city)
     }
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>> {
-        let row = sqlx::query("SELECT * FROM city WHERE id = $1")
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>> {
+        let row = sqlx::query("SELECT * FROM locality WHERE id = $1")
             .bind(id)
             .fetch_optional(&*self.pool)
             .await?;
         match row {
-            Some(row) => Ok(Some(CityModel::try_from_row(&row)?)),
+            Some(row) => Ok(Some(LocalityModel::try_from_row(&row)?)),
             None => Ok(None),
         }
     }
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query("SELECT * FROM city WHERE id = ANY($1)")
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
+        let rows = sqlx::query("SELECT * FROM locality WHERE id = ANY($1)")
             .bind(ids)
             .fetch_all(&*self.pool)
             .await?;
-        let mut cities = Vec::new();
+        let mut localities = Vec::new();
         for row in rows {
-            cities.push(CityModel::try_from_row(&row)?);
+            localities.push(LocalityModel::try_from_row(&row)?);
         }
-        Ok(cities)
+        Ok(localities)
     }
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM city WHERE id = $1)", id)
+        let exists = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM locality WHERE id = $1)", id)
             .fetch_one(&*self.pool)
             .await?;
         Ok(exists.unwrap_or(false))
@@ -713,7 +713,7 @@ impl CityRepository for CityRepositoryImpl {
         &self,
         country_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar("SELECT city_id FROM city_idx WHERE country_id = $1")
+        let ids = sqlx::query_scalar("SELECT locality_id FROM locality_idx WHERE country_id = $1")
             .bind(country_id)
             .fetch_all(&*self.pool)
             .await?;
@@ -724,7 +724,7 @@ impl CityRepository for CityRepositoryImpl {
         country_id: Uuid,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
         let ids = self.find_ids_by_country_id(country_id).await?;
         let start = (page.saturating_sub(1) * page_size) as usize;
         let end = (start + page_size as usize).min(ids.len());
@@ -733,20 +733,20 @@ impl CityRepository for CityRepositoryImpl {
         }
         self.find_by_ids(&ids[start..end]).await
     }
-    async fn find_ids_by_state_id(&self, state_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar("SELECT city_id FROM city_idx WHERE state_id = $1")
-            .bind(state_id)
+    async fn find_ids_by_country_subdivision_id(&self, country_subdivision_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        let ids = sqlx::query_scalar("SELECT locality_id FROM locality_idx WHERE country_subdivision_id = $1")
+            .bind(country_subdivision_id)
             .fetch_all(&*self.pool)
             .await?;
         Ok(ids)
     }
-    async fn find_by_state_id(
+    async fn find_by_country_subdivision_id(
         &self,
-        state_id: Uuid,
+        country_subdivision_id: Uuid,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
-        let ids = self.find_ids_by_state_id(state_id).await?;
+    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
+        let ids = self.find_ids_by_country_subdivision_id(country_subdivision_id).await?;
         let start = (page.saturating_sub(1) * page_size) as usize;
         let end = (start + page_size as usize).min(ids.len());
         if start >= end {
@@ -754,23 +754,23 @@ impl CityRepository for CityRepositoryImpl {
         }
         self.find_by_ids(&ids[start..end]).await
     }
-    async fn find_city_by_city_code(
+    async fn find_locality_by_code(
         &self,
         country_id: Uuid,
-        city_code: &str,
-    ) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>> {
+        code: &str,
+    ) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>> {
         let row = sqlx::query(
             r#"
-            SELECT * FROM city WHERE country_id = $1 AND city_code = $2
+            SELECT * FROM locality WHERE country_id = $1 AND code = $2
             "#,
         )
         .bind(country_id)
-        .bind(city_code)
+        .bind(code)
         .fetch_optional(&*self.pool)
         .await?;
 
         match row {
-            Some(row) => Ok(Some(CityModel::try_from_row(&row)?)),
+            Some(row) => Ok(Some(LocalityModel::try_from_row(&row)?)),
             None => Ok(None),
         }
     }
@@ -778,7 +778,7 @@ impl CityRepository for CityRepositoryImpl {
         &self,
         is_active: bool,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar("SELECT city_id FROM city_idx WHERE is_active = $1")
+        let ids = sqlx::query_scalar("SELECT locality_id FROM locality_idx WHERE is_active = $1")
             .bind(is_active)
             .fetch_all(&*self.pool)
             .await?;
@@ -789,7 +789,7 @@ impl CityRepository for CityRepositoryImpl {
         is_active: bool,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
         let ids = self.find_ids_by_is_active(is_active).await?;
         let start = (page.saturating_sub(1) * page_size) as usize;
         let end = (start + page_size as usize).min(ids.len());
@@ -800,108 +800,108 @@ impl CityRepository for CityRepositoryImpl {
     }
 }
 
-pub struct AddressRepositoryImpl {
+pub struct LocationRepositoryImpl {
     pool: Arc<PgPool>,
 }
-impl AddressRepositoryImpl {
+impl LocationRepositoryImpl {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
 }
 #[async_trait]
-impl AddressRepository for AddressRepositoryImpl {
-    async fn save(&self, address: AddressModel) -> Result<AddressModel, Box<dyn Error + Send + Sync>> {
+impl LocationRepository for LocationRepositoryImpl {
+    async fn save(&self, location: LocationModel) -> Result<LocationModel, Box<dyn Error + Send + Sync>> {
         sqlx::query(
             r#"
-            INSERT INTO address (id, address_type, street_line1, street_line2, street_line3, street_line4, city_id, postal_code, latitude, longitude, accuracy_meters, is_active, created_at, updated_at, created_by_person_id, updated_by_person_id)
-            VALUES ($1, $2::address_type, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            INSERT INTO location (id, location_type, street_line1, street_line2, street_line3, street_line4, locality_id, postal_code, latitude, longitude, accuracy_meters, is_active, created_at, updated_at, created_by_person_id, updated_by_person_id)
+            VALUES ($1, $2::location_type, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             "#,
         )
-        .bind(address.id)
-        .bind(address.address_type)
-        .bind(address.street_line1.as_str())
-        .bind(address.street_line2.as_ref().map(|s| s.as_str()))
-        .bind(address.street_line3.as_ref().map(|s| s.as_str()))
-        .bind(address.street_line4.as_ref().map(|s| s.as_str()))
-        .bind(address.city_id)
-        .bind(address.postal_code.as_ref().map(|s| s.as_str()))
-        .bind(address.latitude)
-        .bind(address.longitude)
-        .bind(address.accuracy_meters)
-        .bind(address.is_active)
-        .bind(address.created_at)
-        .bind(address.updated_at)
-        .bind(address.created_by_person_id)
-        .bind(address.updated_by_person_id)
+        .bind(location.id)
+        .bind(location.location_type)
+        .bind(location.street_line1.as_str())
+        .bind(location.street_line2.as_ref().map(|s| s.as_str()))
+        .bind(location.street_line3.as_ref().map(|s| s.as_str()))
+        .bind(location.street_line4.as_ref().map(|s| s.as_str()))
+        .bind(location.locality_id)
+        .bind(location.postal_code.as_ref().map(|s| s.as_str()))
+        .bind(location.latitude)
+        .bind(location.longitude)
+        .bind(location.accuracy_meters)
+        .bind(location.is_active)
+        .bind(location.created_at)
+        .bind(location.updated_at)
+        .bind(location.created_by_person_id)
+        .bind(location.updated_by_person_id)
         .execute(&*self.pool)
         .await?;
 
         let street_line1_hash = {
             let mut hasher = XxHash64::with_seed(0);
-            hasher.write(address.street_line1.as_bytes());
+            hasher.write(location.street_line1.as_bytes());
             hasher.finish() as i64
         };
 
         sqlx::query(
             r#"
-            INSERT INTO address_idx (address_id, address_type, city_id, is_active, street_line1_hash)
-            VALUES ($1, $2::address_type, $3, $4, $5)
+            INSERT INTO location_idx (location_id, location_type, locality_id, is_active, street_line1_hash)
+            VALUES ($1, $2::location_type, $3, $4, $5)
             "#,
         )
-        .bind(address.id)
-        .bind(address.address_type)
-        .bind(address.city_id)
-        .bind(address.is_active)
+        .bind(location.id)
+        .bind(location.location_type)
+        .bind(location.locality_id)
+        .bind(location.is_active)
         .bind(street_line1_hash)
         .execute(&*self.pool)
         .await?;
 
-        Ok(address)
+        Ok(location)
     }
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<AddressModel>, Box<dyn Error + Send + Sync>> {
-        let row = sqlx::query("SELECT * FROM address WHERE id = $1")
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationModel>, Box<dyn Error + Send + Sync>> {
+        let row = sqlx::query("SELECT * FROM location WHERE id = $1")
             .bind(id)
             .fetch_optional(&*self.pool)
             .await?;
         match row {
-            Some(row) => Ok(Some(AddressModel::try_from_row(&row)?)),
+            Some(row) => Ok(Some(LocationModel::try_from_row(&row)?)),
             None => Ok(None),
         }
     }
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query("SELECT * FROM address WHERE id = ANY($1)")
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+        let rows = sqlx::query("SELECT * FROM location WHERE id = ANY($1)")
             .bind(ids)
             .fetch_all(&*self.pool)
             .await?;
-        let mut addresses = Vec::new();
+        let mut locations = Vec::new();
         for row in rows {
-            addresses.push(AddressModel::try_from_row(&row)?);
+            locations.push(LocationModel::try_from_row(&row)?);
         }
-        Ok(addresses)
+        Ok(locations)
     }
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM address WHERE id = $1)", id)
+        let exists = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM location WHERE id = $1)", id)
             .fetch_one(&*self.pool)
             .await?;
         Ok(exists.unwrap_or(false))
     }
-    async fn find_ids_by_address_type(
+    async fn find_ids_by_location_type(
         &self,
-        address_type: AddressType,
+        location_type: LocationType,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar("SELECT address_id FROM address_idx WHERE address_type = $1::address_type")
-            .bind(address_type)
+        let ids = sqlx::query_scalar("SELECT location_id FROM location_idx WHERE location_type = $1::location_type")
+            .bind(location_type)
             .fetch_all(&*self.pool)
             .await?;
         Ok(ids)
     }
-    async fn find_by_address_type(
+    async fn find_by_location_type(
         &self,
-        address_type: AddressType,
+        location_type: LocationType,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
-        let ids = self.find_ids_by_address_type(address_type).await?;
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+        let ids = self.find_ids_by_location_type(location_type).await?;
         let start = (page.saturating_sub(1) * page_size) as usize;
         let end = (start + page_size as usize).min(ids.len());
         if start >= end {
@@ -909,20 +909,20 @@ impl AddressRepository for AddressRepositoryImpl {
         }
         self.find_by_ids(&ids[start..end]).await
     }
-    async fn find_ids_by_city_id(&self, city_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar("SELECT address_id FROM address_idx WHERE city_id = $1")
-            .bind(city_id)
+    async fn find_ids_by_locality_id(&self, locality_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+        let ids = sqlx::query_scalar("SELECT location_id FROM location_idx WHERE locality_id = $1")
+            .bind(locality_id)
             .fetch_all(&*self.pool)
             .await?;
         Ok(ids)
     }
-    async fn find_by_city_id(
+    async fn find_by_locality_id(
         &self,
-        city_id: Uuid,
+        locality_id: Uuid,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
-        let ids = self.find_ids_by_city_id(city_id).await?;
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+        let ids = self.find_ids_by_locality_id(locality_id).await?;
         let start = (page.saturating_sub(1) * page_size) as usize;
         let end = (start + page_size as usize).min(ids.len());
         if start >= end {
@@ -931,7 +931,7 @@ impl AddressRepository for AddressRepositoryImpl {
         self.find_by_ids(&ids[start..end]).await
     }
     async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar("SELECT address_id FROM address_idx WHERE is_active = $1")
+        let ids = sqlx::query_scalar("SELECT location_id FROM location_idx WHERE is_active = $1")
             .bind(is_active)
             .fetch_all(&*self.pool)
             .await?;
@@ -942,7 +942,7 @@ impl AddressRepository for AddressRepositoryImpl {
         is_active: bool,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
         let ids = self.find_ids_by_is_active(is_active).await?;
         let start = (page.saturating_sub(1) * page_size) as usize;
         let end = (start + page_size as usize).min(ids.len());
@@ -959,7 +959,7 @@ impl AddressRepository for AddressRepositoryImpl {
         hasher.write(street_line1.as_bytes());
         let hash = hasher.finish() as i64;
 
-        let ids = sqlx::query_scalar("SELECT address_id FROM address_idx WHERE street_line1_hash = $1")
+        let ids = sqlx::query_scalar("SELECT location_id FROM location_idx WHERE street_line1_hash = $1")
             .bind(hash)
             .fetch_all(&*self.pool)
             .await?;
@@ -967,16 +967,16 @@ impl AddressRepository for AddressRepositoryImpl {
     }
 }
 
-impl TryFromRow<PgRow> for AddressModel {
+impl TryFromRow<PgRow> for LocationModel {
     fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        Ok(AddressModel {
+        Ok(LocationModel {
             id: row.get("id"),
-            address_type: row.get("address_type"),
+            location_type: row.get("location_type"),
             street_line1: get_heapless_string(row, "street_line1")?,
             street_line2: get_optional_heapless_string(row, "street_line2")?,
             street_line3: get_optional_heapless_string(row, "street_line3")?,
             street_line4: get_optional_heapless_string(row, "street_line4")?,
-            city_id: row.get("city_id"),
+            locality_id: row.get("locality_id"),
             postal_code: get_optional_heapless_string(row, "postal_code")?,
             latitude: row.get("latitude"),
             longitude: row.get("longitude"),
@@ -1009,7 +1009,7 @@ impl TryFromRow<PgRow> for PersonModel {
             messaging5_id: row.get("messaging5_id"),
             messaging5_type: row.get("messaging5_type"),
             department: get_optional_heapless_string(row, "department")?,
-            location_address_id: row.get("location_address_id"),
+            location_id: row.get("location_id"),
             duplicate_of_person_id: row.get("duplicate_of_person_id"),
             is_active: row.get("is_active"),
             created_at: row.get("created_at"),
@@ -1035,12 +1035,12 @@ impl TryFromRow<PgRow> for CountryModel {
     }
 }
 
-impl TryFromRow<PgRow> for StateProvinceModel {
+impl TryFromRow<PgRow> for CountrySubdivisionModel {
     fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        Ok(StateProvinceModel {
+        Ok(CountrySubdivisionModel {
             id: row.get("id"),
             country_id: row.get("country_id"),
-            state_province_code: get_heapless_string(row, "state_province_code")?,
+            code: get_heapless_string(row, "code")?,
             name_l1: get_heapless_string(row, "name_l1")?,
             name_l2: get_optional_heapless_string(row, "name_l2")?,
             name_l3: get_optional_heapless_string(row, "name_l3")?,
@@ -1053,13 +1053,13 @@ impl TryFromRow<PgRow> for StateProvinceModel {
     }
 }
 
-impl TryFromRow<PgRow> for CityModel {
+impl TryFromRow<PgRow> for LocalityModel {
     fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        Ok(CityModel {
+        Ok(LocalityModel {
             id: row.get("id"),
             country_id: row.get("country_id"),
-            state_id: row.get("state_id"),
-            city_code: get_heapless_string(row, "city_code")?,
+            country_subdivision_id: row.get("country_subdivision_id"),
+            code: get_heapless_string(row, "code")?,
             name_l1: get_heapless_string(row, "name_l1")?,
             name_l2: get_optional_heapless_string(row, "name_l2")?,
             name_l3: get_optional_heapless_string(row, "name_l3")?,

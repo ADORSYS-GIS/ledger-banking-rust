@@ -1,17 +1,17 @@
 use async_trait::async_trait;
 use banking_api::domain::person::{
-    Address, AddressType, City, Country, EntityReference, Messaging, Person, PersonType,
-    RelationshipRole, StateProvince,
+    Location, LocationType, Locality, Country, EntityReference, Messaging, Person, PersonType,
+    RelationshipRole, CountrySubdivision,
 };
 use banking_api::service::PersonService;
 use banking_db::models::person::{
-    AddressModel, AddressType as AddressTypeModel, CityModel, CountryModel, EntityReferenceModel,
+    LocationModel, LocationType as LocationTypeModel, LocalityModel, CountryModel, EntityReferenceModel,
     MessagingModel, MessagingType as MessagingTypeModel, PersonModel,
-    PersonType as PersonTypeModel, RelationshipRole as RelationshipRoleModel, StateProvinceModel,
+    PersonType as PersonTypeModel, RelationshipRole as RelationshipRoleModel, CountrySubdivisionModel,
 };
 use banking_db::repository::{
-    AddressRepository, CityRepository, CountryRepository, EntityReferenceRepository,
-    MessagingRepository, PersonRepository, StateProvinceRepository,
+    LocationRepository, LocalityRepository, CountryRepository, EntityReferenceRepository,
+    MessagingRepository, PersonRepository, CountrySubdivisionRepository,
 };
 use banking_logic::services::person_service_impl::PersonServiceImpl;
 use heapless::String as HeaplessString;
@@ -282,31 +282,31 @@ impl CountryRepository for MockCountryRepository {
 }
 
 #[derive(Default)]
-struct MockStateProvinceRepository {
-    states: Mutex<Vec<StateProvinceModel>>,
+struct MockCountrySubdivisionRepository {
+    country_subdivisions: Mutex<Vec<CountrySubdivisionModel>>,
 }
 
 #[async_trait]
-impl StateProvinceRepository for MockStateProvinceRepository {
+impl CountrySubdivisionRepository for MockCountrySubdivisionRepository {
     async fn save(
         &self,
-        state: StateProvinceModel,
-    ) -> Result<StateProvinceModel, Box<dyn Error + Send + Sync>> {
-        self.states.lock().unwrap().push(state.clone());
-        Ok(state)
+        country_subdivision: CountrySubdivisionModel,
+    ) -> Result<CountrySubdivisionModel, Box<dyn Error + Send + Sync>> {
+        self.country_subdivisions.lock().unwrap().push(country_subdivision.clone());
+        Ok(country_subdivision)
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
-        Ok(self.states.lock().unwrap().iter().find(|s| s.id == id).cloned())
+    ) -> Result<Option<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
+        Ok(self.country_subdivisions.lock().unwrap().iter().find(|s| s.id == id).cloned())
     }
 
     async fn find_by_ids(
         &self,
         _ids: &[Uuid],
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 
@@ -326,29 +326,29 @@ impl StateProvinceRepository for MockStateProvinceRepository {
         country_id: Uuid,
         _page: u32,
         _page_size: u32,
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
-        let states = self
-            .states
+    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
+        let country_subdivisions = self
+            .country_subdivisions
             .lock()
             .unwrap()
             .iter()
             .filter(|s| s.country_id == country_id)
             .cloned()
             .collect();
-        Ok(states)
+        Ok(country_subdivisions)
     }
 
-    async fn find_state_province_by_state_province_code(
+    async fn find_country_subdivision_by_code(
         &self,
         country_id: Uuid,
-        state_province_code: &str,
-    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+        code: &str,
+    ) -> Result<Option<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
         Ok(self
-            .states
+            .country_subdivisions
             .lock()
             .unwrap()
             .iter()
-            .find(|s| s.country_id == country_id && s.state_province_code == state_province_code)
+            .find(|s| s.country_id == country_id && s.code == code)
             .cloned())
     }
 
@@ -364,31 +364,31 @@ impl StateProvinceRepository for MockStateProvinceRepository {
         _is_active: bool,
         _page: u32,
         _page_size: u32,
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 }
 
 #[derive(Default)]
-struct MockCityRepository {
-    cities: Mutex<Vec<CityModel>>,
+struct MockLocalityRepository {
+    localities: Mutex<Vec<LocalityModel>>,
 }
 
 #[async_trait]
-impl CityRepository for MockCityRepository {
-    async fn save(&self, city: CityModel) -> Result<CityModel, Box<dyn Error + Send + Sync>> {
-        self.cities.lock().unwrap().push(city.clone());
+impl LocalityRepository for MockLocalityRepository {
+    async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, Box<dyn Error + Send + Sync>> {
+        self.localities.lock().unwrap().push(locality.clone());
         Ok(city)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>> {
-        Ok(self.cities.lock().unwrap().iter().find(|c| c.id == id).cloned())
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>> {
+        Ok(self.localities.lock().unwrap().iter().find(|c| c.id == id).cloned())
     }
 
     async fn find_by_ids(
         &self,
         _ids: &[Uuid],
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 
@@ -408,53 +408,53 @@ impl CityRepository for MockCityRepository {
         country_id: Uuid,
         _page: u32,
         _page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
-        let cities = self
-            .cities
+    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
+        let localities = self
+            .localities
             .lock()
             .unwrap()
             .iter()
             .filter(|c| c.country_id == country_id)
             .cloned()
             .collect();
-        Ok(cities)
+        Ok(localities)
     }
 
-    async fn find_ids_by_state_id(
+    async fn find_ids_by_country_subdivision_id(
         &self,
-        _state_id: Uuid,
+        _country_subdivision_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 
-    async fn find_by_state_id(
+    async fn find_by_country_subdivision_id(
         &self,
-        state_id: Uuid,
+        country_subdivision_id: Uuid,
         _page: u32,
         _page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
-        let cities = self
-            .cities
+    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
+        let localities = self
+            .localities
             .lock()
             .unwrap()
             .iter()
-            .filter(|c| c.state_id == Some(state_id))
+            .filter(|c| c.country_subdivision_id == Some(country_subdivision_id))
             .cloned()
             .collect();
-        Ok(cities)
+        Ok(localities)
     }
 
-    async fn find_city_by_city_code(
+    async fn find_locality_by_code(
         &self,
         country_id: Uuid,
-        city_code: &str,
-    ) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>> {
+        code: &str,
+    ) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>> {
         Ok(self
-            .cities
+            .localities
             .lock()
             .unwrap()
             .iter()
-            .find(|c| c.country_id == country_id && c.city_code == city_code)
+            .find(|c| c.country_id == country_id && c.code == code)
             .cloned())
     }
 
@@ -470,29 +470,29 @@ impl CityRepository for MockCityRepository {
         _is_active: bool,
         _page: u32,
         _page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 }
 
 #[derive(Default)]
-struct MockAddressRepository {
-    addresses: Mutex<Vec<AddressModel>>,
+struct MockLocationRepository {
+    locations: Mutex<Vec<LocationModel>>,
 }
 
 #[async_trait]
-impl AddressRepository for MockAddressRepository {
-    async fn save(&self, address: AddressModel) -> Result<AddressModel, Box<dyn Error + Send + Sync>> {
-        self.addresses.lock().unwrap().push(address.clone());
-        Ok(address)
+impl LocationRepository for MockLocationRepository {
+    async fn save(&self, location: LocationModel) -> Result<LocationModel, Box<dyn Error + Send + Sync>> {
+        self.locations.lock().unwrap().push(location.clone());
+        Ok(location)
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<AddressModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<LocationModel>, Box<dyn Error + Send + Sync>> {
         Ok(self
-            .addresses
+            .locations
             .lock()
             .unwrap()
             .iter()
@@ -503,68 +503,68 @@ impl AddressRepository for MockAddressRepository {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
-        let addresses = self
-            .addresses
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+        let locations = self
+            .locations
             .lock()
             .unwrap()
             .iter()
             .filter(|a| ids.contains(&a.id))
             .cloned()
             .collect();
-        Ok(addresses)
+        Ok(locations)
     }
 
     async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 
-    async fn find_ids_by_address_type(
+    async fn find_ids_by_location_type(
         &self,
-        _address_type: AddressTypeModel,
+        _location_type: LocationTypeModel,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 
-    async fn find_by_address_type(
+    async fn find_by_location_type(
         &self,
-        address_type: AddressTypeModel,
+        location_type: LocationTypeModel,
         _page: u32,
         _page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
-        let addresses = self
-            .addresses
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+        let locations = self
+            .locations
             .lock()
             .unwrap()
             .iter()
-            .filter(|a| a.address_type == address_type)
+            .filter(|a| a.location_type == location_type)
             .cloned()
             .collect();
-        Ok(addresses)
+        Ok(locations)
     }
 
-    async fn find_ids_by_city_id(
+    async fn find_ids_by_locality_id(
         &self,
-        _city_id: Uuid,
+        _locality_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 
-    async fn find_by_city_id(
+    async fn find_by_locality_id(
         &self,
-        city_id: Uuid,
+        locality_id: Uuid,
         _page: u32,
         _page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
-        let addresses = self
-            .addresses
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+        let locations = self
+            .locations
             .lock()
             .unwrap()
             .iter()
-            .filter(|a| a.city_id == city_id)
+            .filter(|a| a.locality_id == locality_id)
             .cloned()
             .collect();
-        Ok(addresses)
+        Ok(locations)
     }
 
     async fn find_ids_by_is_active(
@@ -579,7 +579,7 @@ impl AddressRepository for MockAddressRepository {
         _is_active: bool,
         _page: u32,
         _page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
         unimplemented!()
     }
 
@@ -588,7 +588,7 @@ impl AddressRepository for MockAddressRepository {
         street_line1: &str,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
         let ids = self
-            .addresses
+            .locations
             .lock()
             .unwrap()
             .iter()
@@ -834,9 +834,9 @@ fn create_test_service() -> PersonServiceImpl {
     PersonServiceImpl::new(
         Arc::new(MockPersonRepository::default()),
         Arc::new(MockCountryRepository::default()),
-        Arc::new(MockStateProvinceRepository::default()),
-        Arc::new(MockCityRepository::default()),
-        Arc::new(MockAddressRepository::default()),
+        Arc::new(MockCountrySubdivisionRepository::default()),
+        Arc::new(MockLocalityRepository::default()),
+        Arc::new(MockLocationRepository::default()),
         Arc::new(MockMessagingRepository::default()),
         Arc::new(MockEntityReferenceRepository::default()),
     )
@@ -859,12 +859,12 @@ fn create_test_country() -> Country {
     }
 }
 
-fn create_test_state(country_id: Uuid) -> StateProvince {
+fn create_test_country_subdivision(country_id: Uuid) -> CountrySubdivision {
     let person_id = Uuid::new_v4();
-    StateProvince {
+    CountrySubdivision {
         id: Uuid::new_v4(),
         country_id,
-        state_province_code: HeaplessString::try_from("CA").unwrap(),
+        code: HeaplessString::try_from("CA").unwrap(),
         name_l1: HeaplessString::try_from("California").unwrap(),
         name_l2: None,
         name_l3: None,
@@ -876,13 +876,13 @@ fn create_test_state(country_id: Uuid) -> StateProvince {
     }
 }
 
-fn create_test_city(country_id: Uuid, state_id: Uuid) -> City {
+fn create_test_locality(country_id: Uuid, country_subdivision_id: Uuid) -> Locality {
     let person_id = Uuid::new_v4();
-    City {
+    Locality {
         id: Uuid::new_v4(),
         country_id,
-        state_id: Some(state_id),
-        city_code: HeaplessString::try_from("LA").unwrap(),
+        country_subdivision_id: Some(country_subdivision_id),
+        code: HeaplessString::try_from("LA").unwrap(),
         name_l1: HeaplessString::try_from("Los Angeles").unwrap(),
         name_l2: None,
         name_l3: None,
@@ -894,16 +894,16 @@ fn create_test_city(country_id: Uuid, state_id: Uuid) -> City {
     }
 }
 
-fn create_test_address(city_id: Uuid) -> Address {
+fn create_test_location(locality_id: Uuid) -> Location {
     let person_id = Uuid::new_v4();
-    Address {
+    Location {
         id: Uuid::new_v4(),
-        address_type: AddressType::Residential,
+        location_type: LocationType::Residential,
         street_line1: HeaplessString::try_from("123 Main St").unwrap(),
         street_line2: None,
         street_line3: None,
         street_line4: None,
-        city_id,
+        locality_id,
         postal_code: None,
         latitude: None,
         longitude: None,
@@ -965,7 +965,7 @@ fn create_test_person() -> Person {
         messaging5_id: None,
         messaging5_type: None,
         department: None,
-        location_address_id: None,
+        location_id: None,
         duplicate_of_person_id: None,
         is_active: true,
         created_at: chrono::Utc::now(),
@@ -1013,209 +1013,209 @@ async fn test_get_all_countries() {
 }
 
 #[tokio::test]
-async fn test_create_state_province() {
+async fn test_create_country_subdivision() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    let created_state = service.create_state_province(state.clone()).await.unwrap();
-    assert_eq!(state.id, created_state.id);
+    let country_subdivision = create_test_country_subdivision(country.id);
+    let created_country_subdivision = service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    assert_eq!(country_subdivision.id, created_country_subdivision.id);
 }
 
 #[tokio::test]
-async fn test_find_state_province_by_id() {
+async fn test_find_country_subdivision_by_id() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let found_state = service
-        .find_state_province_by_id(state.id)
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let found_country_subdivision = service
+        .find_country_subdivision_by_id(country_subdivision.id)
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(state.id, found_state.id);
+    assert_eq!(country_subdivision.id, found_country_subdivision.id);
 }
 
 #[tokio::test]
-async fn test_find_state_provinces_by_country_id() {
+async fn test_find_country_subdivisions_by_country_id() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let states = service
-        .find_state_provinces_by_country_id(country.id)
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let country_subdivisions = service
+        .find_country_subdivisions_by_country_id(country.id)
         .await
         .unwrap();
-    assert!(!states.is_empty());
+    assert!(!country_subdivisions.is_empty());
 }
 
 #[tokio::test]
-async fn test_find_state_province_by_code() {
+async fn test_find_country_subdivision_by_code() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let found_state = service
-        .find_state_province_by_code(country.id, state.state_province_code.clone())
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let found_country_subdivision = service
+        .find_country_subdivision_by_code(country.id, country_subdivision.code.clone())
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(state.id, found_state.id);
+    assert_eq!(country_subdivision.id, found_country_subdivision.id);
 }
 
 #[tokio::test]
-async fn test_create_city() {
+async fn test_create_locality() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    let created_city = service.create_city(city.clone()).await.unwrap();
-    assert_eq!(city.id, created_city.id);
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    let created_city = service.create_locality(locality.clone()).await.unwrap();
+    assert_eq!(locality.id, created_locality.id);
 }
 
 #[tokio::test]
-async fn test_find_city_by_id() {
+async fn test_find_locality_by_id() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
-    let found_city = service.find_city_by_id(city.id).await.unwrap().unwrap();
-    assert_eq!(city.id, found_city.id);
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
+    let found_city = service.find_locality_by_id(locality.id).await.unwrap().unwrap();
+    assert_eq!(locality.id, found_locality.id);
 }
 
 #[tokio::test]
-async fn test_find_cities_by_country_id() {
+async fn test_find_localities_by_country_id() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
-    let cities = service.find_cities_by_country_id(country.id).await.unwrap();
-    assert!(!cities.is_empty());
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
+    let localities = service.find_localities_by_country_id(country.id).await.unwrap();
+    assert!(!localities.is_empty());
 }
 
 #[tokio::test]
-async fn test_find_cities_by_state_id() {
+async fn test_find_localities_by_country_subdivision_id() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
-    let cities = service.find_cities_by_state_id(state.id).await.unwrap();
-    assert!(!cities.is_empty());
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
+    let localities = service.find_localities_by_country_subdivision_id(country_subdivision.id).await.unwrap();
+    assert!(!localities.is_empty());
 }
 
 #[tokio::test]
-async fn test_find_city_by_code() {
+async fn test_find_locality_by_code() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
     let found_city = service
-        .find_city_by_code(country.id, city.city_code.clone())
+        .find_locality_by_code(country.id, locality.code.clone())
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(city.id, found_city.id);
+    assert_eq!(locality.id, found_locality.id);
 }
 
 #[tokio::test]
-async fn test_create_address() {
+async fn test_create_location() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
-    let address = create_test_address(city.id);
-    let created_address = service.create_address(address.clone()).await.unwrap();
-    assert_eq!(address.id, created_address.id);
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
+    let location = create_test_location(locality.id);
+    let created_location = service.create_location(location.clone()).await.unwrap();
+    assert_eq!(location.id, created_location.id);
 }
 
 #[tokio::test]
-async fn test_find_address_by_id() {
+async fn test_find_location_by_id() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
-    let address = create_test_address(city.id);
-    service.create_address(address.clone()).await.unwrap();
-    let found_address = service
-        .find_address_by_id(address.id)
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
+    let location = create_test_location(locality.id);
+    service.create_location(location.clone()).await.unwrap();
+    let found_location = service
+        .find_location_by_id(location.id)
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(address.id, found_address.id);
+    assert_eq!(location.id, found_location.id);
 }
 
 #[tokio::test]
-async fn test_find_addresses_by_street_line1() {
+async fn test_find_locations_by_street_line1() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
-    let address = create_test_address(city.id);
-    service.create_address(address.clone()).await.unwrap();
-    let addresses = service
-        .find_addresses_by_street_line1(address.street_line1.clone())
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
+    let location = create_test_location(locality.id);
+    service.create_location(location.clone()).await.unwrap();
+    let locations = service
+        .find_locations_by_street_line1(location.street_line1.clone())
         .await
         .unwrap();
-    assert!(!addresses.is_empty());
+    assert!(!locations.is_empty());
 }
 
 #[tokio::test]
-async fn test_find_addresses_by_city_id() {
+async fn test_find_locations_by_locality_id() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
-    let address = create_test_address(city.id);
-    service.create_address(address.clone()).await.unwrap();
-    let addresses = service.find_addresses_by_city_id(city.id).await.unwrap();
-    assert!(!addresses.is_empty());
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
+    let location = create_test_location(locality.id);
+    service.create_location(location.clone()).await.unwrap();
+    let locations = service.find_locations_by_locality_id(locality.id).await.unwrap();
+    assert!(!locations.is_empty());
 }
 
 #[tokio::test]
-async fn test_find_addresses_by_type_and_city() {
+async fn test_find_locations_by_type_and_locality() {
     let service = create_test_service();
     let country = create_test_country();
     service.create_country(country.clone()).await.unwrap();
-    let state = create_test_state(country.id);
-    service.create_state_province(state.clone()).await.unwrap();
-    let city = create_test_city(country.id, state.id);
-    service.create_city(city.clone()).await.unwrap();
-    let address = create_test_address(city.id);
-    service.create_address(address.clone()).await.unwrap();
-    let addresses = service
-        .find_addresses_by_type_and_city(address.address_type, city.id)
+    let country_subdivision = create_test_country_subdivision(country.id);
+    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let locality = create_test_locality(country.id, country_subdivision.id);
+    service.create_locality(locality.clone()).await.unwrap();
+    let location = create_test_location(locality.id);
+    service.create_location(location.clone()).await.unwrap();
+    let locations = service
+        .find_locations_by_type_and_locality(location.location_type, locality.id)
         .await
         .unwrap();
-    assert!(!addresses.is_empty());
+    assert!(!locations.is_empty());
 }
 
 #[tokio::test]

@@ -387,7 +387,7 @@ pub struct CollateralModel {
     // Location and custody
     #[serde(serialize_with = "serialize_custody_location", deserialize_with = "deserialize_custody_location")]
     pub custody_location: CustodyLocation,
-    /// References AddressModel.address_id for physical location
+    /// References LocationModel.location_id for physical location
     pub physical_location: Option<Uuid>,
     pub custodian_details_id: Option<Uuid>,
     

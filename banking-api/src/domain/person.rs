@@ -1,138 +1,139 @@
-use chrono::{DateTime, Utc};
 use heapless::{String as HeaplessString};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Country structure with ISO 3166-1 alpha-2 code
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Nature
+/// - RuntimeImmutable: Creation, Modification requires reload of caches
+/// # Documentation
+/// - Country structure with ISO 3166-1 alpha-2 code
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Country {
-    // find_country_by_id
+    /// # Trait method
+    /// - find_country_by_id
+    /// # Nature
+    /// - primary index
     pub id: Uuid,
-    /// ISO 3166-1 alpha-2 country code (e.g., "CM", "US", "GB")
-    /// find_country_by_iso2
+    /// # Documentation
+    /// - ISO 3166-1 alpha-2 country code (e.g., "CM", "US", "GB")
+    /// # Trait method
+    /// - find_country_by_iso2
+    /// # Nature
+    /// - unique
     pub iso2: HeaplessString<2>,
-    /// Country name in primary language
     pub name_l1: HeaplessString<100>,
-    /// Country name in second language
     pub name_l2: Option<HeaplessString<100>>,
-    /// Country name in third language
     pub name_l3: Option<HeaplessString<100>>,
-    /// Whether this country is currently active
-    pub is_active: bool,
-    /// Audit fields
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    /// References Person.person_id
-    pub created_by_person_id: Uuid,
-    /// References Person.person_id
-    pub updated_by_person_id: Uuid,
 }
 
-/// State/Province structure with multilingual support
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Nature
+/// - RuntimeImmutable: Creation, Modification requires reload of caches
+/// # Documentation
+/// - Country structure with ISO 3166-1 alpha-2 code
+/// CountrySubdivision structure with multilingual support
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateProvince {
-    /// find_state_province_by_id
+pub struct CountrySubdivision {
+    /// # Trait method
+    /// - find_country_subdivision_by_id
+    /// # Nature
+    /// - primary index
     pub id: Uuid,
-    /// References Country.country_id
-    /// find_state_province_by_country_id
+    /// # Trait method
+    /// - find_country_subdivision_by_country_id
     pub country_id: Uuid,
-    /// Code unique to the province in the context of the country
-    /// If not provided, we us the first 10 chars of the name_l1
-    /// find_state_province_by_state_province_code
-    pub state_province_code: HeaplessString<10>,
-    /// State/province name in primary language
+    /// # Documentation
+    /// - If non existant the first 10 chars of the name_l1
+    /// # Trait method
+    /// - find_country_subdivision_by_code
+    /// # Nature
+    /// - unique
+    pub code: HeaplessString<10>,
     pub name_l1: HeaplessString<100>,
-    /// State/province name in second language
     pub name_l2: Option<HeaplessString<100>>,
-    /// State/province name in third language
     pub name_l3: Option<HeaplessString<100>>,
-    /// Whether this state/province is currently active
-    pub is_active: bool,
-    /// Audit fields
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    /// References Person.person_id
-    pub created_by_person_id: Uuid,
-    /// References Person.person_id
-    pub updated_by_person_id: Uuid,
 }
 
-/// City structure with multilingual support
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Nature
+/// - RuntimeImmutable: Creation, Modification requires reload of caches
+/// # Documentation
+/// - Locality structure with multilingual support
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct City {
-    /// find_city_by_id
+pub struct Locality {
+    /// # Trait method
+    /// - find_locality_by_id
+    /// # Nature
+    /// - primary index
     pub id: Uuid,
-    /// References Country.country_id
-    /// find_city_by_country_id
-    pub country_id: Uuid,
-    /// References StateProvince.state_id (optional for countries without states/provinces)
-    /// find_city_by_state_id
-    pub state_id: Option<Uuid>,
-    /// If empty, normalized value of the primary language name_l1
-    /// find_city_by_city_code
-    pub city_code: HeaplessString<50>,
-    /// City name in primary language
+    /// # Trait method
+    /// - find_localities_by_country_subdivision_id
+    pub country_subdivision_id: Uuid,
+    /// # Documentation
+    /// - If empty, normalized value of the primary language name_l1
+    /// # Trait method
+    /// - find_locality_by_code
+    /// # Nature
+    /// - unique
+    pub code: HeaplessString<50>,
+    /// Locality name in primary language
     pub name_l1: HeaplessString<50>,
-    /// City name in second language
+    /// Locality name in second language
     pub name_l2: Option<HeaplessString<50>>,
-    /// City name in third language
+    /// Locality name in third language
     pub name_l3: Option<HeaplessString<50>>,
-    /// Whether this city is currently active
-    pub is_active: bool,
-    /// Audit fields
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    /// References Person.person_id
-    pub created_by_person_id: Uuid,
-    /// References Person.person_id
-    pub updated_by_person_id: Uuid,
 }
 
-/// Address structure for geographical locations
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Documentation
+/// - Location structure for geographical locations
+/// # Nature
+/// - Immutable: 
+///     - A location can be fixed if eroneous, but does not change base on the holder.  
+///     - A customer changing address receives a new location.
+///     - Many customers can share the same location object 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Address {
-    /// find_address_by_id
+pub struct Location {
+    /// # Trait method
+    /// - find_location_by_id
+    /// # Nature
+    /// - primary index
     pub id: Uuid,
-    /// Structured address components - 4 street lines
-    /// find_address_by_street_line1
+    /// # Trait method
+    /// - find_locations_by_street_line1
+    /// # Documentation
+    /// - Structured location components - 4 street lines
     pub street_line1: HeaplessString<50>,
     pub street_line2: Option<HeaplessString<50>>,
     pub street_line3: Option<HeaplessString<50>>,
     pub street_line4: Option<HeaplessString<50>>,
-    /// References City.city_id (city contains country and state references)
-    /// find_address_by_city_id
-    pub city_id: Uuid,
+    /// # Trait method
+    /// - find_locations_by_locality_id
+    pub locality_id: Uuid,
     pub postal_code: Option<HeaplessString<20>>,
     
     /// Geographical coordinates (decimal degrees)
     pub latitude: Option<Decimal>,
     pub longitude: Option<Decimal>,
-    pub accuracy_meters: Option<f32>,
+    pub accuracy_meters: Option<f32>,    
     
-    
-    /// Address type for categorization
-    /// find_address_by_address_type_and_city_id
-    pub address_type: AddressType,
-    
-    /// Whether this address is currently active/valid
-    pub is_active: bool,
-    
-    /// Audit fields
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    /// References Person.person_id
-    pub created_by_person_id: Uuid,
-    /// References Person.person_id
-    pub updated_by_person_id: Uuid,
+    /// # Trait method
+    /// - find_location_by_type_and_locality
+    /// # Documentation
+    /// - Location type for categorization
+    pub location_type: LocationType,
 }
 
-impl Address {
-    /// Create a new address
+impl Location {
+    /// Create a new location
     pub fn new(
         id: Uuid,
-        address_type: AddressType,
-        created_by_person_id: Uuid,
+        location_type: LocationType,
     ) -> Self {
         Self {
             id,
@@ -140,34 +141,27 @@ impl Address {
             street_line2: None,
             street_line3: None,
             street_line4: None,
-            city_id: Uuid::new_v4(),
+            locality_id: Uuid::new_v4(),
             postal_code: None,
             latitude: None,
             longitude: None,
             accuracy_meters: None,
-            address_type,
-            is_active: true,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            created_by_person_id,
-            updated_by_person_id: created_by_person_id,
+            location_type,
         }
     }
     
-    /// Builder for creating an Address with optional fields
+    /// Builder for creating an Location with optional fields
     pub fn builder(
         id: Uuid,
-        address_type: AddressType,
-        created_by_person_id: Uuid,
-    ) -> AddressBuilder {
-        AddressBuilder::new(id, address_type, created_by_person_id)
+        location_type: LocationType,
+    ) -> LocationBuilder {
+        LocationBuilder::new(id, location_type)
     }
     
     /// Set geographical coordinates
     pub fn set_coordinates(&mut self, latitude: Decimal, longitude: Decimal) {
         self.latitude = Some(latitude);
         self.longitude = Some(longitude);
-        self.updated_at = Utc::now();
     }
     
     /// Set geographical coordinates with accuracy
@@ -175,37 +169,33 @@ impl Address {
         self.latitude = Some(latitude);
         self.longitude = Some(longitude);
         self.accuracy_meters = Some(accuracy_meters);
-        self.updated_at = Utc::now();
     }
     
-    /// Check if address has valid coordinates
+    /// Check if location has valid coordinates
     pub fn has_coordinates(&self) -> bool {
         self.latitude.is_some() && self.longitude.is_some()
     }
 }
 
-/// Builder for Address
-pub struct AddressBuilder {
+/// Builder for Location
+pub struct LocationBuilder {
     id: Uuid,
     street_line1: Option<String>,
     street_line2: Option<String>,
     street_line3: Option<String>,
     street_line4: Option<String>,
-    city_id: Uuid,
+    locality_id: Uuid,
     postal_code: Option<String>,
     latitude: Option<Decimal>,
     longitude: Option<Decimal>,
     accuracy_meters: Option<f32>,
-    address_type: AddressType,
-    is_active: bool,
-    created_by_person_id: Uuid,
+    location_type: LocationType,
 }
 
-impl AddressBuilder {
+impl LocationBuilder {
     pub fn new(
         id: Uuid,
-        address_type: AddressType,
-        created_by_person_id: Uuid,
+        location_type: LocationType,
     ) -> Self {
         Self {
             id,
@@ -213,14 +203,12 @@ impl AddressBuilder {
             street_line2: None,
             street_line3: None,
             street_line4: None,
-            city_id: Uuid::new_v4(),
+            locality_id: Uuid::new_v4(),
             postal_code: None,
             latitude: None,
             longitude: None,
             accuracy_meters: None,
-            address_type,
-            is_active: true,
-            created_by_person_id,
+            location_type,
         }
     }
     
@@ -244,8 +232,8 @@ impl AddressBuilder {
         self
     }
     
-    pub fn city_id(mut self, city_id: Uuid) -> Self {
-        self.city_id = city_id;
+    pub fn locality_id(mut self, locality_id: Uuid) -> Self {
+        self.locality_id = locality_id;
         self
     }
     
@@ -266,14 +254,8 @@ impl AddressBuilder {
         self.accuracy_meters = Some(accuracy_meters);
         self
     }
-    
-    
-    pub fn is_active(mut self, active: bool) -> Self {
-        self.is_active = active;
-        self
-    }
-    
-    pub fn build(self) -> Result<Address, &'static str> {
+        
+    pub fn build(self) -> Result<Location, &'static str> {
         let street_line1 = self.street_line1
             .map(|s| HeaplessString::try_from(s.as_str()))
             .transpose()
@@ -300,50 +282,45 @@ impl AddressBuilder {
             .transpose()
             .map_err(|_| "Postal code exceeds maximum length")?;
             
-        Ok(Address {
+        Ok(Location {
             id: self.id,
             street_line1,
             street_line2,
             street_line3,
             street_line4,
-            city_id: self.city_id,
+            locality_id: self.locality_id,
             postal_code,
             latitude: self.latitude,
             longitude: self.longitude,
             accuracy_meters: self.accuracy_meters,
-            address_type: self.address_type,
-            is_active: self.is_active,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            created_by_person_id: self.created_by_person_id,
-            updated_by_person_id: self.created_by_person_id,
+            location_type: self.location_type,
         })
     }
 }
 
-/// Type of address for categorization
+/// Type of location for categorization
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AddressType {
-    /// Home/residential address
+pub enum LocationType {
+    /// Home/residential location
     Residential,
-    /// Business/office address
+    /// Business/office location
     Business,
-    /// Mailing address (P.O. Box, etc.)
+    /// Mailing location (P.O. Box, etc.)
     Mailing,
-    /// Temporary address
+    /// Temporary location
     Temporary,
     /// Branch/agency location
     Branch,
     /// Community location
     Community,
-    /// Other address types
+    /// Other location types
     Other,
 }
 
 /// Type of messaging/communication method
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MessagingType {
-    /// Email address
+    /// Email location
     Email,
     /// Phone number (mobile or landline)
     Phone,
@@ -375,26 +352,33 @@ pub enum MessagingType {
     Other,
 }
 
-/// Messaging/communication identifier for a person
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Documentation
+/// - Messaging/communication identifier for a person
+/// # Nature
+/// - Immutable: 
+///     - A messaging information can be fixed if eroneous, but does not change base on the holder. 
+///     - A customer changing phone number receives an association with a new record.
+///     - Many customers can share the same messaging object 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Messaging {
-    /// Unique identifier for this messaging record
-    /// find_messaging_by_id
+    /// # Trait method
+    /// - find_messaging_by_id
+    /// # Nature
+    /// - primary index
     pub id: Uuid,
-    /// Type of messaging/communication method
+    /// # Documentation
+    /// - Type of messaging/communication method
     pub messaging_type: MessagingType,
-    /// The actual messaging identifier/address (email, phone, username, etc.)
-    /// find_messaging_by_value
+    /// # Trait method
+    /// - find_messaging_by_value
+    /// # Documentation
+    /// - The actual messaging identifier/location (email, phone, username, etc.)
     pub value: HeaplessString<100>,
-    /// Description of the messaging type when MessagingType::Other is used
+    /// # Documentation
+    /// - Description of the messaging type when MessagingType::Other is used
     pub other_type: Option<HeaplessString<20>>,
-    /// Whether this messaging method is currently active/valid
-    pub is_active: bool,
-    /// Priority order for this messaging method (1 = highest priority)
-    pub priority: Option<u8>,
-    /// Audit fields
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 impl Messaging {
@@ -411,10 +395,6 @@ impl Messaging {
             messaging_type,
             value,
             other_type: None,
-            is_active: true,
-            priority: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
         })
     }
     
@@ -433,23 +413,7 @@ impl Messaging {
             messaging_type: MessagingType::Other,
             value,
             other_type: Some(other_type),
-            is_active: true,
-            priority: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
         })
-    }
-    
-    /// Set priority for this messaging method
-    pub fn with_priority(mut self, priority: u8) -> Self {
-        self.priority = Some(priority);
-        self
-    }
-    
-    /// Set active status
-    pub fn with_active_status(mut self, is_active: bool) -> Self {
-        self.is_active = is_active;
-        self
     }
 }
 
@@ -497,37 +461,51 @@ pub enum RelationshipRole {
     Other,
 }
 
-/// Entity reference table for managing person-to-entity relationships
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Documentation
+/// - Entity reference table for managing person-to-entity relationships
+/// # Nature
+/// - Mutable 
+///     - version field used to track changes.
+///     - store a copy in table EntityReferenceAudit during modification. 
+/// - AuditLog
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityReference {
-    /// Unique identifier for this entity reference
-    /// find_entity_reference_by_id
+    /// # Trait method
+    /// - find_entity_reference_by_id
+    /// # Nature
+    /// - primary index
     pub id: Uuid,
-    /// References Person.person_id
-    /// find_entity_reference_by_person_id
+
+    /// # Documentation
+    /// - version number, increased whenever a reference changes.
+    /// - change triggers storage of old version in an audit database.
+    pub version: u16,
+
+    /// # Documentation
+    /// - References Person.person_id
+    /// # Trait method
+    /// - find_entity_references_by_person_id
     pub person_id: Uuid,
-    /// Type of entity relationship
-    /// find_entity_reference_by_person_id_and_entity_role
+    
+    /// # Documentation
+    /// - Type of entity relationship
+    /// # Trait method
+    /// - find_entity_reference_by_person_and_role
     pub entity_role: RelationshipRole,
-    /// External identifier for the reference (e.g., customer ID, employee ID)
-    pub reference_external_id: Option<HeaplessString<50>>,
-    /// Reference details in language 1
+    
+    /// # Documentation
+    /// - External identifier for the reference (e.g., customer ID, employee ID)
+    /// # Trait method
+    /// - find_entity_reference_by_reference_external_id
+    pub reference_external_id: HeaplessString<50>,
+    
     pub reference_details_l1: Option<HeaplessString<50>>,
-    /// Reference details in language 2
     pub reference_details_l2: Option<HeaplessString<50>>,
-    /// Reference details in language 3
     pub reference_details_l3: Option<HeaplessString<50>>,
-    /// Whether this entity reference is currently active
-    /// find_entity_reference__by_is_active
-    pub is_active: bool,
-    /// When this reference was created
-    pub created_at: DateTime<Utc>,
-    /// When this reference was last updated
-    pub updated_at: DateTime<Utc>,
-    /// Who created this reference
-    pub created_by_person_id: Uuid,
-    /// Who last updated this reference
-    pub updated_by_person_id: Uuid,
+
+    pub audit_log_id: Uuid,
 }
 
 impl EntityReference {
@@ -535,23 +513,19 @@ impl EntityReference {
     pub fn new(
         person_id: Uuid,
         entity_role: RelationshipRole,
-        reference_external_id: Option<HeaplessString<50>>,
-        created_by_person_id: Uuid,
+        reference_external_id: HeaplessString<50>,
+        audit_log_id: Uuid,
     ) -> Self {
-        let now = Utc::now();
         Self {
             id: Uuid::new_v4(),
+            version: 0,
             person_id,
             entity_role,
             reference_external_id,
             reference_details_l1: None,
             reference_details_l2: None,
             reference_details_l3: None,
-            is_active: true,
-            created_at: now,
-            updated_at: now,
-            created_by_person_id,
-            updated_by_person_id: created_by_person_id,
+            audit_log_id,
         }
     }
 
@@ -561,51 +535,100 @@ impl EntityReference {
         details_l1: Option<HeaplessString<50>>,
         details_l2: Option<HeaplessString<50>>,
         details_l3: Option<HeaplessString<50>>,
-        updated_by_person_id: Uuid,
+        audit_log_id: Uuid,
     ) {
         self.reference_details_l1 = details_l1;
         self.reference_details_l2 = details_l2;
         self.reference_details_l3 = details_l3;
-        self.updated_at = Utc::now();
-        self.updated_by_person_id = updated_by_person_id;
-    }
-
-    /// Deactivate this entity reference
-    pub fn deactivate(&mut self, updated_by_person_id: Uuid) {
-        self.is_active = false;
-        self.updated_at = Utc::now();
-        self.updated_by_person_id = updated_by_person_id;
-    }
-
-    /// Reactivate this entity reference
-    pub fn reactivate(&mut self, updated_by_person_id: Uuid) {
-        self.is_active = true;
-        self.updated_at = Utc::now();
-        self.updated_by_person_id = updated_by_person_id;
+        
+        self.audit_log_id = audit_log_id;
     }
 }
 
-/// Represents a person throughout the system for audit and tracking purposes
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Documentation
+/// - Entity reference audit table for storing changes on entity references.
+/// # Nature
+/// - Immutable 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EntityReferenceAudit {
+    /// # Trait method
+    /// - find_entity_reference_by_id
+    /// # Nature
+    /// - Coumpound primary index with self.version
+    pub id: Uuid,
+
+    /// # Nature
+    /// - Coumpound primary index with version
+    pub version: u16,
+
+    /// # Documentation
+    /// - References Person.person_id
+    /// # Trait method
+    /// - find_entity_references_audit_by_person_id
+    pub person_id: Uuid,
+    
+    /// # Documentation
+    /// - Type of entity relationship
+    /// # Trait method
+    /// - find_entity_reference_audit_by_person_and_role
+    pub entity_role: RelationshipRole,
+    
+    /// # Documentation
+    /// - External identifier for the reference (e.g., customer ID, employee ID)
+    pub reference_external_id: HeaplessString<50>,
+    
+    /// Reference details in language 1
+    pub reference_details_l1: Option<HeaplessString<50>>,
+    /// Reference details in language 2
+    pub reference_details_l2: Option<HeaplessString<50>>,
+    /// Reference details in language 3
+    pub reference_details_l3: Option<HeaplessString<50>>,
+
+    pub audit_log_id: Uuid
+}
+
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Documentation
+/// - Represents a person throughout the system for audit and tracking purposes
+/// # Nature
+/// - Mutable 
+///     - version field used to track changes.
+///     - store a copy in table EntityReferenceAudit during modification. 
+/// - AuditLog
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Person {
-    /// Unique identifier for this person reference
-    /// find_by_id
+    /// # Trait method
+    /// - find_person_by_id
+    /// # Nature
+    /// - Primary index
     pub id: Uuid,
     
-    /// Type of person (natural, legal, system, etc.)
-    /// find_by_person_type
+    pub version: u16,
+
+    /// # Documentation
+    /// Type of person (natural, legal, etc.)
     pub person_type: PersonType,
     
+    /// # Documentation
     /// Display name of the person
     pub display_name: HeaplessString<100>,
     
+    /// # Trait method
+    /// get_persons_by_external_identifier
+    /// # Documentation
     /// External identifier (e.g., employee ID, badge number, system ID)
-    /// get_by_external_identifier
     pub external_identifier: Option<HeaplessString<50>>,
+
+    pub entity_reference_count: u8,
     
+    /// # Documentation
     /// References another Person.person_id for organizational hierarchy
     pub organization_person_id: Option<Uuid>,
     
+    /// # Documentation
     /// References to Messaging.messaging_id (up to 5 messaging methods)
     pub messaging1_id: Option<Uuid>,
     pub messaging1_type: Option<MessagingType>,
@@ -618,41 +641,41 @@ pub struct Person {
     pub messaging5_id: Option<Uuid>,
     pub messaging5_type: Option<MessagingType>,
     
+    /// # Documentation
     /// Department within organization
     pub department: Option<HeaplessString<50>>,
     
-    /// References Address.address_id for person's location
-    pub location_address_id: Option<Uuid>,
+    /// # Documentation
+    /// References Location.location_id for person's location
+    pub location_id: Option<Uuid>,
     
+    /// # Documentation
     /// Reference to another Person if this is a duplicate
     pub duplicate_of_person_id: Option<Uuid>,
-    
-    /// Whether this person reference is currently active
-    pub is_active: bool,
-    
-    /// When this person reference was created
-    pub created_at: DateTime<Utc>,
-    
-    /// When this person reference was last updated
-    pub updated_at: DateTime<Utc>,
+
+    pub audit_log_id: Uuid,    
 }
 
 impl Person {
     /// Creates a new Person
     pub fn new(
         id: Uuid,
+        version: u16,
         person_type: PersonType,
         display_name: impl AsRef<str>,
+        audit_log_id: Uuid,
     ) -> Result<Self, &'static str> {
         let display_name = HeaplessString::try_from(display_name.as_ref())
             .map_err(|_| "Display name exceeds maximum length")?;
             
         Ok(Self {
             id,
+            version,
             person_type,
             display_name,
             external_identifier: None,
             organization_person_id: None,
+            entity_reference_count: 0,
             messaging1_id: None,
             messaging1_type: None,
             messaging2_id: None,
@@ -664,44 +687,15 @@ impl Person {
             messaging5_id: None,
             messaging5_type: None,
             department: None,
-            location_address_id: None,
+            location_id: None,
             duplicate_of_person_id: None,
-            is_active: true,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            audit_log_id,
         })
     }
     
-    /// Creates a system user reference
-    pub fn system() -> Self {
-        Self {
-            id: Uuid::nil(), // Use nil UUID for system
-            person_type: PersonType::System,
-            display_name: HeaplessString::try_from("SYSTEM").unwrap(),
-            external_identifier: None,
-            organization_person_id: None,
-            messaging1_id: None,
-            messaging1_type: None,
-            messaging2_id: None,
-            messaging2_type: None,
-            messaging3_id: None,
-            messaging3_type: None,
-            messaging4_id: None,
-            messaging4_type: None,
-            messaging5_id: None,
-            messaging5_type: None,
-            department: None,
-            location_address_id: None,
-            duplicate_of_person_id: None,
-            is_active: true,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        }
-    }
-    
     /// Builder for creating a Person with optional fields
-    pub fn builder(id: Uuid, person_type: PersonType, display_name: impl AsRef<str>) -> PersonBuilder {
-        PersonBuilder::new(id, person_type, display_name)
+    pub fn builder(id: Uuid, version:u16, person_type: PersonType, display_name: impl AsRef<str>, audit_log_id: Uuid) -> PersonBuilder {
+        PersonBuilder::new(id, version, person_type, display_name, audit_log_id)
     }
     
     /// Add a messaging method reference to the person
@@ -724,7 +718,6 @@ impl Person {
         } else {
             return Err("Maximum 5 messaging entries allowed");
         }
-        self.updated_at = Utc::now();
         Ok(())
     }
     
@@ -748,7 +741,6 @@ impl Person {
         } else {
             return false;
         }
-        self.updated_at = Utc::now();
         true
     }
     
@@ -787,30 +779,34 @@ impl Person {
 /// Builder for Person
 pub struct PersonBuilder {
     id: Uuid,
+    version: u16,
     person_type: PersonType,
     display_name: String,
     external_identifier: Option<String>,
     organization_person_id: Option<Uuid>,
+    entity_reference_count: u8,
     messaging: Vec<Uuid>,
     department: Option<String>,
-    location_address_id: Option<Uuid>,
+    location_id: Option<Uuid>,
     duplicate_of_person_id: Option<Uuid>,
-    is_active: bool,
+    audit_log_id: Uuid,
 }
 
 impl PersonBuilder {
-    pub fn new(id: Uuid, person_type: PersonType, display_name: impl AsRef<str>) -> Self {
+    pub fn new(id: Uuid, version: u16, person_type: PersonType, display_name: impl AsRef<str>, audit_log_id: Uuid) -> Self {
         Self {
             id,
+            version,
             person_type,
             display_name: display_name.as_ref().to_string(),
             external_identifier: None,
             organization_person_id: None,
+            entity_reference_count: 0,
             messaging: Vec::new(),
             department: None,
-            location_address_id: None,
+            location_id: None,
             duplicate_of_person_id: None,
-            is_active: true,
+            audit_log_id,
         }
     }
     
@@ -834,18 +830,13 @@ impl PersonBuilder {
         self
     }
     
-    pub fn location_address_id(mut self, address_id: Uuid) -> Self {
-        self.location_address_id = Some(address_id);
+    pub fn location_id(mut self, location_id: Uuid) -> Self {
+        self.location_id = Some(location_id);
         self
     }
     
     pub fn duplicate_of_person_id(mut self, person_id: Uuid) -> Self {
         self.duplicate_of_person_id = Some(person_id);
-        self
-    }
-    
-    pub fn is_active(mut self, active: bool) -> Self {
-        self.is_active = active;
         self
     }
     
@@ -875,10 +866,12 @@ impl PersonBuilder {
             
         Ok(Person {
             id: self.id,
+            version: self.version,
             person_type: self.person_type,
             display_name,
             external_identifier,
             organization_person_id: self.organization_person_id,
+            entity_reference_count: self.entity_reference_count,
             messaging1_id: msg1_id,
             messaging1_type: None,  // Type will be set separately if needed
             messaging2_id: msg2_id,
@@ -890,34 +883,71 @@ impl PersonBuilder {
             messaging5_id: msg5_id,
             messaging5_type: None,
             department,
-            location_address_id: self.location_address_id,
+            location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
-            is_active: self.is_active,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            audit_log_id: self.audit_log_id,
         })
     }
 }
 
-/// Common person references for system operations
-pub struct SystemPersons {
-    /// System user for automated processes
-    pub system: Uuid,
-    /// Migration user for data migrations
-    pub migration: Uuid,
-    /// API integration user
-    pub api_integration: Uuid,
-    /// Batch processing user
-    pub batch_processor: Uuid,
-}
+/// # Service Trait
+/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// # Documentation
+/// - Audit tracking for person.
+/// # Nature
+/// - Immutable 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PersonAudit {
+    /// # Trait method
+    /// - find_person_audit_by_id
+    /// # Nature
+    /// - Compound index with version
+    pub id: Uuid,
+    
+    pub version: u16,
 
-impl Default for SystemPersons {
-    fn default() -> Self {
-        Self {
-            system: Uuid::nil(),
-            migration: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
-            api_integration: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
-            batch_processor: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
-        }
-    }
+    /// # Documentation
+    /// Type of person (natural, legal, etc.)
+    pub person_type: PersonType,
+    
+    /// # Documentation
+    /// Display name of the person
+    pub display_name: HeaplessString<100>,
+    
+    /// # Trait method
+    /// get_persons_audit_by_external_identifier
+    /// # Documentation
+    /// External identifier (e.g., employee ID, badge number, system ID)
+    pub external_identifier: Option<HeaplessString<50>>,
+
+    pub entity_reference_count: u8,
+    
+    /// # Documentation
+    /// References another Person.person_id for organizational hierarchy
+    pub organization_person_id: Option<Uuid>,
+    
+    /// # Documentation
+    /// References to Messaging.messaging_id (up to 5 messaging methods)
+    pub messaging1_id: Option<Uuid>,
+    pub messaging1_type: Option<MessagingType>,
+    pub messaging2_id: Option<Uuid>,
+    pub messaging2_type: Option<MessagingType>,
+    pub messaging3_id: Option<Uuid>,
+    pub messaging3_type: Option<MessagingType>,
+    pub messaging4_id: Option<Uuid>,
+    pub messaging4_type: Option<MessagingType>,
+    pub messaging5_id: Option<Uuid>,
+    pub messaging5_type: Option<MessagingType>,
+    
+    /// # Documentation
+    /// Department within organization
+    pub department: Option<HeaplessString<50>>,
+    
+    /// # Documentation
+    /// References Location.location_id for person's location
+    pub location_id: Option<Uuid>,
+    
+    /// # Documentation
+    /// Reference to another Person if this is a duplicate
+    pub duplicate_of_person_id: Option<Uuid>,
 }

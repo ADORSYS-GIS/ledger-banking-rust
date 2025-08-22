@@ -593,7 +593,7 @@ pub struct CustomerCollectionProfile {
     pub daily_amount: Decimal,
     pub collection_schedule: CollectionSchedule,
     pub assigned_collection_agent_id: Uuid,
-    pub collection_location_address_id: Uuid,
+    pub collection_location_id: Uuid,
     pub collection_performance_metrics: CollectionPerformanceMetrics,
     pub graduation_progress: GraduationProgress,
     pub created_at: DateTime<Utc>,
@@ -767,7 +767,7 @@ pub struct CollectionRecord {
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
     pub collection_method: CollectionMethod,
-    pub location_address_id: Option<Uuid>,
+    pub location_id: Option<Uuid>,
     pub receipt_number: HeaplessString<50>,
     pub status: CollectionRecordStatus,
     pub notes: Option<HeaplessString<500>>,
@@ -1247,7 +1247,7 @@ pub struct CustomerCollectionProfileBuilder {
     daily_amount: Option<Decimal>,
     collection_schedule: Option<CollectionSchedule>,
     assigned_collection_agent_id: Option<Uuid>,
-    collection_location_address_id: Option<Uuid>,
+    collection_location_id: Option<Uuid>,
     collection_performance_metrics: Option<CollectionPerformanceMetrics>,
     graduation_progress: Option<GraduationProgress>,
     reason_id: Option<Uuid>,
@@ -1270,7 +1270,7 @@ impl CustomerCollectionProfile {
             daily_amount: None,
             collection_schedule: None,
             assigned_collection_agent_id: None,
-            collection_location_address_id: None,
+            collection_location_id: None,
             collection_performance_metrics: None,
             graduation_progress: None,
             reason_id: None,
@@ -1304,8 +1304,8 @@ impl CustomerCollectionProfileBuilder {
         self
     }
 
-    pub fn collection_location_address_id(mut self, id: Uuid) -> Self {
-        self.collection_location_address_id = Some(id);
+    pub fn collection_location_id(mut self, id: Uuid) -> Self {
+        self.collection_location_id = Some(id);
         self
     }
 
@@ -1338,7 +1338,7 @@ impl CustomerCollectionProfileBuilder {
             daily_amount: self.daily_amount.ok_or("Daily amount is required")?,
             collection_schedule: self.collection_schedule.ok_or("Collection schedule is required")?,
             assigned_collection_agent_id: self.assigned_collection_agent_id.ok_or("Assigned agent ID is required")?,
-            collection_location_address_id: self.collection_location_address_id.ok_or("Collection location ID is required")?,
+            collection_location_id: self.collection_location_id.ok_or("Collection location ID is required")?,
             collection_performance_metrics: self.collection_performance_metrics.ok_or("Collection performance metrics are required")?,
             graduation_progress: self.graduation_progress.ok_or("Graduation progress is required")?,
             created_at: now,
@@ -1360,7 +1360,7 @@ pub struct CollectionRecordBuilder {
     amount: Option<Decimal>,
     currency: Option<HeaplessString<3>>,
     collection_method: Option<CollectionMethod>,
-    location_address_id: Option<Uuid>,
+    location_id: Option<Uuid>,
     receipt_number: Option<HeaplessString<50>>,
     status: CollectionRecordStatus,
     notes: Option<HeaplessString<500>>,
@@ -1387,7 +1387,7 @@ impl CollectionRecord {
             amount: None,
             currency: None,
             collection_method: None,
-            location_address_id: None,
+            location_id: None,
             receipt_number: None,
             status: CollectionRecordStatus::Pending,
             notes: None,
@@ -1424,8 +1424,8 @@ impl CollectionRecordBuilder {
         self
     }
 
-    pub fn location_address_id(mut self, id: Uuid) -> Self {
-        self.location_address_id = Some(id);
+    pub fn location_id(mut self, id: Uuid) -> Self {
+        self.location_id = Some(id);
         self
     }
 
@@ -1470,7 +1470,7 @@ impl CollectionRecordBuilder {
             amount: self.amount.ok_or("Collection amount is required")?,
             currency: self.currency.ok_or("Currency is required")?,
             collection_method: self.collection_method.ok_or("Collection method is required")?,
-            location_address_id: self.location_address_id,
+            location_id: self.location_id,
             receipt_number: self.receipt_number.ok_or("Receipt number is required")?,
             status: self.status,
             notes: self.notes,

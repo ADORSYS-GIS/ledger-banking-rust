@@ -3,8 +3,8 @@ use std::error::Error;
 use uuid::Uuid;
 
 use crate::models::person::{
-    AddressModel, AddressType, CityModel, CountryModel, EntityReferenceModel, MessagingModel,
-    MessagingType, PersonModel, PersonType, RelationshipRole, StateProvinceModel,
+    LocationModel, LocationType, LocalityModel, CountryModel, EntityReferenceModel, MessagingModel,
+    PersonModel, RelationshipRole, CountrySubdivisionModel,
 };
 
 #[async_trait]
@@ -20,31 +20,6 @@ pub trait PersonRepository: Send + Sync {
 
     /// Checks for the existence of a person by its primary key.
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>>;
-
-    /// INDEX FINDER: Finds all person IDs for a given person type.
-    async fn find_ids_by_person_type(
-        &self,
-        person_type: PersonType,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-
-    /// PUBLIC FINDER: Finds a paginated list of persons for a given person type.
-    async fn find_by_person_type(
-        &self,
-        person_type: PersonType,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>>;
-
-    /// INDEX FINDER: Finds all person IDs by active status.
-    async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-
-    /// PUBLIC FINDER: Finds a paginated list of persons by active status.
-    async fn find_by_is_active(
-        &self,
-        is_active: bool,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>>;
 
     /// INDEX FINDER: Finds person IDs by external identifier hash.
     async fn get_ids_by_external_identifier(
@@ -107,28 +82,22 @@ pub trait CountryRepository: Send + Sync {
         page_size: u32,
     ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>>;
     async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_is_active(
-        &self,
-        is_active: bool,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>>;
 }
 
 #[async_trait]
-pub trait StateProvinceRepository: Send + Sync {
+pub trait CountrySubdivisionRepository: Send + Sync {
     async fn save(
         &self,
-        state: StateProvinceModel,
-    ) -> Result<StateProvinceModel, Box<dyn Error + Send + Sync>>;
+        country_subdivision: CountrySubdivisionModel,
+    ) -> Result<CountrySubdivisionModel, Box<dyn Error + Send + Sync>>;
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>>;
+    ) -> Result<Option<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>>;
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>>;
+    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>>;
     async fn find_ids_by_country_id(
         &self,
@@ -139,88 +108,58 @@ pub trait StateProvinceRepository: Send + Sync {
         country_id: Uuid,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_state_province_by_state_province_code(
+    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_by_code(
         &self,
         country_id: Uuid,
-        state_province_code: &str,
-    ) -> Result<Option<StateProvinceModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_is_active(
-        &self,
-        is_active: bool,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<StateProvinceModel>, Box<dyn Error + Send + Sync>>;
+        code: &str,
+    ) -> Result<Option<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>>;
 }
 
 #[async_trait]
-pub trait CityRepository: Send + Sync {
-    async fn save(&self, city: CityModel) -> Result<CityModel, Box<dyn Error + Send + Sync>>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>>;
+pub trait LocalityRepository: Send + Sync {
+    async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, Box<dyn Error + Send + Sync>>;
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_country_id(
+    async fn find_ids_by_country_subdivision_id(&self, country_subdivision_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
+    async fn find_by_country_subdivision_id(
         &self,
-        country_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_country_id(
-        &self,
-        country_id: Uuid,
+        country_subdivision_id: Uuid,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_state_id(&self, state_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_state_id(
-        &self,
-        state_id: Uuid,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_city_by_city_code(
+    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_by_code(
         &self,
         country_id: Uuid,
-        city_code: &str,
-    ) -> Result<Option<CityModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_is_active(
-        &self,
-        is_active: bool,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<CityModel>, Box<dyn Error + Send + Sync>>;
+        code: &str,
+    ) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>>;
 }
 
 #[async_trait]
-pub trait AddressRepository: Send + Sync {
-    async fn save(&self, address: AddressModel) -> Result<AddressModel, Box<dyn Error + Send + Sync>>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<AddressModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>>;
+pub trait LocationRepository: Send + Sync {
+    async fn save(&self, location: LocationModel) -> Result<LocationModel, Box<dyn Error + Send + Sync>>;
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_address_type(
+    async fn find_ids_by_location_type(
         &self,
-        address_type: AddressType,
+        location_type: LocationType,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_address_type(
+    async fn find_by_type_and_locality(
         &self,
-        address_type: AddressType,
+        location_type: LocationType,
+        locality_id: Uuid,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_city_id(&self, city_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_city_id(
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>>;
+    async fn find_ids_by_locality_id(&self, locality_id: Uuid) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
+    async fn find_by_locality_id(
         &self,
-        city_id: Uuid,
+        locality_id: Uuid,
         page: u32,
         page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_is_active(
-        &self,
-        is_active: bool,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<AddressModel>, Box<dyn Error + Send + Sync>>;
+    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>>;
     async fn find_ids_by_street_line1(
         &self,
         street_line1: &str,
@@ -242,23 +181,6 @@ pub trait MessagingRepository: Send + Sync {
         ids: &[Uuid],
     ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_messaging_type(
-        &self,
-        messaging_type: MessagingType,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_messaging_type(
-        &self,
-        messaging_type: MessagingType,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_is_active(
-        &self,
-        is_active: bool,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>>;
     async fn find_ids_by_value(
         &self,
         value: &str,
@@ -290,20 +212,9 @@ pub trait EntityReferenceRepository: Send + Sync {
         page: u32,
         page_size: u32,
     ) -> Result<Vec<EntityReferenceModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_entity_role(
+    async fn find_by_reference_external_id(
         &self,
-        entity_role: RelationshipRole,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_entity_role(
-        &self,
-        entity_role: RelationshipRole,
-        page: u32,
-        page_size: u32,
-    ) -> Result<Vec<EntityReferenceModel>, Box<dyn Error + Send + Sync>>;
-    async fn find_ids_by_is_active(&self, is_active: bool) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>>;
-    async fn find_by_is_active(
-        &self,
-        is_active: bool,
+        reference_external_id: &str,
         page: u32,
         page_size: u32,
     ) -> Result<Vec<EntityReferenceModel>, Box<dyn Error + Send + Sync>>;

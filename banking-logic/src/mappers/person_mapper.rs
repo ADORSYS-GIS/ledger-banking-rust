@@ -1,10 +1,10 @@
 use banking_api::domain::person::{
-    Address, AddressType, City, Country, EntityReference, Messaging, MessagingType, Person,
-    PersonType, RelationshipRole, StateProvince,
+    Location, LocationType, Locality, Country, EntityReference, Messaging, MessagingType, Person,
+    PersonType, RelationshipRole, CountrySubdivision,
 };
 use banking_db::models::person::{
-    AddressModel, CityModel, CountryModel, EntityReferenceModel, MessagingModel, PersonModel,
-    StateProvinceModel,
+    LocationModel, LocalityModel, CountryModel, EntityReferenceModel, MessagingModel, PersonModel,
+    CountrySubdivisionModel,
 };
 
 pub trait ToDomain<D> {
@@ -49,12 +49,12 @@ impl ToModel<CountryModel> for Country {
     }
 }
 
-impl ToDomain<StateProvince> for StateProvinceModel {
-    fn to_domain(self) -> StateProvince {
-        StateProvince {
+impl ToDomain<CountrySubdivision> for CountrySubdivisionModel {
+    fn to_domain(self) -> CountrySubdivision {
+        CountrySubdivision {
             id: self.id,
             country_id: self.country_id,
-            state_province_code: self.state_province_code,
+            code: self.code,
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
@@ -67,12 +67,12 @@ impl ToDomain<StateProvince> for StateProvinceModel {
     }
 }
 
-impl ToModel<StateProvinceModel> for StateProvince {
-    fn to_model(self) -> StateProvinceModel {
-        StateProvinceModel {
+impl ToModel<CountrySubdivisionModel> for CountrySubdivision {
+    fn to_model(self) -> CountrySubdivisionModel {
+        CountrySubdivisionModel {
             id: self.id,
             country_id: self.country_id,
-            state_province_code: self.state_province_code,
+            code: self.code,
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
@@ -85,13 +85,13 @@ impl ToModel<StateProvinceModel> for StateProvince {
     }
 }
 
-impl ToDomain<City> for CityModel {
-    fn to_domain(self) -> City {
-        City {
+impl ToDomain<Locality> for LocalityModel {
+    fn to_domain(self) -> Locality {
+        Locality {
             id: self.id,
             country_id: self.country_id,
-            state_id: self.state_id,
-            city_code: self.city_code,
+            country_subdivision_id: self.country_subdivision_id,
+            code: self.code,
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
@@ -104,13 +104,13 @@ impl ToDomain<City> for CityModel {
     }
 }
 
-impl ToModel<CityModel> for City {
-    fn to_model(self) -> CityModel {
-        CityModel {
+impl ToModel<LocalityModel> for Locality {
+    fn to_model(self) -> LocalityModel {
+        LocalityModel {
             id: self.id,
             country_id: self.country_id,
-            state_id: self.state_id,
-            city_code: self.city_code,
+            country_subdivision_id: self.country_subdivision_id,
+            code: self.code,
             name_l1: self.name_l1,
             name_l2: self.name_l2,
             name_l3: self.name_l3,
@@ -123,20 +123,20 @@ impl ToModel<CityModel> for City {
     }
 }
 
-impl ToDomain<Address> for AddressModel {
-    fn to_domain(self) -> Address {
-        Address {
+impl ToDomain<Location> for LocationModel {
+    fn to_domain(self) -> Location {
+        Location {
             id: self.id,
             street_line1: self.street_line1,
             street_line2: self.street_line2,
             street_line3: self.street_line3,
             street_line4: self.street_line4,
-            city_id: self.city_id,
+            locality_id: self.locality_id,
             postal_code: self.postal_code,
             latitude: self.latitude,
             longitude: self.longitude,
             accuracy_meters: self.accuracy_meters,
-            address_type: self.address_type.to_domain(),
+            location_type: self.location_type.to_domain(),
             is_active: self.is_active,
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -146,20 +146,20 @@ impl ToDomain<Address> for AddressModel {
     }
 }
 
-impl ToModel<AddressModel> for Address {
-    fn to_model(self) -> AddressModel {
-        AddressModel {
+impl ToModel<LocationModel> for Location {
+    fn to_model(self) -> LocationModel {
+        LocationModel {
             id: self.id,
             street_line1: self.street_line1,
             street_line2: self.street_line2,
             street_line3: self.street_line3,
             street_line4: self.street_line4,
-            city_id: self.city_id,
+            locality_id: self.locality_id,
             postal_code: self.postal_code,
             latitude: self.latitude,
             longitude: self.longitude,
             accuracy_meters: self.accuracy_meters,
-            address_type: self.address_type.to_model(),
+            location_type: self.location_type.to_model(),
             is_active: self.is_active,
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -256,7 +256,7 @@ impl ToDomain<Person> for PersonModel {
             messaging5_id: self.messaging5_id,
             messaging5_type: self.messaging5_type.map(|t| t.to_domain()),
             department: self.department,
-            location_address_id: self.location_address_id,
+            location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
             is_active: self.is_active,
             created_at: self.created_at,
@@ -284,7 +284,7 @@ impl ToModel<PersonModel> for Person {
             messaging5_id: self.messaging5_id,
             messaging5_type: self.messaging5_type.map(|t| t.to_model()),
             department: self.department,
-            location_address_id: self.location_address_id,
+            location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
             is_active: self.is_active,
             created_at: self.created_at,
@@ -294,30 +294,30 @@ impl ToModel<PersonModel> for Person {
 }
 
 // Enum conversions
-impl ToDomain<AddressType> for banking_db::models::person::AddressType {
-    fn to_domain(self) -> AddressType {
+impl ToDomain<LocationType> for banking_db::models::person::LocationType {
+    fn to_domain(self) -> LocationType {
         match self {
-            banking_db::models::person::AddressType::Residential => AddressType::Residential,
-            banking_db::models::person::AddressType::Business => AddressType::Business,
-            banking_db::models::person::AddressType::Mailing => AddressType::Mailing,
-            banking_db::models::person::AddressType::Temporary => AddressType::Temporary,
-            banking_db::models::person::AddressType::Branch => AddressType::Branch,
-            banking_db::models::person::AddressType::Community => AddressType::Community,
-            banking_db::models::person::AddressType::Other => AddressType::Other,
+            banking_db::models::person::LocationType::Residential => LocationType::Residential,
+            banking_db::models::person::LocationType::Business => LocationType::Business,
+            banking_db::models::person::LocationType::Mailing => LocationType::Mailing,
+            banking_db::models::person::LocationType::Temporary => LocationType::Temporary,
+            banking_db::models::person::LocationType::Branch => LocationType::Branch,
+            banking_db::models::person::LocationType::Community => LocationType::Community,
+            banking_db::models::person::LocationType::Other => LocationType::Other,
         }
     }
 }
 
-impl ToModel<banking_db::models::person::AddressType> for AddressType {
-    fn to_model(self) -> banking_db::models::person::AddressType {
+impl ToModel<banking_db::models::person::LocationType> for LocationType {
+    fn to_model(self) -> banking_db::models::person::LocationType {
         match self {
-            AddressType::Residential => banking_db::models::person::AddressType::Residential,
-            AddressType::Business => banking_db::models::person::AddressType::Business,
-            AddressType::Mailing => banking_db::models::person::AddressType::Mailing,
-            AddressType::Temporary => banking_db::models::person::AddressType::Temporary,
-            AddressType::Branch => banking_db::models::person::AddressType::Branch,
-            AddressType::Community => banking_db::models::person::AddressType::Community,
-            AddressType::Other => banking_db::models::person::AddressType::Other,
+            LocationType::Residential => banking_db::models::person::LocationType::Residential,
+            LocationType::Business => banking_db::models::person::LocationType::Business,
+            LocationType::Mailing => banking_db::models::person::LocationType::Mailing,
+            LocationType::Temporary => banking_db::models::person::LocationType::Temporary,
+            LocationType::Branch => banking_db::models::person::LocationType::Branch,
+            LocationType::Community => banking_db::models::person::LocationType::Community,
+            LocationType::Other => banking_db::models::person::LocationType::Other,
         }
     }
 }

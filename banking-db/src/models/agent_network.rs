@@ -159,8 +159,8 @@ pub struct AgencyBranchModel {
     pub created_at: DateTime<Utc>,
     
     // === LOCATION FIELDS ===
-    // Physical address reference
-    pub address_id: Uuid,
+    // Physical location reference
+    pub location_id: Uuid,
     pub landmark_description: Option<HeaplessString<200>>,
     
     // Operational details

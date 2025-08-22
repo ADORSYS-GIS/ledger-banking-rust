@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 use banking_api::domain::person::{
-    Address, AddressType, City, Country, EntityReference, Messaging, Person, PersonType,
-    RelationshipRole, StateProvince,
+    Location, LocationType, Locality, Country, EntityReference, Messaging, Person, PersonType,
+    RelationshipRole, CountrySubdivision,
 };
 use banking_api::service::PersonService;
 use banking_api::BankingResult;
 use banking_db::repository::{
-    AddressRepository, CityRepository, CountryRepository, EntityReferenceRepository,
-    MessagingRepository, PersonRepository, StateProvinceRepository,
+    LocationRepository, LocalityRepository, CountryRepository, EntityReferenceRepository,
+    MessagingRepository, PersonRepository, CountrySubdivisionRepository,
 };
 use heapless::String as HeaplessString;
 use std::sync::Arc;
@@ -18,9 +18,9 @@ use crate::mappers::person_mapper::{ToDomain, ToModel};
 pub struct PersonServiceImpl {
     person_repository: Arc<dyn PersonRepository>,
     country_repository: Arc<dyn CountryRepository>,
-    state_province_repository: Arc<dyn StateProvinceRepository>,
-    city_repository: Arc<dyn CityRepository>,
-    address_repository: Arc<dyn AddressRepository>,
+    country_subdivision_repository: Arc<dyn CountrySubdivisionRepository>,
+    locality_repository: Arc<dyn LocalityRepository>,
+    location_repository: Arc<dyn LocationRepository>,
     messaging_repository: Arc<dyn MessagingRepository>,
     entity_reference_repository: Arc<dyn EntityReferenceRepository>,
 }
@@ -29,18 +29,18 @@ impl PersonServiceImpl {
     pub fn new(
         person_repository: Arc<dyn PersonRepository>,
         country_repository: Arc<dyn CountryRepository>,
-        state_province_repository: Arc<dyn StateProvinceRepository>,
-        city_repository: Arc<dyn CityRepository>,
-        address_repository: Arc<dyn AddressRepository>,
+        country_subdivision_repository: Arc<dyn CountrySubdivisionRepository>,
+        locality_repository: Arc<dyn LocalityRepository>,
+        location_repository: Arc<dyn LocationRepository>,
         messaging_repository: Arc<dyn MessagingRepository>,
         entity_reference_repository: Arc<dyn EntityReferenceRepository>,
     ) -> Self {
         Self {
             person_repository,
             country_repository,
-            state_province_repository,
-            city_repository,
-            address_repository,
+            country_subdivision_repository,
+            locality_repository,
+            location_repository,
             messaging_repository,
             entity_reference_repository,
         }
@@ -53,6 +53,10 @@ impl PersonService for PersonServiceImpl {
         let model = country.to_model();
         let saved_model = self.country_repository.save(model).await?;
         Ok(saved_model.to_domain())
+    }
+
+    async fn fix_country(&self, country: Country) -> BankingResult<Country> {
+        self.create_country(country);
     }
 
     async fn find_country_by_id(&self, id: Uuid) -> BankingResult<Option<Country>> {
@@ -70,96 +74,103 @@ impl PersonService for PersonServiceImpl {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn create_state_province(&self, state_province: StateProvince) -> BankingResult<StateProvince> {
-        let model = state_province.to_model();
-        let saved_model = self.state_province_repository.save(model).await?;
+    async fn create_country_subdivision(&self, country_subdivision: CountrySubdivision) -> BankingResult<CountrySubdivision> {
+        let model = country_subdivision.to_model();
+        let saved_model = self.country_subdivision_repository.save(model).await?;
         Ok(saved_model.to_domain())
     }
 
-    async fn find_state_province_by_id(&self, id: Uuid) -> BankingResult<Option<StateProvince>> {
-        let model = self.state_province_repository.find_by_id(id).await?;
+    async fn fix_country_subdivision(&self, country_subdivision: CountrySubdivision) -> BankingResult<CountrySubdivision> {
+        self.create_country_subdivision(country_subdivision);
+    }
+
+    async fn find_country_subdivision_by_id(&self, id: Uuid) -> BankingResult<Option<CountrySubdivision>> {
+        let model = self.country_subdivision_repository.find_by_id(id).await?;
         Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn find_state_provinces_by_country_id(&self, country_id: Uuid) -> BankingResult<Vec<StateProvince>> {
-        let models = self.state_province_repository.find_by_country_id(country_id, 1, 1000).await?;
+    async fn find_country_subdivisions_by_country_id(&self, country_id: Uuid) -> BankingResult<Vec<CountrySubdivision>> {
+        let models = self.country_subdivision_repository.find_by_country_id(country_id, 1, 1000).await?;
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_state_province_by_code(
+    async fn find_country_subdivision_by_code(
         &self,
         country_id: Uuid,
-        state_province_code: HeaplessString<10>,
-    ) -> BankingResult<Option<StateProvince>> {
-        let model = self.state_province_repository.find_state_province_by_state_province_code(country_id, state_province_code.as_str()).await?;
+        code: HeaplessString<10>,
+    ) -> BankingResult<Option<CountrySubdivision>> {
+        let model = self.country_subdivision_repository.find_country_subdivision_by_code(country_id, code.as_str()).await?;
         Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn create_city(&self, city: City) -> BankingResult<City> {
-        let model = city.to_model();
-        let saved_model = self.city_repository.save(model).await?;
+    async fn create_locality(&self, locality: Locality) -> BankingResult<Locality> {
+        let model = locality.to_model();
+        let saved_model = self.locality_repository.save(model).await?;
         Ok(saved_model.to_domain())
     }
 
-    async fn find_city_by_id(&self, id: Uuid) -> BankingResult<Option<City>> {
-        let model = self.city_repository.find_by_id(id).await?;
+    async fn fix_locality(&self, locality: Locality) -> BankingResult<Locality> {
+        self.create_locality(locality);
+    }
+
+    async fn find_locality_by_id(&self, id: Uuid) -> BankingResult<Option<Locality>> {
+        let model = self.locality_repository.find_by_id(id).await?;
         Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn find_cities_by_country_id(&self, country_id: Uuid) -> BankingResult<Vec<City>> {
-        let models = self.city_repository.find_by_country_id(country_id, 1, 1000).await?;
+    async fn find_localities_by_country_subdivision_id(&self, country_subdivision_id: Uuid) -> BankingResult<Vec<Locality>> {
+        let models = self.locality_repository.find_by_country_subdivision_id(country_subdivision_id, 1, 1000).await?;
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_cities_by_state_id(&self, state_id: Uuid) -> BankingResult<Vec<City>> {
-        let models = self.city_repository.find_by_state_id(state_id, 1, 1000).await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
-    }
-
-    async fn find_city_by_code(
+    async fn find_locality_by_code(
         &self,
         country_id: Uuid,
-        city_code: HeaplessString<50>,
-    ) -> BankingResult<Option<City>> {
-        let model = self.city_repository.find_city_by_city_code(country_id, city_code.as_str()).await?;
+        code: HeaplessString<50>,
+    ) -> BankingResult<Option<Locality>> {
+        let model = self.locality_repository.find_locality_by_code(country_id, code.as_str()).await?;
         Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn create_address(&self, address: Address) -> BankingResult<Address> {
-        let model = address.to_model();
-        let saved_model = self.address_repository.save(model).await?;
+    async fn create_location(&self, location: Location) -> BankingResult<Location> {
+        let model = location.to_model();
+        let saved_model = self.location_repository.save(model).await?;
         Ok(saved_model.to_domain())
     }
 
-    async fn find_address_by_id(&self, id: Uuid) -> BankingResult<Option<Address>> {
-        let model = self.address_repository.find_by_id(id).await?;
+    async fn fix_location(&self, location: Location) -> BankingResult<Location> {
+        self.create_location(location);
+    }
+
+    async fn find_location_by_id(&self, id: Uuid) -> BankingResult<Option<Location>> {
+        let model = self.location_repository.find_by_id(id).await?;
         Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn find_addresses_by_street_line1(
+    async fn find_locations_by_street_line1(
         &self,
         street_line1: HeaplessString<50>,
-    ) -> BankingResult<Vec<Address>> {
+    ) -> BankingResult<Vec<Location>> {
         let ids = self
-            .address_repository
+            .location_repository
             .find_ids_by_street_line1(street_line1.as_str())
             .await?;
-        let models = self.address_repository.find_by_ids(&ids).await?;
+        let models = self.location_repository.find_by_ids(&ids).await?;
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_addresses_by_city_id(&self, city_id: Uuid) -> BankingResult<Vec<Address>> {
-        let models = self.address_repository.find_by_city_id(city_id, 1, 1000).await?;
+    async fn find_locations_by_locality_id(&self, locality_id: Uuid) -> BankingResult<Vec<Location>> {
+        let models = self.location_repository.find_by_locality_id(locality_id, 1, 1000).await?;
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_addresses_by_type_and_city(
+    async fn find_locations_by_type_and_locality(
         &self,
-        address_type: AddressType,
-        city_id: Uuid,
-    ) -> BankingResult<Vec<Address>> {
-        let models = self.address_repository.find_by_address_type(address_type.to_model(), 1, 1000).await?;
-        let filtered_models = models.into_iter().filter(|m| m.city_id == city_id).collect::<Vec<_>>();
+        location_type: LocationType,
+        locality_id: Uuid,
+    ) -> BankingResult<Vec<Location>> {
+        let models = self.location_repository.find_by_location_type(location_type.to_model(), 1, 1000).await?;
+        let filtered_models = models.into_iter().filter(|m| m.locality_id == locality_id).collect::<Vec<_>>();
         Ok(filtered_models.into_iter().map(|m| m.to_domain()).collect())
     }
 
@@ -167,6 +178,10 @@ impl PersonService for PersonServiceImpl {
         let model = messaging.to_model();
         let saved_model = self.messaging_repository.save(model).await?;
         Ok(saved_model.to_domain())
+    }
+
+    async fn fix_messaging(&self, messaging: Messaging) -> BankingResult<Messaging> {
+        self.create_messaging(messaging);
     }
 
     async fn find_messaging_by_id(&self, id: Uuid) -> BankingResult<Option<Messaging>> {
@@ -196,6 +211,10 @@ impl PersonService for PersonServiceImpl {
         Ok(saved_model.to_domain())
     }
 
+    async fn fix_entity_reference(&self, entity_reference: EntityReference) -> BankingResult<EntityReference> {
+        self.create_entity_reference(entity_reference, audit_log);
+    }
+
     async fn find_entity_reference_by_id(&self, id: Uuid) -> BankingResult<Option<EntityReference>> {
         let model = self.entity_reference_repository.find_by_id(id).await?;
         Ok(model.map(|m| m.to_domain()))
@@ -206,18 +225,11 @@ impl PersonService for PersonServiceImpl {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn find_entity_reference_by_person_and_role(
+    async fn find_entity_references_by_reference_external_id(
         &self,
-        person_id: Uuid,
-        entity_role: RelationshipRole,
-    ) -> BankingResult<Option<EntityReference>> {
-        let models = self.entity_reference_repository.find_by_entity_role(entity_role.to_model(), 1, 1000).await?;
-        let filtered_model = models.into_iter().find(|m| m.person_id == person_id);
-        Ok(filtered_model.map(|m| m.to_domain()))
-    }
-
-    async fn find_active_entity_references(&self) -> BankingResult<Vec<EntityReference>> {
-        let models = self.entity_reference_repository.find_by_is_active(true, 1, 1000).await?;
+        reference_external_id: HeaplessString<50>,
+    ) -> BankingResult<Vec<EntityReference>> {
+        let models = self.entity_reference_repository.find_by_reference_external_id(reference_external_id.as_str(), 1, 1000).await?;
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
@@ -232,16 +244,11 @@ impl PersonService for PersonServiceImpl {
         Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn find_persons_by_type(&self, person_type: PersonType) -> BankingResult<Vec<Person>> {
-        let models = self.person_repository.find_by_person_type(person_type.to_model(), 1, 1000).await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
-    }
-
-    async fn get_person_by_external_identifier(
+    async fn get_persons_by_external_identifier(
         &self,
         external_identifier: HeaplessString<50>,
-    ) -> BankingResult<Option<Person>> {
+    ) -> BankingResult<Vec<Person>> {
         let models = self.person_repository.get_by_external_identifier(external_identifier.as_str()).await?;
-        Ok(models.into_iter().next().map(|m| m.to_domain()))
+        Ok(models.into_iter().map(|m| m.to_domain()))
     }
 }

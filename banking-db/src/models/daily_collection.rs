@@ -399,7 +399,7 @@ pub struct CustomerCollectionProfileModel {
     pub schedule_holiday_handling: HolidayHandling,
     
     pub assigned_collection_agent_id: Uuid,
-    pub collection_location_address_id: Uuid,
+    pub collection_location_id: Uuid,
     
     // Performance metrics fields (flattened)
     pub performance_collection_rate: Decimal,
@@ -444,7 +444,7 @@ pub struct CollectionRecordModel {
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
     pub collection_method: CollectionMethod,
-    pub location_address_id: Option<Uuid>,
+    pub location_id: Option<Uuid>,
     pub receipt_number: HeaplessString<50>,
     pub status: CollectionRecordStatus,
     pub notes: Option<HeaplessString<500>>,

@@ -7,7 +7,7 @@ Apply the rules defined in 'docs/guidelines/development.md' to generate the nece
 -   `<init_order>`: The numerical prefix for the database migration file (e.g., `001`).
 
 **Infered Parameter**
--   `<ModelName>`: stands for each struct `<ModelName>Model` defined in the module (e.g. PersonModel, AddressModel). 
+-   `<ModelName>`: stands for each struct `<ModelName>Model` defined in the module (e.g. PersonModel, LocationModel). 
 -   `<attribute>`: an attribute of this model used in a finder.
 ---
 

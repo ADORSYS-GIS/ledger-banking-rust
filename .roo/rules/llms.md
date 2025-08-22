@@ -20,7 +20,7 @@ banking-db-postgres/   # PostgreSQL implementation (✅ 100% complete)
 - **Runtime**: Rust 2021 + Tokio async
 - **Database**: SQLx + PostgreSQL with native UUID support
 - **Memory**: heapless::String for stack allocation, Blake3 hashing
-- **Cache**: Moka high-performance async cache
+- **Cache**: The system implements simple but performant `HashMap`-based concurrent caches instead of a generic cache implementation. This approach maximizes performance by avoiding key-to-string conversions, using native types for cache keys, and allowing fine-tuned caching behavior for immutable sets.
 - **Financial**: rust_decimal for precision arithmetic
 
 ### Design Patterns
@@ -36,7 +36,7 @@ banking-db-postgres/   # PostgreSQL implementation (✅ 100% complete)
 - **Account**: Unified model supporting all product types (savings/current/loan)
 - **Transaction**: Multi-stage validation with audit trails
 - **Agent Network**: Hierarchical structure (Network → Branch → Terminal)
-- **Person**: Comprehensive person/entity management with addresses
+- **Person**: Comprehensive person/entity management with locations
 - **Collateral**: Enterprise collateral management with valuations
 - **Workflow**: Multi-step processes with approvals
 - **Compliance**: KYC/AML with sanctions screening
@@ -74,3 +74,6 @@ process file docs/guidelines/testing.md only when you want to
 - run tests
 
 
+## Instruction Precedence
+
+In case of conflicting instructions, instructions provided in code comments (e.g., `/// # Cache`) take precedence over external instructions found in command files or other documentation.

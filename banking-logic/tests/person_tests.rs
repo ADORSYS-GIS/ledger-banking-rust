@@ -2,8 +2,8 @@
 mod person_tests {
     use banking_api::{BankingResult, Person, PersonService, PersonType};
     use banking_db_postgres::repository::{
-        AddressRepositoryImpl, CityRepositoryImpl, CountryRepositoryImpl, EntityReferenceRepositoryImpl,
-        MessagingRepositoryImpl, PersonRepositoryImpl, StateProvinceRepositoryImpl,
+        LocationRepositoryImpl, LocalityRepositoryImpl, CountryRepositoryImpl, EntityReferenceRepositoryImpl,
+        MessagingRepositoryImpl, PersonRepositoryImpl, CountrySubdivisionRepositoryImpl,
     };
     use banking_logic::services::PersonServiceImpl;
     use sqlx::PgPool;
@@ -18,18 +18,18 @@ mod person_tests {
 
         let person_repo = Arc::new(PersonRepositoryImpl::new(pool.clone()));
         let country_repo = Arc::new(CountryRepositoryImpl::new(pool.clone()));
-        let state_repo = Arc::new(StateProvinceRepositoryImpl::new(pool.clone()));
-        let city_repo = Arc::new(CityRepositoryImpl::new(pool.clone()));
-        let address_repo = Arc::new(AddressRepositoryImpl::new(pool.clone()));
+        let country_subdivision_repo = Arc::new(CountrySubdivisionRepositoryImpl::new(pool.clone()));
+        let locality_repo = Arc::new(LocalityRepositoryImpl::new(pool.clone()));
+        let location_repo = Arc::new(LocationRepositoryImpl::new(pool.clone()));
         let messaging_repo = Arc::new(MessagingRepositoryImpl::new(pool.clone()));
         let entity_ref_repo = Arc::new(EntityReferenceRepositoryImpl::new(pool.clone()));
 
         let person_service = Arc::new(PersonServiceImpl::new(
             person_repo,
             country_repo,
-            state_repo,
-            city_repo,
-            address_repo,
+            country_subdivision_repo,
+            locality_repo,
+            location_repo,
             messaging_repo,
             entity_ref_repo,
         ));

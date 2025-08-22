@@ -1,5 +1,5 @@
 -- Create ENUM types
-CREATE TYPE address_type AS ENUM ('Residential', 'Business', 'Mailing', 'Temporary', 'Branch', 'Community', 'Other');
+CREATE TYPE location_type AS ENUM ('Residential', 'Business', 'Mailing', 'Temporary', 'Branch', 'Community', 'Other');
 CREATE TYPE messaging_type AS ENUM ('Email', 'Phone', 'Sms', 'WhatsApp', 'Telegram', 'Skype', 'Teams', 'Signal', 'WeChat', 'Viber', 'Messenger', 'LinkedIn', 'Slack', 'Discord', 'Other');
 CREATE TYPE person_type AS ENUM ('Natural', 'Legal', 'System', 'Integration', 'Unknown');
 CREATE TYPE person_entity_type AS ENUM ('Customer', 'Employee', 'Shareholder', 'Director', 'BeneficialOwner', 'Agent', 'Vendor', 'Partner', 'RegulatoryContact', 'EmergencyContact', 'SystemAdmin', 'Other');
@@ -25,11 +25,11 @@ CREATE TABLE country_idx (
     is_active BOOLEAN NOT NULL
 );
 
--- Main table for model StateProvinceModel
-CREATE TABLE state_province (
+-- Main table for model CountrySubdivisionModel
+CREATE TABLE country_subdivision (
     id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
-    state_province_code VARCHAR(10) NOT NULL,
+    code VARCHAR(10) NOT NULL,
     name_l1 VARCHAR(100) NOT NULL,
     name_l2 VARCHAR(100),
     name_l3 VARCHAR(100),
@@ -40,20 +40,20 @@ CREATE TABLE state_province (
     updated_by_person_id UUID NOT NULL
 );
 
--- Index table for StateProvince
-CREATE TABLE state_province_idx (
-    state_province_id UUID PRIMARY KEY,
+-- Index table for CountrySubdivision
+CREATE TABLE country_subdivision_idx (
+    country_subdivision_id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
-    state_province_code VARCHAR(10) NOT NULL,
+    code VARCHAR(10) NOT NULL,
     is_active BOOLEAN NOT NULL
 );
 
--- Main table for model CityModel
-CREATE TABLE city (
+-- Main table for model LocalityModel
+CREATE TABLE locality (
     id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
-    state_id UUID,
-    city_code VARCHAR(50) NOT NULL,
+    country_subdivision_id UUID,
+    code VARCHAR(50) NOT NULL,
     name_l1 VARCHAR(50) NOT NULL,
     name_l2 VARCHAR(50),
     name_l3 VARCHAR(50),
@@ -64,28 +64,28 @@ CREATE TABLE city (
     updated_by_person_id UUID NOT NULL
 );
 
--- Index table for City
-CREATE TABLE city_idx (
-    city_id UUID PRIMARY KEY,
+-- Index table for Locality
+CREATE TABLE locality_idx (
+    locality_id UUID PRIMARY KEY,
     country_id UUID NOT NULL,
-    state_id UUID,
-    city_code VARCHAR(50) NOT NULL,
+    country_subdivision_id UUID,
+    code VARCHAR(50) NOT NULL,
     is_active BOOLEAN NOT NULL
 );
 
--- Main table for model AddressModel
-CREATE TABLE address (
+-- Main table for model LocationModel
+CREATE TABLE location (
     id UUID PRIMARY KEY,
     street_line1 VARCHAR(50) NOT NULL,
     street_line2 VARCHAR(50),
     street_line3 VARCHAR(50),
     street_line4 VARCHAR(50),
-    city_id UUID NOT NULL,
+    locality_id UUID NOT NULL,
     postal_code VARCHAR(20),
     latitude DECIMAL(15,10),
     longitude DECIMAL(15,10),
     accuracy_meters REAL,
-    address_type address_type NOT NULL,
+    location_type location_type NOT NULL,
     is_active BOOLEAN NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -93,12 +93,12 @@ CREATE TABLE address (
     updated_by_person_id UUID NOT NULL
 );
 
--- Index table for Address
-CREATE TABLE address_idx (
-    address_id UUID PRIMARY KEY,
-    address_type address_type NOT NULL,
+-- Index table for Location
+CREATE TABLE location_idx (
+    location_id UUID PRIMARY KEY,
+    location_type location_type NOT NULL,
     is_active BOOLEAN NOT NULL,
-    city_id UUID,
+    locality_id UUID,
     street_line1_hash BIGINT
 );
 
@@ -164,7 +164,7 @@ CREATE TABLE person (
     messaging5_id UUID,
     messaging5_type messaging_type,
     department VARCHAR(50),
-    location_address_id UUID,
+    location_id UUID,
     duplicate_of_person_id UUID,
     is_active BOOLEAN NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
