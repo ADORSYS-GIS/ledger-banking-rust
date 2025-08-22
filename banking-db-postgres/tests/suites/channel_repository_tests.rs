@@ -1,4 +1,4 @@
-#[cfg(feature = "postgres_tests")]
+
 mod channel_repository_tests {
     use banking_api::{BankingResult};
     use banking_db::models::channel::{ChannelModel, ChannelStatus};

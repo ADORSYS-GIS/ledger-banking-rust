@@ -1,6 +1,6 @@
 mod commons;
 
-#[cfg(feature = "postgres_tests")]
+
 mod fee_repository_tests {
     use banking_api::domain::fee::{
         FeeType, FeeCategory, FeeCalculationMethod, FeeTriggerEvent, FeeApplicationStatus

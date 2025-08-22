@@ -71,8 +71,8 @@ impl CollateralMapper {
     pub fn from_model(model: CollateralModel) -> banking_api::BankingResult<Collateral> {
         Ok(Collateral {
             id: model.id,
-            collateral_type: Self::db_to_collateral_type(model.collateral_type),
-            collateral_category: Self::db_to_collateral_category(model.collateral_category),
+            collateral_type: Self::collateral_type_from_db(model.collateral_type),
+            collateral_category: Self::collateral_category_from_db(model.collateral_category),
             description: model.description,
             external_reference: model.external_reference,
             original_value: model.original_value,
@@ -87,20 +87,20 @@ impl CollateralMapper {
             lien_amount: model.lien_amount,
             margin_percentage: model.margin_percentage,
             forced_sale_value: model.forced_sale_value,
-            custody_location: Self::db_to_custody_location(model.custody_location),
+            custody_location: Self::custody_location_from_db(model.custody_location),
             physical_location: model.physical_location,
             custodian_details_id: model.custodian_details_id,
             legal_title_holder_person_id: model.legal_title_holder_person_id,
-            perfection_status: Self::db_to_perfection_status(model.perfection_status),
+            perfection_status: Self::perfection_status_from_db(model.perfection_status),
             perfection_date: model.perfection_date,
             perfection_expiry_date: model.perfection_expiry_date,
             registration_number: model.registration_number,
             registration_authority_person_id: model.registration_authority_person_id,
             insurance_required: model.insurance_required,
             insurance_coverage: model.insurance_coverage.and_then(|v| serde_json::from_value(v).ok()),
-            risk_rating: Self::db_to_collateral_risk_rating(model.risk_rating),
+            risk_rating: Self::collateral_risk_rating_from_db(model.risk_rating),
             environmental_risk: model.environmental_risk.and_then(|v| serde_json::from_value(v).ok()),
-            status: Self::db_to_collateral_status(model.status),
+            status: Self::collateral_status_from_db(model.status),
             pledge_date: model.pledge_date,
             release_date: model.release_date,
             maturity_date: model.maturity_date,
@@ -139,7 +139,7 @@ impl CollateralMapper {
             id: model.id,
             collateral_id: model.collateral_id,
             valuation_date: model.valuation_date,
-            valuation_method: Self::db_to_valuation_method(model.valuation_method),
+            valuation_method: Self::valuation_method_from_db(model.valuation_method),
             market_value: model.market_value,
             forced_sale_value: model.forced_sale_value,
             appraiser_name: model.appraiser_name,
@@ -185,10 +185,10 @@ impl CollateralMapper {
             loan_account_id: model.loan_account_id,
             pledged_amount: model.pledged_amount,
             pledge_percentage: model.pledge_percentage,
-            pledge_priority: Self::db_to_pledge_priority(model.pledge_priority),
+            pledge_priority: Self::pledge_priority_from_db(model.pledge_priority),
             pledge_date: model.pledge_date,
             release_conditions: model.release_conditions,
-            status: Self::db_to_pledge_status(model.status),
+            status: Self::pledge_status_from_db(model.status),
             security_agreement_reference: model.security_agreement_reference,
             pledge_registration_number: model.pledge_registration_number,
             last_review_date: model.last_review_date,
@@ -224,12 +224,12 @@ impl CollateralMapper {
         Ok(CollateralAlert {
             id: model.id,
             collateral_id: model.collateral_id,
-            alert_type: Self::db_to_collateral_alert_type(model.alert_type),
-            severity: Self::db_to_alert_severity(model.severity),
+            alert_type: Self::collateral_alert_type_from_db(model.alert_type),
+            severity: Self::alert_severity_from_db(model.severity),
             message: model.message,
             trigger_date: model.trigger_date,
             due_date: model.due_date,
-            status: Self::db_to_collateral_alert_status(model.status),
+            status: Self::collateral_alert_status_from_db(model.status),
             assigned_to_person_id: model.assigned_to_person_id,
             resolution_notes: model.resolution_notes,
             resolved_at: model.resolved_at,
@@ -269,12 +269,12 @@ impl CollateralMapper {
             id: model.id,
             collateral_id: model.collateral_id,
             loan_account_id: model.loan_account_id,
-            enforcement_type: Self::db_to_enforcement_type(model.enforcement_type),
+            enforcement_type: Self::enforcement_type_from_db(model.enforcement_type),
             enforcement_date: model.enforcement_date,
             outstanding_debt: model.outstanding_debt,
             estimated_recovery: model.estimated_recovery,
-            enforcement_method: Self::db_to_enforcement_method(model.enforcement_method),
-            status: Self::db_to_enforcement_status(model.status),
+            enforcement_method: Self::enforcement_method_from_db(model.enforcement_method),
+            status: Self::enforcement_status_from_db(model.status),
             legal_counsel_person_id: model.legal_counsel_person_id,
             court_case_reference: model.court_case_reference,
             expected_completion_date: model.expected_completion_date,
@@ -319,7 +319,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_collateral_type(ct: DbCollateralType) -> CollateralType {
+    fn collateral_type_from_db(ct: DbCollateralType) -> CollateralType {
         match ct {
             DbCollateralType::ResidentialProperty => CollateralType::ResidentialProperty,
             DbCollateralType::CommercialProperty => CollateralType::CommercialProperty,
@@ -357,7 +357,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_collateral_category(cc: DbCollateralCategory) -> CollateralCategory {
+    fn collateral_category_from_db(cc: DbCollateralCategory) -> CollateralCategory {
         match cc {
             DbCollateralCategory::Immovable => CollateralCategory::Immovable,
             DbCollateralCategory::Movable => CollateralCategory::Movable,
@@ -377,7 +377,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_custody_location(cl: DbCustodyLocation) -> CustodyLocation {
+    fn custody_location_from_db(cl: DbCustodyLocation) -> CustodyLocation {
         match cl {
             DbCustodyLocation::BankVault => CustodyLocation::BankVault,
             DbCustodyLocation::ThirdPartyCustodian => CustodyLocation::ThirdPartyCustodian,
@@ -398,7 +398,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_perfection_status(ps: DbPerfectionStatus) -> PerfectionStatus {
+    fn perfection_status_from_db(ps: DbPerfectionStatus) -> PerfectionStatus {
         match ps {
             DbPerfectionStatus::Pending => PerfectionStatus::Pending,
             DbPerfectionStatus::Perfected => PerfectionStatus::Perfected,
@@ -418,7 +418,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_collateral_risk_rating(crr: DbCollateralRiskRating) -> CollateralRiskRating {
+    fn collateral_risk_rating_from_db(crr: DbCollateralRiskRating) -> CollateralRiskRating {
         match crr {
             DbCollateralRiskRating::Excellent => CollateralRiskRating::Excellent,
             DbCollateralRiskRating::Good => CollateralRiskRating::Good,
@@ -441,7 +441,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_collateral_status(cs: DbCollateralStatus) -> CollateralStatus {
+    fn collateral_status_from_db(cs: DbCollateralStatus) -> CollateralStatus {
         match cs {
             DbCollateralStatus::Active => CollateralStatus::Active,
             DbCollateralStatus::Released => CollateralStatus::Released,
@@ -466,7 +466,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_valuation_method(vm: DbValuationMethod) -> ValuationMethod {
+    fn valuation_method_from_db(vm: DbValuationMethod) -> ValuationMethod {
         match vm {
             DbValuationMethod::MarketComparison => ValuationMethod::MarketComparison,
             DbValuationMethod::IncomeApproach => ValuationMethod::IncomeApproach,
@@ -487,7 +487,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_pledge_priority(pp: DbPledgePriority) -> PledgePriority {
+    fn pledge_priority_from_db(pp: DbPledgePriority) -> PledgePriority {
         match pp {
             DbPledgePriority::First => PledgePriority::First,
             DbPledgePriority::Second => PledgePriority::Second,
@@ -507,7 +507,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_pledge_status(ps: DbPledgeStatus) -> PledgeStatus {
+    fn pledge_status_from_db(ps: DbPledgeStatus) -> PledgeStatus {
         match ps {
             DbPledgeStatus::Active => PledgeStatus::Active,
             DbPledgeStatus::Released => PledgeStatus::Released,
@@ -535,7 +535,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_collateral_alert_type(cat: DbCollateralAlertType) -> CollateralAlertType {
+    fn collateral_alert_type_from_db(cat: DbCollateralAlertType) -> CollateralAlertType {
         match cat {
             DbCollateralAlertType::ValuationDue => CollateralAlertType::ValuationDue,
             DbCollateralAlertType::ValuationOverdue => CollateralAlertType::ValuationOverdue,
@@ -552,7 +552,7 @@ impl CollateralMapper {
         }
     }
 
-    fn alert_severity_to_db(als: AlertSeverity) -> DbAlertSeverity {
+    pub fn alert_severity_to_db(als: AlertSeverity) -> DbAlertSeverity {
         match als {
             AlertSeverity::Low => DbAlertSeverity::Low,
             AlertSeverity::Medium => DbAlertSeverity::Medium,
@@ -561,7 +561,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_alert_severity(als: DbAlertSeverity) -> AlertSeverity {
+    pub fn alert_severity_from_db(als: DbAlertSeverity) -> AlertSeverity {
         match als {
             DbAlertSeverity::Low => AlertSeverity::Low,
             DbAlertSeverity::Medium => AlertSeverity::Medium,
@@ -580,7 +580,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_collateral_alert_status(cas: DbCollateralAlertStatus) -> CollateralAlertStatus {
+    fn collateral_alert_status_from_db(cas: DbCollateralAlertStatus) -> CollateralAlertStatus {
         match cas {
             DbCollateralAlertStatus::Open => CollateralAlertStatus::Open,
             DbCollateralAlertStatus::InProgress => CollateralAlertStatus::InProgress,
@@ -601,7 +601,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_enforcement_type(et: DbEnforcementType) -> EnforcementType {
+    fn enforcement_type_from_db(et: DbEnforcementType) -> EnforcementType {
         match et {
             DbEnforcementType::PrivateSale => EnforcementType::PrivateSale,
             DbEnforcementType::PublicAuction => EnforcementType::PublicAuction,
@@ -623,7 +623,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_enforcement_method(em: DbEnforcementMethod) -> EnforcementMethod {
+    fn enforcement_method_from_db(em: DbEnforcementMethod) -> EnforcementMethod {
         match em {
             DbEnforcementMethod::DirectSale => EnforcementMethod::DirectSale,
             DbEnforcementMethod::AuctionHouse => EnforcementMethod::AuctionHouse,
@@ -645,7 +645,7 @@ impl CollateralMapper {
         }
     }
 
-    fn db_to_enforcement_status(es: DbEnforcementStatus) -> EnforcementStatus {
+    fn enforcement_status_from_db(es: DbEnforcementStatus) -> EnforcementStatus {
         match es {
             DbEnforcementStatus::Initiated => EnforcementStatus::Initiated,
             DbEnforcementStatus::InProgress => EnforcementStatus::InProgress,

@@ -2,6 +2,7 @@ pub mod customer;
 pub mod account;
 pub mod account_hold;
 pub mod agent_network;
+pub mod audit;
 pub mod transaction;
 pub mod calendar;
 pub mod workflow;
@@ -18,6 +19,7 @@ pub mod daily_collection;
 pub mod product;
 pub mod common;
 
+pub use audit::*;
 pub use customer::*;
 pub use account::*;
 pub use account_hold::*;

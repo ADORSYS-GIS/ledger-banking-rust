@@ -34,7 +34,7 @@ This directory contains a complete database cleanup system designed to solve tes
 async fn test_with_cleanup() {
     // Setup
     let (pool, person_id, account_id) = setup_test_db().await;
-    cleanup_database(&pool).await; // Start with clean state
+    cleanup_database(&pool).await; // Start with clean country_subdivision
     
     // Recreate prerequisites after cleanup
     let person_id = create_test_person(&pool).await;

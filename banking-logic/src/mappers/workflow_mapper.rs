@@ -36,9 +36,9 @@ impl WorkflowMapper {
         Ok(AccountWorkflow {
             id: model.id,
             account_id: model.id,
-            workflow_type: Self::db_to_workflow_type(model.workflow_type),
-            current_step: Self::db_to_workflow_step(model.current_step),
-            status: Self::db_to_workflow_status(model.status),
+            workflow_type: Self::workflow_type_from_db(model.workflow_type),
+            current_step: Self::workflow_step_from_db(model.current_step),
+            status: Self::workflow_status_from_db(model.status),
             initiated_by: model.initiated_by,
             initiated_at: model.initiated_at,
             completed_at: model.completed_at,
@@ -62,7 +62,7 @@ impl WorkflowMapper {
     /// Map from database WorkflowStepRecordModel to domain WorkflowStepRecord
     pub fn step_record_from_model(model: WorkflowStepRecordModel) -> WorkflowStepRecord {
         WorkflowStepRecord {
-            step: Self::db_to_workflow_step(model.step),
+            step: Self::workflow_step_from_db(model.step),
             completed_at: model.completed_at,
             completed_by: model.completed_by,
             notes: model.notes,
@@ -112,7 +112,7 @@ impl WorkflowMapper {
     /// Map from database ClosureRequestModel to domain ClosureRequest
     pub fn closure_request_from_model(model: ClosureRequestModel) -> ClosureRequest {
         ClosureRequest {
-            reason: Self::db_to_closure_reason(model.reason),
+            reason: Self::closure_reason_from_db(model.reason),
             disbursement_instructions: Default::default(), // Will be set separately
             requested_by: model.requested_by,
             force_closure: model.force_closure,
@@ -227,7 +227,7 @@ impl WorkflowMapper {
     }
 
     // Database to Domain enum conversions
-    fn db_to_workflow_type(workflow_type: WorkflowTypeModel) -> WorkflowType {
+    fn workflow_type_from_db(workflow_type: WorkflowTypeModel) -> WorkflowType {
         match workflow_type {
             WorkflowTypeModel::AccountOpening => WorkflowType::AccountOpening,
             WorkflowTypeModel::AccountClosure => WorkflowType::AccountClosure,
@@ -247,7 +247,7 @@ impl WorkflowMapper {
         }
     }
 
-    fn db_to_workflow_step(step: WorkflowStepModel) -> WorkflowStep {
+    fn workflow_step_from_db(step: WorkflowStepModel) -> WorkflowStep {
         match step {
             WorkflowStepModel::InitiateRequest => WorkflowStep::InitiateRequest,
             WorkflowStepModel::ComplianceCheck => WorkflowStep::ComplianceCheck,
@@ -258,7 +258,7 @@ impl WorkflowMapper {
         }
     }
 
-    fn db_to_workflow_status(status: WorkflowStatusModel) -> WorkflowStatus {
+    fn workflow_status_from_db(status: WorkflowStatusModel) -> WorkflowStatus {
         match status {
             WorkflowStatusModel::InProgress => WorkflowStatus::InProgress,
             WorkflowStatusModel::PendingAction => WorkflowStatus::PendingAction,
@@ -269,7 +269,7 @@ impl WorkflowMapper {
         }
     }
 
-    fn db_to_closure_reason(reason: ClosureReasonModel) -> ClosureReason {
+    fn closure_reason_from_db(reason: ClosureReasonModel) -> ClosureReason {
         match reason {
             ClosureReasonModel::CustomerRequest => ClosureReason::CustomerRequest,
             ClosureReasonModel::Regulatory => ClosureReason::Regulatory,

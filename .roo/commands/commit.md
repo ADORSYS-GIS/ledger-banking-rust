@@ -25,23 +25,7 @@ When this prompt is used, the assistant should:
    - Run `git diff --stat` to understand the scope of changes
    - Identify the primary purpose and scope of the changes
 
-2. **Create Commit Template**:
-   - Generate a comprehensive commit template
-   - Store it in `target/commit.md`
-
-3. **Stage Relevant Changes**:
-   - Use `git add` to stage files related to the main task
-   - Handle file deletions with `git rm` if needed
-   - Focus on logically related changes for a single commit
-
-4. **Create Comprehensive Commit Message**:
-   - Follow conventional commit format: `<type>(<scope>): <subject>`
-   - Include detailed body explaining the changes
-   - Specify affected components
-   - Explain benefits and impact
-   - Add LLM Code attribution
-
-5. **Update docs/progress/progress-tracking.md Progress Tracking** (IMPORTANT):
+2. **Update docs/progress/progress-tracking.md Progress Tracking** (IMPORTANT):
    - **Always check if the commit includes new repository implementations**
    - **Update completion percentages** (e.g., 92% → 95%)
    - **Update test counts** (e.g., 39+ tests → 42+ tests)
@@ -50,6 +34,22 @@ When this prompt is used, the assistant should:
    - **Add achievement documentation** in "Recent Achievements" section
    - This ensures docs/progress/progress-tracking.md accurately reflects the current implementation state
    - **add docs/progress/progress-tracking.md** to the commit
+
+3. **Create Commit Template**:
+   - Generate a comprehensive commit template
+   - Store it in `target/commit.md`
+
+4. **Stage Relevant Changes**:
+   - Use `git add` to stage files related to the main task
+   - Handle file deletions with `git rm` if needed
+   - Focus on logically related changes for a single commit
+
+5. **Create Comprehensive Commit Message**:
+   - Follow conventional commit format: `<type>(<scope>): <subject>`
+   - Include detailed body explaining the changes
+   - Specify affected components
+   - Explain benefits and impact
+   - Add LLM Code attribution
 
 6. **Commit with Proper Signing**:
    - Use both `-s` (DCO sign-off) and `-S` (GPG signature) flags
@@ -114,7 +114,7 @@ git commit -s -S -F target/commit.md
 ## Pre-Commit Verification
 
 Before committing, ensure:
-- [ ] All tests pass (`cargo test --workspace`)
+- [ ] All tests pass (`cargo test --workspace -- --test-threads=1`)
 - [ ] Code compiles without warnings (`cargo check --workspace`)
 - [ ] Changes are logically grouped
 - [ ] Commit message is comprehensive and follows format

@@ -1,28 +1,30 @@
-pub mod customer_repository_impl;
-pub mod agent_network_repository_impl;
-pub mod calendar_repository_impl;
-pub mod account_repository_impl;
-pub mod account_hold_repository_impl;
-pub mod transaction_repository_impl;
+// #[cfg(feature = "customer")]
+// pub mod customer_repository_impl;
+// #[cfg(feature = "agent_network")]
+// pub mod agent_network_repository_impl;
+// #[cfg(feature = "calendar")]
+// pub mod calendar_repository_impl;
+// #[cfg(feature = "account")]
+// pub mod account_repository_impl;
+// #[cfg(feature = "account_hold")]
+// pub mod account_hold_repository_impl;
+// #[cfg(feature = "transaction")]
+// pub mod transaction_repository_impl;
 pub mod person_repository_impl;
-pub mod compliance_repository_impl;
-pub mod collateral_repository_impl;
-pub mod workflow_repository_impl;
-pub mod fee_repository_impl;
-pub mod reason_and_purpose_repository_impl;
-pub mod channel_repository_impl;
-pub mod product_repository_impl;
-
-pub use customer_repository_impl::*;
-pub use agent_network_repository_impl::*;
-pub use calendar_repository_impl::*;
-pub use account_repository_impl::*;
-pub use transaction_repository_impl::*;
-pub use person_repository_impl::*;
-pub use compliance_repository_impl::*;
-pub use collateral_repository_impl::*;
-pub use workflow_repository_impl::*;
-pub use fee_repository_impl::*;
-pub use reason_and_purpose_repository_impl::*;
-pub use channel_repository_impl::*;
-pub use product_repository_impl::*;
+// #[cfg(feature = "compliance")]
+// pub mod compliance_repository_impl;
+// #[cfg(feature = "collateral")]
+// pub mod collateral_repository_impl;
+// #[cfg(feature = "daily_collection")]
+// pub mod daily_collection_repository_impl;
+// #[cfg(feature = "workflow")]
+// pub mod workflow_repository_impl;
+// #[cfg(feature = "fee")]
+// pub mod fee_repository_impl;
+// #[cfg(feature = "reason_and_purpose")]
+// pub mod reason_and_purpose_repository_impl;
+// #[cfg(feature = "channel")]
+// pub mod channel_repository_impl;
+// #[cfg(feature = "product")]
+// pub mod product_repository_impl;
+pub mod audit_repository_impl;

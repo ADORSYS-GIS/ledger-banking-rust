@@ -180,7 +180,7 @@ impl AccountLifecycleService for AccountLifecycleServiceImpl {
 
     /// Activate account after all verifications complete
     async fn activate_account(&self, account_id: Uuid, authorized_by: Uuid) -> BankingResult<()> {
-        // Validate account exists and is in pending state
+        // Validate account exists and is in pending country_subdivision
         let account_model = self.account_repository
             .find_by_id(account_id)
             .await?

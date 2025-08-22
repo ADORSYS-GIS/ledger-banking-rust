@@ -211,6 +211,9 @@ pub enum BankingError {
     // Not implemented features
     #[error("Feature not implemented: {0}")]
     NotImplemented(String),
+
+    #[error("Duplicate person: {0}")]
+    DuplicatePerson(String),
 }
 
 impl From<anyhow::Error> for BankingError {
@@ -238,6 +241,12 @@ impl From<sqlx::Error> for BankingError {
         }
     }
 }
+impl From<Box<dyn std::error::Error + Send + Sync>> for BankingError {
+    fn from(err: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        BankingError::Internal(err.to_string())
+    }
+}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LimitType { 

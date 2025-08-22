@@ -106,7 +106,7 @@ async fn setup_test_db() -> PgPool {
     pool
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_workflow_crud_operations() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -141,7 +141,7 @@ async fn test_workflow_crud_operations() {
     assert!(result.completed_at.is_some());
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_workflows_by_account() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -183,7 +183,7 @@ async fn test_find_workflows_by_account() {
     assert!(workflow_types.contains(&&WorkflowTypeModel::AccountClosure));
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_active_workflow() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -210,7 +210,7 @@ async fn test_find_active_workflow() {
     assert!(active_workflow.status == WorkflowStatusModel::InProgress || active_workflow.status == WorkflowStatusModel::PendingAction);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_workflows_by_type() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -249,7 +249,7 @@ async fn test_find_workflows_by_type() {
     }
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_workflows_by_status() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -284,7 +284,7 @@ async fn test_find_workflows_by_status() {
     assert!(found_our_workflow, "Our test workflow not found in PendingAction results");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_workflow_status_management() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -308,7 +308,7 @@ async fn test_workflow_status_management() {
     assert_eq!(updated_workflow.next_action_required.unwrap().as_str(), "Waiting for documents");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_workflow_step_management() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -331,7 +331,7 @@ async fn test_workflow_step_management() {
     assert_eq!(updated_workflow.current_step, WorkflowStepModel::ComplianceCheck);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_complete_workflow() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -355,7 +355,7 @@ async fn test_complete_workflow() {
     assert!(completed_workflow.completed_at.is_some());
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_fail_workflow() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -379,7 +379,7 @@ async fn test_fail_workflow() {
     assert_eq!(failed_workflow.next_action_required.unwrap().as_str(), "KYC verification failed");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_cancel_workflow() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -403,7 +403,7 @@ async fn test_cancel_workflow() {
     assert_eq!(cancelled_workflow.next_action_required.unwrap().as_str(), "Customer request");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_pending_workflows() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -442,7 +442,7 @@ async fn test_find_pending_workflows() {
     }
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_in_progress_workflows() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -486,7 +486,7 @@ async fn test_find_in_progress_workflows() {
     }
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_expired_workflows() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -515,7 +515,7 @@ async fn test_find_expired_workflows() {
     assert!(found_our_workflow, "Our test workflow not found in expired workflows results");
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_account_opening_workflows() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -570,7 +570,7 @@ async fn test_find_account_opening_workflows() {
     }
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_pending_kyc_workflows() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -605,7 +605,7 @@ async fn test_find_pending_kyc_workflows() {
     assert_eq!(our_workflow.current_step, WorkflowStepModel::ComplianceCheck);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_find_pending_document_verification() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -639,7 +639,7 @@ async fn test_find_pending_document_verification() {
     assert_eq!(our_workflow.status, WorkflowStatusModel::PendingAction);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_utility_operations() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -676,7 +676,7 @@ async fn test_utility_operations() {
     assert!(total_count >= 1);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_list_workflows_pagination() {
     use std::collections::HashSet;
@@ -733,7 +733,7 @@ async fn test_list_workflows_pagination() {
     assert!(found_our_workflows >= 3, "Should find at least 3 of our created workflows in paginated results, found {}", found_our_workflows);
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_bulk_operations() {
     use banking_db_postgres::WorkflowRepositoryImpl;
@@ -769,7 +769,7 @@ async fn test_bulk_operations() {
     }
 }
 
-#[cfg(feature = "postgres_tests")]
+
 #[tokio::test]
 async fn test_bulk_timeout_expired_workflows() {
     use banking_db_postgres::WorkflowRepositoryImpl;

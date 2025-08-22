@@ -1,4 +1,4 @@
-#[cfg(feature = "postgres_tests")]
+
 mod tests {
     use banking_db::RiskRating;
     use banking_db_postgres::CustomerRepositoryImpl;

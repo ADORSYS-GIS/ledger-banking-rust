@@ -1,0 +1,13 @@
+// pub mod account_repository_tests;
+// pub mod channel_repository_tests;
+// pub mod cleanup_demo;
+// pub mod compliance_repository_tests;
+// pub mod customer_repository_tests;
+// pub mod example_with_cleanup;
+// pub mod fee_repository_tests;
+pub mod commons;
+pub mod person_repository_tests;
+// pub mod reason_and_purpose_repository_tests;
+// pub mod transaction_repository_tests;
+// pub mod unit_tests;
+// pub mod workflow_repository_tests;

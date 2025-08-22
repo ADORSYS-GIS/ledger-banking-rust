@@ -38,8 +38,8 @@ pub struct AgencyBranch {
     pub minimum_cash_balance: Decimal,
     pub created_at: DateTime<Utc>,
     
-    // Physical address
-    pub address_id: Uuid,
+    // Physical location
+    pub location_id: Uuid,
     pub landmark_description: Option<HeaplessString<200>>,
     
     // Operational details
@@ -196,7 +196,7 @@ pub enum BranchType {
     MobileUnit,
 }
 
-// Supporting structs - AgentAddress and GpsCoordinates removed, using person::Address instead
+// Supporting structs - AgentLocation and GpsCoordinates removed, using person::Location instead
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BranchCapabilities {
@@ -492,9 +492,9 @@ impl AgencyBranch {
         }
     }
     
-    /// Get address reference ID
-    pub fn get_address_id(&self) -> Uuid {
-        self.address_id
+    /// Get location reference ID
+    pub fn get_location_id(&self) -> Uuid {
+        self.location_id
     }
     
     /// Get capabilities reference ID
@@ -520,7 +520,7 @@ impl AgencyBranch {
         current_cash_balance: Decimal,
         minimum_cash_balance: Decimal,
         created_at: DateTime<Utc>,
-        default_address_id: Uuid,
+        default_location_id: Uuid,
         default_operating_hours_id: Uuid,
         default_capabilities_id: Uuid,
         default_security_access_id: Uuid,
@@ -542,7 +542,7 @@ impl AgencyBranch {
             created_at,
             
             // Default values for new fields
-            address_id: default_address_id,
+            location_id: default_location_id,
             landmark_description: None,
             operating_hours_id: default_operating_hours_id,
             holiday_plan_id: Uuid::nil(), // Default to nil UUID

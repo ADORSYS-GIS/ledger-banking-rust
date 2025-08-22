@@ -21,7 +21,7 @@ pub struct BranchSummary {
     pub branch_name: String,
     pub branch_code: String,
     pub branch_type: BranchType,
-    pub address: String,
+    pub location: String,
     pub is_open_now: bool,
     pub services_available: Vec<ServiceType>,
     pub wait_time_minutes: Option<u16>,
@@ -54,11 +54,11 @@ impl BranchSummary {
             branch_name: branch.branch_name.to_string(),
             branch_code: branch.branch_code.to_string(),
             branch_type: branch.branch_type,
-            address: format!("Address ID: {}", branch.address_id), // Simplified - would need to fetch actual address
+            location: format!("Location ID: {}", branch.location_id), // Simplified - would need to fetch actual location
             is_open_now: branch.is_cash_pickup_enabled_basic(), // Simplified check
             services_available: Vec::new(), // Would need to fetch from branch_capabilities
             wait_time_minutes: branch.average_wait_time_minutes,
-            gps_coordinates: None, // Would need to fetch from address
+            gps_coordinates: None, // Would need to fetch from location
             contact_info: ContactInfo {
                 primary_phone: String::new(), // Would need to fetch from messaging
                 secondary_phone: None,
@@ -78,7 +78,7 @@ pub struct BranchDetailView {
     pub branch_code: String,
     pub branch_type: BranchType,
     pub status: String,
-    pub address: AddressView,
+    pub location: LocationView,
     pub operating_hours: OperatingHoursView,
     pub services_available: Vec<ServiceType>,
     pub supported_currencies: Vec<String>,
@@ -93,13 +93,13 @@ pub struct BranchDetailView {
     pub last_updated_at: DateTime<Utc>,
 }
 
-/// Address view for API responses
+/// Location view for API responses
 #[derive(Serialize, Deserialize)]
-pub struct AddressView {
+pub struct LocationView {
     pub street_line1: String,
     pub street_line2: Option<String>,
-    pub city: String,
-    pub state_province: String,
+    pub locality: String,
+    pub country_subdivision: String,
     pub postal_code: String,
     pub country_code: String,
     pub gps_coordinates: Option<GpsCoordinatesSummary>,
@@ -186,14 +186,14 @@ impl BranchDetailView {
             branch_code: branch.branch_code.to_string(),
             branch_type: branch.branch_type,
             status: format!("{:?}", branch.status),
-            address: AddressView {
-                street_line1: format!("Address ID: {}", branch.address_id), // Simplified - would need to fetch actual address
+            location: LocationView {
+                street_line1: format!("Location ID: {}", branch.location_id), // Simplified - would need to fetch actual location
                 street_line2: None,
-                city: "Unknown City".to_string(), // Would need to fetch from address reference
-                state_province: "Unknown State".to_string(),
+                locality: "Unknown Locality".to_string(), // Would need to fetch from location reference
+                country_subdivision: "Unknown State".to_string(),
                 postal_code: "Unknown".to_string(),
                 country_code: "??".to_string(),
-                gps_coordinates: None, // Would need to fetch from address reference
+                gps_coordinates: None, // Would need to fetch from location reference
                 landmark_description: branch.landmark_description.as_ref().map(|s| s.to_string()),
             },
             operating_hours: OperatingHoursView {

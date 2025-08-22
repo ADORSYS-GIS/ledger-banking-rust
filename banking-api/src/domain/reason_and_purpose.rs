@@ -87,7 +87,7 @@ pub enum ReasonCategory {
     KycVerificationFailure,
     KycUpdateRequired,
     IdentityVerificationIssue,
-    AddressVerificationIssue,
+    LocationVerificationIssue,
     SourceOfFundsRequired,
     
     // Customer service
@@ -263,7 +263,7 @@ impl std::fmt::Display for ReasonCategory {
             ReasonCategory::KycVerificationFailure => write!(f, "KycVerificationFailure"),
             ReasonCategory::KycUpdateRequired => write!(f, "KycUpdateRequired"),
             ReasonCategory::IdentityVerificationIssue => write!(f, "IdentityVerificationIssue"),
-            ReasonCategory::AddressVerificationIssue => write!(f, "AddressVerificationIssue"),
+            ReasonCategory::LocationVerificationIssue => write!(f, "LocationVerificationIssue"),
             ReasonCategory::SourceOfFundsRequired => write!(f, "SourceOfFundsRequired"),
             ReasonCategory::ComplaintReason => write!(f, "ComplaintReason"),
             ReasonCategory::ServiceRequest => write!(f, "ServiceRequest"),
@@ -331,7 +331,7 @@ impl std::str::FromStr for ReasonCategory {
             "KycVerificationFailure" => Ok(ReasonCategory::KycVerificationFailure),
             "KycUpdateRequired" => Ok(ReasonCategory::KycUpdateRequired),
             "IdentityVerificationIssue" => Ok(ReasonCategory::IdentityVerificationIssue),
-            "AddressVerificationIssue" => Ok(ReasonCategory::AddressVerificationIssue),
+            "LocationVerificationIssue" => Ok(ReasonCategory::LocationVerificationIssue),
             "SourceOfFundsRequired" => Ok(ReasonCategory::SourceOfFundsRequired),
             "ComplaintReason" => Ok(ReasonCategory::ComplaintReason),
             "ServiceRequest" => Ok(ReasonCategory::ServiceRequest),

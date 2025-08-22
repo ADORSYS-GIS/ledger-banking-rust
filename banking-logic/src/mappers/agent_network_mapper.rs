@@ -71,7 +71,7 @@ impl AgentNetworkMapper {
             created_at: branch.created_at,
             
             // Location fields - normalized to UUID references
-            address_id: branch.address_id,
+            location_id: branch.location_id,
             landmark_description: branch.landmark_description,
             
             // Operational details - normalized to UUID references
@@ -137,7 +137,7 @@ impl AgentNetworkMapper {
             created_at: model.created_at,
             
             // Location fields
-            address_id: model.address_id,
+            location_id: model.location_id,
             landmark_description: model.landmark_description,
             
             // Operational details
