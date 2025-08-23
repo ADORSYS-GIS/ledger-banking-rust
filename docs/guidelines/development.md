@@ -182,6 +182,90 @@ pub name_l3: HeaplessString<100>,
 4. **References (&T)** for function parameters
 5. **PostgreSQL Enum Casting**: Use `$N::enum_name`
 
+## Command Pattern for Business Logic Execution
+
+To maintain a clean separation of concerns and ensure that business logic is decoupled from the API/delivery layer, the system uses a Command pattern. This pattern encapsulates all the information needed to perform an action into a single object (a "command").
+
+### Core Components
+
+1.  **`Command` Trait (`banking-api/src/command/command.rs`)**: The core trait that defines what a command is. It has an `execute` method and associated types for the `Context` (dependencies like services) and the `Result`.
+
+    ```rust
+    #[async_trait]
+    pub trait Command: Send + Sync {
+        type Context;
+        type Result: Send + 'static;
+
+        async fn execute(&self, context: &Self::Context) -> Result<Self::Result, BankingError>;
+    }
+    ```
+
+2.  **Concrete Command Structs** (e.g., `banking-api/src/command/person.rs`): These are the actual implementations of the `Command` trait. Each struct holds the specific data required for its operation.
+
+    ```rust
+    // Example: Command to populate geographical data
+    pub struct PopulateGeoDataCommand {
+        pub json_data: String,
+    }
+
+    #[async_trait]
+    impl Command for PopulateGeoDataCommand {
+        type Context = Arc<dyn PersonService>;
+        type Result = ();
+
+        async fn execute(&self, context: &Self::Context) -> Result<Self::Result, BankingError> {
+            // ... implementation ...
+        }
+    }
+    ```
+
+3.  **`AppCommand` Enum (`banking-api/src/command/command.rs`)**: A single enum that wraps all possible commands in the application. This provides a unified interface for the command executor.
+
+    ```rust
+    pub enum AppCommand {
+        AddPersonOfInterest(AddPersonOfInterestCommand),
+        PopulateGeoData(super::person::PopulateGeoDataCommand),
+        // ... other commands
+    }
+    ```
+
+4.  **`CommandExecutor` Trait & Implementation (`banking-logic/src/commands/executor.rs`)**: The executor is responsible for running the commands. It takes an `AppCommand`, matches on the variant, and calls the command's `execute` method with the correct dependencies.
+
+    ```rust
+    // Trait in banking-api
+    #[async_trait]
+    pub trait CommandExecutor: Send + Sync {
+        async fn execute(&self, command: AppCommand) -> Result<CommandResult, BankingError>;
+    }
+
+    // Implementation in banking-logic
+    pub struct CommandExecutorImpl {
+        person_service: Arc<dyn PersonService>,
+        // ... other services
+    }
+
+    #[async_trait::async_trait]
+    impl CommandExecutor for CommandExecutorImpl {
+        async fn execute(&self, command: AppCommand) -> Result<CommandResult, BankingError> {
+            match command {
+                AppCommand::PopulateGeoData(cmd) => {
+                    let result = cmd.execute(&self.person_service).await?;
+                    Ok(Box::new(result) as Box<dyn Any + Send>)
+                }
+                // ... other command handlers
+            }
+        }
+    }
+    ```
+
+### How to Add a New Command
+
+1.  **Define the Command Struct**: Create a new struct in the appropriate module within `banking-api/src/command/`. This struct will hold the data for the command.
+2.  **Implement the `Command` Trait**: Implement the `Command` trait for your new struct. Define the `Context` (the service it needs) and the `Result` type. Implement the `execute` logic.
+3.  **Add to `AppCommand` Enum**: Add a new variant to the `AppCommand` enum in `banking-api/src/command/command.rs` to include your new command.
+4.  **Update the `CommandExecutorImpl`**: Add a new match arm in `CommandExecutorImpl::execute` in `banking-logic/src/commands/executor.rs`. This arm will handle your new command, call its `execute` method with the required service, and wrap the result.
+5.  **Inject Dependencies**: If your command requires a new service, make sure to add it to `CommandExecutorImpl` and inject it during its construction.
+
 ## Architectural Strategy: Distributed Data & Application-Layer Logic
 
 To ensure high scalability and resilience, this system is designed to support a distributed data architecture. This means data can be partitioned across multiple databases and even stored in different types of storage systems (Polyglot Persistence). To achieve this, logic traditionally handled by a monolithic database is moved into the application layer.

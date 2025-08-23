@@ -2,6 +2,7 @@ pub mod domain;
 pub mod service;
 pub mod error;
 pub mod views;
+pub mod command;
 
 pub use error::*;
 pub use views::*;
