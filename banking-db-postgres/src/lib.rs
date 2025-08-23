@@ -4,12 +4,13 @@ use std::sync::Arc;
 
 pub mod repository;
 pub mod utils;
+pub mod test_utils;
 
-use repository::person_repository_impl::{
-    CountryRepositoryImpl, CountrySubdivisionRepositoryImpl, LocalityRepositoryImpl,
-    LocationRepositoryImpl, MessagingRepositoryImpl, PersonRepositoryImpl, EntityReferenceRepositoryImpl
+pub use repository::audit_repository_impl::AuditLogRepositoryImpl;
+pub use repository::person_repository_impl::{
+    CountryRepositoryImpl, CountrySubdivisionRepositoryImpl, EntityReferenceRepositoryImpl,
+    LocalityRepositoryImpl, LocationRepositoryImpl, MessagingRepositoryImpl, PersonRepositoryImpl,
 };
-use repository::audit_repository_impl::AuditLogRepositoryImpl;
 
 pub struct PostgresRepositories {
     pool: Arc<PgPool>,

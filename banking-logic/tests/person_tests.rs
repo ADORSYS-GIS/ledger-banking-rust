@@ -2,40 +2,38 @@
 mod person_tests {
     use banking_api::{BankingResult, Person, PersonService, PersonType};
     use banking_db_postgres::{
-        LocationRepositoryImpl, LocalityRepositoryImpl, CountryRepositoryImpl, EntityReferenceRepositoryImpl,
-        MessagingRepositoryImpl, PersonRepositoryImpl, CountrySubdivisionRepositoryImpl, AuditLogRepositoryImpl,
+        AuditLogRepositoryImpl, CountryRepositoryImpl, CountrySubdivisionRepositoryImpl,
+        EntityReferenceRepositoryImpl, LocalityRepositoryImpl, LocationRepositoryImpl,
+        MessagingRepositoryImpl, PersonRepositoryImpl,
     };
-    use banking_logic::services::PersonServiceImpl;
+    use banking_logic::services::{repositories::Repositories, PersonServiceImpl};
+    use heapless::String as HeaplessString;
     use sqlx::PgPool;
     use std::sync::Arc;
     use uuid::Uuid;
-    use banking_api::domain::AuditLog;
-    use heapless::String as HeaplessString;
+
+    use banking_db_postgres::test_utils::commons;
 
     async fn setup() -> (Arc<dyn PersonService>, PgPool) {
-        let pool = PgPool::connect("postgres://user:password@localhost:5432/testdb")
-            .await
-            .unwrap();
+        let pool = commons::establish_connection().await;
         let pool = Arc::new(pool);
 
-        let person_repo = Arc::new(PersonRepositoryImpl::new(pool.clone()));
-        let audit_log_repo = Arc::new(AuditRepositoryImpl::new(pool.clone()));
-        let country_repo = Arc::new(CountryRepositoryImpl::new(pool.clone()));
-        let country_subdivision_repo = Arc::new(CountrySubdivisionRepositoryImpl::new(pool.clone()));
-        let locality_repo = Arc::new(LocalityRepositoryImpl::new(pool.clone()));
-        let location_repo = Arc::new(LocationRepositoryImpl::new(pool.clone()));
-        let messaging_repo = Arc::new(MessagingRepositoryImpl::new(pool.clone()));
-        let entity_ref_repo = Arc::new(EntityReferenceRepositoryImpl::new(pool.clone()));
+        let repositories = Repositories {
+            person_repository: Arc::new(PersonRepositoryImpl::new(pool.clone())),
+            audit_log_repository: Arc::new(AuditLogRepositoryImpl::new(pool.clone())),
+            country_repository: Arc::new(CountryRepositoryImpl::new(pool.clone())),
+            country_subdivision_repository: Arc::new(CountrySubdivisionRepositoryImpl::new(
+                pool.clone(),
+            )),
+            locality_repository: Arc::new(LocalityRepositoryImpl::new(pool.clone())),
+            location_repository: Arc::new(LocationRepositoryImpl::new(pool.clone())),
+            messaging_repository: Arc::new(MessagingRepositoryImpl::new(pool.clone())),
+            entity_reference_repository: Arc::new(EntityReferenceRepositoryImpl::new(
+                pool.clone(),
+            )),
+        };
 
-        let person_service = Arc::new(PersonServiceImpl::new(
-            person_repo,
-            country_repo,
-            country_subdivision_repo,
-            locality_repo,
-            location_repo,
-            messaging_repo,
-            entity_ref_repo,
-        ));
+        let person_service = Arc::new(PersonServiceImpl::new(repositories));
 
         (person_service, (*pool).clone())
     }

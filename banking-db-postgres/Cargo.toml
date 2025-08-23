@@ -38,5 +38,8 @@ twox-hash = "2.1.1"
 tokio-test.workspace = true
 sqlx = { workspace = true, features = ["migrate"] }
 
+[features]
+test-utils = []
+
 [package.metadata.sqlx]
 migrations = "./migrations"

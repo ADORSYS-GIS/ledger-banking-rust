@@ -2,10 +2,8 @@ use crate::domain::person::{Country, CountrySubdivision, Locality};
 use crate::error::BankingError;
 use crate::service::person_service::PersonService;
 use async_trait::async_trait;
-use heapless::String as HeaplessString;
 use serde::Deserialize;
 use std::sync::Arc;
-use uuid::Uuid;
 
 use super::command::Command;
 

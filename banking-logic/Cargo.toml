@@ -32,7 +32,7 @@ rand = { workspace = true }
 # Configuration
 
 [dev-dependencies]
-banking-db-postgres = { path = "../banking-db-postgres" }
+banking-db-postgres = { path = "../banking-db-postgres", features = ["test-utils"] }
 sqlx = { version = "0.8.0", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "bigdecimal"] }
 
 [features]
