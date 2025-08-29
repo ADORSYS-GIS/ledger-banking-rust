@@ -444,3 +444,61 @@ For performance and storage efficiency, long or sensitive string fields used for
 4.  It returns a `Vec<Uuid>` (which may contain IDs from hash collisions).
 5.  `get_by_external_identifier` then calls `find_by_ids` with these IDs to fetch the full `PersonModel` objects.
 6.  Finally, it filters the resulting `Vec<PersonModel>` to find the one where `person.external_identifier` exactly matches the original `identifier` string.
+
+
+## Transaction Management with the Unit of Work Pattern
+
+To ensure data consistency across multiple repository operations, the system uses a Unit of Work pattern. This pattern guarantees that a series of operations are executed within a single database transaction, which can be either committed or rolled back as a single atomic unit.
+
+### Core Components
+
+1.  **`UnitOfWork` Trait (`banking-db/src/repository/unit_of_work.rs`)**: The core trait that defines the pattern. It has a `begin` method that starts a new session.
+
+    ```rust
+    #[async_trait]
+    pub trait UnitOfWork<DB: Database>: Send + Sync {
+        type Session: UnitOfWorkSession<DB>;
+        async fn begin(&self) -> BankingResult<Self::Session>;
+    }
+    ```
+
+2.  **`UnitOfWorkSession` Trait (`banking-db/src/repository/unit_of_work.rs`)**: Represents an active session with repository access and transaction control.
+
+    ```rust
+    #[async_trait]
+    pub trait UnitOfWorkSession<DB: Database>: Send + Sync {
+        // ... repository accessors
+        async fn commit(self) -> BankingResult<()>;
+        async fn rollback(self) -> BankingResult<()>;
+    }
+    ```
+
+3.  **Implementation (`banking-db-postgres/src/repository/unit_of_work_impl.rs`)**: The PostgreSQL-specific implementation that manages `sqlx::Transaction`.
+
+### How to Use the Unit of Work
+
+To perform multiple repository operations within a single transaction, you must use a `UnitOfWorkSession`.
+
+1.  **Begin a Session**: Start by calling `begin()` on a `UnitOfWork` instance.
+2.  **Access Repositories**: Use the session to get repository instances. All operations on these repositories will be part of the same transaction.
+3.  **Commit or Rollback**: Once all operations are complete, call `commit()` to save the changes or `rollback()` to discard them.
+
+```rust
+// Example: Creating a person and an audit log in a single transaction
+async fn create_person_with_audit(
+    uow: &PostgresUnitOfWork,
+    display_name: &str,
+) -> BankingResult<Person> {
+    let session = uow.begin().await?;
+
+    let audit_log_repo = session.audit_logs();
+    let person_repo = session.persons();
+
+    let audit_log = audit_log_repo.create(/* ... */).await?;
+    let person = person_repo.create(display_name, audit_log.id).await?;
+
+    session.commit().await?;
+
+    Ok(person)
+}
+```

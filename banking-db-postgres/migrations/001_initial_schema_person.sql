@@ -65,7 +65,9 @@ CREATE TABLE location (
     latitude DECIMAL(15,10),
     longitude DECIMAL(15,10),
     accuracy_meters REAL,
-    location_type location_type NOT NULL
+    location_type location_type NOT NULL,
+    version INTEGER NOT NULL,
+    audit_log_id UUID NOT NULL
 );
 
 -- Index table for Location
@@ -80,7 +82,9 @@ CREATE TABLE messaging (
     id UUID PRIMARY KEY,
     messaging_type messaging_type NOT NULL,
     value VARCHAR(100) NOT NULL,
-    other_type VARCHAR(20)
+    other_type VARCHAR(20),
+    version INTEGER NOT NULL,
+    audit_log_id UUID NOT NULL
 );
 
 -- Index table for Messaging
@@ -97,7 +101,9 @@ CREATE TABLE entity_reference (
     reference_external_id VARCHAR(50),
     reference_details_l1 VARCHAR(50),
     reference_details_l2 VARCHAR(50),
-    reference_details_l3 VARCHAR(50)
+    reference_details_l3 VARCHAR(50),
+    version INTEGER NOT NULL,
+    audit_log_id UUID NOT NULL
 );
 
 -- Index table for EntityReference
@@ -126,7 +132,10 @@ CREATE TABLE person (
     messaging5_type messaging_type,
     department VARCHAR(50),
     location_id UUID,
-    duplicate_of_person_id UUID
+    duplicate_of_person_id UUID,
+    version INTEGER NOT NULL,
+    entity_reference_count INTEGER NOT NULL,
+    audit_log_id UUID NOT NULL
 );
 
 -- Index table for Person

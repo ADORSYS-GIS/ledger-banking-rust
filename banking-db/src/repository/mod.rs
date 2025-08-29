@@ -1,5 +1,6 @@
 pub mod person_repository;
 pub mod audit_repository;
+pub mod unit_of_work;
 // pub mod customer_repository;
 // pub mod account_repository;
 // pub mod account_hold_repository;
@@ -31,3 +32,4 @@ pub use audit_repository::*;
 // pub use channel_repository::*;
 // pub use daily_collection_repository::*;
 // pub use product_repository::*;
+pub use unit_of_work::*;

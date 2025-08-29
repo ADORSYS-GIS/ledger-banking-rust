@@ -21,6 +21,7 @@ use heapless::String as HeaplessString;
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
+use sqlx::Postgres;
 
 // Mock Repositories
 #[derive(Default)]
@@ -29,8 +30,8 @@ struct MockPersonRepository {
 }
 
 #[async_trait]
-impl PersonRepository for MockPersonRepository {
-    async fn save(&self, person: PersonModel) -> Result<PersonModel, Box<dyn Error + Send + Sync>> {
+impl PersonRepository<Postgres> for MockPersonRepository {
+    async fn save(&self, person: PersonModel) -> Result<PersonModel, sqlx::Error> {
         self.persons.lock().unwrap().push(person.clone());
         Ok(person)
     }
@@ -38,7 +39,7 @@ impl PersonRepository for MockPersonRepository {
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<PersonModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<PersonModel>, sqlx::Error> {
         Ok(self.persons.lock().unwrap().iter().find(|p| p.id == id).cloned())
     }
 
@@ -137,11 +138,11 @@ struct MockCountryRepository {
 }
 
 #[async_trait]
-impl CountryRepository for MockCountryRepository {
+impl CountryRepository<Postgres> for MockCountryRepository {
     async fn save(
         &self,
         country: CountryModel,
-    ) -> Result<CountryModel, Box<dyn Error + Send + Sync>> {
+    ) -> Result<CountryModel, sqlx::Error> {
         self.countries.lock().unwrap().push(country.clone());
         Ok(country)
     }
@@ -149,7 +150,7 @@ impl CountryRepository for MockCountryRepository {
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<CountryModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<CountryModel>, sqlx::Error> {
         Ok(self
             .countries
             .lock()
@@ -162,7 +163,7 @@ impl CountryRepository for MockCountryRepository {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<CountryModel>, sqlx::Error> {
         let countries = self
             .countries
             .lock()
@@ -188,9 +189,9 @@ impl CountryRepository for MockCountryRepository {
     async fn find_by_iso2(
         &self,
         iso2: &str,
-        _page: u32,
-        _page_size: u32,
-    ) -> Result<Vec<CountryModel>, Box<dyn Error + Send + Sync>> {
+        _page: i32,
+        _page_size: i32,
+    ) -> Result<Vec<CountryModel>, sqlx::Error> {
         let countries = self
             .countries
             .lock()
@@ -209,11 +210,11 @@ struct MockCountrySubdivisionRepository {
 }
 
 #[async_trait]
-impl CountrySubdivisionRepository for MockCountrySubdivisionRepository {
+impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository {
     async fn save(
         &self,
         country_subdivision: CountrySubdivisionModel,
-    ) -> Result<CountrySubdivisionModel, Box<dyn Error + Send + Sync>> {
+    ) -> Result<CountrySubdivisionModel, sqlx::Error> {
         self.country_subdivisions.lock().unwrap().push(country_subdivision.clone());
         Ok(country_subdivision)
     }
@@ -221,7 +222,7 @@ impl CountrySubdivisionRepository for MockCountrySubdivisionRepository {
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<CountrySubdivisionModel>, sqlx::Error> {
         Ok(self.country_subdivisions.lock().unwrap().iter().find(|s| s.id == id).cloned())
     }
 
@@ -246,9 +247,9 @@ impl CountrySubdivisionRepository for MockCountrySubdivisionRepository {
     async fn find_by_country_id(
         &self,
         country_id: Uuid,
-        _page: u32,
-        _page_size: u32,
-    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
+        _page: i32,
+        _page_size: i32,
+    ) -> Result<Vec<CountrySubdivisionModel>, sqlx::Error> {
         let country_subdivisions = self
             .country_subdivisions
             .lock()
@@ -264,7 +265,7 @@ impl CountrySubdivisionRepository for MockCountrySubdivisionRepository {
         &self,
         country_id: Uuid,
         code: &str,
-    ) -> Result<Option<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<CountrySubdivisionModel>, sqlx::Error> {
         Ok(self
             .country_subdivisions
             .lock()
@@ -281,13 +282,13 @@ struct MockLocalityRepository {
 }
 
 #[async_trait]
-impl LocalityRepository for MockLocalityRepository {
-    async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, Box<dyn Error + Send + Sync>> {
+impl LocalityRepository<Postgres> for MockLocalityRepository {
+    async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, sqlx::Error> {
         self.localities.lock().unwrap().push(locality.clone());
         Ok(locality)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityModel>, sqlx::Error> {
         Ok(self.localities.lock().unwrap().iter().find(|c| c.id == id).cloned())
     }
 
@@ -312,9 +313,9 @@ impl LocalityRepository for MockLocalityRepository {
     async fn find_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,
-        _page: u32,
-        _page_size: u32,
-    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
+        _page: i32,
+        _page_size: i32,
+    ) -> Result<Vec<LocalityModel>, sqlx::Error> {
         let localities = self
             .localities
             .lock()
@@ -330,7 +331,7 @@ impl LocalityRepository for MockLocalityRepository {
         &self,
         country_subdivision_id: Uuid,
         code: &str,
-    ) -> Result<Option<LocalityModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<LocalityModel>, sqlx::Error> {
         Ok(self
             .localities
             .lock()
@@ -347,8 +348,8 @@ struct MockLocationRepository {
 }
 
 #[async_trait]
-impl LocationRepository for MockLocationRepository {
-    async fn save(&self, location: LocationModel) -> Result<LocationModel, Box<dyn Error + Send + Sync>> {
+impl LocationRepository<Postgres> for MockLocationRepository {
+    async fn save(&self, location: LocationModel) -> Result<LocationModel, sqlx::Error> {
         self.locations.lock().unwrap().push(location.clone());
         Ok(location)
     }
@@ -356,7 +357,7 @@ impl LocationRepository for MockLocationRepository {
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<LocationModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<LocationModel>, sqlx::Error> {
         Ok(self
             .locations
             .lock()
@@ -369,7 +370,7 @@ impl LocationRepository for MockLocationRepository {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<LocationModel>, sqlx::Error> {
         let locations = self
             .locations
             .lock()
@@ -402,9 +403,9 @@ impl LocationRepository for MockLocationRepository {
     async fn find_by_locality_id(
         &self,
         locality_id: Uuid,
-        _page: u32,
-        _page_size: u32,
-    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+        _page: i32,
+        _page_size: i32,
+    ) -> Result<Vec<LocationModel>, sqlx::Error> {
         let locations = self
             .locations
             .lock()
@@ -419,7 +420,7 @@ impl LocationRepository for MockLocationRepository {
     async fn find_ids_by_street_line1(
         &self,
         street_line1: &str,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<Uuid>, sqlx::Error> {
         let ids = self
             .locations
             .lock()
@@ -435,9 +436,9 @@ impl LocationRepository for MockLocationRepository {
         &self,
         location_type: LocationTypeModel,
         locality_id: Uuid,
-        _page: u32,
-        _page_size: u32,
-    ) -> Result<Vec<LocationModel>, Box<dyn Error + Send + Sync>> {
+        _page: i32,
+        _page_size: i32,
+    ) -> Result<Vec<LocationModel>, sqlx::Error> {
         let locations = self
             .locations
             .lock()
@@ -456,11 +457,11 @@ struct MockMessagingRepository {
 }
 
 #[async_trait]
-impl MessagingRepository for MockMessagingRepository {
+impl MessagingRepository<Postgres> for MockMessagingRepository {
     async fn save(
         &self,
         messaging: MessagingModel,
-    ) -> Result<MessagingModel, Box<dyn Error + Send + Sync>> {
+    ) -> Result<MessagingModel, sqlx::Error> {
         self.messages.lock().unwrap().push(messaging.clone());
         Ok(messaging)
     }
@@ -511,11 +512,11 @@ struct MockEntityReferenceRepository {
 }
 
 #[async_trait]
-impl EntityReferenceRepository for MockEntityReferenceRepository {
+impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
     async fn save(
         &self,
         entity_ref: EntityReferenceModel,
-    ) -> Result<EntityReferenceModel, Box<dyn Error + Send + Sync>> {
+    ) -> Result<EntityReferenceModel, sqlx::Error> {
         self.entities.lock().unwrap().push(entity_ref.clone());
         Ok(entity_ref)
     }
@@ -523,7 +524,7 @@ impl EntityReferenceRepository for MockEntityReferenceRepository {
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<EntityReferenceModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<EntityReferenceModel>, sqlx::Error> {
         Ok(self
             .entities
             .lock()
@@ -570,9 +571,9 @@ impl EntityReferenceRepository for MockEntityReferenceRepository {
     async fn find_by_person_id(
         &self,
         person_id: Uuid,
-        _page: u32,
-        _page_size: u32,
-    ) -> Result<Vec<EntityReferenceModel>, Box<dyn Error + Send + Sync>> {
+        _page: i32,
+        _page_size: i32,
+    ) -> Result<Vec<EntityReferenceModel>, sqlx::Error> {
         let entities = self
             .entities
             .lock()
@@ -587,9 +588,9 @@ impl EntityReferenceRepository for MockEntityReferenceRepository {
     async fn find_by_reference_external_id(
         &self,
         _reference_external_id: &str,
-        _page: u32,
-        _page_size: u32,
-    ) -> Result<Vec<EntityReferenceModel>, Box<dyn Error + Send + Sync>> {
+        _page: i32,
+        _page_size: i32,
+    ) -> Result<Vec<EntityReferenceModel>, sqlx::Error> {
         unimplemented!()
     }
 }
@@ -600,7 +601,7 @@ struct MockAuditLogRepository {
 }
 
 #[async_trait]
-impl AuditLogRepository for MockAuditLogRepository {
+impl AuditLogRepository<Postgres> for MockAuditLogRepository {
     async fn create(&self, audit_log: &AuditLogModel) -> Result<AuditLogModel, sqlx::Error> {
         self.audit_logs.lock().unwrap().push(audit_log.clone());
         Ok(audit_log.clone())

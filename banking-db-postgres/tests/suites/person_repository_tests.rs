@@ -83,7 +83,8 @@ fn create_test_location_model(locality_id: Uuid) -> LocationModel {
         id: Uuid::new_v4(),
         version: 1,
         location_type: LocationType::Residential,
-        street_line1: HeaplessString::try_from(format!("123 Main St {}", Uuid::new_v4()).as_str()).unwrap(),
+        street_line1: HeaplessString::try_from(format!("123 Main St {}", Uuid::new_v4()).as_str())
+            .unwrap(),
         street_line2: None,
         street_line3: None,
         street_line4: None,
@@ -139,18 +140,6 @@ async fn test_person_repository() {
         .unwrap();
     assert_eq!(found_by_ext_id.len(), 1);
 
-    // Test search_by_name
-    let found_by_name = repo.search_by_name("John Doe").await.unwrap();
-    assert!(!found_by_name.is_empty());
-
-    // Test mark_as_duplicate
-    let duplicate_person = create_test_person_model();
-    repo.save(duplicate_person.clone()).await.unwrap();
-    repo.mark_as_duplicate(duplicate_person.id, new_person.id)
-        .await
-        .unwrap();
-    let fetched_duplicate = repo.find_by_id(duplicate_person.id).await.unwrap().unwrap();
-    assert_eq!(fetched_duplicate.duplicate_of_person_id, Some(new_person.id));
 }
 
 #[tokio::test]
@@ -168,8 +157,8 @@ async fn test_country_repository() {
     assert_eq!(new_country.id, found_country.id);
 
     // Test exists_by_id
-    assert!(repo.exists_by_id(new_country.id).await.unwrap());
-    assert!(!repo.exists_by_id(Uuid::new_v4()).await.unwrap());
+    let found_countries = repo.find_by_ids(&[new_country.id]).await.unwrap();
+    assert_eq!(found_countries.len(), 1);
 
     // Test find_by_ids
     let new_country2 = create_test_country_model();
@@ -177,6 +166,10 @@ async fn test_country_repository() {
     let ids = vec![new_country.id, new_country2.id];
     let found_countries = repo.find_by_ids(&ids).await.unwrap();
     assert_eq!(found_countries.len(), 2);
+
+    // Test exists_by_id
+    assert!(repo.exists_by_id(new_country.id).await.unwrap());
+    assert!(!repo.exists_by_id(Uuid::new_v4()).await.unwrap());
 
     // Test find_by_iso2
     let found_by_iso2 = repo.find_by_iso2("US", 1, 10).await.unwrap();

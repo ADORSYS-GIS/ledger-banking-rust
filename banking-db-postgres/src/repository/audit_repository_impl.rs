@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use banking_db::{models::audit::AuditLogModel, repository::audit_repository::AuditLogRepository};
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Postgres, Row};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -15,7 +15,7 @@ impl AuditLogRepositoryImpl {
 }
 
 #[async_trait]
-impl AuditLogRepository for AuditLogRepositoryImpl {
+impl AuditLogRepository<Postgres> for AuditLogRepositoryImpl {
     async fn create(&self, audit_log: &AuditLogModel) -> Result<AuditLogModel, sqlx::Error> {
         sqlx::query(
             r#"

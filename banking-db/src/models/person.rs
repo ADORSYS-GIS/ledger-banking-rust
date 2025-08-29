@@ -274,7 +274,7 @@ pub struct LocationModel {
     /// # Audit
     /// ## Nature
     /// - compound-primary with self.id
-    pub version: i16,
+    pub version: i32,
 
     /// # Trait method
     /// - find_ids_by_street_line1
@@ -356,7 +356,7 @@ pub struct MessagingModel {
     /// # Audit
     /// ## Nature
     /// - compound-primary with self.id
-    pub version: i16,
+    pub version: i32,
 
     /// # Documentation
     /// - Type of messaging/communication method
@@ -430,7 +430,7 @@ pub struct EntityReferenceModel {
     /// # Audit
     /// ## Nature
     /// - compound-primary with self.id
-    pub version: i16,
+    pub version: i32,
 
     /// # Documentation
     /// - References PersonModel.person_id
@@ -485,7 +485,7 @@ pub struct EntityReferenceAuditModel {
 
     /// # Nature
     /// - compound-primary with self.id
-    pub version: i16,
+    pub version: i32,
 
     /// # Trait method
     /// - find_audits_by_person_id
@@ -550,7 +550,7 @@ pub struct PersonModel {
     /// # Audit
     /// ## Nature
     /// - compound-primary with self.id
-    pub version: i16,
+    pub version: i32,
 
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
     pub person_type: PersonType,
@@ -579,7 +579,7 @@ pub struct PersonModel {
     /// # Audit
     /// ## Trait method
     /// - get_audits_by_entity_reference
-    pub entity_reference_count: i16,
+    pub entity_reference_count: i32,
     
     /// # Documentation
     /// References PersonModel.person_id for organizational hierarchy
@@ -630,7 +630,7 @@ pub struct PersonAuditModel {
     
     /// # Nature
     /// - compound-primary with self.id
-    pub version: i16,
+    pub version: i32,
 
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
     pub person_type: PersonType,
@@ -643,7 +643,7 @@ pub struct PersonAuditModel {
 
     /// # Trait method
     /// - get_audits_by_entity_reference
-    pub entity_reference_count: i16,
+    pub entity_reference_count: i32,
     
     pub organization_person_id: Option<Uuid>,
     

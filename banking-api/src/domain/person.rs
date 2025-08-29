@@ -104,7 +104,7 @@ pub struct Location {
     /// # Nature
     /// - primary index
     pub id: Uuid,
-    pub version: i16,
+    pub version: i32,
     /// # Trait method
     /// - find_locations_by_street_line1
     /// # Documentation
@@ -201,7 +201,7 @@ pub struct Messaging {
     /// # Nature
     /// - primary index
     pub id: Uuid,
-    pub version: i16,
+    pub version: i32,
     /// # Documentation
     /// - Type of messaging/communication method
     pub messaging_type: MessagingType,
@@ -280,7 +280,7 @@ pub struct EntityReference {
     /// # Documentation
     /// - version number, increased whenever a reference changes.
     /// - change triggers storage of old version in an audit database.
-    pub version: i16,
+    pub version: i32,
 
     /// # Documentation
     /// - References Person.person_id
@@ -324,7 +324,7 @@ pub struct Person {
     /// - Primary index
     pub id: Uuid,
     
-    pub version: i16,
+    pub version: i32,
 
     /// # Documentation
     /// Type of person (natural, legal, etc.)
@@ -340,7 +340,7 @@ pub struct Person {
     /// External identifier (e.g., employee ID, badge number, system ID)
     pub external_identifier: Option<HeaplessString<50>>,
 
-    pub entity_reference_count: i16,
+    pub entity_reference_count: i32,
     
     /// # Documentation
     /// References another Person.person_id for organizational hierarchy

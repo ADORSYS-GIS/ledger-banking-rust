@@ -1,16 +1,20 @@
 use async_trait::async_trait;
 use banking_api::{domain::audit::AuditLog, service::audit_service::AuditService};
-use banking_db::{repository::audit_repository::AuditLogRepository, models::audit::AuditLogModel};
+use banking_db::{
+    models::audit::AuditLogModel, repository::audit_repository::AuditLogRepository,
+};
 use std::sync::Arc;
 use uuid::Uuid;
 use crate::mappers::audit_mapper;
 
+use sqlx::Postgres;
+
 pub struct AuditServiceImpl {
-    audit_log_repository: Arc<dyn AuditLogRepository>,
+    audit_log_repository: Arc<dyn AuditLogRepository<Postgres>>,
 }
 
 impl AuditServiceImpl {
-    pub fn new(audit_log_repository: Arc<dyn AuditLogRepository>) -> Self {
+    pub fn new(audit_log_repository: Arc<dyn AuditLogRepository<Postgres>>) -> Self {
         Self {
             audit_log_repository,
         }
@@ -25,7 +29,10 @@ impl AuditService for AuditServiceImpl {
             updated_at: chrono::Utc::now(),
             updated_by_person_id,
         };
-        let created_audit_log = self.audit_log_repository.create(&audit_log).await?;
+        let created_audit_log = self
+            .audit_log_repository
+            .create(&audit_log)
+            .await?;
         Ok(audit_mapper::map_to_domain(&created_audit_log))
     }
 

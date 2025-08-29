@@ -16,6 +16,7 @@ rust_decimal = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
 heapless = { workspace = true }
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "rust_decimal"] }
 
 # Banking crates
 banking-api = { path = "../banking-api" }
