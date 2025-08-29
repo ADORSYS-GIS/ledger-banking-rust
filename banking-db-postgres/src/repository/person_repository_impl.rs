@@ -1,8 +1,7 @@
 use async_trait::async_trait;
-use banking_api::BankingError;
 use banking_db::models::person::{
     CountryModel, CountrySubdivisionModel, EntityReferenceModel, LocationModel, LocationType,
-    LocalityModel, MessagingModel, PersonModel, PersonType, RelationshipRole,
+    LocalityModel, MessagingModel, PersonModel, RelationshipRole,
 };
 use banking_db::repository::{
     CountryRepository, CountrySubdivisionRepository, EntityReferenceRepository, LocationRepository,
@@ -191,69 +190,6 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         Ok(persons)
     }
 
-    async fn create(
-        &self,
-        display_name: &str,
-        person_type: PersonType,
-        external_identifier: Option<&str>,
-    ) -> Result<PersonModel, Box<dyn Error + Send + Sync>> {
-        if let Some(ext_id) = external_identifier {
-            let existing = self.get_by_external_identifier(ext_id).await?;
-            if !existing.is_empty() {
-                return Err(Box::new(BankingError::DuplicatePerson(
-                    "Person with the same external identifier already exists".to_string(),
-                )));
-            }
-        }
-
-        let display_name_hs = match display_name.try_into() {
-            Ok(s) => s,
-            Err(_) => {
-                return Err(Box::new(BankingError::ValidationError {
-                    field: "display_name".to_string(),
-                    message: "Display name too long".to_string(),
-                }))
-            }
-        };
-
-        let external_identifier_hs =
-            match external_identifier.map(|s| s.try_into()).transpose() {
-                Ok(s) => s,
-                Err(_) => {
-                    return Err(Box::new(BankingError::ValidationError {
-                        field: "external_identifier".to_string(),
-                        message: "External identifier too long".to_string(),
-                    }))
-                }
-            };
-
-        let new_person = PersonModel {
-            id: Uuid::new_v4(),
-            version: 1,
-            person_type,
-            display_name: display_name_hs,
-            external_identifier: external_identifier_hs,
-            entity_reference_count: 0,
-            organization_person_id: None,
-            messaging1_id: None,
-            messaging1_type: None,
-            messaging2_id: None,
-            messaging2_type: None,
-            messaging3_id: None,
-            messaging3_type: None,
-            messaging4_id: None,
-            messaging4_type: None,
-            messaging5_id: None,
-            messaging5_type: None,
-            department: None,
-            location_id: None,
-            duplicate_of_person_id: None,
-            audit_log_id: Uuid::new_v4(),
-        };
-
-        let saved_person = self.save(new_person).await?;
-        Ok(saved_person)
-    }
 
     async fn mark_as_duplicate(
         &self,

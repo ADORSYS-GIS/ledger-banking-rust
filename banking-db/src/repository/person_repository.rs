@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::models::person::{
     CountryModel, CountrySubdivisionModel, EntityReferenceModel, LocationModel, LocationType,
-    LocalityModel, MessagingModel, PersonModel, PersonType, RelationshipRole,
+    LocalityModel, MessagingModel, PersonModel, RelationshipRole,
 };
 
 #[async_trait]
@@ -34,12 +34,6 @@ pub trait PersonRepository<DB: Database>: Send + Sync {
         entity_type: RelationshipRole,
     ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
 
-    async fn create(
-        &self,
-        display_name: &str,
-        person_type: PersonType,
-        external_identifier: Option<&str>,
-    ) -> Result<PersonModel, Box<dyn std::error::Error + Send + Sync>>;
     async fn mark_as_duplicate(
         &self,
         person_id: Uuid,
