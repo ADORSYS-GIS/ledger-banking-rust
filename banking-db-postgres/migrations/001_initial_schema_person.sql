@@ -133,7 +133,6 @@ CREATE TABLE person (
     department VARCHAR(50),
     location_id UUID,
     duplicate_of_person_id UUID,
-    version INTEGER NOT NULL,
     entity_reference_count INTEGER NOT NULL,
     audit_log_id UUID NOT NULL
 );
@@ -141,7 +140,36 @@ CREATE TABLE person (
 -- Index table for Person
 CREATE TABLE person_idx (
     person_id UUID PRIMARY KEY,
-    external_identifier_hash BIGINT
+    external_identifier_hash BIGINT,
+    version INTEGER NOT NULL,
+    hash BIGINT NOT NULL
+);
+
+-- Main table for model PersonAuditModel
+CREATE TABLE person_audit (
+    person_id UUID NOT NULL,
+    version INTEGER NOT NULL,
+    hash BIGINT NOT NULL,
+    person_type person_type NOT NULL,
+    display_name VARCHAR(100) NOT NULL,
+    external_identifier VARCHAR(50),
+    organization_person_id UUID,
+    messaging1_id UUID,
+    messaging1_type messaging_type,
+    messaging2_id UUID,
+    messaging2_type messaging_type,
+    messaging3_id UUID,
+    messaging3_type messaging_type,
+    messaging4_id UUID,
+    messaging4_type messaging_type,
+    messaging5_id UUID,
+    messaging5_type messaging_type,
+    department VARCHAR(50),
+    location_id UUID,
+    duplicate_of_person_id UUID,
+    entity_reference_count INTEGER NOT NULL,
+    audit_log_id UUID NOT NULL,
+    PRIMARY KEY (person_id, version)
 );
 
 -- Main table for model AuditLogModel

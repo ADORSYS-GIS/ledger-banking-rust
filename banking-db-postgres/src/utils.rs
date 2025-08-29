@@ -16,7 +16,7 @@ pub fn get_heapless_string<const N: usize>(
 ) -> Result<HeaplessString<N>, Box<dyn Error + Send + Sync>> {
     let s: String = row.try_get(col_name)?;
     HeaplessString::from_str(&s).map_err(|_| {
-        format!("Value for column '{}' is too long (max {} chars)", col_name, N).into()
+        format!("Value for column '{col_name}' is too long (max {N} chars)").into()
     })
 }
 
@@ -29,6 +29,6 @@ pub fn get_optional_heapless_string<const N: usize>(
     s.map(|val| HeaplessString::from_str(&val))
         .transpose()
         .map_err(|_| {
-            format!("Value for column '{}' is too long (max {} chars)", col_name, N).into()
+            format!("Value for column '{col_name}' is too long (max {N} chars)").into()
         })
 }

@@ -21,7 +21,6 @@ use super::commons::commons;
 fn create_test_person_model() -> PersonModel {
     PersonModel {
         id: Uuid::new_v4(),
-        version: 1,
         person_type: PersonType::Natural,
         display_name: HeaplessString::try_from("John Doe").unwrap(),
         external_identifier: Some(
@@ -112,15 +111,15 @@ fn create_test_messaging_model() -> MessagingModel {
 async fn test_person_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let repo = PersonRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let repo = PersonRepositoryImpl::new(Arc::new(db_pool.clone())).await;
 
     // Test save and find_by_id
     let new_person = create_test_person_model();
     let saved_person = repo.save(new_person.clone()).await.unwrap();
     assert_eq!(new_person.id, saved_person.id);
 
-    let found_person = repo.find_by_id(new_person.id).await.unwrap().unwrap();
-    assert_eq!(new_person.id, found_person.id);
+    let found_person_idx = repo.find_by_id(new_person.id).await.unwrap().unwrap();
+    assert_eq!(new_person.id, found_person_idx.person_id);
 
     // Test exists_by_id
     assert!(repo.exists_by_id(new_person.id).await.unwrap());
@@ -135,7 +134,7 @@ async fn test_person_repository() {
 
     // Test get_by_external_identifier
     let found_by_ext_id = repo
-        .get_by_external_identifier(new_person.external_identifier.as_ref().unwrap())
+        .get_by_external_identifier(new_person.external_identifier.as_ref().unwrap().as_str())
         .await
         .unwrap();
     assert_eq!(found_by_ext_id.len(), 1);

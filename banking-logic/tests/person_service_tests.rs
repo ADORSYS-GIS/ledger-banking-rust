@@ -6,8 +6,8 @@ use banking_api::domain::person::{
 use banking_api::service::PersonService;
 use banking_db::models::person::{
     LocationModel, LocationType as LocationTypeModel, LocalityModel, CountryModel, EntityReferenceModel,
-    MessagingModel, PersonModel,
-    PersonType as PersonTypeModel, CountrySubdivisionModel,
+    MessagingModel, PersonModel, PersonIdxModel,
+    CountrySubdivisionModel,
 };
 use banking_db::models::audit::AuditLogModel;
 
@@ -27,49 +27,60 @@ use sqlx::Postgres;
 #[derive(Default)]
 struct MockPersonRepository {
     persons: Mutex<Vec<PersonModel>>,
+    person_ixes: Mutex<Vec<PersonIdxModel>>,
 }
 
 #[async_trait]
 impl PersonRepository<Postgres> for MockPersonRepository {
     async fn save(&self, person: PersonModel) -> Result<PersonModel, sqlx::Error> {
         self.persons.lock().unwrap().push(person.clone());
+        // In a real scenario, we'd create a proper hash and version.
+        let person_idx = PersonIdxModel {
+            person_id: person.id,
+            external_identifier_hash: None,
+            version: 0,
+            hash: 0,
+        };
+        self.person_ixes.lock().unwrap().push(person_idx);
         Ok(person)
+    }
+
+    async fn load(&self, id: Uuid) -> Result<PersonModel, sqlx::Error> {
+        Ok(self.persons.lock().unwrap().iter().find(|p| p.id == id).cloned().unwrap())
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<PersonModel>, sqlx::Error> {
-        Ok(self.persons.lock().unwrap().iter().find(|p| p.id == id).cloned())
+    ) -> Result<Option<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+        Ok(self.person_ixes.lock().unwrap().iter().find(|p| p.person_id == id).cloned())
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let persons = self
-            .persons
+    ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+        let person_ixes = self
+            .person_ixes
             .lock()
             .unwrap()
             .iter()
-            .filter(|p| ids.contains(&p.id))
+            .filter(|p| ids.contains(&p.person_id))
             .cloned()
             .collect();
-        Ok(persons)
+        Ok(person_ixes)
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.persons.lock().unwrap().iter().any(|p| p.id == id))
+        Ok(self.person_ixes.lock().unwrap().iter().any(|p| p.person_id == id))
     }
 
     async fn get_ids_by_external_identifier(
         &self,
         identifier: &str,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = self
-            .persons
-            .lock()
-            .unwrap()
+        let persons = self.persons.lock().unwrap();
+        let ids = persons
             .iter()
             .filter(|p| p.external_identifier.as_deref() == Some(identifier))
             .map(|p| p.id)
@@ -80,55 +91,20 @@ impl PersonRepository<Postgres> for MockPersonRepository {
     async fn get_by_external_identifier(
         &self,
         identifier: &str,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let persons = self
-            .persons
-            .lock()
-            .unwrap()
+    ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+        let persons = self.persons.lock().unwrap();
+        let person_ixes = self.person_ixes.lock().unwrap();
+        let ids: Vec<Uuid> = persons
             .iter()
             .filter(|p| p.external_identifier.as_deref() == Some(identifier))
+            .map(|p| p.id)
+            .collect();
+        let result = person_ixes
+            .iter()
+            .filter(|p| ids.contains(&p.person_id))
             .cloned()
             .collect();
-        Ok(persons)
-    }
-
-    async fn get_by_entity_reference(
-        &self,
-        _entity_id: Uuid,
-        _entity_type: banking_db::models::person::RelationshipRole,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        Ok(vec![])
-    }
-
-    async fn create(
-        &self,
-        _display_name: &str,
-        _person_type: PersonTypeModel,
-        _external_identifier: Option<&str>,
-    ) -> Result<PersonModel, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
-    }
-
-    async fn mark_as_duplicate(
-        &self,
-        _person_id: Uuid,
-        _duplicate_of_person_id: Uuid,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        unimplemented!()
-    }
-
-    async fn search_by_name(
-        &self,
-        _query: &str,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
-    }
-
-    async fn batch_create(
-        &self,
-        _persons: Vec<PersonModel>,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        Ok(result)
     }
 }
 
@@ -711,7 +687,6 @@ fn create_test_entity_reference(person_id: Uuid) -> EntityReference {
 fn create_test_person() -> Person {
     Person {
         id: Uuid::new_v4(),
-        version: 1,
         person_type: PersonType::Natural,
         display_name: HeaplessString::try_from("John Doe").unwrap(),
         external_identifier: Some(HeaplessString::try_from("JD001").unwrap()),

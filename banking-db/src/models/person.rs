@@ -547,11 +547,6 @@ pub struct PersonModel {
     /// - find_audits_by_id
     pub id: Uuid,
     
-    /// # Audit
-    /// ## Nature
-    /// - compound-primary with self.id
-    pub version: i32,
-
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
     pub person_type: PersonType,
     
@@ -625,12 +620,14 @@ pub struct PersonAuditModel {
     /// # Nature
     /// - compound-primary with self.version
     /// # Trait method
-    /// - find_audits_by_id
-    pub id: Uuid,
+    /// - find_audits_by_person_id
+    pub person_id: Uuid,
     
     /// # Nature
-    /// - compound-primary with self.id
+    /// - compound-primary with self.person_id
     pub version: i32,
+
+    pub hash: i64,
 
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
     pub person_type: PersonType,
@@ -1326,6 +1323,8 @@ pub struct PersonIdxModel {
     /// # Nature
     /// - secondary
     pub external_identifier_hash: Option<i64>,
+    pub version: i32,
+    pub hash: i64,
 }
 
 pub struct PersonIdxModelCache {
@@ -1334,9 +1333,7 @@ pub struct PersonIdxModelCache {
 }
 
 impl PersonIdxModelCache {
-    pub fn new(
-        items: Vec<PersonIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    pub fn new(items: Vec<PersonIdxModel>) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_external_identifier_hash = HashMap::new();
 
@@ -1352,14 +1349,50 @@ impl PersonIdxModelCache {
                     .or_insert_with(Vec::new)
                     .push(primary_key);
             }
-            
+
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(PersonIdxModelCache {
+        Ok(PersonIdxModelCache {
             by_id,
             by_external_identifier_hash,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: PersonIdxModel) {
+        let primary_key = item.person_id;
+        if self.by_id.contains_key(&primary_key) {
+            self.update(item);
+            return;
+        }
+
+        if let Some(hash) = item.external_identifier_hash {
+            self.by_external_identifier_hash
+                .entry(hash)
+                .or_default()
+                .push(primary_key);
+        }
+        self.by_id.insert(primary_key, item);
+    }
+
+    pub fn remove(&mut self, person_id: &Uuid) -> Option<PersonIdxModel> {
+        if let Some(item) = self.by_id.remove(person_id) {
+            if let Some(hash) = item.external_identifier_hash {
+                if let Some(ids) = self.by_external_identifier_hash.get_mut(&hash) {
+                    ids.retain(|&id| id != *person_id);
+                    if ids.is_empty() {
+                        self.by_external_identifier_hash.remove(&hash);
+                    }
+                }
+            }
+            return Some(item);
+        }
+        None
+    }
+
+    pub fn update(&mut self, item: PersonIdxModel) {
+        self.remove(&item.person_id);
+        self.add(item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {

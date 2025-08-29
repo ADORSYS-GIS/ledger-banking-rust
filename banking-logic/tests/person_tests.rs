@@ -19,7 +19,7 @@ mod person_tests {
         let pool = Arc::new(pool);
 
         let repositories = Repositories {
-            person_repository: Arc::new(PersonRepositoryImpl::new(pool.clone())),
+            person_repository: Arc::new(PersonRepositoryImpl::new(pool.clone()).await),
             audit_log_repository: Arc::new(AuditLogRepositoryImpl::new(pool.clone())),
             country_repository: Arc::new(CountryRepositoryImpl::new(pool.clone())),
             country_subdivision_repository: Arc::new(CountrySubdivisionRepositoryImpl::new(
@@ -44,7 +44,6 @@ mod person_tests {
 
         let new_person = Person {
             id: Uuid::new_v4(),
-            version: 1,
             person_type: PersonType::Natural,
             display_name: HeaplessString::try_from("John Doe").unwrap(),
             external_identifier: None,

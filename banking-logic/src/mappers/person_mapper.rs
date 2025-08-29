@@ -193,7 +193,6 @@ impl ToDomain<Person> for PersonModel {
     fn to_domain(self) -> Person {
         Person {
             id: self.id,
-            version: self.version,
             person_type: self.person_type.to_domain(),
             display_name: self.display_name,
             external_identifier: self.external_identifier,
@@ -221,7 +220,6 @@ impl ToModel<PersonModel> for Person {
     fn to_model(self) -> PersonModel {
         PersonModel {
             id: self.id,
-            version: self.version,
             person_type: self.person_type.to_model(),
             display_name: self.display_name,
             external_identifier: self.external_identifier,

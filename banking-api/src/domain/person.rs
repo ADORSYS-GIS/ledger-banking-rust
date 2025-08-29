@@ -34,7 +34,7 @@ pub struct Country {
 /// - RuntimeImmutable: Creation, Modification requires reload of caches
 /// # Documentation
 /// - Country structure with ISO 3166-1 alpha-2 code
-/// CountrySubdivision structure with multilingual support
+/// - CountrySubdivision structure with multilingual support
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CountrySubdivision {
     /// # Trait method
@@ -324,8 +324,6 @@ pub struct Person {
     /// - Primary index
     pub id: Uuid,
     
-    pub version: i32,
-
     /// # Documentation
     /// Type of person (natural, legal, etc.)
     pub person_type: PersonType,

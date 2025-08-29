@@ -1,20 +1,23 @@
 use async_trait::async_trait;
 use sqlx::Database;
 use uuid::Uuid;
-
 use crate::models::person::{
     CountryModel, CountrySubdivisionModel, EntityReferenceModel, LocationModel, LocationType,
-    LocalityModel, MessagingModel, PersonModel, RelationshipRole,
+    LocalityModel, MessagingModel, PersonModel, PersonIdxModel,
 };
 
 #[async_trait]
 pub trait PersonRepository<DB: Database>: Send + Sync {
     async fn save(&self, person: PersonModel) -> Result<PersonModel, sqlx::Error>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<PersonModel>, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<PersonModel, sqlx::Error>;
+    async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<PersonIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<Vec<PersonIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -26,27 +29,7 @@ pub trait PersonRepository<DB: Database>: Send + Sync {
     async fn get_by_external_identifier(
         &self,
         identifier: &str,
-    ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
-
-    async fn get_by_entity_reference(
-        &self,
-        entity_id: Uuid,
-        entity_type: RelationshipRole,
-    ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
-
-    async fn mark_as_duplicate(
-        &self,
-        person_id: Uuid,
-        duplicate_of_person_id: Uuid,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    async fn search_by_name(
-        &self,
-        query: &str,
-    ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
-    async fn batch_create(
-        &self,
-        persons: Vec<PersonModel>,
-    ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<Vec<PersonIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 #[async_trait]

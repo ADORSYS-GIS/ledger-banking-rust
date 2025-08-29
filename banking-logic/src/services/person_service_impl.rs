@@ -275,19 +275,37 @@ impl PersonService for PersonServiceImpl {
     }
 
     async fn find_person_by_id(&self, id: Uuid) -> BankingResult<Option<Person>> {
-        let model = self.repositories.person_repository.find_by_id(id).await?;
-        Ok(model.map(|m| m.to_domain()))
+        let model_idx = self.repositories.person_repository.find_by_id(id).await?;
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .person_repository
+                .load(idx.person_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn get_persons_by_external_identifier(
         &self,
         external_identifier: HeaplessString<50>,
     ) -> BankingResult<Vec<Person>> {
-        let models = self
+        let model_ixes = self
             .repositories
             .person_repository
             .get_by_external_identifier(external_identifier.as_str())
             .await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let mut persons = Vec::new();
+        for idx in model_ixes {
+            let person_model = self
+                .repositories
+                .person_repository
+                .load(idx.person_id)
+                .await?;
+            persons.push(person_model.to_domain());
+        }
+        Ok(persons)
     }
 }

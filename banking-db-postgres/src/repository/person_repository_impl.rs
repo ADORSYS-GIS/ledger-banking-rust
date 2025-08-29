@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use banking_db::models::person::{
     CountryModel, CountrySubdivisionModel, EntityReferenceModel, LocationModel, LocationType,
-    LocalityModel, MessagingModel, PersonModel, RelationshipRole,
+    LocalityModel, MessagingModel, PersonModel, PersonAuditModel, PersonIdxModel,
+    PersonIdxModelCache,
 };
 use banking_db::repository::{
     CountryRepository, CountrySubdivisionRepository, EntityReferenceRepository, LocationRepository,
@@ -10,126 +11,327 @@ use banking_db::repository::{
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use twox_hash::XxHash64;
 use uuid::Uuid;
-
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 
 pub struct PersonRepositoryImpl {
     pool: Arc<PgPool>,
+    person_idx_cache: Arc<RwLock<PersonIdxModelCache>>,
 }
 
 impl PersonRepositoryImpl {
-    pub fn new(pool: Arc<PgPool>) -> Self {
-        Self { pool }
+    pub async fn new(pool: Arc<PgPool>) -> Self {
+        let person_idx_models = Self::load_all_person_idx(&pool).await.unwrap();
+        let person_idx_cache =
+            Arc::new(RwLock::new(PersonIdxModelCache::new(person_idx_models).unwrap()));
+        Self {
+            pool,
+            person_idx_cache,
+        }
+    }
+
+    async fn load_all_person_idx(
+        pool: &PgPool,
+    ) -> Result<Vec<PersonIdxModel>, sqlx::Error> {
+        sqlx::query_as::<_, PersonIdxModel>("SELECT * FROM person_idx")
+            .fetch_all(pool)
+            .await
     }
 }
 
+/// # Refactoring Instruction
+/// ## add a method load(id) returning PersonModel. also add to PersonRepository,
+///    It is the only methode that returns a PersonModel. All other finders return a PersonIdxModel.
 #[async_trait]
 impl PersonRepository<Postgres> for PersonRepositoryImpl {
     async fn save(&self, person: PersonModel) -> Result<PersonModel, sqlx::Error> {
-        sqlx::query(
-            r#"
-            INSERT INTO person (
-                id, version, person_type, display_name, external_identifier, organization_person_id,
-                messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type,
-                messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id
-            )
-            VALUES ($1, $2, $3::person_type, $4, $5, $6, $7, $8::messaging_type, $9, $10::messaging_type, $11, $12::messaging_type, $13, $14::messaging_type, $15, $16, $17, $18, $19, $20, $21)
-           "#,
-        )
-        .bind(person.id)
-        .bind(person.version)
-        .bind(person.person_type)
-        .bind(person.display_name.as_str())
-        .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
-        .bind(person.organization_person_id)
-        .bind(person.messaging1_id)
-        .bind(person.messaging1_type)
-        .bind(person.messaging2_id)
-        .bind(person.messaging2_type)
-        .bind(person.messaging3_id)
-        .bind(person.messaging3_type)
-        .bind(person.messaging4_id)
-        .bind(person.messaging4_type)
-        .bind(person.messaging5_id)
-        .bind(person.messaging5_type)
-        .bind(person.department.as_ref().map(|s| s.as_str()))
-        .bind(person.location_id)
-        .bind(person.duplicate_of_person_id)
-        .bind(person.entity_reference_count)
-        .bind(person.audit_log_id)
-        .execute(&*self.pool)
-        .await?;
+        let mut hasher = XxHash64::with_seed(0);
+        let person_json = serde_json::to_string(&person).unwrap();
+        hasher.write(person_json.as_bytes());
+        let new_hash = hasher.finish() as i64;
 
-        let hash = person.external_identifier.as_ref().map(|s| {
+        let maybe_existing_idx = {
+            let cache_read_guard = self.person_idx_cache.read().unwrap();
+            cache_read_guard.get_by_primary(&person.id)
+        };
+
+        let new_external_hash = person.external_identifier.as_ref().map(|s| {
             let mut hasher = XxHash64::with_seed(0);
             hasher.write(s.as_bytes());
             hasher.finish() as i64
         });
 
-        sqlx::query(
-            r#"
-            INSERT INTO person_idx (person_id, external_identifier_hash)
-            VALUES ($1, $2)
-            "#,
-        )
-        .bind(person.id)
-        .bind(hash)
-        .execute(&*self.pool)
-        .await?;
+        if let Some(existing_idx) = maybe_existing_idx {
+            // UPDATE
+            if existing_idx.hash == new_hash {
+                return Ok(person); // No changes
+            }
+
+            let new_version = existing_idx.version + 1;
+
+            let audit_model = PersonAuditModel {
+                person_id: person.id,
+                version: new_version,
+                hash: new_hash,
+                person_type: person.person_type,
+                display_name: person.display_name.clone(),
+                external_identifier: person.external_identifier.clone(),
+                entity_reference_count: person.entity_reference_count,
+                organization_person_id: person.organization_person_id,
+                messaging1_id: person.messaging1_id,
+                messaging1_type: person.messaging1_type,
+                messaging2_id: person.messaging2_id,
+                messaging2_type: person.messaging2_type,
+                messaging3_id: person.messaging3_id,
+                messaging3_type: person.messaging3_type,
+                messaging4_id: person.messaging4_id,
+                messaging4_type: person.messaging4_type,
+                messaging5_id: person.messaging5_id,
+                messaging5_type: person.messaging5_type,
+                department: person.department.clone(),
+                location_id: person.location_id,
+                duplicate_of_person_id: person.duplicate_of_person_id,
+                audit_log_id: person.audit_log_id,
+            };
+
+            sqlx::query(
+                r#"
+                INSERT INTO person_audit (person_id, version, hash, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+                "#,
+            )
+            .bind(audit_model.person_id)
+            .bind(audit_model.version)
+            .bind(audit_model.hash)
+            .bind(audit_model.person_type)
+            .bind(audit_model.display_name.as_str())
+            .bind(audit_model.external_identifier.as_ref().map(|s| s.as_str()))
+            .bind(audit_model.organization_person_id)
+            .bind(audit_model.messaging1_id)
+            .bind(audit_model.messaging1_type)
+            .bind(audit_model.messaging2_id)
+            .bind(audit_model.messaging2_type)
+            .bind(audit_model.messaging3_id)
+            .bind(audit_model.messaging3_type)
+            .bind(audit_model.messaging4_id)
+            .bind(audit_model.messaging4_type)
+            .bind(audit_model.messaging5_id)
+            .bind(audit_model.messaging5_type)
+            .bind(audit_model.department.as_ref().map(|s| s.as_str()))
+            .bind(audit_model.location_id)
+            .bind(audit_model.duplicate_of_person_id)
+            .bind(audit_model.entity_reference_count)
+            .bind(audit_model.audit_log_id)
+            .execute(&*self.pool)
+            .await?;
+
+            sqlx::query(
+                r#"
+                UPDATE person SET
+                    person_type = $2::person_type, display_name = $3, external_identifier = $4,
+                    organization_person_id = $5, messaging1_id = $6, messaging1_type = $7::messaging_type,
+                    messaging2_id = $8, messaging2_type = $9::messaging_type, messaging3_id = $10,
+                    messaging3_type = $11::messaging_type, messaging4_id = $12, messaging4_type = $13::messaging_type,
+                    messaging5_id = $14, messaging5_type = $15, department = $16,
+                    location_id = $17, duplicate_of_person_id = $18, entity_reference_count = $19, audit_log_id = $20
+                WHERE id = $1
+                "#,
+            )
+            .bind(person.id)
+            .bind(person.person_type)
+            .bind(person.display_name.as_str())
+            .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
+            .bind(person.organization_person_id)
+            .bind(person.messaging1_id)
+            .bind(person.messaging1_type)
+            .bind(person.messaging2_id)
+            .bind(person.messaging2_type)
+            .bind(person.messaging3_id)
+            .bind(person.messaging3_type)
+            .bind(person.messaging4_id)
+            .bind(person.messaging4_type)
+            .bind(person.messaging5_id)
+            .bind(person.messaging5_type)
+            .bind(person.department.as_ref().map(|s| s.as_str()))
+            .bind(person.location_id)
+            .bind(person.duplicate_of_person_id)
+            .bind(person.entity_reference_count)
+            .bind(person.audit_log_id)
+            .execute(&*self.pool)
+            .await?;
+
+            sqlx::query(
+                r#"
+                UPDATE person_idx SET
+                    external_identifier_hash = $2,
+                    version = $3,
+                    hash = $4
+                WHERE person_id = $1
+                "#,
+            )
+            .bind(person.id)
+            .bind(new_external_hash)
+            .bind(new_version)
+            .bind(new_hash)
+            .execute(&*self.pool)
+            .await?;
+
+            let new_idx = PersonIdxModel {
+                person_id: person.id,
+                external_identifier_hash: new_external_hash,
+                version: new_version,
+                hash: new_hash,
+            };
+            self.person_idx_cache.write().unwrap().update(new_idx);
+        } else {
+            // INSERT
+            let version = 0;
+            let audit_model = PersonAuditModel {
+                person_id: person.id,
+                version,
+                hash: new_hash,
+                person_type: person.person_type,
+                display_name: person.display_name.clone(),
+                external_identifier: person.external_identifier.clone(),
+                entity_reference_count: person.entity_reference_count,
+                organization_person_id: person.organization_person_id,
+                messaging1_id: person.messaging1_id,
+                messaging1_type: person.messaging1_type,
+                messaging2_id: person.messaging2_id,
+                messaging2_type: person.messaging2_type,
+                messaging3_id: person.messaging3_id,
+                messaging3_type: person.messaging3_type,
+                messaging4_id: person.messaging4_id,
+                messaging4_type: person.messaging4_type,
+                messaging5_id: person.messaging5_id,
+                messaging5_type: person.messaging5_type,
+                department: person.department.clone(),
+                location_id: person.location_id,
+                duplicate_of_person_id: person.duplicate_of_person_id,
+                audit_log_id: person.audit_log_id,
+            };
+
+            sqlx::query(
+                r#"
+                INSERT INTO person_audit (person_id, version, hash, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+                "#,
+            )
+            .bind(audit_model.person_id)
+            .bind(audit_model.version)
+            .bind(audit_model.hash)
+            .bind(audit_model.person_type)
+            .bind(audit_model.display_name.as_str())
+            .bind(audit_model.external_identifier.as_ref().map(|s| s.as_str()))
+            .bind(audit_model.organization_person_id)
+            .bind(audit_model.messaging1_id)
+            .bind(audit_model.messaging1_type)
+            .bind(audit_model.messaging2_id)
+            .bind(audit_model.messaging2_type)
+            .bind(audit_model.messaging3_id)
+            .bind(audit_model.messaging3_type)
+            .bind(audit_model.messaging4_id)
+            .bind(audit_model.messaging4_type)
+            .bind(audit_model.messaging5_id)
+            .bind(audit_model.messaging5_type)
+            .bind(audit_model.department.as_ref().map(|s| s.as_str()))
+            .bind(audit_model.location_id)
+            .bind(audit_model.duplicate_of_person_id)
+            .bind(audit_model.entity_reference_count)
+            .bind(audit_model.audit_log_id)
+            .execute(&*self.pool)
+            .await?;
+
+            sqlx::query(
+                r#"
+                INSERT INTO person (id, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id)
+                VALUES ($1, $2::person_type, $3, $4, $5, $6, $7::messaging_type, $8, $9::messaging_type, $10, $11::messaging_type, $12, $13::messaging_type, $14, $15, $16, $17, $18, $19, $20)
+                "#,
+            )
+            .bind(person.id)
+            .bind(person.person_type)
+            .bind(person.display_name.as_str())
+            .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
+            .bind(person.organization_person_id)
+            .bind(person.messaging1_id)
+            .bind(person.messaging1_type)
+            .bind(person.messaging2_id)
+            .bind(person.messaging2_type)
+            .bind(person.messaging3_id)
+            .bind(person.messaging3_type)
+            .bind(person.messaging4_id)
+            .bind(person.messaging4_type)
+            .bind(person.messaging5_id)
+            .bind(person.messaging5_type)
+            .bind(person.department.as_ref().map(|s| s.as_str()))
+            .bind(person.location_id)
+            .bind(person.duplicate_of_person_id)
+            .bind(person.entity_reference_count)
+            .bind(person.audit_log_id)
+            .execute(&*self.pool)
+            .await?;
+
+            sqlx::query(
+                r#"
+                INSERT INTO person_idx (person_id, external_identifier_hash, version, hash)
+                VALUES ($1, $2, $3, $4)
+                "#,
+            )
+            .bind(person.id)
+            .bind(new_external_hash)
+            .bind(version)
+            .bind(new_hash)
+            .execute(&*self.pool)
+            .await?;
+
+            let new_idx = PersonIdxModel {
+                person_id: person.id,
+                external_identifier_hash: new_external_hash,
+                version,
+                hash: new_hash,
+            };
+            self.person_idx_cache.write().unwrap().add(new_idx);
+        }
 
         Ok(person)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<PersonModel>, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> Result<PersonModel, sqlx::Error> {
         let row = sqlx::query(
             r#"
             SELECT * FROM person WHERE id = $1
             "#,
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_one(&*self.pool)
         .await?;
 
-        match row {
-            Some(row) => Ok(Some(
-                PersonModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?,
-            )),
-            None => Ok(None),
-        }
+        PersonModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+    }
+
+    async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+        Ok(self.person_idx_cache.read().unwrap().get_by_primary(&id))
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query(
-            r#"
-            SELECT * FROM person WHERE id = ANY($1)
-            "#,
-        )
-        .bind(ids)
-        .fetch_all(&*self.pool)
-        .await?;
-
-        let mut persons = Vec::new();
-        for row in rows {
-            persons.push(PersonModel::try_from_row(&row)?);
-        }
-        Ok(persons)
+    ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+        let cache = self.person_idx_cache.read().unwrap();
+        let results = ids
+            .iter()
+            .filter_map(|id| cache.get_by_primary(id))
+            .collect();
+        Ok(results)
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM person WHERE id = $1)",
-            id
-        )
-        .fetch_one(&*self.pool)
-        .await?;
-        Ok(exists.unwrap_or(false))
+        Ok(self.person_idx_cache.read().unwrap().contains_primary(&id))
     }
 
     async fn get_ids_by_external_identifier(
@@ -140,77 +342,31 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         hasher.write(identifier.as_bytes());
         let hash = hasher.finish() as i64;
 
-        let ids = sqlx::query_scalar(
-            "SELECT person_id FROM person_idx WHERE external_identifier_hash = $1",
-        )
-        .bind(hash)
-        .fetch_all(&*self.pool)
-        .await?;
-        Ok(ids)
+        let cache = self.person_idx_cache.read().unwrap();
+        Ok(cache
+            .get_by_external_identifier_hash(&hash)
+            .cloned()
+            .unwrap_or_default())
     }
 
     async fn get_by_external_identifier(
         &self,
         identifier: &str,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let ids = self.get_ids_by_external_identifier(identifier).await?;
-        if ids.is_empty() {
-            return Ok(vec![]);
-        }
-        let persons = self.find_by_ids(&ids).await?;
-        let filtered_persons = persons
-            .into_iter()
-            .filter(|p| p.external_identifier.as_deref() == Some(identifier))
+    ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write(identifier.as_bytes());
+        let hash = hasher.finish() as i64;
+
+        let cache = self.person_idx_cache.read().unwrap();
+        let ids = cache
+            .get_by_external_identifier_hash(&hash)
+            .cloned()
+            .unwrap_or_default();
+        let results = ids
+            .iter()
+            .filter_map(|id| cache.get_by_primary(id))
             .collect();
-        Ok(filtered_persons)
-    }
-
-    async fn get_by_entity_reference(
-        &self,
-        entity_id: Uuid,
-        entity_type: RelationshipRole,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query(
-            r#"
-            SELECT p.*
-            FROM person p
-            INNER JOIN entity_reference er ON p.id = er.person_id
-            WHERE er.reference_external_id = $1 AND er.entity_role = $2
-            "#,
-        )
-        .bind(entity_id.to_string())
-        .bind(entity_type)
-        .fetch_all(&*self.pool)
-        .await?;
-
-        let mut persons = Vec::new();
-        for row in rows {
-            persons.push(PersonModel::try_from_row(&row)?);
-        }
-        Ok(persons)
-    }
-
-
-    async fn mark_as_duplicate(
-        &self,
-        _person_id: Uuid,
-        _duplicate_of_person_id: Uuid,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        unimplemented!()
-    }
-
-    async fn search_by_name(
-        &self,
-        _query: &str,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
-    }
-
-    async fn batch_create(
-        &self,
-        _persons: Vec<PersonModel>,
-    ) -> Result<Vec<PersonModel>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        Ok(results)
     }
 }
 
@@ -256,7 +412,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
         match row {
             Some(row) => Ok(Some(
-                CountryModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?,
+                CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -282,7 +438,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
         let mut countries = Vec::new();
         for row in rows {
-            countries.push(CountryModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?);
+            countries.push(CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(countries)
     }
@@ -299,7 +455,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
         let mut countries = Vec::new();
         for row in rows {
-            countries.push(CountryModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?);
+            countries.push(CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(countries)
     }
@@ -380,7 +536,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         match row {
             Some(row) => Ok(Some(
                 CountrySubdivisionModel::try_from_row(&row)
-                    .map_err(|e| sqlx::Error::Decode(e))?,
+                    .map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -408,7 +564,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         for row in rows {
             subdivisions.push(
                 CountrySubdivisionModel::try_from_row(&row)
-                    .map_err(|e| sqlx::Error::Decode(e))?,
+                    .map_err(sqlx::Error::Decode)?,
             );
         }
         Ok(subdivisions)
@@ -432,7 +588,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         match row {
             Some(row) => Ok(Some(
                 CountrySubdivisionModel::try_from_row(&row)
-                    .map_err(|e| sqlx::Error::Decode(e))?,
+                    .map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -527,7 +683,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
 
         match row {
             Some(row) => Ok(Some(
-                LocalityModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?,
+                LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -554,7 +710,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         let mut localities = Vec::new();
         for row in rows {
             localities
-                .push(LocalityModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?);
+                .push(LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(localities)
     }
@@ -578,7 +734,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
 
         match row {
             Some(row) => Ok(Some(
-                LocalityModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?,
+                LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -680,7 +836,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
 
         match row {
             Some(row) => Ok(Some(
-                LocationModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?,
+                LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -714,7 +870,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let mut locations = Vec::new();
         for row in rows {
             locations
-                .push(LocationModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?);
+                .push(LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(locations)
     }
@@ -740,7 +896,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let mut locations = Vec::new();
         for row in rows {
             locations
-                .push(LocationModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?);
+                .push(LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(locations)
     }
@@ -768,7 +924,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let mut locations = Vec::new();
         for row in rows {
             locations
-                .push(LocationModel::try_from_row(&row).map_err(|e| sqlx::Error::Decode(e))?);
+                .push(LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(locations)
     }
@@ -855,7 +1011,6 @@ impl TryFromRow<PgRow> for PersonModel {
             department: get_optional_heapless_string(row, "department")?,
             location_id: row.get("location_id"),
             duplicate_of_person_id: row.get("duplicate_of_person_id"),
-            version: row.get("version"),
             entity_reference_count: row.get("entity_reference_count"),
             audit_log_id: row.get("audit_log_id"),
         })
@@ -1073,7 +1228,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         match row {
             Some(row) => Ok(Some(
                 EntityReferenceModel::try_from_row(&row)
-                    .map_err(|e| sqlx::Error::Decode(e))?,
+                    .map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -1101,7 +1256,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         for row in rows {
             refs.push(
                 EntityReferenceModel::try_from_row(&row)
-                    .map_err(|e| sqlx::Error::Decode(e))?,
+                    .map_err(sqlx::Error::Decode)?,
             );
         }
         Ok(refs)
@@ -1129,7 +1284,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         for row in rows {
             refs.push(
                 EntityReferenceModel::try_from_row(&row)
-                    .map_err(|e| sqlx::Error::Decode(e))?,
+                    .map_err(sqlx::Error::Decode)?,
             );
         }
         Ok(refs)

@@ -21,9 +21,9 @@ impl PostgresRepositories {
         Self { pool }
     }
 
-    pub fn create_person_service_repositories(&self) -> Repositories {
+    pub async fn create_person_service_repositories(&self) -> Repositories {
         Repositories {
-            person_repository: Arc::new(PersonRepositoryImpl::new(self.pool.clone())),
+            person_repository: Arc::new(PersonRepositoryImpl::new(self.pool.clone()).await),
             audit_log_repository: Arc::new(AuditLogRepositoryImpl::new(self.pool.clone())),
             country_repository: Arc::new(CountryRepositoryImpl::new(self.pool.clone())),
             country_subdivision_repository: Arc::new(CountrySubdivisionRepositoryImpl::new(

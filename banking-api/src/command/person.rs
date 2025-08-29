@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use std::sync::Arc;
 
-use super::command::Command;
+use super::Command;
 
 #[derive(Deserialize)]
 struct GeoData {
@@ -26,7 +26,7 @@ impl Command for PopulateGeoDataCommand {
 
     async fn execute(&self, context: &Self::Context) -> Result<Self::Result, BankingError> {
         let data: GeoData = serde_json::from_str(&self.json_data).map_err(|e| {
-            BankingError::ValidationFailed(format!("Failed to parse JSON data: {}", e))
+            BankingError::ValidationFailed(format!("Failed to parse JSON data: {e}"))
         })?;
 
         for country in data.countries {
