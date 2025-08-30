@@ -1,20 +1,40 @@
 use async_trait::async_trait;
-use banking_db::models::person::{LocalityIdxModel, LocalityModel};
+use banking_db::models::person::{LocalityIdxModel, LocalityIdxModelCache, LocalityModel};
 use banking_db::repository::LocalityRepository;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocalityRepositoryImpl {
     pool: Arc<PgPool>,
+    locality_idx_cache: Arc<RwLock<LocalityIdxModelCache>>,
 }
 
 impl LocalityRepositoryImpl {
-    pub fn new(pool: Arc<PgPool>) -> Self {
-        Self { pool }
+    pub async fn new(pool: Arc<PgPool>) -> Self {
+        let locality_idx_models = Self::load_all_locality_idx(&pool).await.unwrap();
+        let locality_idx_cache = Arc::new(RwLock::new(
+            LocalityIdxModelCache::new(locality_idx_models).unwrap(),
+        ));
+        Self {
+            pool,
+            locality_idx_cache,
+        }
+    }
+
+    async fn load_all_locality_idx(pool: &PgPool) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
+        let rows = sqlx::query("SELECT * FROM locality_idx")
+            .fetch_all(pool)
+            .await?;
+        let mut idx_models = Vec::with_capacity(rows.len());
+        for row in rows {
+            idx_models.push(LocalityIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+        }
+        Ok(idx_models)
     }
 }
 
@@ -52,6 +72,13 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         .execute(&*self.pool)
         .await?;
 
+        let new_idx = LocalityIdxModel {
+            locality_id: locality.id,
+            country_subdivision_id: locality.country_subdivision_id,
+            code_hash,
+        };
+        self.locality_idx_cache.write().unwrap().add(new_idx);
+
         Ok(locality)
     }
 
@@ -69,73 +96,41 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
-        let row = sqlx::query(
-            r#"
-            SELECT * FROM locality_idx WHERE locality_id = $1
-            "#,
-        )
-        .bind(id)
-        .fetch_optional(&*self.pool)
-        .await?;
-
-        match row {
-            Some(row) => Ok(Some(
-                LocalityIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
-            )),
-            None => Ok(None),
-        }
+        Ok(self.locality_idx_cache.read().unwrap().get_by_primary(&id))
     }
 
     async fn find_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,
-        page: i32,
-        page_size: i32,
+        _page: i32,
+        _page_size: i32,
     ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
-        let rows = sqlx::query(
-            r#"
-            SELECT * FROM locality_idx WHERE country_subdivision_id = $1
-            LIMIT $2 OFFSET $3
-            "#,
-        )
-        .bind(country_subdivision_id)
-        .bind(page_size)
-        .bind((page - 1) * page_size)
-        .fetch_all(&*self.pool)
-        .await?;
-
-        let mut localities = Vec::new();
-        for row in rows {
-            localities
-                .push(LocalityIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+        let cache = self.locality_idx_cache.read().unwrap();
+        let mut result = Vec::new();
+        if let Some(ids) = cache.get_by_country_subdivision_id(&country_subdivision_id) {
+            for id in ids {
+                if let Some(idx) = cache.get_by_primary(id) {
+                    result.push(idx);
+                }
+            }
         }
-        Ok(localities)
+        Ok(result)
     }
 
     async fn find_by_code(
         &self,
-        country_id: Uuid,
+        _country_id: Uuid,
         code: &str,
     ) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
-        let row = sqlx::query(
-            r#"
-            SELECT li.*
-            FROM locality_idx li
-            JOIN locality l ON li.locality_id = l.id
-            JOIN country_subdivision cs ON l.country_subdivision_id = cs.id
-            WHERE cs.country_id = $1 AND l.code = $2
-            "#,
-        )
-        .bind(country_id)
-        .bind(code)
-        .fetch_optional(&*self.pool)
-        .await?;
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write(code.as_bytes());
+        let code_hash = hasher.finish() as i64;
 
-        match row {
-            Some(row) => Ok(Some(
-                LocalityIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
-            )),
-            None => Ok(None),
+        let cache = self.locality_idx_cache.read().unwrap();
+        if let Some(id) = cache.get_by_code_hash(&code_hash) {
+            Ok(cache.get_by_primary(&id))
+        } else {
+            Ok(None)
         }
     }
 
@@ -143,45 +138,29 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<LocalityIdxModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query(
-            r#"
-            SELECT * FROM locality_idx WHERE locality_id = ANY($1)
-            "#,
-        )
-        .bind(ids)
-        .fetch_all(&*self.pool)
-        .await?;
-
-        let mut localities = Vec::new();
-        for row in rows {
-            localities.push(LocalityIdxModel::try_from_row(&row)?);
+        let cache = self.locality_idx_cache.read().unwrap();
+        let mut result = Vec::new();
+        for id in ids {
+            if let Some(idx) = cache.get_by_primary(id) {
+                result.push(idx);
+            }
         }
-        Ok(localities)
+        Ok(result)
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM locality WHERE id = $1)",
-            id
-        )
-        .fetch_one(&*self.pool)
-        .await?;
-        Ok(exists.unwrap_or(false))
+        Ok(self.locality_idx_cache.read().unwrap().contains_primary(&id))
     }
 
     async fn find_ids_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar(
-            r#"
-            SELECT id FROM locality WHERE country_subdivision_id = $1
-            "#,
-        )
-        .bind(country_subdivision_id)
-        .fetch_all(&*self.pool)
-        .await?;
-        Ok(ids)
+        let cache = self.locality_idx_cache.read().unwrap();
+        Ok(cache
+            .get_by_country_subdivision_id(&country_subdivision_id)
+            .cloned()
+            .unwrap_or_default())
     }
 }
 

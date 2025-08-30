@@ -257,3 +257,18 @@ For performance and storage efficiency, long or sensitive string fields used for
 4.  It returns a `Vec<Uuid>` (which may contain IDs from hash collisions).
 5.  `get_by_external_identifier` then calls `find_by_ids` with these IDs to fetch the full `PersonModel` objects.
 6.  Finally, it filters the resulting `Vec<PersonModel>` to find the one where `person.external_identifier` exactly matches the original `identifier` string.
+
+##### Immutable Caches for Static Data
+
+For data that is static or changes very infrequently (e.g., countries, currencies), a simpler, immutable caching pattern is used.
+
+**Principles:**
+
+-   **`IdxModelCache`**: The cache is still represented by a `struct` (e.g., `CountryIdxModelCache`).
+-   **`new()` Constructor**: The constructor takes a `Vec<IdxModel>` and builds `HashMap`s for each indexed field upon instantiation. It returns a `Result<Arc<Self>, ...>` to ensure the cache is immutable and thread-safe.
+-   **No Mutable Methods**: The cache struct does not expose any methods that would mutate its internal state (e.g., no `add`, `update`, or `remove` methods).
+-   **Repository Implementation**:
+    -   The repository `struct` holds an `Arc<IdxModelCache>`.
+    -   The `new()` function for the repository is `async`. It loads all records from the `*_idx` table and initializes the cache once.
+    -   Finder methods (`find_by_*`, `exists_by_*`) perform read-only lookups against the immutable cache.
+    -   The `save` method in the repository does *not* interact with the cache. It only performs the necessary database operations. This is acceptable because the underlying data is considered static.

@@ -147,7 +147,7 @@ async fn test_person_repository() {
 async fn test_country_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone())).await;
 
     // Test save and find_by_id
     let new_country = create_test_country_model();
@@ -181,10 +181,10 @@ async fn test_country_repository() {
 async fn test_country_subdivision_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone())).await;
     let country = create_test_country_model();
     country_repo.save(country.clone()).await.unwrap();
-    let repo = CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let repo = CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone())).await;
 
     // Test save and find_by_id
     let new_country_subdivision = create_test_country_subdivision_model(country.id);
@@ -203,13 +203,14 @@ async fn test_country_subdivision_repository() {
 async fn test_locality_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone())).await;
     let country = create_test_country_model();
     country_repo.save(country.clone()).await.unwrap();
-    let country_subdivision_repo = CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let country_subdivision_repo =
+        CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone())).await;
     let country_subdivision = create_test_country_subdivision_model(country.id);
     country_subdivision_repo.save(country_subdivision.clone()).await.unwrap();
-    let repo = LocalityRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let repo = LocalityRepositoryImpl::new(Arc::new(db_pool.clone())).await;
 
     // Test save and find_by_id
     let new_locality = create_test_locality_model(country_subdivision.id);
@@ -228,13 +229,14 @@ async fn test_locality_repository() {
 async fn test_location_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let country_repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone())).await;
     let country = create_test_country_model();
     country_repo.save(country.clone()).await.unwrap();
-    let country_subdivision_repo = CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let country_subdivision_repo =
+        CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone())).await;
     let country_subdivision = create_test_country_subdivision_model(country.id);
     country_subdivision_repo.save(country_subdivision.clone()).await.unwrap();
-    let locality_repo = LocalityRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let locality_repo = LocalityRepositoryImpl::new(Arc::new(db_pool.clone())).await;
     let locality = create_test_locality_model(country_subdivision.id);
     locality_repo.save(locality.clone()).await.unwrap();
     let repo = LocationRepositoryImpl::new(Arc::new(db_pool.clone())).await;

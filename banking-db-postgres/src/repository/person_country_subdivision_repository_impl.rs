@@ -1,20 +1,45 @@
 use async_trait::async_trait;
-use banking_db::models::person::{CountrySubdivisionIdxModel, CountrySubdivisionModel};
+use banking_db::models::person::{
+    CountrySubdivisionIdxModel, CountrySubdivisionIdxModelCache, CountrySubdivisionModel,
+};
 use banking_db::repository::CountrySubdivisionRepository;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::Arc;
+use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct CountrySubdivisionRepositoryImpl {
     pool: Arc<PgPool>,
+    country_subdivision_idx_cache: Arc<CountrySubdivisionIdxModelCache>,
 }
 
 impl CountrySubdivisionRepositoryImpl {
-    pub fn new(pool: Arc<PgPool>) -> Self {
-        Self { pool }
+    pub async fn new(pool: Arc<PgPool>) -> Self {
+        let country_subdivision_idx_models =
+            Self::load_all_country_subdivision_idx(&pool).await.unwrap();
+        let country_subdivision_idx_cache =
+            CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap();
+        Self {
+            pool,
+            country_subdivision_idx_cache,
+        }
+    }
+
+    async fn load_all_country_subdivision_idx(
+        pool: &PgPool,
+    ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
+        let rows = sqlx::query("SELECT * FROM country_subdivision_idx")
+            .fetch_all(pool)
+            .await?;
+        let mut idx_models = Vec::with_capacity(rows.len());
+        for row in rows {
+            idx_models
+                .push(CountrySubdivisionIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+        }
+        Ok(idx_models)
     }
 }
 
@@ -85,76 +110,45 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         &self,
         id: Uuid,
     ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
-        let row = sqlx::query(
-            r#"
-            SELECT * FROM country_subdivision_idx WHERE country_subdivision_id = $1
-            "#,
-        )
-        .bind(id)
-        .fetch_optional(&*self.pool)
-        .await?;
-
-        match row {
-            Some(row) => Ok(Some(
-                CountrySubdivisionIdxModel::try_from_row(&row)
-                    .map_err(sqlx::Error::Decode)?,
-            )),
-            None => Ok(None),
-        }
+        Ok(self.country_subdivision_idx_cache.get_by_primary(&id))
     }
 
     async fn find_by_country_id(
         &self,
         country_id: Uuid,
-        page: i32,
-        page_size: i32,
+        _page: i32,
+        _page_size: i32,
     ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
-        let rows = sqlx::query(
-            r#"
-            SELECT * FROM country_subdivision_idx WHERE country_id = $1
-            LIMIT $2 OFFSET $3
-            "#,
-        )
-        .bind(country_id)
-        .bind(page_size)
-        .bind((page - 1) * page_size)
-        .fetch_all(&*self.pool)
-        .await?;
-
-        let mut subdivisions = Vec::new();
-        for row in rows {
-            subdivisions.push(
-                CountrySubdivisionIdxModel::try_from_row(&row)
-                    .map_err(sqlx::Error::Decode)?,
-            );
+        let mut result = Vec::new();
+        if let Some(ids) = self
+            .country_subdivision_idx_cache
+            .get_by_country_id(&country_id)
+        {
+            for id in ids {
+                if let Some(idx) = self.country_subdivision_idx_cache.get_by_primary(id) {
+                    result.push(idx);
+                }
+            }
         }
-        Ok(subdivisions)
+        Ok(result)
     }
 
     async fn find_by_code(
         &self,
-        country_id: Uuid,
+        _country_id: Uuid,
         code: &str,
     ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
-        let row = sqlx::query(
-            r#"
-            SELECT csi.*
-            FROM country_subdivision_idx csi
-            JOIN country_subdivision cs ON csi.country_subdivision_id = cs.id
-            WHERE cs.country_id = $1 AND cs.code = $2
-            "#,
-        )
-        .bind(country_id)
-        .bind(code)
-        .fetch_optional(&*self.pool)
-        .await?;
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write(code.as_bytes());
+        let code_hash = hasher.finish() as i64;
 
-        match row {
-            Some(row) => Ok(Some(
-                CountrySubdivisionIdxModel::try_from_row(&row)
-                    .map_err(sqlx::Error::Decode)?,
-            )),
-            None => Ok(None),
+        if let Some(id) = self
+            .country_subdivision_idx_cache
+            .get_by_code_hash(&code_hash)
+        {
+            Ok(self.country_subdivision_idx_cache.get_by_primary(&id))
+        } else {
+            Ok(None)
         }
     }
 
@@ -162,45 +156,28 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<CountrySubdivisionIdxModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query(
-            r#"
-            SELECT * FROM country_subdivision_idx WHERE country_subdivision_id = ANY($1)
-            "#,
-        )
-        .bind(ids)
-        .fetch_all(&*self.pool)
-        .await?;
-
-        let mut subdivisions = Vec::new();
-        for row in rows {
-            subdivisions.push(CountrySubdivisionIdxModel::try_from_row(&row)?);
+        let mut result = Vec::new();
+        for id in ids {
+            if let Some(idx) = self.country_subdivision_idx_cache.get_by_primary(id) {
+                result.push(idx);
+            }
         }
-        Ok(subdivisions)
+        Ok(result)
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM country_subdivision WHERE id = $1)",
-            id
-        )
-        .fetch_one(&*self.pool)
-        .await?;
-        Ok(exists.unwrap_or(false))
+        Ok(self.country_subdivision_idx_cache.contains_primary(&id))
     }
 
     async fn find_ids_by_country_id(
         &self,
         country_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar(
-            r#"
-            SELECT id FROM country_subdivision WHERE country_id = $1
-            "#,
-        )
-        .bind(country_id)
-        .fetch_all(&*self.pool)
-        .await?;
-        Ok(ids)
+        Ok(self
+            .country_subdivision_idx_cache
+            .get_by_country_id(&country_id)
+            .cloned()
+            .unwrap_or_default())
     }
 }
 

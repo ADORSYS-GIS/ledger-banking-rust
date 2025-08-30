@@ -1116,9 +1116,7 @@ pub struct LocalityIdxModelCache {
 }
 
 impl LocalityIdxModelCache {
-    pub fn new(
-        items: Vec<LocalityIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    pub fn new(items: Vec<LocalityIdxModel>) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_code_hash = HashMap::new();
         let mut by_country_subdivision_id = HashMap::new();
@@ -1138,15 +1136,29 @@ impl LocalityIdxModelCache {
                 .entry(item.country_subdivision_id)
                 .or_insert_with(Vec::new)
                 .push(primary_key);
-            
+
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(LocalityIdxModelCache {
+        Ok(LocalityIdxModelCache {
             by_id,
             by_code_hash,
             by_country_subdivision_id,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: LocalityIdxModel) {
+        let primary_key = item.locality_id;
+        if self.by_id.contains_key(&primary_key) {
+            return;
+        }
+
+        self.by_code_hash.insert(item.code_hash, primary_key);
+        self.by_country_subdivision_id
+            .entry(item.country_subdivision_id)
+            .or_default()
+            .push(primary_key);
+        self.by_id.insert(primary_key, item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
