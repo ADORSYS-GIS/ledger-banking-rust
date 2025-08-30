@@ -33,12 +33,12 @@ impl CustomerMapper {
     pub fn from_model(model: CustomerModel) -> banking_api::BankingResult<Customer> {
         Ok(Customer {
             id: model.id,
-            customer_type: Self::db_to_customer_type(model.customer_type),
+            customer_type: Self::customer_type_from_db(model.customer_type),
             full_name: model.full_name,
-            id_type: Self::db_to_identity_type(model.id_type),
+            id_type: Self::identity_type_from_db(model.id_type),
             id_number: model.id_number,
-            risk_rating: Self::db_to_risk_rating(model.risk_rating),
-            status: Self::db_to_customer_status(model.status),
+            risk_rating: Self::risk_rating_from_db(model.risk_rating),
+            status: Self::customer_status_from_db(model.status),
             created_at: model.created_at,
             last_updated_at: model.last_updated_at,
             updated_by_person_id: model.updated_by_person_id,
@@ -54,7 +54,7 @@ impl CustomerMapper {
             total_loan_outstanding: model.total_loan_outstanding,
             last_activity_date: model.last_activity_date,
             risk_score: model.risk_score,
-            kyc_status: Self::db_to_kyc_status(model.kyc_status),
+            kyc_status: Self::kyc_status_from_db(model.kyc_status),
             sanctions_checked: model.sanctions_checked,
             last_screening_date: model.last_screening_date,
         }
@@ -68,7 +68,7 @@ impl CustomerMapper {
         }
     }
 
-    pub fn db_to_customer_type(db_type: DbCustomerType) -> CustomerType {
+    pub fn customer_type_from_db(db_type: DbCustomerType) -> CustomerType {
         match db_type {
             DbCustomerType::Individual => CustomerType::Individual,
             DbCustomerType::Corporate => CustomerType::Corporate,
@@ -87,7 +87,7 @@ impl CustomerMapper {
         }
     }
 
-    pub fn db_to_identity_type(db_type: DbIdentityType) -> IdentityType {
+    pub fn identity_type_from_db(db_type: DbIdentityType) -> IdentityType {
         match db_type {
             DbIdentityType::NationalId => IdentityType::NationalId,
             DbIdentityType::Passport => IdentityType::Passport,
@@ -108,7 +108,7 @@ impl CustomerMapper {
         }
     }
 
-    pub fn db_to_risk_rating(db_rating: DbRiskRating) -> RiskRating {
+    pub fn risk_rating_from_db(db_rating: DbRiskRating) -> RiskRating {
         match db_rating {
             DbRiskRating::Low => RiskRating::Low,
             DbRiskRating::Medium => RiskRating::Medium,
@@ -127,7 +127,7 @@ impl CustomerMapper {
         }
     }
 
-    pub fn db_to_customer_status(db_status: DbCustomerStatus) -> CustomerStatus {
+    pub fn customer_status_from_db(db_status: DbCustomerStatus) -> CustomerStatus {
         match db_status {
             DbCustomerStatus::Active => CustomerStatus::Active,
             DbCustomerStatus::PendingVerification => CustomerStatus::PendingVerification,
@@ -137,7 +137,7 @@ impl CustomerMapper {
         }
     }
 
-    pub fn db_to_kyc_status(db_status: DbKycStatus) -> KycStatus {
+    pub fn kyc_status_from_db(db_status: DbKycStatus) -> KycStatus {
         match db_status {
             DbKycStatus::NotStarted => KycStatus::NotStarted,
             DbKycStatus::InProgress => KycStatus::InProgress,
@@ -166,7 +166,7 @@ impl CustomerMapper {
     /// Map from database RiskSummaryModel to domain RiskSummary
     pub fn risk_summary_from_model(model: RiskSummaryModel) -> RiskSummary {
         RiskSummary {
-            current_rating: Self::db_to_risk_rating(model.current_rating),
+            current_rating: Self::risk_rating_from_db(model.current_rating),
             last_assessment_date: model.last_assessment_date,
             flags_01: model.flags_01,
             flags_02: model.flags_02,
@@ -192,7 +192,7 @@ impl CustomerMapper {
     /// Map from database CustomerComplianceStatusModel to domain CustomerComplianceStatus
     pub fn compliance_status_from_model(model: CustomerComplianceStatusModel) -> CustomerComplianceStatus {
         CustomerComplianceStatus {
-            kyc_status: Self::db_to_kyc_status(model.kyc_status),
+            kyc_status: Self::kyc_status_from_db(model.kyc_status),
             sanctions_checked: model.sanctions_checked,
             last_screening_date: model.last_screening_date,
         }
@@ -216,7 +216,7 @@ impl CustomerMapper {
         }
     }
 
-    pub fn db_to_document_status(db_status: DbDocumentStatus) -> DocumentStatus {
+    pub fn document_status_from_db(db_status: DbDocumentStatus) -> DocumentStatus {
         match db_status {
             DbDocumentStatus::Uploaded => DocumentStatus::Uploaded,
             DbDocumentStatus::Verified => DocumentStatus::Verified,
@@ -245,7 +245,7 @@ impl CustomerMapper {
             customer_id: model.customer_id,
             document_type: model.document_type,
             document_path: model.document_path,
-            status: Self::db_to_document_status(model.status),
+            status: Self::document_status_from_db(model.status),
             uploaded_at: model.uploaded_at,
             uploaded_by: model.uploaded_by,
             verified_at: model.verified_at,

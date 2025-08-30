@@ -1,28 +1,23 @@
+use sqlx::{Postgres, Transaction, pool::PoolConnection, PgPool};
+use async_trait::async_trait;
+
 pub mod models;
 pub mod repository;
 pub mod utils;
 
-// Re-export only specific items to avoid naming conflicts
-pub use models::{
-    customer::*, account::*, transaction::*, 
-    agent_network::*, workflow::*,
-    calendar::*, person::*
-};
-// Import compliance models with aliases to avoid conflicts
-pub use models::{
-    KycResultModel, KycCheckModel,
-    ScreeningResultModel, SanctionsMatchModel, SanctionsScreeningModel,
-    ComplianceAlertModel, ExtendedComplianceAlertModel, UboVerificationResultModel,
-    UboLinkModel, ComplianceResultModel, ComplianceRiskScoreModel,
-    SarDataModel, ExtendedSarDataModel, ComplianceDocumentModel,
-    ComplianceCustomerAuditModel, MonitoringResultModel, MonitoringRulesModel,
-    ComplianceCustomerPortfolioModel,
-    ComplianceControlType, ComplianceVerificationStatus,
-    CheckResult, ScreeningType, RiskLevel, AlertType, Severity,
-    AlertStatus, SarStatus, ComplianceStatus, CheckType
-};
-pub use repository::{
-    CustomerRepository, AccountRepository, TransactionRepository,
-    AgentNetworkRepository, ComplianceRepository, WorkflowRepository,
-    CalendarRepository,
-};
+#[async_trait]
+pub trait DatabaseExecutor: Send + Sync {
+    async fn begin(&self) -> Result<Transaction<'_, Postgres>, sqlx::Error>;
+    async fn acquire(&self) -> Result<PoolConnection<Postgres>, sqlx::Error>;
+}
+
+#[async_trait]
+impl DatabaseExecutor for PgPool {
+    async fn begin(&self) -> Result<Transaction<'_, Postgres>, sqlx::Error> {
+        self.begin().await
+    }
+
+    async fn acquire(&self) -> Result<PoolConnection<Postgres>, sqlx::Error> {
+        self.acquire().await
+    }
+}

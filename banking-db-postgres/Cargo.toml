@@ -6,16 +6,11 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[features]
-default = []
-postgres_tests = []
-offline = []
-full_sqlx = []
-
 [dependencies]
 # Workspace dependencies
 banking-api = { path = "../banking-api", features = ["sqlx"] }
 banking-db = { path = "../banking-db" }
+banking-logic = { path = "../banking-logic" }
 
 # Database
 sqlx = { workspace = true, features = ["rust_decimal"] }
@@ -35,6 +30,7 @@ async-trait.workspace = true
 
 # Stack optimization
 heapless.workspace = true
+twox-hash = "2.1.1"
 
 # Logging
 
@@ -42,29 +38,8 @@ heapless.workspace = true
 tokio-test.workspace = true
 sqlx = { workspace = true, features = ["migrate"] }
 
+[features]
+test-utils = []
+
 [package.metadata.sqlx]
 migrations = "./migrations"
-
-[[test]]
-name = "workflow_repository_tests"
-path = "tests/workflow_repository_tests.rs"
-
-[[test]]
-name = "account_repository_tests"
-path = "tests/account_repository_tests.rs"
-
-[[test]]
-name = "transaction_repository_tests"
-path = "tests/transaction_repository_tests.rs"
-
-[[test]]
-name = "example_with_cleanup"
-path = "tests/example_with_cleanup.rs"
-
-[[test]]
-name = "cleanup_demo"
-path = "tests/cleanup_demo.rs"
-
-[[test]]
-name = "fee_repository_tests"
-path = "tests/fee_repository_tests.rs"

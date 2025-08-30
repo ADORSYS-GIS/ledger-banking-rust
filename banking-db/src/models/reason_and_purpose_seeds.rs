@@ -299,7 +299,7 @@ impl ReasonSeeds {
                 code: HeaplessString::try_from("KYC_PROOF_OF_ADDRESS_MISSING").unwrap(),
                 category: ReasonCategory::KycMissingDocument,
                 context: ReasonContext::Kyc,
-                l1_content: Some(HeaplessString::try_from("Proof of address document required").unwrap()),
+                l1_content: Some(HeaplessString::try_from("Proof of location document required").unwrap()),
                 l2_content: Some(HeaplessString::try_from("Justificatif de domicile requis").unwrap()),
                 l3_content: Some(HeaplessString::try_from("Uthibitisho wa makazi unahitajika").unwrap()),
                 l1_language_code: Some(*b"eng"),

@@ -1,287 +1,379 @@
-use banking_api::domain;
-use banking_api::domain::person::MessagingType as DomainMessagingType;
-use banking_db::models::person::{PersonType, PersonModel, RelationshipRole, EntityReferenceModel, MessagingType as DbMessagingType};
+use banking_api::domain::person::{
+    Location, LocationType, Locality, Country, EntityReference, Messaging, MessagingType, Person,
+    PersonType, RelationshipRole, CountrySubdivision,
+};
+use banking_db::models::person::{
+    LocationModel, LocalityModel, CountryModel, EntityReferenceModel, MessagingModel, PersonModel,
+    CountrySubdivisionModel,
+};
 
-#[cfg(test)]
-use heapless::String as HeaplessString;
+pub trait ToDomain<D> {
+    fn to_domain(self) -> D;
+}
 
-/// Mapper for converting between domain and database models for Person
-pub struct PersonMapper;
+pub trait ToModel<M> {
+    fn to_model(self) -> M;
+}
 
-impl PersonMapper {
-    /// Convert domain PersonType to database PersonType
-    pub fn person_type_to_model(person_type: domain::PersonType) -> PersonType {
-        match person_type {
-            domain::PersonType::Natural => PersonType::Natural,
-            domain::PersonType::Legal => PersonType::Legal,
-            domain::PersonType::System => PersonType::System,
-            domain::PersonType::Integration => PersonType::Integration,
-            domain::PersonType::Unknown => PersonType::Unknown,
-        }
-    }
-
-    /// Convert database PersonType to domain PersonType
-    pub fn person_type_from_model(model: PersonType) -> domain::PersonType {
-        match model {
-            PersonType::Natural => domain::PersonType::Natural,
-            PersonType::Legal => domain::PersonType::Legal,
-            PersonType::System => domain::PersonType::System,
-            PersonType::Integration => domain::PersonType::Integration,
-            PersonType::Unknown => domain::PersonType::Unknown,
-        }
-    }
-
-    /// Convert domain Person to database PersonModel
-    pub fn to_model(person: domain::Person) -> PersonModel {
-        PersonModel {
-            id: person.id,
-            person_type: Self::person_type_to_model(person.person_type),
-            display_name: person.display_name,
-            external_identifier: person.external_identifier,
-            organization_person_id: person.organization_person_id,
-            // Individual messaging fields
-            messaging1_id: person.messaging1_id,
-            messaging1_type: person.messaging1_type.map(Self::messaging_type_to_db),
-            messaging2_id: person.messaging2_id,
-            messaging2_type: person.messaging2_type.map(Self::messaging_type_to_db),
-            messaging3_id: person.messaging3_id,
-            messaging3_type: person.messaging3_type.map(Self::messaging_type_to_db),
-            messaging4_id: person.messaging4_id,
-            messaging4_type: person.messaging4_type.map(Self::messaging_type_to_db),
-            messaging5_id: person.messaging5_id,
-            messaging5_type: person.messaging5_type.map(Self::messaging_type_to_db),
-            department: person.department,
-            location_address_id: person.location_address_id,
-            duplicate_of_person_id: person.duplicate_of_person_id,
-            // Note: entity_reference and entity_type fields removed from Person domain model
-            is_active: person.is_active,
-            created_at: person.created_at,
-            updated_at: person.updated_at,
-        }
-    }
-
-    /// Convert database PersonModel to domain Person
-    pub fn from_model(model: PersonModel) -> domain::Person {
-        domain::Person {
-            id: model.id,
-            person_type: Self::person_type_from_model(model.person_type),
-            display_name: model.display_name,
-            external_identifier: model.external_identifier,
-            organization_person_id: model.organization_person_id,
-            // Individual messaging fields
-            messaging1_id: model.messaging1_id,
-            messaging1_type: model.messaging1_type.map(Self::messaging_type_from_db),
-            messaging2_id: model.messaging2_id,
-            messaging2_type: model.messaging2_type.map(Self::messaging_type_from_db),
-            messaging3_id: model.messaging3_id,
-            messaging3_type: model.messaging3_type.map(Self::messaging_type_from_db),
-            messaging4_id: model.messaging4_id,
-            messaging4_type: model.messaging4_type.map(Self::messaging_type_from_db),
-            messaging5_id: model.messaging5_id,
-            messaging5_type: model.messaging5_type.map(Self::messaging_type_from_db),
-            department: model.department,
-            location_address_id: model.location_address_id,
-            duplicate_of_person_id: model.duplicate_of_person_id,
-            // Note: entity_reference and entity_type fields removed from Person domain model
-            is_active: model.is_active,
-            created_at: model.created_at,
-            updated_at: model.updated_at,
-        }
-    }
-
-    /// Convert a vector of database models to domain models
-    pub fn from_models(models: Vec<PersonModel>) -> Vec<domain::Person> {
-        models.into_iter().map(Self::from_model).collect()
-    }
-
-    /// Convert a vector of domain models to database models
-    pub fn to_models(persons: Vec<domain::Person>) -> Vec<PersonModel> {
-        persons.into_iter().map(Self::to_model).collect()
-    }
-
-    /// Convert domain MessagingType to database MessagingType
-    fn messaging_type_to_db(messaging_type: DomainMessagingType) -> DbMessagingType {
-        match messaging_type {
-            DomainMessagingType::Email => DbMessagingType::Email,
-            DomainMessagingType::Phone => DbMessagingType::Phone,
-            DomainMessagingType::Sms => DbMessagingType::Sms,
-            DomainMessagingType::WhatsApp => DbMessagingType::WhatsApp,
-            DomainMessagingType::Telegram => DbMessagingType::Telegram,
-            DomainMessagingType::Skype => DbMessagingType::Skype,
-            DomainMessagingType::Teams => DbMessagingType::Teams,
-            DomainMessagingType::Signal => DbMessagingType::Signal,
-            DomainMessagingType::WeChat => DbMessagingType::WeChat,
-            DomainMessagingType::Viber => DbMessagingType::Viber,
-            DomainMessagingType::Messenger => DbMessagingType::Messenger,
-            DomainMessagingType::LinkedIn => DbMessagingType::LinkedIn,
-            DomainMessagingType::Slack => DbMessagingType::Slack,
-            DomainMessagingType::Discord => DbMessagingType::Discord,
-            DomainMessagingType::Other => DbMessagingType::Other,
-        }
-    }
-
-    /// Convert database MessagingType to domain MessagingType
-    fn messaging_type_from_db(db_type: DbMessagingType) -> DomainMessagingType {
-        match db_type {
-            DbMessagingType::Email => DomainMessagingType::Email,
-            DbMessagingType::Phone => DomainMessagingType::Phone,
-            DbMessagingType::Sms => DomainMessagingType::Sms,
-            DbMessagingType::WhatsApp => DomainMessagingType::WhatsApp,
-            DbMessagingType::Telegram => DomainMessagingType::Telegram,
-            DbMessagingType::Skype => DomainMessagingType::Skype,
-            DbMessagingType::Teams => DomainMessagingType::Teams,
-            DbMessagingType::Signal => DomainMessagingType::Signal,
-            DbMessagingType::WeChat => DomainMessagingType::WeChat,
-            DbMessagingType::Viber => DomainMessagingType::Viber,
-            DbMessagingType::Messenger => DomainMessagingType::Messenger,
-            DbMessagingType::LinkedIn => DomainMessagingType::LinkedIn,
-            DbMessagingType::Slack => DomainMessagingType::Slack,
-            DbMessagingType::Discord => DomainMessagingType::Discord,
-            DbMessagingType::Other => DomainMessagingType::Other,
-        }
-    }
-
-    // EntityReference mappers (for the new separate entity reference table)
-
-    /// Convert domain RelationshipRole to database RelationshipRole
-    pub fn relationship_role_to_model(entity_role: domain::RelationshipRole) -> RelationshipRole {
-        match entity_role {
-            domain::RelationshipRole::Customer => RelationshipRole::Customer,
-            domain::RelationshipRole::Employee => RelationshipRole::Employee,
-            domain::RelationshipRole::Shareholder => RelationshipRole::Shareholder,
-            domain::RelationshipRole::Director => RelationshipRole::Director,
-            domain::RelationshipRole::BeneficialOwner => RelationshipRole::BeneficialOwner,
-            domain::RelationshipRole::Agent => RelationshipRole::Agent,
-            domain::RelationshipRole::Vendor => RelationshipRole::Vendor,
-            domain::RelationshipRole::Partner => RelationshipRole::Partner,
-            domain::RelationshipRole::RegulatoryContact => RelationshipRole::RegulatoryContact,
-            domain::RelationshipRole::EmergencyContact => RelationshipRole::EmergencyContact,
-            domain::RelationshipRole::SystemAdmin => RelationshipRole::SystemAdmin,
-            domain::RelationshipRole::Other => RelationshipRole::Other,
-        }
-    }
-
-    /// Convert database RelationshipRole to domain RelationshipRole
-    pub fn relationship_role_from_model(model: RelationshipRole) -> domain::RelationshipRole {
-        match model {
-            RelationshipRole::Customer => domain::RelationshipRole::Customer,
-            RelationshipRole::Employee => domain::RelationshipRole::Employee,
-            RelationshipRole::Shareholder => domain::RelationshipRole::Shareholder,
-            RelationshipRole::Director => domain::RelationshipRole::Director,
-            RelationshipRole::BeneficialOwner => domain::RelationshipRole::BeneficialOwner,
-            RelationshipRole::Agent => domain::RelationshipRole::Agent,
-            RelationshipRole::Vendor => domain::RelationshipRole::Vendor,
-            RelationshipRole::Partner => domain::RelationshipRole::Partner,
-            RelationshipRole::RegulatoryContact => domain::RelationshipRole::RegulatoryContact,
-            RelationshipRole::EmergencyContact => domain::RelationshipRole::EmergencyContact,
-            RelationshipRole::SystemAdmin => domain::RelationshipRole::SystemAdmin,
-            RelationshipRole::Other => domain::RelationshipRole::Other,
-        }
-    }
-
-    /// Placeholder mapper for EntityReferenceModel (until domain model exists)
-    pub fn entity_reference_from_model(model: EntityReferenceModel) -> (uuid::Uuid, uuid::Uuid, RelationshipRole, Option<String>) {
-        (
-            model.id,
-            model.person_id,
-            model.entity_role,
-            model.reference_external_id.map(|s| s.to_string())
-        )
-    }
-
-    /// Placeholder mapper to EntityReferenceModel (until domain model exists)
-    pub fn entity_reference_to_model(
-        id: uuid::Uuid,
-        person_id: uuid::Uuid,
-        entity_role: RelationshipRole,
-        reference_external_id: Option<&str>,
-        created_by_person_id: uuid::Uuid,
-    ) -> EntityReferenceModel {
-        use chrono::Utc;
-        use heapless::String as HeaplessString;
-        
-        EntityReferenceModel {
-            id,
-            person_id,
-            entity_role,
-            reference_external_id: reference_external_id.map(|s| HeaplessString::try_from(s).unwrap_or_default()),
-            reference_details_l1: None,
-            reference_details_l2: None,
-            reference_details_l3: None,
-            is_active: true,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            created_by_person_id,
-            updated_by_person_id: created_by_person_id,
+impl ToDomain<Country> for CountryModel {
+    fn to_domain(self) -> Country {
+        Country {
+            id: self.id,
+            iso2: self.iso2,
+            name_l1: self.name_l1,
+            name_l2: self.name_l2,
+            name_l3: self.name_l3,
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use uuid::Uuid;
-    use chrono::Utc;
-
-
-    #[test]
-    fn test_person_type_mapping() {
-        let domain_types = vec![
-            domain::PersonType::Natural,
-            domain::PersonType::Legal,
-            domain::PersonType::System,
-            domain::PersonType::Integration,
-            domain::PersonType::Unknown,
-        ];
-
-        for domain_type in domain_types {
-            let model_type = PersonMapper::person_type_to_model(domain_type);
-            let back_to_domain = PersonMapper::person_type_from_model(model_type);
-            assert_eq!(domain_type, back_to_domain);
+impl ToModel<CountryModel> for Country {
+    fn to_model(self) -> CountryModel {
+        CountryModel {
+            id: self.id,
+            iso2: self.iso2,
+            name_l1: self.name_l1,
+            name_l2: self.name_l2,
+            name_l3: self.name_l3,
         }
     }
+}
 
-    #[test]
-    fn test_person_mapping() {
-        let person_id = Uuid::new_v4();
-        let now = Utc::now();
-        
-        let domain_person = domain::Person {
-            id: person_id,
-            person_type: domain::PersonType::Natural,
-            display_name: HeaplessString::try_from("John Doe").unwrap(),
-            external_identifier: Some(HeaplessString::try_from("EMP001").unwrap()),
-            organization_person_id: Some(Uuid::new_v4()), // Changed to UUID reference
-            // Individual messaging fields
-            messaging1_id: Some(Uuid::new_v4()),
-            messaging1_type: Some(DomainMessagingType::Email),
-            messaging2_id: None,
-            messaging2_type: None,
-            messaging3_id: None,
-            messaging3_type: None,
-            messaging4_id: None,
-            messaging4_type: None,
-            messaging5_id: None,
-            messaging5_type: None,
-            department: Some(HeaplessString::try_from("Engineering").unwrap()),
-            location_address_id: Some(Uuid::new_v4()), // Use correct field name for address reference
-            duplicate_of_person_id: None,
-            // Note: entity_reference and entity_type fields removed
-            is_active: true,
-            created_at: now,
-            updated_at: now,
-        };
+impl ToDomain<CountrySubdivision> for CountrySubdivisionModel {
+    fn to_domain(self) -> CountrySubdivision {
+        CountrySubdivision {
+            id: self.id,
+            country_id: self.country_id,
+            code: self.code,
+            name_l1: self.name_l1,
+            name_l2: self.name_l2,
+            name_l3: self.name_l3,
+        }
+    }
+}
 
-        let model = PersonMapper::to_model(domain_person.clone());
-        let back_to_domain = PersonMapper::from_model(model);
+impl ToModel<CountrySubdivisionModel> for CountrySubdivision {
+    fn to_model(self) -> CountrySubdivisionModel {
+        CountrySubdivisionModel {
+            id: self.id,
+            country_id: self.country_id,
+            code: self.code,
+            name_l1: self.name_l1,
+            name_l2: self.name_l2,
+            name_l3: self.name_l3,
+        }
+    }
+}
 
-        assert_eq!(domain_person.id, back_to_domain.id);
-        assert_eq!(domain_person.person_type, back_to_domain.person_type);
-        assert_eq!(domain_person.display_name, back_to_domain.display_name);
-        assert_eq!(domain_person.external_identifier, back_to_domain.external_identifier);
-        assert_eq!(domain_person.organization_person_id, back_to_domain.organization_person_id);
-        assert_eq!(domain_person.is_active, back_to_domain.is_active);
-        assert_eq!(domain_person.created_at, back_to_domain.created_at);
-        assert_eq!(domain_person.updated_at, back_to_domain.updated_at);
+impl ToDomain<Locality> for LocalityModel {
+    fn to_domain(self) -> Locality {
+        Locality {
+            id: self.id,
+            country_subdivision_id: self.country_subdivision_id,
+            code: self.code,
+            name_l1: self.name_l1,
+            name_l2: self.name_l2,
+            name_l3: self.name_l3,
+        }
+    }
+}
+
+impl ToModel<LocalityModel> for Locality {
+    fn to_model(self) -> LocalityModel {
+        LocalityModel {
+            id: self.id,
+            country_subdivision_id: self.country_subdivision_id,
+            code: self.code,
+            name_l1: self.name_l1,
+            name_l2: self.name_l2,
+            name_l3: self.name_l3,
+        }
+    }
+}
+
+impl ToDomain<Location> for LocationModel {
+    fn to_domain(self) -> Location {
+        Location {
+            id: self.id,
+            version: self.version,
+            street_line1: self.street_line1,
+            street_line2: self.street_line2,
+            street_line3: self.street_line3,
+            street_line4: self.street_line4,
+            locality_id: self.locality_id,
+            postal_code: self.postal_code,
+            latitude: self.latitude,
+            longitude: self.longitude,
+            accuracy_meters: self.accuracy_meters,
+            location_type: self.location_type.to_domain(),
+            audit_log_id: self.audit_log_id,
+        }
+    }
+}
+
+impl ToModel<LocationModel> for Location {
+    fn to_model(self) -> LocationModel {
+        LocationModel {
+            id: self.id,
+            version: self.version,
+            street_line1: self.street_line1,
+            street_line2: self.street_line2,
+            street_line3: self.street_line3,
+            street_line4: self.street_line4,
+            locality_id: self.locality_id,
+            postal_code: self.postal_code,
+            latitude: self.latitude,
+            longitude: self.longitude,
+            accuracy_meters: self.accuracy_meters,
+            location_type: self.location_type.to_model(),
+            audit_log_id: self.audit_log_id,
+        }
+    }
+}
+
+impl ToDomain<Messaging> for MessagingModel {
+    fn to_domain(self) -> Messaging {
+        Messaging {
+            id: self.id,
+            version: self.version,
+            messaging_type: self.messaging_type.to_domain(),
+            value: self.value,
+            other_type: self.other_type,
+            audit_log_id: self.audit_log_id,
+        }
+    }
+}
+
+impl ToModel<MessagingModel> for Messaging {
+    fn to_model(self) -> MessagingModel {
+        MessagingModel {
+            id: self.id,
+            version: self.version,
+            messaging_type: self.messaging_type.to_model(),
+            value: self.value,
+            other_type: self.other_type,
+            audit_log_id: self.audit_log_id,
+        }
+    }
+}
+
+impl ToDomain<EntityReference> for EntityReferenceModel {
+    fn to_domain(self) -> EntityReference {
+        EntityReference {
+            id: self.id,
+            version: self.version,
+            person_id: self.person_id,
+            entity_role: self.entity_role.to_domain(),
+            reference_external_id: self.reference_external_id,
+            reference_details_l1: self.reference_details_l1,
+            reference_details_l2: self.reference_details_l2,
+            reference_details_l3: self.reference_details_l3,
+            audit_log_id: self.audit_log_id,
+        }
+    }
+}
+
+impl ToModel<EntityReferenceModel> for EntityReference {
+    fn to_model(self) -> EntityReferenceModel {
+        EntityReferenceModel {
+            id: self.id,
+            version: self.version,
+            person_id: self.person_id,
+            entity_role: self.entity_role.to_model(),
+            reference_external_id: self.reference_external_id,
+            reference_details_l1: self.reference_details_l1,
+            reference_details_l2: self.reference_details_l2,
+            reference_details_l3: self.reference_details_l3,
+            audit_log_id: self.audit_log_id,
+        }
+    }
+}
+
+impl ToDomain<Person> for PersonModel {
+    fn to_domain(self) -> Person {
+        Person {
+            id: self.id,
+            person_type: self.person_type.to_domain(),
+            display_name: self.display_name,
+            external_identifier: self.external_identifier,
+            organization_person_id: self.organization_person_id,
+            entity_reference_count: self.entity_reference_count,
+            messaging1_id: self.messaging1_id,
+            messaging1_type: self.messaging1_type.map(|t| t.to_domain()),
+            messaging2_id: self.messaging2_id,
+            messaging2_type: self.messaging2_type.map(|t| t.to_domain()),
+            messaging3_id: self.messaging3_id,
+            messaging3_type: self.messaging3_type.map(|t| t.to_domain()),
+            messaging4_id: self.messaging4_id,
+            messaging4_type: self.messaging4_type.map(|t| t.to_domain()),
+            messaging5_id: self.messaging5_id,
+            messaging5_type: self.messaging5_type.map(|t| t.to_domain()),
+            department: self.department,
+            location_id: self.location_id,
+            duplicate_of_person_id: self.duplicate_of_person_id,
+            audit_log_id: self.audit_log_id,
+        }
+    }
+}
+
+impl ToModel<PersonModel> for Person {
+    fn to_model(self) -> PersonModel {
+        PersonModel {
+            id: self.id,
+            person_type: self.person_type.to_model(),
+            display_name: self.display_name,
+            external_identifier: self.external_identifier,
+            organization_person_id: self.organization_person_id,
+            entity_reference_count: self.entity_reference_count,
+            messaging1_id: self.messaging1_id,
+            messaging1_type: self.messaging1_type.map(|t| t.to_model()),
+            messaging2_id: self.messaging2_id,
+            messaging2_type: self.messaging2_type.map(|t| t.to_model()),
+            messaging3_id: self.messaging3_id,
+            messaging3_type: self.messaging3_type.map(|t| t.to_model()),
+            messaging4_id: self.messaging4_id,
+            messaging4_type: self.messaging4_type.map(|t| t.to_model()),
+            messaging5_id: self.messaging5_id,
+            messaging5_type: self.messaging5_type.map(|t| t.to_model()),
+            department: self.department,
+            location_id: self.location_id,
+            duplicate_of_person_id: self.duplicate_of_person_id,
+            audit_log_id: self.audit_log_id,
+        }
+    }
+}
+
+// Enum conversions
+impl ToDomain<LocationType> for banking_db::models::person::LocationType {
+    fn to_domain(self) -> LocationType {
+        match self {
+            banking_db::models::person::LocationType::Residential => LocationType::Residential,
+            banking_db::models::person::LocationType::Business => LocationType::Business,
+            banking_db::models::person::LocationType::Mailing => LocationType::Mailing,
+            banking_db::models::person::LocationType::Temporary => LocationType::Temporary,
+            banking_db::models::person::LocationType::Branch => LocationType::Branch,
+            banking_db::models::person::LocationType::Community => LocationType::Community,
+            banking_db::models::person::LocationType::Other => LocationType::Other,
+        }
+    }
+}
+
+impl ToModel<banking_db::models::person::LocationType> for LocationType {
+    fn to_model(self) -> banking_db::models::person::LocationType {
+        match self {
+            LocationType::Residential => banking_db::models::person::LocationType::Residential,
+            LocationType::Business => banking_db::models::person::LocationType::Business,
+            LocationType::Mailing => banking_db::models::person::LocationType::Mailing,
+            LocationType::Temporary => banking_db::models::person::LocationType::Temporary,
+            LocationType::Branch => banking_db::models::person::LocationType::Branch,
+            LocationType::Community => banking_db::models::person::LocationType::Community,
+            LocationType::Other => banking_db::models::person::LocationType::Other,
+        }
+    }
+}
+
+impl ToDomain<MessagingType> for banking_db::models::person::MessagingType {
+    fn to_domain(self) -> MessagingType {
+        match self {
+            banking_db::models::person::MessagingType::Email => MessagingType::Email,
+            banking_db::models::person::MessagingType::Phone => MessagingType::Phone,
+            banking_db::models::person::MessagingType::Sms => MessagingType::Sms,
+            banking_db::models::person::MessagingType::WhatsApp => MessagingType::WhatsApp,
+            banking_db::models::person::MessagingType::Telegram => MessagingType::Telegram,
+            banking_db::models::person::MessagingType::Skype => MessagingType::Skype,
+            banking_db::models::person::MessagingType::Teams => MessagingType::Teams,
+            banking_db::models::person::MessagingType::Signal => MessagingType::Signal,
+            banking_db::models::person::MessagingType::WeChat => MessagingType::WeChat,
+            banking_db::models::person::MessagingType::Viber => MessagingType::Viber,
+            banking_db::models::person::MessagingType::Messenger => MessagingType::Messenger,
+            banking_db::models::person::MessagingType::LinkedIn => MessagingType::LinkedIn,
+            banking_db::models::person::MessagingType::Slack => MessagingType::Slack,
+            banking_db::models::person::MessagingType::Discord => MessagingType::Discord,
+            banking_db::models::person::MessagingType::Other => MessagingType::Other,
+        }
+    }
+}
+
+impl ToModel<banking_db::models::person::MessagingType> for MessagingType {
+    fn to_model(self) -> banking_db::models::person::MessagingType {
+        match self {
+            MessagingType::Email => banking_db::models::person::MessagingType::Email,
+            MessagingType::Phone => banking_db::models::person::MessagingType::Phone,
+            MessagingType::Sms => banking_db::models::person::MessagingType::Sms,
+            MessagingType::WhatsApp => banking_db::models::person::MessagingType::WhatsApp,
+            MessagingType::Telegram => banking_db::models::person::MessagingType::Telegram,
+            MessagingType::Skype => banking_db::models::person::MessagingType::Skype,
+            MessagingType::Teams => banking_db::models::person::MessagingType::Teams,
+            MessagingType::Signal => banking_db::models::person::MessagingType::Signal,
+            MessagingType::WeChat => banking_db::models::person::MessagingType::WeChat,
+            MessagingType::Viber => banking_db::models::person::MessagingType::Viber,
+            MessagingType::Messenger => banking_db::models::person::MessagingType::Messenger,
+            MessagingType::LinkedIn => banking_db::models::person::MessagingType::LinkedIn,
+            MessagingType::Slack => banking_db::models::person::MessagingType::Slack,
+            MessagingType::Discord => banking_db::models::person::MessagingType::Discord,
+            MessagingType::Other => banking_db::models::person::MessagingType::Other,
+        }
+    }
+}
+
+impl ToDomain<PersonType> for banking_db::models::person::PersonType {
+    fn to_domain(self) -> PersonType {
+        match self {
+            banking_db::models::person::PersonType::Natural => PersonType::Natural,
+            banking_db::models::person::PersonType::Legal => PersonType::Legal,
+            banking_db::models::person::PersonType::System => PersonType::System,
+            banking_db::models::person::PersonType::Integration => PersonType::Integration,
+            banking_db::models::person::PersonType::Unknown => PersonType::Unknown,
+        }
+    }
+}
+
+impl ToModel<banking_db::models::person::PersonType> for PersonType {
+    fn to_model(self) -> banking_db::models::person::PersonType {
+        match self {
+            PersonType::Natural => banking_db::models::person::PersonType::Natural,
+            PersonType::Legal => banking_db::models::person::PersonType::Legal,
+            PersonType::System => banking_db::models::person::PersonType::System,
+            PersonType::Integration => banking_db::models::person::PersonType::Integration,
+            PersonType::Unknown => banking_db::models::person::PersonType::Unknown,
+        }
+    }
+}
+
+impl ToDomain<RelationshipRole> for banking_db::models::person::RelationshipRole {
+    fn to_domain(self) -> RelationshipRole {
+        match self {
+            banking_db::models::person::RelationshipRole::Customer => RelationshipRole::Customer,
+            banking_db::models::person::RelationshipRole::Employee => RelationshipRole::Employee,
+            banking_db::models::person::RelationshipRole::Shareholder => RelationshipRole::Shareholder,
+            banking_db::models::person::RelationshipRole::Director => RelationshipRole::Director,
+            banking_db::models::person::RelationshipRole::BeneficialOwner => RelationshipRole::BeneficialOwner,
+            banking_db::models::person::RelationshipRole::Agent => RelationshipRole::Agent,
+            banking_db::models::person::RelationshipRole::Vendor => RelationshipRole::Vendor,
+            banking_db::models::person::RelationshipRole::Partner => RelationshipRole::Partner,
+            banking_db::models::person::RelationshipRole::RegulatoryContact => RelationshipRole::RegulatoryContact,
+            banking_db::models::person::RelationshipRole::EmergencyContact => RelationshipRole::EmergencyContact,
+            banking_db::models::person::RelationshipRole::SystemAdmin => RelationshipRole::SystemAdmin,
+            banking_db::models::person::RelationshipRole::Other => RelationshipRole::Other,
+        }
+    }
+}
+
+impl ToModel<banking_db::models::person::RelationshipRole> for RelationshipRole {
+    fn to_model(self) -> banking_db::models::person::RelationshipRole {
+        match self {
+            RelationshipRole::Customer => banking_db::models::person::RelationshipRole::Customer,
+            RelationshipRole::Employee => banking_db::models::person::RelationshipRole::Employee,
+            RelationshipRole::Shareholder => banking_db::models::person::RelationshipRole::Shareholder,
+            RelationshipRole::Director => banking_db::models::person::RelationshipRole::Director,
+            RelationshipRole::BeneficialOwner => banking_db::models::person::RelationshipRole::BeneficialOwner,
+            RelationshipRole::Agent => banking_db::models::person::RelationshipRole::Agent,
+            RelationshipRole::Vendor => banking_db::models::person::RelationshipRole::Vendor,
+            RelationshipRole::Partner => banking_db::models::person::RelationshipRole::Partner,
+            RelationshipRole::RegulatoryContact => banking_db::models::person::RelationshipRole::RegulatoryContact,
+            RelationshipRole::EmergencyContact => banking_db::models::person::RelationshipRole::EmergencyContact,
+            RelationshipRole::SystemAdmin => banking_db::models::person::RelationshipRole::SystemAdmin,
+            RelationshipRole::Other => banking_db::models::person::RelationshipRole::Other,
+        }
     }
 }

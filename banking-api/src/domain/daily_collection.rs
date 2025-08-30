@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -214,7 +214,7 @@ pub struct AgentPerformanceMetrics {
     pub compliance_score: Decimal,
     pub total_collections: i64,
     pub total_amount_collected: Decimal,
-    pub average_collection_time: Duration,
+    pub average_collection_time_minutes: u32,
     pub customer_retention_rate: Decimal,
     pub route_efficiency: Decimal,
     pub monthly_targets_id: Uuid,
@@ -247,6 +247,8 @@ pub struct PerformanceAlert {
     pub created_at: DateTime<Utc>,
     pub acknowledged: bool,
     pub resolution_required: bool,
+    pub acknowledged_at: Option<DateTime<Utc>>,
+    pub resolved_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -413,7 +415,7 @@ pub struct CollectionProgram {
     pub reason_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionProgramType {
     FixedAmount,
     VariableAmount,
@@ -446,7 +448,7 @@ impl std::str::FromStr for CollectionProgramType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ProgramStatus {
     Active,
     Suspended,
@@ -479,7 +481,7 @@ impl std::str::FromStr for ProgramStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CollectionFrequency {
     Daily,
     Weekly,
@@ -540,7 +542,7 @@ pub struct FeeStructure {
     pub fee_frequency: CollectionFeeFrequency,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionFeeFrequency {
     PerCollection,
     Daily,
@@ -591,7 +593,7 @@ pub struct CustomerCollectionProfile {
     pub daily_amount: Decimal,
     pub collection_schedule: CollectionSchedule,
     pub assigned_collection_agent_id: Uuid,
-    pub collection_location_address_id: Uuid,
+    pub collection_location_id: Uuid,
     pub collection_performance_metrics: CollectionPerformanceMetrics,
     pub graduation_progress: GraduationProgress,
     pub created_at: DateTime<Utc>,
@@ -599,7 +601,7 @@ pub struct CustomerCollectionProfile {
     pub reason_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionStatus {
     Active,
     Suspended,
@@ -645,7 +647,7 @@ pub struct CollectionSchedule {
     pub holiday_handling: HolidayHandling,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum HolidayHandling {
     Skip,
     NextBusinessDay,
@@ -697,7 +699,7 @@ pub struct CollectionPerformanceMetrics {
     pub reliability_rating: ReliabilityRating,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ReliabilityRating {
     Excellent,
     Good,
@@ -765,7 +767,7 @@ pub struct CollectionRecord {
     pub amount: Decimal,
     pub currency: HeaplessString<3>,
     pub collection_method: CollectionMethod,
-    pub location_address_id: Option<Uuid>,
+    pub location_id: Option<Uuid>,
     pub receipt_number: HeaplessString<50>,
     pub status: CollectionRecordStatus,
     pub notes: Option<HeaplessString<500>>,
@@ -775,7 +777,7 @@ pub struct CollectionRecord {
     pub reason_id: Option<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionMethod {
     Cash,
     MobilePayment,
@@ -808,7 +810,7 @@ impl std::str::FromStr for CollectionMethod {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CollectionRecordStatus {
     Pending,
     Processed,
@@ -868,7 +870,7 @@ pub struct BiometricData {
     pub confidence_level: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum BiometricMethod {
     Fingerprint,
     FaceRecognition,
@@ -939,7 +941,7 @@ pub struct CollectionBatch {
     pub processed_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum BatchStatus {
     Pending,
     Processing,
@@ -1069,9 +1071,6 @@ impl CollectionAgentBuilder {
     pub fn build(self) -> Result<CollectionAgent, String> {
         let now = Utc::now();
 
-        // Generate default performance metrics ID
-        let default_metrics_id = Uuid::new_v4();
-
         Ok(CollectionAgent {
             id: self.id,
             person_id: self.person_id.ok_or("Person reference is required")?,
@@ -1079,7 +1078,7 @@ impl CollectionAgentBuilder {
             license_expiry: self.license_expiry.ok_or("License expiry is required")?,
             status: self.status,
             assigned_territory_id: self.assigned_territory_id.ok_or("Territory assignment is required")?,
-            agent_performance_metrics_id: self.agent_performance_metrics_id.unwrap_or(default_metrics_id),
+            agent_performance_metrics_id: self.agent_performance_metrics_id.ok_or("Agent performance metrics ID is required")?,
             cash_limit: self.cash_limit.ok_or("Cash limit is required")?,
             device_information_id: self.device_information_id.ok_or("Device information ID is required")?,
             created_at: now,
@@ -1248,7 +1247,7 @@ pub struct CustomerCollectionProfileBuilder {
     daily_amount: Option<Decimal>,
     collection_schedule: Option<CollectionSchedule>,
     assigned_collection_agent_id: Option<Uuid>,
-    collection_location_address_id: Option<Uuid>,
+    collection_location_id: Option<Uuid>,
     collection_performance_metrics: Option<CollectionPerformanceMetrics>,
     graduation_progress: Option<GraduationProgress>,
     reason_id: Option<Uuid>,
@@ -1271,7 +1270,7 @@ impl CustomerCollectionProfile {
             daily_amount: None,
             collection_schedule: None,
             assigned_collection_agent_id: None,
-            collection_location_address_id: None,
+            collection_location_id: None,
             collection_performance_metrics: None,
             graduation_progress: None,
             reason_id: None,
@@ -1305,8 +1304,8 @@ impl CustomerCollectionProfileBuilder {
         self
     }
 
-    pub fn collection_location_address_id(mut self, id: Uuid) -> Self {
-        self.collection_location_address_id = Some(id);
+    pub fn collection_location_id(mut self, id: Uuid) -> Self {
+        self.collection_location_id = Some(id);
         self
     }
 
@@ -1339,7 +1338,7 @@ impl CustomerCollectionProfileBuilder {
             daily_amount: self.daily_amount.ok_or("Daily amount is required")?,
             collection_schedule: self.collection_schedule.ok_or("Collection schedule is required")?,
             assigned_collection_agent_id: self.assigned_collection_agent_id.ok_or("Assigned agent ID is required")?,
-            collection_location_address_id: self.collection_location_address_id.ok_or("Collection location ID is required")?,
+            collection_location_id: self.collection_location_id.ok_or("Collection location ID is required")?,
             collection_performance_metrics: self.collection_performance_metrics.ok_or("Collection performance metrics are required")?,
             graduation_progress: self.graduation_progress.ok_or("Graduation progress is required")?,
             created_at: now,
@@ -1361,7 +1360,7 @@ pub struct CollectionRecordBuilder {
     amount: Option<Decimal>,
     currency: Option<HeaplessString<3>>,
     collection_method: Option<CollectionMethod>,
-    location_address_id: Option<Uuid>,
+    location_id: Option<Uuid>,
     receipt_number: Option<HeaplessString<50>>,
     status: CollectionRecordStatus,
     notes: Option<HeaplessString<500>>,
@@ -1388,7 +1387,7 @@ impl CollectionRecord {
             amount: None,
             currency: None,
             collection_method: None,
-            location_address_id: None,
+            location_id: None,
             receipt_number: None,
             status: CollectionRecordStatus::Pending,
             notes: None,
@@ -1425,8 +1424,8 @@ impl CollectionRecordBuilder {
         self
     }
 
-    pub fn location_address_id(mut self, id: Uuid) -> Self {
-        self.location_address_id = Some(id);
+    pub fn location_id(mut self, id: Uuid) -> Self {
+        self.location_id = Some(id);
         self
     }
 
@@ -1471,7 +1470,7 @@ impl CollectionRecordBuilder {
             amount: self.amount.ok_or("Collection amount is required")?,
             currency: self.currency.ok_or("Currency is required")?,
             collection_method: self.collection_method.ok_or("Collection method is required")?,
-            location_address_id: self.location_address_id,
+            location_id: self.location_id,
             receipt_number: self.receipt_number.ok_or("Receipt number is required")?,
             status: self.status,
             notes: self.notes,

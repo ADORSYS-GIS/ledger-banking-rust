@@ -310,7 +310,7 @@ pub struct CollectionRoute {
 pub struct RouteWaypoint {
     pub customer_id: Uuid,
     pub sequence_number: i32,
-    pub location_address_id: Uuid,
+    pub location_id: Uuid,
     pub estimated_collection_amount: Decimal,
     pub estimated_arrival_time: DateTime<Utc>,
     pub collection_method: CollectionMethod,
@@ -325,7 +325,7 @@ pub struct ScheduledCollection {
     pub scheduled_time: DateTime<Utc>,
     pub expected_amount: Decimal,
     pub collection_method: CollectionMethod,
-    pub location_address_id: Uuid,
+    pub location_id: Uuid,
     pub priority: CollectionPriority,
     pub notes: Option<String>,
 }

@@ -1,14 +1,15 @@
-use chrono::{DateTime, Utc};
 use heapless::String as HeaplessString;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
+use std::collections::HashMap;
+use std::sync::Arc;
 
-/// Database model for address type enum
+/// Database model for location type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "address_type", rename_all = "PascalCase")]
-pub enum AddressType {
+#[sqlx(type_name = "location_type", rename_all = "PascalCase")]
+pub enum LocationType {
     Residential,
     Business,
     Mailing,
@@ -80,119 +81,506 @@ pub enum RelationshipRole {
     Other,
 }
 
-/// Database model for Country
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountryRepository
+/// 
+/// # Index: CountryIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountryRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// ## Cache: CountryIdxModelCache
+/// - Immutable Set of Immutable Records Cache
+/// - Concurent
+/// 
+/// # Documentation
+/// - Country structure with ISO 3166-1 alpha-2 code
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CountryModel {
+    /// # Trait method
+    /// - find_by_id
+    /// - find_by_ids
+    /// - exists_by_id
+    /// 
+    /// # Index: country_id
+    /// ## Nature
+    /// - primary
     pub id: Uuid,
+    
+    /// # Documentation
+    /// - ISO 3166-1 alpha-2 country code (e.g., "CM", "US", "GB")
+    /// # Trait method
+    /// - find_ids_by_iso2
+    /// - find_by_iso2
+    /// 
+    /// # Index: iso2: HeaplessString<2>
+    /// ## Nature
+    /// - secondary
+    /// - unique
     pub iso2: HeaplessString<2>,
+
     pub name_l1: HeaplessString<100>,
     pub name_l2: Option<HeaplessString<100>>,
     pub name_l3: Option<HeaplessString<100>>,
-    pub is_active: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub created_by_person_id: Uuid,
-    pub updated_by_person_id: Uuid,
 }
 
-/// Database model for StateProvince
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountrySubdivisionRepository
+/// 
+/// # Index: CountrySubdivisionIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountrySubdivisionRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// ## Cache: CountrySubdivisionIdxModelCache
+/// - Immutable Set of Immutable Records Cache
+/// - Concurent
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct StateProvinceModel {
+pub struct CountrySubdivisionModel {
+    /// # Trait methods
+    /// - find_by_id
+    /// - find_by_ids
+    /// - exists_by_id
+    /// 
+    /// # Index: country_subdivision_id
+    /// ## Nature
+    /// - primary
     pub id: Uuid,
+    /// # Trait method
+    /// - find_ids_by_country_id
+    /// - find_by_country_id
+    /// 
+    /// # Index
+    /// ## Nature
+    /// - secondary
     pub country_id: Uuid,
+
+    /// # Documentation
+    /// - if non existant the first 10 chars of the name_l1
+    /// # Trait method
+    /// - find_by_code
+    ///     - code: self.code
+    /// 
+    /// # Index: code_hash: i64
+    /// ## Nature
+    /// - secondary
+    /// - unique
+    pub code: HeaplessString<10>,
     pub name_l1: HeaplessString<100>,
     pub name_l2: Option<HeaplessString<100>>,
     pub name_l3: Option<HeaplessString<100>>,
-    pub is_active: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub created_by_person_id: Uuid,
-    pub updated_by_person_id: Uuid,
 }
 
-/// Database model for City
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocalityRepository
+/// 
+/// # Index: LocalityIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocalityRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// ## Cache: LocalityIdxModelCache
+/// - Mutable Set of Immutable Records
+/// - Concurent
+/// 
+/// # Documentation
+/// - Database model for Locality
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct CityModel {
+pub struct LocalityModel {
+    /// # Trait methods
+    /// - find_by_id
+    /// - find_by_ids
+    /// - exists_by_id
+    /// 
+    /// # Index: locality_id
+    /// ## Nature
+    /// - primary
     pub id: Uuid,
-    pub country_id: Uuid,
-    pub state_id: Option<Uuid>,
-    pub name_l1: HeaplessString<100>,
-    pub name_l2: Option<HeaplessString<100>>,
-    pub name_l3: Option<HeaplessString<100>>,
-    pub is_active: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub created_by_person_id: Uuid,
-    pub updated_by_person_id: Uuid,
+
+    /// # Trait method
+    /// - find_ids_by_country_subdivision_id
+    /// - find_by_country_subdivision_id
+    /// 
+    /// # Index
+    /// ## Nature
+    /// - secondary
+    pub country_subdivision_id: Uuid,
+
+    /// # Documentation
+    /// - If non existant, country subdivision code '_' the first 10 chars of the name_l1
+    /// 
+    /// # Trait method
+    /// - find_by_code
+    ///     - code: self.code
+    /// 
+    /// # Index: code_hash: i64
+    /// ## Nature
+    /// - secondary
+    /// - unique
+    pub code: HeaplessString<50>,
+    pub name_l1: HeaplessString<50>,
+    pub name_l2: Option<HeaplessString<50>>,
+    pub name_l3: Option<HeaplessString<50>>,
 }
 
-/// Database model for Address
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
+/// 
+/// # Index: LocationIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// ## Cache: LocationIdxModelCache
+/// - Mutable Set of Mutable Records
+/// - Concurent
+/// 
+/// # Audit: LocationAuditModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
+/// ## Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct AddressModel {
+pub struct LocationModel {
+    /// # Trait method
+    /// - find_by_id
+    /// - find_by_ids
+    /// - exists_by_id
+    /// 
+    /// # Index: location_id
+    /// ## Nature
+    /// - primary
+    /// 
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.version
+    /// ## Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
+
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.id
+    pub version: i32,
+
+    /// # Trait method
+    /// - find_ids_by_street_line1
+    /// # Documentation
+    /// - Structured location components - 4 street lines
     pub street_line1: HeaplessString<50>,
-    pub street_line2: HeaplessString<50>,
-    pub street_line3: HeaplessString<50>,
-    pub street_line4: HeaplessString<50>,
-    pub city_id: Option<Uuid>,
+    pub street_line2: Option<HeaplessString<50>>,
+    pub street_line3: Option<HeaplessString<50>>,
+    pub street_line4: Option<HeaplessString<50>>,
+
+    /// # Trait method
+    /// - find_ids_by_locality_id
+    /// - find_by_locality_id
+    /// 
+    /// # Index:
+    /// ## Nature
+    /// - secondary
+    pub locality_id: Uuid,
     pub postal_code: Option<HeaplessString<20>>,
+
+    /// Geographical coordinates (decimal degrees)
     pub latitude: Option<Decimal>,
     pub longitude: Option<Decimal>,
     pub accuracy_meters: Option<f32>,
-    #[serde(serialize_with = "serialize_address_type", deserialize_with = "deserialize_address_type")]
-    pub address_type: AddressType,
-    pub is_active: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub created_by_person_id: Uuid,
-    pub updated_by_person_id: Uuid,
+
+    
+    /// # Trait method
+    /// - find_ids_by_location_type
+    /// - find_by_location_type
+    /// - find_location_by_type_and_locality
+    /// 
+    /// # Documentation
+    /// - Location type for categorization
+    #[serde(serialize_with = "serialize_location_type", deserialize_with = "deserialize_location_type")]
+    pub location_type: LocationType,
+
+    pub audit_log_id: Uuid,
 }
 
-/// Database model for Messaging
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
+/// 
+/// # Index: MessagingIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// ## Cache: MessagingIdxModelCache
+/// - Mutable Set of Immutable Records
+/// - Concurent
+/// 
+/// # Audit: MessagingAuditModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
+/// ## Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct MessagingModel {
+    /// # Trait method
+    /// - find_by_id
+    /// - find_by_ids
+    /// - exists_by_id
+    /// 
+    /// # Index: messaging_id
+    /// ## Nature
+    /// - primary
+    /// 
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.version
+    /// ## Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
+
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.id
+    pub version: i32,
+
+    /// # Documentation
+    /// - Type of messaging/communication method
     #[serde(serialize_with = "serialize_messaging_type", deserialize_with = "deserialize_messaging_type")]
     pub messaging_type: MessagingType,
+    
+    /// # Documentation
+    /// - The actual messaging identifier/location (email, phone, username, etc.)
+    /// 
+    /// # Trait method
+    /// - find_ids_by_value
+    /// 
+    /// # Index: value_hash: i64
+    /// ## Nature
+    /// - secondary
+    /// - unique
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - find_audits_by_value
     pub value: HeaplessString<100>,
+
+    /// # Documentation
+    /// - Description of the messaging type when MessagingType::Other is used
     pub other_type: Option<HeaplessString<20>>,
-    pub is_active: bool,
-    pub priority: Option<u8>, // Changed from i16 to u8 to match domain model
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+
+    pub audit_log_id: Uuid,
 }
 
-/// Database model for EntityReference
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// # Documentation
+/// - Entity reference table for managing person-to-entity relationships
+/// - Database model for EntityReference
+/// 
+/// # Index: EntityReferenceIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// ## Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// ## Cache
+/// - Mutable Set of Mutable Records
+/// 
+/// # Audit: EntityReferenceAuditModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// ## Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct EntityReferenceModel {
+    /// # Trait method
+    /// - find_by_id
+    /// - find_by_ids
+    /// - exists_by_id
+    /// 
+    /// # Index: entity_reference_id
+    /// ## Nature
+    /// - primary
+    /// 
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.version
+    /// ## Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
+
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.id
+    pub version: i32,
+
+    /// # Documentation
+    /// - References PersonModel.person_id
+    /// 
+    /// # Trait method
+    /// - find_ids_by_person_id
+    /// - find_by_person_id
+    /// 
+    /// # Index
+    /// ## Nature
+    /// - secondary
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - find_audits_by_person_id
     pub person_id: Uuid,
+
+    /// # Documentation
+    /// - Type of entity relationship
     #[serde(serialize_with = "serialize_person_entity_type", deserialize_with = "deserialize_person_entity_type")]
     pub entity_role: RelationshipRole,
-    pub reference_external_id: Option<HeaplessString<50>>,
+
+    /// # Documentation
+    /// - External identifier for the reference (e.g., customer ID, employee ID)
+    /// 
+    /// # Trait method
+    /// - find_by_reference_external_id
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - find_audits_by_reference_external_id
+    pub reference_external_id: HeaplessString<50>,
+
     pub reference_details_l1: Option<HeaplessString<50>>,
     pub reference_details_l2: Option<HeaplessString<50>>,
     pub reference_details_l3: Option<HeaplessString<50>>,
-    pub is_active: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub created_by_person_id: Uuid,
-    pub updated_by_person_id: Uuid,
+
+    pub audit_log_id: Uuid,
 }
 
-/// Database model for person
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// # Trait method
+/// - create_audit
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct EntityReferenceAuditModel {
+    /// # Nature
+    /// - compound-primary with self.version
+    /// # Trait method
+    /// - find_audits_by_id
+    pub id: Uuid,
+
+    /// # Nature
+    /// - compound-primary with self.id
+    pub version: i32,
+
+    /// # Trait method
+    /// - find_audits_by_person_id
+    pub person_id: Uuid,
+
+    #[serde(serialize_with = "serialize_person_entity_type", deserialize_with = "deserialize_person_entity_type")]
+    pub entity_role: RelationshipRole,
+
+    /// # Trait method
+    /// - find_audits_by_reference_external_id
+    pub reference_external_id: HeaplessString<50>,
+
+    pub reference_details_l1: Option<HeaplessString<50>>,
+    pub reference_details_l2: Option<HeaplessString<50>>,
+    pub reference_details_l3: Option<HeaplessString<50>>,
+
+    pub audit_log_id: Uuid,
+}
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// # Documentation
+/// - Database model for Person
+/// - Represents a person throughout the system for bank audit and tracking purposes
+/// 
+/// # Index: PersonIdxModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// ## Trait method
+/// - create_idx
+/// - load_idxes
+/// - update_idx
+/// ## Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// ## Cache: PersonIdxModel
+/// - Mutable Set of Mutable Records
+/// 
+/// # Audit: PersonAuditModel
+/// ## Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// ## Trait method
+/// - create_audit
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PersonModel {
+    /// # Trait method
+    /// - find_by_id
+    /// - find_by_ids
+    /// - exists_by_id
+    /// 
+    /// # Index: person_id
+    /// ## Nature
+    /// - primary
+    /// 
+    /// # Audit
+    /// ## Nature
+    /// - compound-primary with self.version
+    /// ## Trait method
+    /// - find_audits_by_id
     pub id: Uuid,
     
     #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
     pub person_type: PersonType,
     
     pub display_name: HeaplessString<100>,
+
+    /// # Documentation
+    /// External identifier (e.g., employee ID, badge number, system ID)
+    /// 
+    /// # Trait method
+    /// - get_ids_by_external_identifier
+    /// - get_by_external_identifier
+    /// 
+    /// # Index: external_identifier_hash: Option<i64>
+    /// ## Nature
+    /// - secondary
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - get_audits_by_external_identifier
     pub external_identifier: Option<HeaplessString<50>>,
+
+    /// # Trait method
+    /// - get_by_entity_reference
+    /// 
+    /// # Audit
+    /// ## Trait method
+    /// - get_audits_by_entity_reference
+    pub entity_reference_count: i32,
+    
+    /// # Documentation
     /// References PersonModel.person_id for organizational hierarchy
     pub organization_person_id: Option<Uuid>,
     
+    /// # Documentation
     /// References to MessagingModel.messaging_id (up to 5 messaging methods)
     pub messaging1_id: Option<Uuid>,
     #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
@@ -210,14 +598,75 @@ pub struct PersonModel {
     #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
     pub messaging5_type: Option<MessagingType>,
     
+    /// # Documentation
+    /// Department within organization
     pub department: Option<HeaplessString<50>>,
-    /// References AddressModel.address_id for person's location
-    pub location_address_id: Option<Uuid>,
+
+    /// # Documentation
+    /// References LocationModel.location_id for person's location
+    pub location_id: Option<Uuid>,
     
     pub duplicate_of_person_id: Option<Uuid>,
-    pub is_active: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+
+    pub audit_log_id: Uuid,
+}
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// # Trait method
+/// - create_audit
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PersonAuditModel {
+    /// # Nature
+    /// - compound-primary with self.version
+    /// # Trait method
+    /// - find_audits_by_person_id
+    pub person_id: Uuid,
+    
+    /// # Nature
+    /// - compound-primary with self.person_id
+    pub version: i32,
+
+    pub hash: i64,
+
+    #[serde(serialize_with = "serialize_person_type", deserialize_with = "deserialize_person_type")]
+    pub person_type: PersonType,
+    
+    pub display_name: HeaplessString<100>,
+
+    /// # Trait method
+    /// - get_audits_by_external_identifier
+    pub external_identifier: Option<HeaplessString<50>>,
+
+    /// # Trait method
+    /// - get_audits_by_entity_reference
+    pub entity_reference_count: i32,
+    
+    pub organization_person_id: Option<Uuid>,
+    
+    pub messaging1_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging1_type: Option<MessagingType>,
+    pub messaging2_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging2_type: Option<MessagingType>,
+    pub messaging3_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging3_type: Option<MessagingType>,
+    pub messaging4_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging4_type: Option<MessagingType>,
+    pub messaging5_id: Option<Uuid>,
+    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
+    pub messaging5_type: Option<MessagingType>,
+    
+    pub department: Option<HeaplessString<50>>,
+
+    pub location_id: Option<Uuid>,
+    
+    pub duplicate_of_person_id: Option<Uuid>,
+
+    pub audit_log_id: Uuid,
 }
 
 // Serialization functions for PersonType
@@ -250,37 +699,37 @@ where
     }
 }
 
-// Serialization functions for AddressType
-fn serialize_address_type<S>(address_type: &AddressType, serializer: S) -> Result<S::Ok, S::Error>
+// Serialization functions for LocationType
+fn serialize_location_type<S>(location_type: &LocationType, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
-    let type_str = match address_type {
-        AddressType::Residential => "residential",
-        AddressType::Business => "business",
-        AddressType::Mailing => "mailing",
-        AddressType::Temporary => "temporary",
-        AddressType::Branch => "branch",
-        AddressType::Community => "community",
-        AddressType::Other => "other",
+    let type_str = match location_type {
+        LocationType::Residential => "residential",
+        LocationType::Business => "business",
+        LocationType::Mailing => "mailing",
+        LocationType::Temporary => "temporary",
+        LocationType::Branch => "branch",
+        LocationType::Community => "community",
+        LocationType::Other => "other",
     };
     serializer.serialize_str(type_str)
 }
 
-fn deserialize_address_type<'de, D>(deserializer: D) -> Result<AddressType, D::Error>
+fn deserialize_location_type<'de, D>(deserializer: D) -> Result<LocationType, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
     match s.as_str() {
-        "residential" => Ok(AddressType::Residential),
-        "business" => Ok(AddressType::Business),
-        "mailing" => Ok(AddressType::Mailing),
-        "temporary" => Ok(AddressType::Temporary),
-        "branch" => Ok(AddressType::Branch),
-        "community" => Ok(AddressType::Community),
-        "other" => Ok(AddressType::Other),
-        _ => Err(serde::de::Error::custom(format!("Unknown address type: {s}"))),
+        "residential" => Ok(LocationType::Residential),
+        "business" => Ok(LocationType::Business),
+        "mailing" => Ok(LocationType::Mailing),
+        "temporary" => Ok(LocationType::Temporary),
+        "branch" => Ok(LocationType::Branch),
+        "community" => Ok(LocationType::Community),
+        "other" => Ok(LocationType::Other),
+        _ => Err(serde::de::Error::custom(format!("Unknown location type: {s}"))),
     }
 }
 
@@ -417,3 +866,544 @@ where
     }
 }
 
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountryRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// # Cache: CountryIdxModelCache
+/// - Immutable Set of Immutable Records Cache
+/// - Concurent
+#[derive(Debug, Clone, FromRow)]
+pub struct CountryIdxModel {
+    /// # Nature
+    /// - primary
+    pub country_id: Uuid,
+
+    /// # Nature
+    /// - secondary
+    /// - unique
+    pub iso2: HeaplessString<2>,
+}
+
+pub struct CountryIdxModelCache {
+    by_id: HashMap<Uuid, CountryIdxModel>,
+    by_iso2: HashMap<HeaplessString<2>, Uuid>,
+}
+
+impl CountryIdxModelCache {
+    pub fn new(
+        items: Vec<CountryIdxModel>,
+    ) -> Result<Arc<Self>, &'static str> {
+        let mut by_id = HashMap::new();
+        let mut by_iso2 = HashMap::new();
+
+        for item in items {
+            let primary_key = item.country_id;
+            if by_id.contains_key(&primary_key) {
+                return Err("Duplicate primary key: country_id");
+            }
+
+            if by_iso2.contains_key(&item.iso2) {
+                return Err("Duplicate unique index value: iso2");
+            }
+            by_iso2.insert(item.iso2.clone(), primary_key);
+            
+            by_id.insert(primary_key, item);
+        }
+
+        Ok(Arc::new(CountryIdxModelCache {
+            by_id,
+            by_iso2,
+        }))
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        self.by_id.contains_key(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<CountryIdxModel> {
+        self.by_id.get(primary_key).cloned()
+    }
+
+    pub fn get_by_iso2(&self, key: &HeaplessString<2>) -> Option<Uuid> {
+        self.by_iso2.get(key).copied()
+    }
+}
+
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/CountrySubdivisionRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// # Cache: CountrySubdivisionIdxModelCache
+/// - Immutable Set of Immutable Records Cache
+/// - Concurent
+#[derive(Debug, Clone, FromRow)]
+pub struct CountrySubdivisionIdxModel {
+    /// # Nature
+    /// - primary
+    pub country_subdivision_id: Uuid,
+
+    /// # Nature
+    /// - secondary
+    pub country_id: Uuid,
+
+    /// # Nature
+    /// - secondary
+    /// - unique
+    pub code_hash: i64,
+}
+
+pub struct CountrySubdivisionIdxModelCache {
+    by_id: HashMap<Uuid, CountrySubdivisionIdxModel>,
+    by_code_hash: HashMap<i64, Uuid>,
+    by_country_id: HashMap<Uuid, Vec<Uuid>>,
+}
+
+impl CountrySubdivisionIdxModelCache {
+    pub fn new(
+        items: Vec<CountrySubdivisionIdxModel>,
+    ) -> Result<Arc<Self>, &'static str> {
+        let mut by_id = HashMap::new();
+        let mut by_code_hash = HashMap::new();
+        let mut by_country_id = HashMap::new();
+
+        for item in items {
+            let primary_key = item.country_subdivision_id;
+            if by_id.contains_key(&primary_key) {
+                return Err("Duplicate primary key: country_subdivision_id");
+            }
+
+            if by_code_hash.contains_key(&item.code_hash) {
+                return Err("Duplicate unique index value: code_hash");
+            }
+            by_code_hash.insert(item.code_hash, primary_key);
+
+            by_country_id
+                .entry(item.country_id)
+                .or_insert_with(Vec::new)
+                .push(primary_key);
+            
+            by_id.insert(primary_key, item);
+        }
+
+        Ok(Arc::new(CountrySubdivisionIdxModelCache {
+            by_id,
+            by_code_hash,
+            by_country_id,
+        }))
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        self.by_id.contains_key(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<CountrySubdivisionIdxModel> {
+        self.by_id.get(primary_key).cloned()
+    }
+
+    pub fn get_by_code_hash(&self, key: &i64) -> Option<Uuid> {
+        self.by_code_hash.get(key).copied()
+    }
+
+    pub fn get_by_country_id(&self, key: &Uuid) -> Option<&Vec<Uuid>> {
+        self.by_country_id.get(key)
+    }
+}
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocalityRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// # Cache: LocationIdxModelCache
+/// - Mutable Set of Immutable Records
+/// - Concurent
+#[derive(Debug, Clone, FromRow)]
+pub struct LocalityIdxModel {
+    /// # Nature
+    /// - primary
+    pub locality_id: Uuid,
+    /// # Nature
+    /// - secondary
+    pub country_subdivision_id: Option<Uuid>,
+    /// # Nature
+    /// - secondary
+    /// - unique
+    pub code_hash: i64,
+}
+
+pub struct LocalityIdxModelCache {
+    by_id: HashMap<Uuid, LocalityIdxModel>,
+    by_code_hash: HashMap<i64, Uuid>,
+    by_country_subdivision_id: HashMap<Uuid, Vec<Uuid>>,
+}
+
+impl LocalityIdxModelCache {
+    pub fn new(
+        items: Vec<LocalityIdxModel>,
+    ) -> Result<Arc<Self>, &'static str> {
+        let mut by_id = HashMap::new();
+        let mut by_code_hash = HashMap::new();
+        let mut by_country_subdivision_id = HashMap::new();
+
+        for item in items {
+            let primary_key = item.locality_id;
+            if by_id.contains_key(&primary_key) {
+                return Err("Duplicate primary key: locality_id");
+            }
+
+            if by_code_hash.contains_key(&item.code_hash) {
+                return Err("Duplicate unique index value: code_hash");
+            }
+            by_code_hash.insert(item.code_hash, primary_key);
+
+            if let Some(country_subdivision_id) = item.country_subdivision_id {
+                by_country_subdivision_id
+                    .entry(country_subdivision_id)
+                    .or_insert_with(Vec::new)
+                    .push(primary_key);
+            }
+            
+            by_id.insert(primary_key, item);
+        }
+
+        Ok(Arc::new(LocalityIdxModelCache {
+            by_id,
+            by_code_hash,
+            by_country_subdivision_id,
+        }))
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        self.by_id.contains_key(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<LocalityIdxModel> {
+        self.by_id.get(primary_key).cloned()
+    }
+
+    pub fn get_by_code_hash(&self, key: &i64) -> Option<Uuid> {
+        self.by_code_hash.get(key).copied()
+    }
+
+    pub fn get_by_country_subdivision_id(&self, key: &Uuid) -> Option<&Vec<Uuid>> {
+        self.by_country_subdivision_id.get(key)
+    }
+}
+
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// # Cache: LocationIdxModelCache
+/// - Mutable Set of Mutable Records
+/// - Concurent
+#[derive(Debug, Clone, FromRow)]
+pub struct LocationIdxModel {
+    /// # Nature
+    /// - primary
+    pub location_id: Uuid,
+    /// # Nature
+    /// - secondary
+    pub locality_id: Option<Uuid>,
+}
+
+pub struct LocationIdxModelCache {
+    by_id: HashMap<Uuid, LocationIdxModel>,
+    by_locality_id: HashMap<Uuid, Vec<Uuid>>,
+}
+
+impl LocationIdxModelCache {
+    pub fn new(
+        items: Vec<LocationIdxModel>,
+    ) -> Result<Arc<Self>, &'static str> {
+        let mut by_id = HashMap::new();
+        let mut by_locality_id = HashMap::new();
+
+        for item in items {
+            let primary_key = item.location_id;
+            if by_id.contains_key(&primary_key) {
+                return Err("Duplicate primary key: location_id");
+            }
+
+            if let Some(locality_id) = item.locality_id {
+                by_locality_id
+                    .entry(locality_id)
+                    .or_insert_with(Vec::new)
+                    .push(primary_key);
+            }
+            
+            by_id.insert(primary_key, item);
+        }
+
+        Ok(Arc::new(LocationIdxModelCache {
+            by_id,
+            by_locality_id,
+        }))
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        self.by_id.contains_key(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<LocationIdxModel> {
+        self.by_id.get(primary_key).cloned()
+    }
+
+    pub fn get_by_locality_id(&self, key: &Uuid) -> Option<&Vec<Uuid>> {
+        self.by_locality_id.get(key)
+    }
+}
+
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// # Cache: MessagingIdxModelCache
+/// - Concurent
+/// - Mutable Set of Immutable Records
+#[derive(Debug, Clone, FromRow)]
+pub struct MessagingIdxModel {
+    /// # Nature
+    /// - primary
+    pub messaging_id: Uuid,
+    /// # Nature
+    /// - secondary
+    /// - unique
+    pub value_hash: i64,
+}
+
+pub struct MessagingIdxModelCache {
+    by_id: HashMap<Uuid, MessagingIdxModel>,
+    by_value_hash: HashMap<i64, Uuid>,
+}
+
+impl MessagingIdxModelCache {
+    pub fn new(
+        items: Vec<MessagingIdxModel>,
+    ) -> Result<Arc<Self>, &'static str> {
+        let mut by_id = HashMap::new();
+        let mut by_value_hash = HashMap::new();
+
+        for item in items {
+            let primary_key = item.messaging_id;
+            if by_id.contains_key(&primary_key) {
+                return Err("Duplicate primary key: messaging_id");
+            }
+
+            if by_value_hash.contains_key(&item.value_hash) {
+                return Err("Duplicate unique index value: value_hash");
+            }
+            by_value_hash.insert(item.value_hash, primary_key);
+            
+            by_id.insert(primary_key, item);
+        }
+
+        Ok(Arc::new(MessagingIdxModelCache {
+            by_id,
+            by_value_hash,
+        }))
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        self.by_id.contains_key(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<MessagingIdxModel> {
+        self.by_id.get(primary_key).cloned()
+    }
+
+    pub fn get_by_value_hash(&self, key: &i64) -> Option<Uuid> {
+        self.by_value_hash.get(key).copied()
+    }
+}
+
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// # Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// # Cache: EntityReferenceIdxModelCache
+/// - Concurent
+/// - Mutable Set of Mutable Records
+#[derive(Debug, Clone, FromRow)]
+pub struct EntityReferenceIdxModel {
+    /// # Nature
+    /// - primary
+    pub entity_reference_id: Uuid,
+    /// # Nature
+    /// - secondary
+    pub person_id: Uuid,
+}
+
+pub struct EntityReferenceIdxModelCache {
+    by_id: HashMap<Uuid, EntityReferenceIdxModel>,
+    by_person_id: HashMap<Uuid, Vec<Uuid>>,
+}
+
+impl EntityReferenceIdxModelCache {
+    pub fn new(
+        items: Vec<EntityReferenceIdxModel>,
+    ) -> Result<Arc<Self>, &'static str> {
+        let mut by_id = HashMap::new();
+        let mut by_person_id = HashMap::new();
+
+        for item in items {
+            let primary_key = item.entity_reference_id;
+            if by_id.contains_key(&primary_key) {
+                return Err("Duplicate primary key: entity_reference_id");
+            }
+
+            by_person_id
+                .entry(item.person_id)
+                .or_insert_with(Vec::new)
+                .push(primary_key);
+            
+            by_id.insert(primary_key, item);
+        }
+
+        Ok(Arc::new(EntityReferenceIdxModelCache {
+            by_id,
+            by_person_id,
+        }))
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        self.by_id.contains_key(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<EntityReferenceIdxModel> {
+        self.by_id.get(primary_key).cloned()
+    }
+
+    pub fn get_by_person_id(&self, key: &Uuid) -> Option<&Vec<Uuid>> {
+        self.by_person_id.get(key)
+    }
+}
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
+/// # Trait method
+/// - create_idx
+/// - load_idxes
+/// - update_idx
+/// # Pg Trigger
+/// - CREATE
+/// - UPDATE
+/// # Cache: PersonIdxModelCache
+/// - Concurent
+/// - Mutable Set of Mutable Records
+#[derive(Debug, Clone, FromRow)]
+pub struct PersonIdxModel {
+    /// # Nature
+    /// - primary
+    pub person_id: Uuid,
+    /// # Nature
+    /// - secondary
+    pub external_identifier_hash: Option<i64>,
+    pub version: i32,
+    pub hash: i64,
+}
+
+pub struct PersonIdxModelCache {
+    by_id: HashMap<Uuid, PersonIdxModel>,
+    by_external_identifier_hash: HashMap<i64, Vec<Uuid>>,
+}
+
+impl PersonIdxModelCache {
+    pub fn new(items: Vec<PersonIdxModel>) -> Result<Self, &'static str> {
+        let mut by_id = HashMap::new();
+        let mut by_external_identifier_hash = HashMap::new();
+
+        for item in items {
+            let primary_key = item.person_id;
+            if by_id.contains_key(&primary_key) {
+                return Err("Duplicate primary key: person_id");
+            }
+
+            if let Some(hash) = item.external_identifier_hash {
+                by_external_identifier_hash
+                    .entry(hash)
+                    .or_insert_with(Vec::new)
+                    .push(primary_key);
+            }
+
+            by_id.insert(primary_key, item);
+        }
+
+        Ok(PersonIdxModelCache {
+            by_id,
+            by_external_identifier_hash,
+        })
+    }
+
+    pub fn add(&mut self, item: PersonIdxModel) {
+        let primary_key = item.person_id;
+        if self.by_id.contains_key(&primary_key) {
+            self.update(item);
+            return;
+        }
+
+        if let Some(hash) = item.external_identifier_hash {
+            self.by_external_identifier_hash
+                .entry(hash)
+                .or_default()
+                .push(primary_key);
+        }
+        self.by_id.insert(primary_key, item);
+    }
+
+    pub fn remove(&mut self, person_id: &Uuid) -> Option<PersonIdxModel> {
+        if let Some(item) = self.by_id.remove(person_id) {
+            if let Some(hash) = item.external_identifier_hash {
+                if let Some(ids) = self.by_external_identifier_hash.get_mut(&hash) {
+                    ids.retain(|&id| id != *person_id);
+                    if ids.is_empty() {
+                        self.by_external_identifier_hash.remove(&hash);
+                    }
+                }
+            }
+            return Some(item);
+        }
+        None
+    }
+
+    pub fn update(&mut self, item: PersonIdxModel) {
+        self.remove(&item.person_id);
+        self.add(item);
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        self.by_id.contains_key(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<PersonIdxModel> {
+        self.by_id.get(primary_key).cloned()
+    }
+
+    pub fn get_by_external_identifier_hash(&self, key: &i64) -> Option<&Vec<Uuid>> {
+        self.by_external_identifier_hash.get(key)
+    }
+}

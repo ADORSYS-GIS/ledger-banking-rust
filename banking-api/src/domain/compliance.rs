@@ -306,7 +306,7 @@ pub enum CheckType {
     WatchlistScreening,
     UboVerification,
     DocumentVerification,
-    AddressVerification,
+    LocationVerification,
     SourceOfFundsVerification,
     SourceOfWealthVerification,
     RiskAssessment,

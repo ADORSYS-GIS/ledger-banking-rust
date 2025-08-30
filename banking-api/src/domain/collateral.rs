@@ -30,7 +30,7 @@ pub struct Collateral {
     
     // Location and custody
     pub custody_location: CustodyLocation,
-    /// References Address.address_id for physical location
+    /// References Location.location_id for physical location
     pub physical_location: Option<Uuid>,
     pub custodian_details_id: Option<Uuid>,
     

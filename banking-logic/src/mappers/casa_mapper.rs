@@ -54,11 +54,11 @@ impl CasaMapper {
             current_utilized: model.current_utilized,
             available_limit: model.available_limit,
             interest_rate: model.interest_rate,
-            facility_status: Self::db_to_overdraft_status(model.facility_status),
+            facility_status: Self::overdraft_status_from_db(model.facility_status),
             approval_date: model.approval_date,
             expiry_date: model.expiry_date,
             approved_by_person_id: model.approved_by_person_id,
-            review_frequency: Self::db_to_review_frequency(model.review_frequency),
+            review_frequency: Self::review_frequency_from_db(model.review_frequency),
             next_review_date: model.next_review_date,
             security_required: model.security_required,
             security_details: model.security_details,
@@ -132,7 +132,7 @@ impl CasaMapper {
             applicable_rate: model.applicable_rate,
             days_calculated: model.days_calculated,
             interest_amount: model.interest_amount,
-            compounding_frequency: Self::db_to_compounding_frequency(model.compounding_frequency),
+            compounding_frequency: Self::compounding_frequency_from_db(model.compounding_frequency),
             capitalization_due: model.capitalization_due,
             calculated_at: model.calculated_at,
             calculated_by_person_id: model.calculated_by_person_id,
@@ -168,7 +168,7 @@ impl CasaMapper {
             total_interest_accrued: model.total_interest_accrued,
             accounts_capitalized: model.accounts_capitalized,
             total_capitalized_amount: model.total_capitalized_amount,
-            status: Self::db_to_processing_job_status(model.status),
+            status: Self::processing_job_status_from_db(model.status),
             started_at: model.started_at,
             completed_at: model.completed_at,
             errors_01: model.errors_01,
@@ -223,7 +223,7 @@ impl CasaMapper {
             required_document07_id: model.required_document07_id,
             requested_by_person_id: model.requested_by_person_id,
             requested_at: model.requested_at,
-            approval_status: Self::db_to_casa_approval_status(model.approval_status),
+            approval_status: Self::casa_approval_status_from_db(model.approval_status),
             approved_by_person_id: model.approved_by_person_id,
             approved_at: model.approved_at,
             approval_notes: model.approval_notes,
@@ -258,7 +258,7 @@ impl CasaMapper {
             id: model.id,
             account_id: model.account_id,
             posting_date: model.posting_date,
-            interest_type: Self::db_to_interest_type(model.interest_type),
+            interest_type: Self::interest_type_from_db(model.interest_type),
             period_start: model.period_start,
             period_end: model.period_end,
             principal_amount: model.principal_amount,
@@ -267,7 +267,7 @@ impl CasaMapper {
             interest_amount: model.interest_amount,
             tax_withheld: model.tax_withheld,
             net_amount: model.net_amount,
-            posting_status: Self::db_to_posting_status(model.posting_status),
+            posting_status: Self::posting_status_from_db(model.posting_status),
             posted_by_person_id: model.posted_by_person_id,
             posted_at: model.posted_at,
         }
@@ -301,7 +301,7 @@ impl CasaMapper {
     pub fn casa_account_summary_from_model(model: DbCasaAccountSummary) -> banking_api::BankingResult<CasaAccountSummary> {
         Ok(CasaAccountSummary {
             account_id: model.account_id,
-            account_type: Self::db_to_account_type(model.account_type),
+            account_type: Self::account_type_from_db(model.account_type),
             current_balance: model.current_balance,
             available_balance: model.available_balance,
             overdraft_facility: match model.overdraft_facility {
@@ -319,7 +319,7 @@ impl CasaMapper {
             mtd_transaction_count: model.mtd_transaction_count,
             mtd_debit_amount: model.mtd_debit_amount,
             mtd_credit_amount: model.mtd_credit_amount,
-            dormancy_risk: Self::db_to_dormancy_risk(model.dormancy_risk),
+            dormancy_risk: Self::dormancy_risk_from_db(model.dormancy_risk),
             compliance_status: Self::casa_compliance_status_from_model(model.compliance_status),
         })
     }
@@ -335,7 +335,7 @@ impl CasaMapper {
         }
     }
 
-    pub fn db_to_overdraft_status(status: DbOverdraftStatus) -> OverdraftStatus {
+    pub fn overdraft_status_from_db(status: DbOverdraftStatus) -> OverdraftStatus {
         match status {
             DbOverdraftStatus::Active => OverdraftStatus::Active,
             DbOverdraftStatus::Suspended => OverdraftStatus::Suspended,
@@ -354,7 +354,7 @@ impl CasaMapper {
         }
     }
 
-    pub fn db_to_review_frequency(freq: DbReviewFrequency) -> ReviewFrequency {
+    pub fn review_frequency_from_db(freq: DbReviewFrequency) -> ReviewFrequency {
         match freq {
             DbReviewFrequency::Monthly => ReviewFrequency::Monthly,
             DbReviewFrequency::Quarterly => ReviewFrequency::Quarterly,
@@ -372,7 +372,7 @@ impl CasaMapper {
         }
     }
 
-    pub fn db_to_compounding_frequency(freq: DbCompoundingFrequency) -> CompoundingFrequency {
+    pub fn compounding_frequency_from_db(freq: DbCompoundingFrequency) -> CompoundingFrequency {
         match freq {
             DbCompoundingFrequency::Daily => CompoundingFrequency::Daily,
             DbCompoundingFrequency::Weekly => CompoundingFrequency::Weekly,
@@ -391,7 +391,7 @@ impl CasaMapper {
         }
     }
 
-    pub fn db_to_processing_job_status(status: DbProcessingJobStatus) -> ProcessingJobStatus {
+    pub fn processing_job_status_from_db(status: DbProcessingJobStatus) -> ProcessingJobStatus {
         match status {
             DbProcessingJobStatus::Scheduled => ProcessingJobStatus::Scheduled,
             DbProcessingJobStatus::Running => ProcessingJobStatus::Running,
@@ -411,7 +411,7 @@ impl CasaMapper {
         }
     }
 
-    pub fn db_to_casa_approval_status(status: DbCasaApprovalStatus) -> CasaApprovalStatus {
+    pub fn casa_approval_status_from_db(status: DbCasaApprovalStatus) -> CasaApprovalStatus {
         match status {
             DbCasaApprovalStatus::Pending => CasaApprovalStatus::Pending,
             DbCasaApprovalStatus::Approved => CasaApprovalStatus::Approved,
@@ -429,7 +429,7 @@ impl CasaMapper {
         }
     }
 
-    pub fn db_to_interest_type(interest_type: DbInterestType) -> InterestType {
+    pub fn interest_type_from_db(interest_type: DbInterestType) -> InterestType {
         match interest_type {
             DbInterestType::CreditInterest => InterestType::CreditInterest,
             DbInterestType::DebitInterest => InterestType::DebitInterest,
@@ -446,7 +446,7 @@ impl CasaMapper {
         }
     }
 
-    pub fn db_to_posting_status(status: DbPostingStatus) -> PostingStatus {
+    pub fn posting_status_from_db(status: DbPostingStatus) -> PostingStatus {
         match status {
             DbPostingStatus::Calculated => PostingStatus::Calculated,
             DbPostingStatus::Posted => PostingStatus::Posted,
@@ -460,7 +460,7 @@ impl CasaMapper {
         account_type
     }
 
-    pub fn db_to_account_type(account_type: AccountType) -> AccountType {
+    pub fn account_type_from_db(account_type: AccountType) -> AccountType {
         // AccountType is used directly from banking_api, no conversion needed
         account_type
     }
@@ -474,7 +474,7 @@ impl CasaMapper {
         }
     }
 
-    pub fn db_to_dormancy_risk(risk: DbDormancyRisk) -> DormancyRisk {
+    pub fn dormancy_risk_from_db(risk: DbDormancyRisk) -> DormancyRisk {
         match risk {
             DbDormancyRisk::Active => DormancyRisk::Active,
             DbDormancyRisk::AtRisk => DormancyRisk::AtRisk,

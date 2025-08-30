@@ -16,10 +16,12 @@ rust_decimal = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
 heapless = { workspace = true }
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "rust_decimal"] }
 
 # Banking crates
 banking-api = { path = "../banking-api" }
 banking-db = { path = "../banking-db" }
+# banking-db-postgres = {path="../banking-db-postgres"}
 
 # External integrations
 reqwest = { workspace = true }
@@ -30,5 +32,14 @@ rand = { workspace = true }
 
 # Configuration
 
+[dev-dependencies]
+banking-db-postgres = { path = "../banking-db-postgres", features = ["test-utils"] }
+sqlx = { version = "0.8.0", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "bigdecimal"] }
+
 [features]
 postgres_tests = []
+person_tests = []
+
+[[test]]
+name = "person_tests"
+required-features = ["person_tests"]
