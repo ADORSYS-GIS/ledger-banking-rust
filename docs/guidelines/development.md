@@ -397,6 +397,8 @@ pub trait ProductRepository: Send + Sync {
 
 Building upon the principle of application-managed indexes, several patterns ensure consistency, performance, and maintainability.
 
+For a detailed, step-by-step guide on implementing a repository that uses these advanced indexing and caching patterns, please refer to the [Repository with In-Memory Index Cache](./repository_with_index_cache.md) guideline.
+
 #### 4.1. The `<ModelName>IdxModel` Pattern (Comment-Driven)
 
 For every main database model (e.g., `CountryModel`) that requires indexed lookups, a corresponding `<ModelName>IdxModel` struct is generated based on structured comments. This ensures that the index definition lives directly alongside the data model it supports.
@@ -405,6 +407,7 @@ For every main database model (e.g., `CountryModel`) that requires indexed looku
 -   **Trigger:** The generation is triggered by a `/// # Index: <ModelName>IdxModel` comment above the main model struct.
 -   **Fields:** The fields of the `IdxModel` are derived from fields in the main model that are explicitly annotated for indexing with `/// # Index: ...`.
 -   **Primary vs. Secondary:** The nature of the index (primary or secondary) is defined under a `/// ## Nature` sub-comment.
+-   **Required Fields:** The `IdxModel` **must** include `version: i32` and `hash: i64` fields. The `audit_log_id` field should **not** be included, as it is exclusive to the audit model.
 
 This pattern centralizes the definition of the model and its associated index, improving maintainability and ensuring consistency.
 

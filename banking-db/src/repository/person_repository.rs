@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use sqlx::Database;
 use uuid::Uuid;
 use crate::models::person::{
-    CountryModel, CountrySubdivisionModel, EntityReferenceModel, LocationModel, LocationType,
-    LocalityModel, MessagingModel, PersonModel, PersonIdxModel,
+    CountryModel, CountrySubdivisionModel, EntityReferenceModel, EntityReferenceIdxModel, LocationModel, LocationType,
+    LocalityModel, MessagingModel, MessagingIdxModel, PersonModel, PersonIdxModel,
 };
 
 #[async_trait]
 pub trait PersonRepository<DB: Database>: Send + Sync {
-    async fn save(&self, person: PersonModel) -> Result<PersonModel, sqlx::Error>;
+    async fn save(&self, person: PersonModel, audit_log_id: Uuid) -> Result<PersonModel, sqlx::Error>;
     async fn load(&self, id: Uuid) -> Result<PersonModel, sqlx::Error>;
     async fn find_by_id(
         &self,
@@ -107,7 +107,7 @@ pub trait LocalityRepository<DB: Database>: Send + Sync {
 
 #[async_trait]
 pub trait LocationRepository<DB: Database>: Send + Sync {
-    async fn save(&self, location: LocationModel) -> Result<LocationModel, sqlx::Error>;
+    async fn save(&self, location: LocationModel, audit_log_id: Uuid) -> Result<LocationModel, sqlx::Error>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationModel>, sqlx::Error>;
     async fn find_ids_by_street_line1(&self, street_line1: &str) -> Result<Vec<Uuid>, sqlx::Error>;
     async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationModel>, sqlx::Error>;
@@ -140,11 +140,13 @@ pub trait MessagingRepository<DB: Database>: Send + Sync {
     async fn save(
         &self,
         messaging: MessagingModel,
+        audit_log_id: Uuid,
     ) -> Result<MessagingModel, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<MessagingModel, sqlx::Error>;
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<MessagingModel>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<Option<MessagingIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
 
     async fn find_by_ids(
         &self,
@@ -164,8 +166,13 @@ pub trait EntityReferenceRepository<DB: Database>: Send + Sync {
     async fn save(
         &self,
         entity_ref: EntityReferenceModel,
+        audit_log_id: Uuid,
     ) -> Result<EntityReferenceModel, sqlx::Error>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<EntityReferenceModel>, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<EntityReferenceModel, sqlx::Error>;
+    async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<EntityReferenceIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_by_person_id(
         &self,
         person_id: Uuid,

@@ -6,9 +6,13 @@ use banking_db::repository::{
     LocationRepository, LocalityRepository, CountryRepository, MessagingRepository, PersonRepository,
     CountrySubdivisionRepository,
 };
-use banking_db_postgres::repository::person_repository_impl::{
-    LocationRepositoryImpl, LocalityRepositoryImpl, CountryRepositoryImpl, MessagingRepositoryImpl,
-    PersonRepositoryImpl, CountrySubdivisionRepositoryImpl,
+use banking_db_postgres::repository::{
+    person_country_repository_impl::CountryRepositoryImpl,
+    person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
+    person_locality_repository_impl::LocalityRepositoryImpl,
+    person_location_repository_impl::LocationRepositoryImpl,
+    person_messaging_repository_impl::MessagingRepositoryImpl,
+    person_person_repository_impl::PersonRepositoryImpl,
 };
 use heapless::String as HeaplessString;
 use std::sync::Arc;
@@ -41,7 +45,6 @@ fn create_test_person_model() -> PersonModel {
         department: None,
         location_id: None,
         duplicate_of_person_id: None,
-        audit_log_id: Uuid::new_v4(),
     }
 }
 
@@ -80,7 +83,6 @@ fn create_test_locality_model(country_subdivision_id: Uuid) -> LocalityModel {
 fn create_test_location_model(locality_id: Uuid) -> LocationModel {
     LocationModel {
         id: Uuid::new_v4(),
-        version: 1,
         location_type: LocationType::Residential,
         street_line1: HeaplessString::try_from(format!("123 Main St {}", Uuid::new_v4()).as_str())
             .unwrap(),
@@ -92,18 +94,15 @@ fn create_test_location_model(locality_id: Uuid) -> LocationModel {
         latitude: None,
         longitude: None,
         accuracy_meters: None,
-        audit_log_id: Uuid::new_v4(),
     }
 }
 
 fn create_test_messaging_model() -> MessagingModel {
     MessagingModel {
         id: Uuid::new_v4(),
-        version: 1,
         messaging_type: MessagingType::Email,
         value: HeaplessString::try_from(format!("test_{}@example.com", Uuid::new_v4()).as_str()).unwrap(),
         other_type: None,
-        audit_log_id: Uuid::new_v4(),
     }
 }
 
@@ -114,8 +113,10 @@ async fn test_person_repository() {
     let repo = PersonRepositoryImpl::new(Arc::new(db_pool.clone())).await;
 
     // Test save and find_by_id
+    let audit_log_id =  Uuid::new_v4();
+
     let new_person = create_test_person_model();
-    let saved_person = repo.save(new_person.clone()).await.unwrap();
+    let saved_person = repo.save(new_person.clone(), audit_log_id).await.unwrap();
     assert_eq!(new_person.id, saved_person.id);
 
     let found_person_idx = repo.find_by_id(new_person.id).await.unwrap().unwrap();
@@ -127,7 +128,8 @@ async fn test_person_repository() {
 
     // Test find_by_ids
     let new_person2 = create_test_person_model();
-    repo.save(new_person2.clone()).await.unwrap();
+    let audit_log_id =  Uuid::new_v4();
+    repo.save(new_person2.clone(), audit_log_id).await.unwrap();
     let ids = vec![new_person.id, new_person2.id];
     let found_persons = repo.find_by_ids(&ids).await.unwrap();
     assert_eq!(found_persons.len(), 2);
@@ -235,11 +237,12 @@ async fn test_location_repository() {
     let locality_repo = LocalityRepositoryImpl::new(Arc::new(db_pool.clone()));
     let locality = create_test_locality_model(country_subdivision.id);
     locality_repo.save(locality.clone()).await.unwrap();
-    let repo = LocationRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let repo = LocationRepositoryImpl::new(Arc::new(db_pool.clone())).await;
 
     // Test save and find_by_id
     let new_location = create_test_location_model(locality.id);
-    let saved_location = repo.save(new_location.clone()).await.unwrap();
+    let audit_log_id =  Uuid::new_v4();
+    let saved_location = repo.save(new_location.clone(), audit_log_id).await.unwrap();
     assert_eq!(new_location.id, saved_location.id);
 
     let found_location = repo.find_by_id(new_location.id).await.unwrap().unwrap();
@@ -254,15 +257,17 @@ async fn test_location_repository() {
 async fn test_messaging_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let repo = MessagingRepositoryImpl::new(Arc::new(db_pool.clone()));
+    let repo = MessagingRepositoryImpl::new(Arc::new(db_pool.clone())).await;
 
     // Test save and find_by_id
     let new_messaging = create_test_messaging_model();
-    let saved_messaging = repo.save(new_messaging.clone()).await.unwrap();
+    let audit_log_id =  Uuid::new_v4();
+
+    let saved_messaging = repo.save(new_messaging.clone(), audit_log_id).await.unwrap();
     assert_eq!(new_messaging.id, saved_messaging.id);
 
-    let found_messaging = repo.find_by_id(new_messaging.id).await.unwrap().unwrap();
-    assert_eq!(new_messaging.id, found_messaging.id);
+    let found_messaging_idx = repo.find_by_id(new_messaging.id).await.unwrap().unwrap();
+    assert_eq!(new_messaging.id, found_messaging_idx.messaging_id);
 
     // Test find_ids_by_value
     let ids = repo

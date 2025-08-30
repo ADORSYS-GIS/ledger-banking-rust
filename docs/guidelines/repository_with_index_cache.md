@@ -10,8 +10,8 @@ The core idea is to maintain a lightweight, in-memory cache of an "index model" 
 
 ### 2.1. Data Models (`banking-db/src/models/`)
 
-- **`Model`**: The main data model. It should **not** contain a `version` or `hash` field.
-- **`ModelAudit`**: The audit model. It **must** contain `version` and `hash` fields.
+- **`Model`**: The main data model. It should **not** contain `version`, `hash`, or `audit_log_id` fields.
+- **`ModelAudit`**: The audit model. It **must** contain `version`, `hash`, and `audit_log_id` fields.
 - **`IdxModel`**: The index model. It **must** contain `version` and `hash` fields, along with the primary key and any other indexed fields.
 
 ### 2.2. Repository Trait (`banking-db/src/repository/`)
@@ -32,14 +32,14 @@ The core idea is to maintain a lightweight, in-memory cache of an "index model" 
         1.  If the record exists in the cache, it's an update.
         2.  Compare the hash of the incoming model with the hash stored in the cached `IdxModel`. If they are the same, no changes are needed, and you can return immediately.
         3.  If the hashes differ, increment the `version` from the cached `IdxModel`.
-        4.  Create a `ModelAudit` record (with the new version and hash) and insert it into the `*_audit` table.
+        4.  Create a `ModelAudit` record (with the new version, hash, and a new `audit_log_id`) and insert it into the `*_audit` table.
         5.  Perform a SQL `UPDATE` on the main table (note: the main table does not have a version or hash column).
         6.  Perform a SQL `UPDATE` on the `*_idx` table to persist the new version, hash, and any other indexed fields.
         7.  Create a new `IdxModel` with the updated information and update the cache.
     - **Insert Logic**:
         1.  If the record does not exist in the cache, it's a new record.
         2.  The `version` is `0`.
-        3.  Create and insert a `ModelAudit` record (with version 0 and the new hash).
+        3.  Create and insert a `ModelAudit` record (with version 0, the new hash, and a new `audit_log_id`).
         4.  Perform a SQL `INSERT` into the main table.
         5.  Create and insert a new `IdxModel` record into the `*_idx` table.
         6.  Add the new `IdxModel` to the in-memory cache.
@@ -69,12 +69,12 @@ if let Some(existing_idx) = maybe_existing_idx {
 3.  **If `IdxModel` exists**:
     a. Compare the new hash with the hash in the cached `IdxModel`. If they match, return.
     b. Increment version from the cached `IdxModel`.
-    c. `await` the insertion of a new `ModelAudit` record (with the new version and hash).
+    c. `await` the insertion of a new `ModelAudit` record (with the new version, hash, and a new `audit_log_id`).
     d. `await` the `UPDATE` of the `Model` in the database.
     e. `await` the `UPDATE` of the `IdxModel` in the `*_idx` table.
     f. Acquire a write lock on the cache and update the `IdxModel` with the new version and hash.
 4.  **If `IdxModel` does not exist**:
-    a. `await` the insertion of a new `ModelAudit` record (with version 0 and the new hash).
+    a. `await` the insertion of a new `ModelAudit` record (with version 0, the new hash, and a new `audit_log_id`).
     b. `await` the `INSERT` of the new `Model` into the database.
     c. `await` the `INSERT` of the new `IdxModel` into the `*_idx` table.
     d. Acquire a write lock on the cache and add the new `IdxModel`.

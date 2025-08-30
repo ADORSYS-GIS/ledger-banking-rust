@@ -7,10 +7,13 @@ pub mod utils;
 pub mod test_utils;
 
 pub use repository::audit_repository_impl::AuditLogRepositoryImpl;
-pub use repository::person_repository_impl::{
-    CountryRepositoryImpl, CountrySubdivisionRepositoryImpl, EntityReferenceRepositoryImpl,
-    LocalityRepositoryImpl, LocationRepositoryImpl, MessagingRepositoryImpl, PersonRepositoryImpl,
-};
+pub use repository::person_country_repository_impl::CountryRepositoryImpl;
+pub use repository::person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
+pub use repository::person_entity_reference_repository_impl::EntityReferenceRepositoryImpl;
+pub use repository::person_locality_repository_impl::LocalityRepositoryImpl;
+pub use repository::person_location_repository_impl::LocationRepositoryImpl;
+pub use repository::person_messaging_repository_impl::MessagingRepositoryImpl;
+pub use repository::person_person_repository_impl::PersonRepositoryImpl;
 
 pub struct PostgresRepositories {
     pool: Arc<PgPool>,
@@ -30,11 +33,11 @@ impl PostgresRepositories {
                 self.pool.clone(),
             )),
             locality_repository: Arc::new(LocalityRepositoryImpl::new(self.pool.clone())),
-            location_repository: Arc::new(LocationRepositoryImpl::new(self.pool.clone())),
-            messaging_repository: Arc::new(MessagingRepositoryImpl::new(self.pool.clone())),
-            entity_reference_repository: Arc::new(EntityReferenceRepositoryImpl::new(
-                self.pool.clone(),
-            )),
+            location_repository: Arc::new(LocationRepositoryImpl::new(self.pool.clone()).await),
+            messaging_repository: Arc::new(MessagingRepositoryImpl::new(self.pool.clone()).await),
+            entity_reference_repository: Arc::new(
+                EntityReferenceRepositoryImpl::new(self.pool.clone()).await,
+            ),
         }
     }
 }

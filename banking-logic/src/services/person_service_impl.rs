@@ -137,14 +137,23 @@ impl PersonService for PersonServiceImpl {
         Ok(model.map(|m| m.to_domain()))
     }
 
-    async fn create_location(&self, location: Location) -> BankingResult<Location> {
+    async fn create_location(&self, location: Location, audit_log: banking_api::domain::AuditLog) -> BankingResult<Location> {
         let model = location.to_model();
-        let saved_model = self.repositories.location_repository.save(model).await?;
+        let saved_model = self
+            .repositories
+            .location_repository
+            .save(model, audit_log.id)
+            .await?;
         Ok(saved_model.to_domain())
     }
 
     async fn fix_location(&self, location: Location) -> BankingResult<Location> {
-        self.create_location(location).await
+        let audit_log = banking_api::domain::AuditLog {
+            id: Uuid::new_v4(),
+            updated_at: chrono::Utc::now(),
+            updated_by_person_id: Uuid::new_v4(), // Placeholder
+        };
+        self.create_location(location, audit_log).await
     }
 
     async fn find_location_by_id(&self, id: Uuid) -> BankingResult<Option<Location>> {
@@ -187,19 +196,37 @@ impl PersonService for PersonServiceImpl {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn create_messaging(&self, messaging: Messaging) -> BankingResult<Messaging> {
+    async fn create_messaging(&self, messaging: Messaging, audit_log: banking_api::domain::AuditLog) -> BankingResult<Messaging> {
         let model = messaging.to_model();
-        let saved_model = self.repositories.messaging_repository.save(model).await?;
+        let saved_model = self
+            .repositories
+            .messaging_repository
+            .save(model, audit_log.id)
+            .await?;
         Ok(saved_model.to_domain())
     }
 
     async fn fix_messaging(&self, messaging: Messaging) -> BankingResult<Messaging> {
-        self.create_messaging(messaging).await
+        let audit_log = banking_api::domain::AuditLog {
+            id: Uuid::new_v4(),
+            updated_at: chrono::Utc::now(),
+            updated_by_person_id: Uuid::new_v4(), // Placeholder
+        };
+        self.create_messaging(messaging, audit_log).await
     }
 
     async fn find_messaging_by_id(&self, id: Uuid) -> BankingResult<Option<Messaging>> {
-        let model = self.repositories.messaging_repository.find_by_id(id).await?;
-        Ok(model.map(|m| m.to_domain()))
+        let model_idx = self.repositories.messaging_repository.find_by_id(id).await?;
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .messaging_repository
+                .load(idx.messaging_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn find_messaging_by_value(
@@ -212,19 +239,28 @@ impl PersonService for PersonServiceImpl {
             .find_ids_by_value(value.as_str())
             .await?;
         if let Some(id) = ids.first() {
-            let model = self.repositories.messaging_repository.find_by_id(*id).await?;
-            Ok(model.map(|m| m.to_domain()))
+            let model_idx = self.repositories.messaging_repository.find_by_id(*id).await?;
+            if let Some(idx) = model_idx {
+                let model = self
+                    .repositories
+                    .messaging_repository
+                    .load(idx.messaging_id)
+                    .await?;
+                Ok(Some(model.to_domain()))
+            } else {
+                Ok(None)
+            }
         } else {
             Ok(None)
         }
     }
 
-    async fn create_entity_reference(&self, entity_reference: EntityReference, _audit_log: banking_api::domain::AuditLog) -> BankingResult<EntityReference> {
+    async fn create_entity_reference(&self, entity_reference: EntityReference, audit_log: banking_api::domain::AuditLog) -> BankingResult<EntityReference> {
         let model = entity_reference.to_model();
         let saved_model = self
             .repositories
             .entity_reference_repository
-            .save(model)
+            .save(model, audit_log.id)
             .await?;
         Ok(saved_model.to_domain())
     }
@@ -239,12 +275,21 @@ impl PersonService for PersonServiceImpl {
     }
 
     async fn find_entity_reference_by_id(&self, id: Uuid) -> BankingResult<Option<EntityReference>> {
-        let model = self
+        let model_idx = self
             .repositories
             .entity_reference_repository
             .find_by_id(id)
             .await?;
-        Ok(model.map(|m| m.to_domain()))
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .entity_reference_repository
+                .load(idx.entity_reference_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn find_entity_references_by_person_id(&self, person_id: Uuid) -> BankingResult<Vec<EntityReference>> {
@@ -268,9 +313,13 @@ impl PersonService for PersonServiceImpl {
         Ok(models.into_iter().map(|m| m.to_domain()).collect())
     }
 
-    async fn create_person(&self, person: Person) -> BankingResult<Person> {
+    async fn create_person(&self, person: Person, audit_log: banking_api::domain::AuditLog) -> BankingResult<Person> {
         let model = person.to_model();
-        let saved_model = self.repositories.person_repository.save(model).await?;
+        let saved_model = self
+            .repositories
+            .person_repository
+            .save(model, audit_log.id)
+            .await?;
         Ok(saved_model.to_domain())
     }
 

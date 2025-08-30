@@ -39,7 +39,7 @@ pub trait PersonService: Send + Sync {
     ) -> BankingResult<Option<Locality>>;
 
     // Location methods
-    async fn create_location(&self, location: Location) -> BankingResult<Location>;
+    async fn create_location(&self, location: Location, audit_log: AuditLog) -> BankingResult<Location>;
     async fn fix_location(&self, location: Location) -> BankingResult<Location>;
     async fn find_location_by_id(&self, id: Uuid) -> BankingResult<Option<Location>>;
     async fn find_locations_by_street_line1(
@@ -54,7 +54,7 @@ pub trait PersonService: Send + Sync {
     ) -> BankingResult<Vec<Location>>;
 
     // Messaging methods
-    async fn create_messaging(&self, messaging: Messaging) -> BankingResult<Messaging>;
+    async fn create_messaging(&self, messaging: Messaging, audit_log: AuditLog) -> BankingResult<Messaging>;
     async fn fix_messaging(&self, messaging: Messaging) -> BankingResult<Messaging>;
     async fn find_messaging_by_id(&self, id: Uuid) -> BankingResult<Option<Messaging>>;
     async fn find_messaging_by_value(
@@ -73,7 +73,7 @@ pub trait PersonService: Send + Sync {
     ) -> BankingResult<Vec<EntityReference>>;
 
     // Person methods
-    async fn create_person(&self, person: Person) -> BankingResult<Person>;
+    async fn create_person(&self, person: Person, audit_log: AuditLog) -> BankingResult<Person>;
     async fn find_person_by_id(&self, id: Uuid) -> BankingResult<Option<Person>>;
     async fn get_persons_by_external_identifier(
         &self,

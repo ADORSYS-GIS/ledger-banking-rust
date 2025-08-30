@@ -10,7 +10,13 @@
 // pub mod account_hold_repository_impl;
 // #[cfg(feature = "transaction")]
 // pub mod transaction_repository_impl;
-pub mod person_repository_impl;
+pub mod person_country_repository_impl;
+pub mod person_country_subdivision_repository_impl;
+pub mod person_entity_reference_repository_impl;
+pub mod person_locality_repository_impl;
+pub mod person_location_repository_impl;
+pub mod person_messaging_repository_impl;
+pub mod person_person_repository_impl;
 // #[cfg(feature = "compliance")]
 // pub mod compliance_repository_impl;
 // #[cfg(feature = "collateral")]

@@ -65,16 +65,34 @@ CREATE TABLE location (
     latitude DECIMAL(15,10),
     longitude DECIMAL(15,10),
     accuracy_meters REAL,
-    location_type location_type NOT NULL,
+    location_type location_type NOT NULL
+);
+
+-- Audit table for LocationModel
+CREATE TABLE location_audit (
+    location_id UUID NOT NULL,
     version INTEGER NOT NULL,
-    audit_log_id UUID NOT NULL
+    hash BIGINT NOT NULL,
+    street_line1 VARCHAR(50) NOT NULL,
+    street_line2 VARCHAR(50),
+    street_line3 VARCHAR(50),
+    street_line4 VARCHAR(50),
+    locality_id UUID NOT NULL,
+    postal_code VARCHAR(20),
+    latitude DECIMAL(15,10),
+    longitude DECIMAL(15,10),
+    accuracy_meters REAL,
+    location_type location_type NOT NULL,
+    audit_log_id UUID NOT NULL,
+    PRIMARY KEY (location_id, version)
 );
 
 -- Index table for Location
 CREATE TABLE location_idx (
     location_id UUID PRIMARY KEY,
-    location_type location_type NOT NULL,
-    locality_id UUID
+    locality_id UUID NOT NULL,
+    version INTEGER NOT NULL,
+    hash BIGINT NOT NULL
 );
 
 -- Main table for model MessagingModel
@@ -82,15 +100,27 @@ CREATE TABLE messaging (
     id UUID PRIMARY KEY,
     messaging_type messaging_type NOT NULL,
     value VARCHAR(100) NOT NULL,
-    other_type VARCHAR(20),
+    other_type VARCHAR(20)
+);
+
+-- Audit table for MessagingModel
+CREATE TABLE messaging_audit (
+    messaging_id UUID NOT NULL,
     version INTEGER NOT NULL,
-    audit_log_id UUID NOT NULL
+    hash BIGINT NOT NULL,
+    messaging_type messaging_type NOT NULL,
+    value VARCHAR(100) NOT NULL,
+    other_type VARCHAR(20),
+    audit_log_id UUID NOT NULL,
+    PRIMARY KEY (messaging_id, version)
 );
 
 -- Index table for Messaging
 CREATE TABLE messaging_idx (
     messaging_id UUID PRIMARY KEY,
-    value_hash BIGINT NOT NULL
+    value_hash BIGINT NOT NULL,
+    version INTEGER NOT NULL,
+    hash BIGINT NOT NULL
 );
 
 -- Main table for model EntityReferenceModel
@@ -98,19 +128,33 @@ CREATE TABLE entity_reference (
     id UUID PRIMARY KEY,
     person_id UUID NOT NULL,
     entity_role person_entity_type NOT NULL,
-    reference_external_id VARCHAR(50),
+    reference_external_id VARCHAR(50) NOT NULL,
+    reference_details_l1 VARCHAR(50),
+    reference_details_l2 VARCHAR(50),
+    reference_details_l3 VARCHAR(50)
+);
+
+-- Audit table for EntityReferenceModel
+CREATE TABLE entity_reference_audit (
+    entity_reference_id UUID NOT NULL,
+    version INTEGER NOT NULL,
+    hash BIGINT NOT NULL,
+    person_id UUID NOT NULL,
+    entity_role person_entity_type NOT NULL,
+    reference_external_id VARCHAR(50) NOT NULL,
     reference_details_l1 VARCHAR(50),
     reference_details_l2 VARCHAR(50),
     reference_details_l3 VARCHAR(50),
-    version INTEGER NOT NULL,
-    audit_log_id UUID NOT NULL
+    audit_log_id UUID NOT NULL,
+    PRIMARY KEY (entity_reference_id, version)
 );
 
 -- Index table for EntityReference
 CREATE TABLE entity_reference_idx (
     entity_reference_id UUID PRIMARY KEY,
     person_id UUID NOT NULL,
-    entity_role person_entity_type NOT NULL
+    version INTEGER NOT NULL,
+    hash BIGINT NOT NULL
 );
 
 -- Main table for model PersonModel
@@ -133,8 +177,7 @@ CREATE TABLE person (
     department VARCHAR(50),
     location_id UUID,
     duplicate_of_person_id UUID,
-    entity_reference_count INTEGER NOT NULL,
-    audit_log_id UUID NOT NULL
+    entity_reference_count INTEGER NOT NULL
 );
 
 -- Index table for Person

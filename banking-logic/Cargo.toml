@@ -38,8 +38,4 @@ sqlx = { version = "0.8.0", features = ["runtime-tokio-rustls", "postgres", "uui
 
 [features]
 postgres_tests = []
-person_tests = []
 
-[[test]]
-name = "person_tests"
-required-features = ["person_tests"]
