@@ -47,8 +47,8 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         audit_log_id: Uuid,
     ) -> Result<EntityReferenceModel, sqlx::Error> {
         let mut hasher = XxHash64::with_seed(0);
-        let entity_ref_json = serde_json::to_string(&entity_ref).unwrap();
-        hasher.write(entity_ref_json.as_bytes());
+        let entity_ref_cbor = serde_cbor::to_vec(&entity_ref).unwrap();
+        hasher.write(&entity_ref_cbor);
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {

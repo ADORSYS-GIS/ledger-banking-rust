@@ -45,8 +45,8 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         audit_log_id: Uuid,
     ) -> Result<PersonModel, sqlx::Error> {
         let mut hasher = XxHash64::with_seed(0);
-        let person_json = serde_json::to_string(&person).unwrap();
-        hasher.write(person_json.as_bytes());
+        let person_cbor = serde_cbor::to_vec(&person).unwrap();
+        hasher.write(&person_cbor);
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {

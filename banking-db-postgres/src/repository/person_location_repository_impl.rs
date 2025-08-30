@@ -44,8 +44,8 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         audit_log_id: Uuid,
     ) -> Result<LocationModel, sqlx::Error> {
         let mut hasher = XxHash64::with_seed(0);
-        let location_json = serde_json::to_string(&location).unwrap();
-        hasher.write(location_json.as_bytes());
+        let location_cbor = serde_cbor::to_vec(&location).unwrap();
+        hasher.write(&location_cbor);
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {
