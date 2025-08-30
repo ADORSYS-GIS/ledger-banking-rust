@@ -213,14 +213,14 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query("SELECT * FROM messaging WHERE id = ANY($1)")
+    ) -> Result<Vec<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
+        let rows = sqlx::query("SELECT * FROM messaging_idx WHERE messaging_id = ANY($1)")
             .bind(ids)
             .fetch_all(&*self.pool)
             .await?;
         let mut messagings = Vec::new();
         for row in rows {
-            messagings.push(MessagingModel::try_from_row(&row)?);
+            messagings.push(MessagingIdxModel::try_from_row(&row)?);
         }
         Ok(messagings)
     }
@@ -253,6 +253,17 @@ impl TryFromRow<PgRow> for MessagingModel {
             messaging_type: row.get("messaging_type"),
             value: get_heapless_string(row, "value")?,
             other_type: get_optional_heapless_string(row, "other_type")?,
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for MessagingIdxModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(MessagingIdxModel {
+            messaging_id: row.get("messaging_id"),
+            value_hash: row.get("value_hash"),
+            version: row.get("version"),
+            hash: row.get("hash"),
         })
     }
 }

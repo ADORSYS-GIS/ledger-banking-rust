@@ -76,6 +76,54 @@ impl MyRepository for MockMyRepository {
 }
 ```
 
+**Handling `Idx` and `Audit` Models in Mocks**
+
+It is crucial that mock repositories accurately reflect the behavior of their real counterparts, especially concerning related data models like indexes (`Idx`) and audit trails (`Audit`).
+
+When implementing a mock repository, always inspect the corresponding model definition in `banking-db/src/models/`. If the documentation comments indicate the presence of an `Idx` or `Audit` model, the mock must be extended to handle them.
+
+**Example:**
+
+If `MyModel` has `MyIdxModel` and `MyAuditModel`, the mock repository should be structured as follows:
+
+```rust
+#[derive(Default)]
+struct MockMyRepository {
+    items: Mutex<Vec<MyModel>>,
+    item_ixes: Mutex<Vec<MyIdxModel>>,   // For the index model
+    item_audits: Mutex<Vec<MyAuditModel>>, // For the audit model
+}
+
+#[async_trait]
+impl MyRepository for MockMyRepository {
+    async fn save(&self, item: MyModel, audit_log_id: Uuid) -> Result<MyModel, sqlx::Error> {
+        // 1. Save the main model
+        self.items.lock().unwrap().push(item.clone());
+
+        // 2. Create and save the index model
+        let item_idx = MyIdxModel {
+            item_id: item.id,
+            // ... populate other fields (use dummy values if necessary)
+        };
+        self.item_ixes.lock().unwrap().push(item_idx);
+
+        // 3. Create and save the audit model
+        let item_audit = MyAuditModel {
+            item_id: item.id,
+            // ... copy relevant fields from the main model
+            audit_log_id,
+        };
+        self.item_audits.lock().unwrap().push(item_audit);
+
+        Ok(item)
+    }
+
+    // ... other methods
+}
+```
+
+This ensures that service logic relying on the existence of these related records can be tested accurately.
+
 ### 3. Test Setup Helpers
 
 To keep tests clean and readable, create helper functions for setup:

@@ -306,10 +306,10 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         person_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<EntityReferenceModel>, sqlx::Error> {
+    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM entity_reference WHERE person_id = $1
+            SELECT * FROM entity_reference_idx WHERE person_id = $1
             LIMIT $2 OFFSET $3
             "#,
         )
@@ -322,7 +322,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         let mut refs = Vec::new();
         for row in rows {
             refs.push(
-                EntityReferenceModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
+                EntityReferenceIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             );
         }
         Ok(refs)
@@ -333,10 +333,13 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         reference_external_id: &str,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<EntityReferenceModel>, sqlx::Error> {
+    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM entity_reference WHERE reference_external_id = $1
+            SELECT ei.*
+            FROM entity_reference_idx ei
+            JOIN entity_reference e ON ei.entity_reference_id = e.id
+            WHERE e.reference_external_id = $1
             LIMIT $2 OFFSET $3
             "#,
         )
@@ -349,7 +352,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         let mut refs = Vec::new();
         for row in rows {
             refs.push(
-                EntityReferenceModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
+                EntityReferenceIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             );
         }
         Ok(refs)
@@ -358,10 +361,10 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<EntityReferenceModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM entity_reference WHERE id = ANY($1)
+            SELECT * FROM entity_reference_idx WHERE entity_reference_id = ANY($1)
             "#,
         )
         .bind(ids)
@@ -370,7 +373,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
 
         let mut refs = Vec::new();
         for row in rows {
-            refs.push(EntityReferenceModel::try_from_row(&row)?);
+            refs.push(EntityReferenceIdxModel::try_from_row(&row)?);
         }
         Ok(refs)
     }
@@ -420,6 +423,17 @@ impl TryFromRow<PgRow> for EntityReferenceModel {
                 row,
                 "reference_details_l3",
             )?,
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for EntityReferenceIdxModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(EntityReferenceIdxModel {
+            entity_reference_id: row.get("entity_reference_id"),
+            person_id: row.get("person_id"),
+            version: row.get("version"),
+            hash: row.get("hash"),
         })
     }
 }

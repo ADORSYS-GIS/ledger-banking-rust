@@ -37,22 +37,49 @@ impl PersonService for PersonServiceImpl {
     }
 
     async fn find_country_by_id(&self, id: Uuid) -> BankingResult<Option<Country>> {
-        let model = self.repositories.country_repository.find_by_id(id).await?;
-        Ok(model.map(|m| m.to_domain()))
+        let model_idx = self.repositories.country_repository.find_by_id(id).await?;
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .country_repository
+                .load(idx.country_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn find_country_by_iso2(&self, iso2: HeaplessString<2>) -> BankingResult<Option<Country>> {
-        let models = self
+        let model_ixes = self
             .repositories
             .country_repository
             .find_by_iso2(iso2.as_str(), 1, 1)
             .await?;
-        Ok(models.into_iter().next().map(|m| m.to_domain()))
+        if let Some(idx) = model_ixes.into_iter().next() {
+            let model = self
+                .repositories
+                .country_repository
+                .load(idx.country_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn get_all_countries(&self) -> BankingResult<Vec<Country>> {
-        let models = self.repositories.country_repository.find_by_ids(&[]).await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let model_ixes = self.repositories.country_repository.find_by_ids(&[]).await?;
+        let mut countries = Vec::new();
+        for idx in model_ixes {
+            let country_model = self
+                .repositories
+                .country_repository
+                .load(idx.country_id)
+                .await?;
+            countries.push(country_model.to_domain());
+        }
+        Ok(countries)
     }
 
     async fn create_country_subdivision(&self, country_subdivision: CountrySubdivision) -> BankingResult<CountrySubdivision> {
@@ -70,21 +97,39 @@ impl PersonService for PersonServiceImpl {
     }
 
     async fn find_country_subdivision_by_id(&self, id: Uuid) -> BankingResult<Option<CountrySubdivision>> {
-        let model = self
+        let model_idx = self
             .repositories
             .country_subdivision_repository
             .find_by_id(id)
             .await?;
-        Ok(model.map(|m| m.to_domain()))
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .country_subdivision_repository
+                .load(idx.country_subdivision_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn find_country_subdivisions_by_country_id(&self, country_id: Uuid) -> BankingResult<Vec<CountrySubdivision>> {
-        let models = self
+        let model_ixes = self
             .repositories
             .country_subdivision_repository
             .find_by_country_id(country_id, 1, 1000)
             .await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let mut subdivisions = Vec::new();
+        for idx in model_ixes {
+            let subdivision_model = self
+                .repositories
+                .country_subdivision_repository
+                .load(idx.country_subdivision_id)
+                .await?;
+            subdivisions.push(subdivision_model.to_domain());
+        }
+        Ok(subdivisions)
     }
 
     async fn find_country_subdivision_by_code(
@@ -92,12 +137,21 @@ impl PersonService for PersonServiceImpl {
         country_id: Uuid,
         code: HeaplessString<10>,
     ) -> BankingResult<Option<CountrySubdivision>> {
-        let model = self
+        let model_idx = self
             .repositories
             .country_subdivision_repository
             .find_by_code(country_id, code.as_str())
             .await?;
-        Ok(model.map(|m| m.to_domain()))
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .country_subdivision_repository
+                .load(idx.country_subdivision_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn create_locality(&self, locality: Locality) -> BankingResult<Locality> {
@@ -111,17 +165,35 @@ impl PersonService for PersonServiceImpl {
     }
 
     async fn find_locality_by_id(&self, id: Uuid) -> BankingResult<Option<Locality>> {
-        let model = self.repositories.locality_repository.find_by_id(id).await?;
-        Ok(model.map(|m| m.to_domain()))
+        let model_idx = self.repositories.locality_repository.find_by_id(id).await?;
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .locality_repository
+                .load(idx.locality_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn find_localities_by_country_subdivision_id(&self, country_subdivision_id: Uuid) -> BankingResult<Vec<Locality>> {
-        let models = self
+        let model_ixes = self
             .repositories
             .locality_repository
             .find_by_country_subdivision_id(country_subdivision_id, 1, 1000)
             .await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let mut localities = Vec::new();
+        for idx in model_ixes {
+            let locality_model = self
+                .repositories
+                .locality_repository
+                .load(idx.locality_id)
+                .await?;
+            localities.push(locality_model.to_domain());
+        }
+        Ok(localities)
     }
 
     async fn find_locality_by_code(
@@ -129,12 +201,21 @@ impl PersonService for PersonServiceImpl {
         country_id: Uuid,
         code: HeaplessString<50>,
     ) -> BankingResult<Option<Locality>> {
-        let model = self
+        let model_idx = self
             .repositories
             .locality_repository
             .find_by_code(country_id, code.as_str())
             .await?;
-        Ok(model.map(|m| m.to_domain()))
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .locality_repository
+                .load(idx.locality_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn create_location(&self, location: Location, audit_log: banking_api::domain::AuditLog) -> BankingResult<Location> {
@@ -157,8 +238,17 @@ impl PersonService for PersonServiceImpl {
     }
 
     async fn find_location_by_id(&self, id: Uuid) -> BankingResult<Option<Location>> {
-        let model = self.repositories.location_repository.find_by_id(id).await?;
-        Ok(model.map(|m| m.to_domain()))
+        let model_idx = self.repositories.location_repository.find_by_id(id).await?;
+        if let Some(idx) = model_idx {
+            let model = self
+                .repositories
+                .location_repository
+                .load(idx.location_id)
+                .await?;
+            Ok(Some(model.to_domain()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn find_locations_by_street_line1(
@@ -170,17 +260,35 @@ impl PersonService for PersonServiceImpl {
             .location_repository
             .find_ids_by_street_line1(street_line1.as_str())
             .await?;
-        let models = self.repositories.location_repository.find_by_ids(&ids).await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let model_ixes = self.repositories.location_repository.find_by_ids(&ids).await?;
+        let mut locations = Vec::new();
+        for idx in model_ixes {
+            let location_model = self
+                .repositories
+                .location_repository
+                .load(idx.location_id)
+                .await?;
+            locations.push(location_model.to_domain());
+        }
+        Ok(locations)
     }
 
     async fn find_locations_by_locality_id(&self, locality_id: Uuid) -> BankingResult<Vec<Location>> {
-        let models = self
+        let model_ixes = self
             .repositories
             .location_repository
             .find_by_locality_id(locality_id, 1, 1000)
             .await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let mut locations = Vec::new();
+        for idx in model_ixes {
+            let location_model = self
+                .repositories
+                .location_repository
+                .load(idx.location_id)
+                .await?;
+            locations.push(location_model.to_domain());
+        }
+        Ok(locations)
     }
 
     async fn find_locations_by_type_and_locality(
@@ -188,12 +296,21 @@ impl PersonService for PersonServiceImpl {
         location_type: LocationType,
         locality_id: Uuid,
     ) -> BankingResult<Vec<Location>> {
-        let models = self
+        let model_ixes = self
             .repositories
             .location_repository
             .find_by_type_and_locality(location_type.to_model(), locality_id, 1, 1000)
             .await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let mut locations = Vec::new();
+        for idx in model_ixes {
+            let location_model = self
+                .repositories
+                .location_repository
+                .load(idx.location_id)
+                .await?;
+            locations.push(location_model.to_domain());
+        }
+        Ok(locations)
     }
 
     async fn create_messaging(&self, messaging: Messaging, audit_log: banking_api::domain::AuditLog) -> BankingResult<Messaging> {
@@ -293,24 +410,42 @@ impl PersonService for PersonServiceImpl {
     }
 
     async fn find_entity_references_by_person_id(&self, person_id: Uuid) -> BankingResult<Vec<EntityReference>> {
-        let models = self
+        let model_ixes = self
             .repositories
             .entity_reference_repository
             .find_by_person_id(person_id, 1, 1000)
             .await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let mut refs = Vec::new();
+        for idx in model_ixes {
+            let ref_model = self
+                .repositories
+                .entity_reference_repository
+                .load(idx.entity_reference_id)
+                .await?;
+            refs.push(ref_model.to_domain());
+        }
+        Ok(refs)
     }
 
     async fn find_entity_references_by_reference_external_id(
         &self,
         reference_external_id: HeaplessString<50>,
     ) -> BankingResult<Vec<EntityReference>> {
-        let models = self
+        let model_ixes = self
             .repositories
             .entity_reference_repository
             .find_by_reference_external_id(reference_external_id.as_str(), 1, 1000)
             .await?;
-        Ok(models.into_iter().map(|m| m.to_domain()).collect())
+        let mut refs = Vec::new();
+        for idx in model_ixes {
+            let ref_model = self
+                .repositories
+                .entity_reference_repository
+                .load(idx.entity_reference_id)
+                .await?;
+            refs.push(ref_model.to_domain());
+        }
+        Ok(refs)
     }
 
     async fn create_person(&self, person: Person, audit_log: banking_api::domain::AuditLog) -> BankingResult<Person> {

@@ -233,10 +233,23 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         Ok(location)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationModel>, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> Result<LocationModel, sqlx::Error> {
         let row = sqlx::query(
             r#"
             SELECT * FROM location WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationIdxModel>, sqlx::Error> {
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM location_idx WHERE location_id = $1
             "#,
         )
         .bind(id)
@@ -245,7 +258,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
 
         match row {
             Some(row) => Ok(Some(
-                LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
+                LocationIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -266,10 +279,10 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         Ok(ids)
     }
 
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationModel>, sqlx::Error> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM location WHERE id = ANY($1)
+            SELECT * FROM location_idx WHERE location_id = ANY($1)
             "#,
         )
         .bind(ids)
@@ -279,7 +292,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let mut locations = Vec::new();
         for row in rows {
             locations
-                .push(LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+                .push(LocationIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(locations)
     }
@@ -289,10 +302,10 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         locality_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<LocationModel>, sqlx::Error> {
+    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM location WHERE locality_id = $1
+            SELECT * FROM location_idx WHERE locality_id = $1
             LIMIT $2 OFFSET $3
             "#,
         )
@@ -305,7 +318,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let mut locations = Vec::new();
         for row in rows {
             locations
-                .push(LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+                .push(LocationIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(locations)
     }
@@ -316,10 +329,13 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         locality_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<LocationModel>, sqlx::Error> {
+    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM location WHERE location_type = $1 AND locality_id = $2
+            SELECT li.*
+            FROM location_idx li
+            JOIN location l ON li.location_id = l.id
+            WHERE l.location_type = $1 AND l.locality_id = $2
             LIMIT $3 OFFSET $4
             "#,
         )
@@ -333,7 +349,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let mut locations = Vec::new();
         for row in rows {
             locations
-                .push(LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+                .push(LocationIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(locations)
     }
@@ -393,6 +409,17 @@ impl TryFromRow<PgRow> for LocationModel {
             latitude: row.get("latitude"),
             longitude: row.get("longitude"),
             accuracy_meters: row.get("accuracy_meters"),
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for LocationIdxModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(LocationIdxModel {
+            location_id: row.get("location_id"),
+            locality_id: row.get("locality_id"),
+            version: row.get("version"),
+            hash: row.get("hash"),
         })
     }
 }

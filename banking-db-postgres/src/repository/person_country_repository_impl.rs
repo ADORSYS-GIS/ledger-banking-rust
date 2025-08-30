@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use banking_db::models::person::CountryModel;
+use banking_db::models::person::{CountryIdxModel, CountryModel};
 use banking_db::repository::CountryRepository;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
@@ -34,13 +34,37 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         .execute(&*self.pool)
         .await?;
 
+        sqlx::query(
+            r#"
+            INSERT INTO country_idx (country_id, iso2)
+            VALUES ($1, $2)
+            "#,
+        )
+        .bind(country.id)
+        .bind(country.iso2.as_str())
+        .execute(&*self.pool)
+        .await?;
+
         Ok(country)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<CountryModel>, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> Result<CountryModel, sqlx::Error> {
         let row = sqlx::query(
             r#"
             SELECT * FROM country WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<CountryIdxModel>, sqlx::Error> {
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM country_idx WHERE country_id = $1
             "#,
         )
         .bind(id)
@@ -49,7 +73,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
         match row {
             Some(row) => Ok(Some(
-                CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
+                CountryIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -60,10 +84,10 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         iso2: &str,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<CountryModel>, sqlx::Error> {
+    ) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM country WHERE iso2 = $1
+            SELECT * FROM country_idx WHERE iso2 = $1
             LIMIT $2 OFFSET $3
             "#,
         )
@@ -75,15 +99,15 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
         let mut countries = Vec::new();
         for row in rows {
-            countries.push(CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+            countries.push(CountryIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(countries)
     }
 
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CountryModel>, sqlx::Error> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM country WHERE id = ANY($1)
+            SELECT * FROM country_idx WHERE country_id = ANY($1)
             "#,
         )
         .bind(ids)
@@ -92,7 +116,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
         let mut countries = Vec::new();
         for row in rows {
-            countries.push(CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+            countries.push(CountryIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(countries)
     }
@@ -131,6 +155,15 @@ impl TryFromRow<PgRow> for CountryModel {
             name_l1: get_heapless_string(row, "name_l1")?,
             name_l2: get_optional_heapless_string(row, "name_l2")?,
             name_l3: get_optional_heapless_string(row, "name_l3")?,
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for CountryIdxModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(CountryIdxModel {
+            country_id: row.get("country_id"),
+            iso2: get_heapless_string(row, "iso2")?,
         })
     }
 }

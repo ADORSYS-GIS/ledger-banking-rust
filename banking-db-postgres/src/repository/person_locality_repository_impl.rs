@@ -1,9 +1,10 @@
 use async_trait::async_trait;
-use banking_db::models::person::LocalityModel;
+use banking_db::models::person::{LocalityIdxModel, LocalityModel};
 use banking_db::repository::LocalityRepository;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
+use std::hash::Hasher;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -35,13 +36,42 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         .execute(&*self.pool)
         .await?;
 
+        let mut hasher = twox_hash::XxHash64::with_seed(0);
+        hasher.write(locality.code.as_bytes());
+        let code_hash = hasher.finish() as i64;
+
+        sqlx::query(
+            r#"
+            INSERT INTO locality_idx (locality_id, country_subdivision_id, code_hash)
+            VALUES ($1, $2, $3)
+            "#,
+        )
+        .bind(locality.id)
+        .bind(locality.country_subdivision_id)
+        .bind(code_hash)
+        .execute(&*self.pool)
+        .await?;
+
         Ok(locality)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityModel>, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> Result<LocalityModel, sqlx::Error> {
         let row = sqlx::query(
             r#"
             SELECT * FROM locality WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM locality_idx WHERE locality_id = $1
             "#,
         )
         .bind(id)
@@ -50,7 +80,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
 
         match row {
             Some(row) => Ok(Some(
-                LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
+                LocalityIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -61,10 +91,10 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         country_subdivision_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<LocalityModel>, sqlx::Error> {
+    ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM locality WHERE country_subdivision_id = $1
+            SELECT * FROM locality_idx WHERE country_subdivision_id = $1
             LIMIT $2 OFFSET $3
             "#,
         )
@@ -77,7 +107,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         let mut localities = Vec::new();
         for row in rows {
             localities
-                .push(LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
+                .push(LocalityIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(localities)
     }
@@ -86,11 +116,13 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         &self,
         country_id: Uuid,
         code: &str,
-    ) -> Result<Option<LocalityModel>, sqlx::Error> {
+    ) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
         let row = sqlx::query(
             r#"
-            SELECT l.* FROM locality l
-            INNER JOIN country_subdivision cs ON l.country_subdivision_id = cs.id
+            SELECT li.*
+            FROM locality_idx li
+            JOIN locality l ON li.locality_id = l.id
+            JOIN country_subdivision cs ON l.country_subdivision_id = cs.id
             WHERE cs.country_id = $1 AND l.code = $2
             "#,
         )
@@ -101,7 +133,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
 
         match row {
             Some(row) => Ok(Some(
-                LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
+                LocalityIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
         }
@@ -110,10 +142,10 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<LocalityIdxModel>, Box<dyn Error + Send + Sync>> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM locality WHERE id = ANY($1)
+            SELECT * FROM locality_idx WHERE locality_id = ANY($1)
             "#,
         )
         .bind(ids)
@@ -122,7 +154,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
 
         let mut localities = Vec::new();
         for row in rows {
-            localities.push(LocalityModel::try_from_row(&row)?);
+            localities.push(LocalityIdxModel::try_from_row(&row)?);
         }
         Ok(localities)
     }
@@ -162,6 +194,16 @@ impl TryFromRow<PgRow> for LocalityModel {
             name_l1: get_heapless_string(row, "name_l1")?,
             name_l2: get_optional_heapless_string(row, "name_l2")?,
             name_l3: get_optional_heapless_string(row, "name_l3")?,
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for LocalityIdxModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(LocalityIdxModel {
+            locality_id: row.get("locality_id"),
+            country_subdivision_id: row.get("country_subdivision_id"),
+            code_hash: row.get("code_hash"),
         })
     }
 }

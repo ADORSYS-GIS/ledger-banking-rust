@@ -155,7 +155,7 @@ async fn test_country_repository() {
     assert_eq!(new_country.id, saved_country.id);
 
     let found_country = repo.find_by_id(new_country.id).await.unwrap().unwrap();
-    assert_eq!(new_country.id, found_country.id);
+    assert_eq!(new_country.id, found_country.country_id);
 
     // Test exists_by_id
     let found_countries = repo.find_by_ids(&[new_country.id]).await.unwrap();
@@ -192,7 +192,7 @@ async fn test_country_subdivision_repository() {
     assert_eq!(new_country_subdivision.id, saved_country_subdivision.id);
 
     let found_country_subdivision = repo.find_by_id(new_country_subdivision.id).await.unwrap().unwrap();
-    assert_eq!(new_country_subdivision.id, found_country_subdivision.id);
+    assert_eq!(new_country_subdivision.id, found_country_subdivision.country_subdivision_id);
 
     // Test find_by_country_id
     let country_subdivisions_in_country = repo.find_by_country_id(country.id, 1, 10).await.unwrap();
@@ -217,7 +217,7 @@ async fn test_locality_repository() {
     assert_eq!(new_locality.id, saved_locality.id);
 
     let found_locality = repo.find_by_id(new_locality.id).await.unwrap().unwrap();
-    assert_eq!(new_locality.id, found_locality.id);
+    assert_eq!(new_locality.id, found_locality.locality_id);
 
     // Test find_by_country_subdivision_id
     let localities_in_country_subdivision = repo.find_by_country_subdivision_id(country_subdivision.id, 1, 10).await.unwrap();
@@ -246,7 +246,7 @@ async fn test_location_repository() {
     assert_eq!(new_location.id, saved_location.id);
 
     let found_location = repo.find_by_id(new_location.id).await.unwrap().unwrap();
-    assert_eq!(new_location.id, found_location.id);
+    assert_eq!(new_location.id, found_location.location_id);
 
     // Test find_by_locality_id
     let locations_in_locality = repo.find_by_locality_id(locality.id, 1, 10).await.unwrap();

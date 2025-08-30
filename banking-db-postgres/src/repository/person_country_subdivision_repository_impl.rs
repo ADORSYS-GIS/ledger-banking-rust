@@ -1,9 +1,10 @@
 use async_trait::async_trait;
-use banking_db::models::person::CountrySubdivisionModel;
+use banking_db::models::person::{CountrySubdivisionIdxModel, CountrySubdivisionModel};
 use banking_db::repository::CountrySubdivisionRepository;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
+use std::hash::Hasher;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -48,16 +49,45 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         .execute(&*self.pool)
         .await?;
 
+        let mut hasher = twox_hash::XxHash64::with_seed(0);
+        hasher.write(country_subdivision.code.as_bytes());
+        let code_hash = hasher.finish() as i64;
+
+        sqlx::query(
+            r#"
+            INSERT INTO country_subdivision_idx (country_subdivision_id, country_id, code_hash)
+            VALUES ($1, $2, $3)
+            "#,
+        )
+        .bind(country_subdivision.id)
+        .bind(country_subdivision.country_id)
+        .bind(code_hash)
+        .execute(&*self.pool)
+        .await?;
+
         Ok(country_subdivision)
+    }
+
+    async fn load(&self, id: Uuid) -> Result<CountrySubdivisionModel, sqlx::Error> {
+        let row = sqlx::query(
+            r#"
+            SELECT * FROM country_subdivision WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        CountrySubdivisionModel::try_from_row(&row).map_err(sqlx::Error::Decode)
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<CountrySubdivisionModel>, sqlx::Error> {
+    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
         let row = sqlx::query(
             r#"
-            SELECT * FROM country_subdivision WHERE id = $1
+            SELECT * FROM country_subdivision_idx WHERE country_subdivision_id = $1
             "#,
         )
         .bind(id)
@@ -66,7 +96,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
 
         match row {
             Some(row) => Ok(Some(
-                CountrySubdivisionModel::try_from_row(&row)
+                CountrySubdivisionIdxModel::try_from_row(&row)
                     .map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
@@ -78,10 +108,10 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         country_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<CountrySubdivisionModel>, sqlx::Error> {
+    ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM country_subdivision WHERE country_id = $1
+            SELECT * FROM country_subdivision_idx WHERE country_id = $1
             LIMIT $2 OFFSET $3
             "#,
         )
@@ -94,7 +124,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         let mut subdivisions = Vec::new();
         for row in rows {
             subdivisions.push(
-                CountrySubdivisionModel::try_from_row(&row)
+                CountrySubdivisionIdxModel::try_from_row(&row)
                     .map_err(sqlx::Error::Decode)?,
             );
         }
@@ -105,10 +135,13 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         &self,
         country_id: Uuid,
         code: &str,
-    ) -> Result<Option<CountrySubdivisionModel>, sqlx::Error> {
+    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
         let row = sqlx::query(
             r#"
-            SELECT * FROM country_subdivision WHERE country_id = $1 AND code = $2
+            SELECT csi.*
+            FROM country_subdivision_idx csi
+            JOIN country_subdivision cs ON csi.country_subdivision_id = cs.id
+            WHERE cs.country_id = $1 AND cs.code = $2
             "#,
         )
         .bind(country_id)
@@ -118,7 +151,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
 
         match row {
             Some(row) => Ok(Some(
-                CountrySubdivisionModel::try_from_row(&row)
+                CountrySubdivisionIdxModel::try_from_row(&row)
                     .map_err(sqlx::Error::Decode)?,
             )),
             None => Ok(None),
@@ -128,10 +161,10 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<CountrySubdivisionIdxModel>, Box<dyn Error + Send + Sync>> {
         let rows = sqlx::query(
             r#"
-            SELECT * FROM country_subdivision WHERE id = ANY($1)
+            SELECT * FROM country_subdivision_idx WHERE country_subdivision_id = ANY($1)
             "#,
         )
         .bind(ids)
@@ -140,7 +173,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
 
         let mut subdivisions = Vec::new();
         for row in rows {
-            subdivisions.push(CountrySubdivisionModel::try_from_row(&row)?);
+            subdivisions.push(CountrySubdivisionIdxModel::try_from_row(&row)?);
         }
         Ok(subdivisions)
     }
@@ -180,6 +213,16 @@ impl TryFromRow<PgRow> for CountrySubdivisionModel {
             name_l1: get_heapless_string(row, "name_l1")?,
             name_l2: get_optional_heapless_string(row, "name_l2")?,
             name_l3: get_optional_heapless_string(row, "name_l3")?,
+        })
+    }
+}
+
+impl TryFromRow<PgRow> for CountrySubdivisionIdxModel {
+    fn try_from_row(row: &PgRow) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(CountrySubdivisionIdxModel {
+            country_subdivision_id: row.get("country_subdivision_id"),
+            country_id: row.get("country_id"),
+            code_hash: row.get("code_hash"),
         })
     }
 }
