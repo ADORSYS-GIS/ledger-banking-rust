@@ -842,7 +842,7 @@ impl AuditLogRepository<Postgres> for MockAuditLogRepository {
     }
 }
 
-fn create_test_service() -> PersonServiceImpl {
+fn create_test_service() -> PersonServiceImpl<Postgres> {
     let repositories = Repositories {
         person_repository: Arc::new(MockPersonRepository::default()),
         audit_log_repository: Arc::new(MockAuditLogRepository::default()),
