@@ -24,6 +24,14 @@ This document outlines the pattern for creating and executing commands within a 
 8.  If the command's execution is successful, the `CommandExecutorImpl` commits the transaction.
 9.  If the command's execution fails at any point, the `CommandExecutorImpl` rolls back the transaction, undoing all changes.
 
+## Panic Safety and Transaction Rollback
+
+A key aspect of this pattern's robustness is its handling of panics. If a panic occurs during the execution of a command, the transaction must be rolled back to prevent the database from being left in an inconsistent state.
+
+The `PostgresUnitOfWorkSession` holds an `sqlx::Transaction`. The `sqlx::Transaction` type is designed to automatically roll back the transaction when it is dropped if it has not been explicitly committed. This is a standard RAII (Resource Acquisition Is Initialization) pattern in Rust.
+
+Therefore, **there is no need to add an explicit `Drop` implementation to `PostgresUnitOfWorkSession`**. If a panic occurs, the stack will unwind, the `PostgresUnitOfWorkSession` will be dropped, which in turn drops the `sqlx::Transaction`, triggering an automatic rollback. This ensures that the transaction is always cleaned up correctly, even in the case of unexpected panics.
+
 ## Example Usage
 
 ```rust
