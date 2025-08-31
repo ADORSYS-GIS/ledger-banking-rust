@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// Database model for location type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
@@ -159,6 +158,8 @@ pub struct CountrySubdivisionModel {
     /// # Index
     /// ## Nature
     /// - secondary
+    /// ## Constraint
+    /// - exists(CountryModel.id)
     pub country_id: Uuid,
 
     /// # Documentation
@@ -213,6 +214,8 @@ pub struct LocalityModel {
     /// # Index
     /// ## Nature
     /// - secondary
+    /// ## Constraint
+    /// - exists(CountrySubdivisionModel.id)
     pub country_subdivision_id: Uuid,
 
     /// # Documentation
@@ -253,6 +256,11 @@ pub struct LocalityModel {
 /// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
 /// ## Trait method
 /// - create_audit
+/// ## Additional field: `pub version: i32`
+/// ### Nature
+/// - composite-primary with self.id
+/// ## Additional field: `pub hash: i64,`
+/// ## Additional field: `pub audit_log_id: Uuid,`
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LocationModel {
     /// # Trait method
@@ -264,17 +272,12 @@ pub struct LocationModel {
     /// ## Nature
     /// - primary
     /// 
-    /// # Audit
+    /// # Audit: location_id
     /// ## Nature
-    /// - compound-primary with self.version
+    /// - composite-primary with self.version
     /// ## Trait method
     /// - find_audits_by_id
     pub id: Uuid,
-
-    /// # Audit
-    /// ## Nature
-    /// - compound-primary with self.id
-    pub version: i32,
 
     /// # Trait method
     /// - find_ids_by_street_line1
@@ -292,6 +295,8 @@ pub struct LocationModel {
     /// # Index:
     /// ## Nature
     /// - secondary
+    /// ## Constraint
+    /// - exists(LocalityModel.id)
     pub locality_id: Uuid,
     pub postal_code: Option<HeaplessString<20>>,
 
@@ -299,7 +304,6 @@ pub struct LocationModel {
     pub latitude: Option<Decimal>,
     pub longitude: Option<Decimal>,
     pub accuracy_meters: Option<f32>,
-
     
     /// # Trait method
     /// - find_ids_by_location_type
@@ -308,6 +312,40 @@ pub struct LocationModel {
     /// 
     /// # Documentation
     /// - Location type for categorization
+    #[serde(serialize_with = "serialize_location_type", deserialize_with = "deserialize_location_type")]
+    pub location_type: LocationType,
+}
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/LocationRepository
+/// # Trait method
+/// - create_audit
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LocationAuditModel {
+    /// # Nature
+    /// - composite-primary with self.version
+    /// # Trait method
+    /// - find_audits_by_id
+    pub location_id: Uuid,
+
+    /// # Nature
+    /// - composite-primary with self.id
+    pub version: i32,
+
+    pub hash: i64,
+
+    pub street_line1: HeaplessString<50>,
+    pub street_line2: Option<HeaplessString<50>>,
+    pub street_line3: Option<HeaplessString<50>>,
+    pub street_line4: Option<HeaplessString<50>>,
+
+    pub locality_id: Uuid,
+    pub postal_code: Option<HeaplessString<20>>,
+
+    pub latitude: Option<Decimal>,
+    pub longitude: Option<Decimal>,
+    pub accuracy_meters: Option<f32>,
+
     #[serde(serialize_with = "serialize_location_type", deserialize_with = "deserialize_location_type")]
     pub location_type: LocationType,
 
@@ -335,6 +373,11 @@ pub struct LocationModel {
 /// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
 /// ## Trait method
 /// - create_audit
+/// ## Additional field: `pub version: i32`
+/// ### Nature
+/// - composite-primary with self.id
+/// ## Additional field: `pub hash: i64,`
+/// ## Additional field: `pub audit_log_id: Uuid,`
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct MessagingModel {
     /// # Trait method
@@ -346,17 +389,12 @@ pub struct MessagingModel {
     /// ## Nature
     /// - primary
     /// 
-    /// # Audit
+    /// # Audit: messaging_id
     /// ## Nature
-    /// - compound-primary with self.version
+    /// - composite-primary with self.version
     /// ## Trait method
     /// - find_audits_by_id
     pub id: Uuid,
-
-    /// # Audit
-    /// ## Nature
-    /// - compound-primary with self.id
-    pub version: i32,
 
     /// # Documentation
     /// - Type of messaging/communication method
@@ -376,6 +414,38 @@ pub struct MessagingModel {
     /// 
     /// # Audit
     /// ## Trait method
+    /// - find_audits_by_value
+    pub value: HeaplessString<100>,
+
+    /// # Documentation
+    /// - Description of the messaging type when MessagingType::Other is used
+    pub other_type: Option<HeaplessString<20>>,
+}
+
+/// # Repository Trait
+/// - FQN: banking-db/src/repository/person_repository.rs/MessagingRepository
+/// # Trait method
+/// - create_audit
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct MessagingAuditModel {
+    /// # Nature
+    /// - composite-primary with self.version
+    /// # Trait method
+    /// - find_audits_by_id
+    pub messaging_id: Uuid,
+
+    /// # Nature
+    /// - composite-primary with self.id
+    pub version: i32,
+
+    pub hash: i64,
+
+    /// # Documentation
+    /// - Type of messaging/communication method
+    #[serde(serialize_with = "serialize_messaging_type", deserialize_with = "deserialize_messaging_type")]
+    pub messaging_type: MessagingType,
+    
+    /// # Trait method
     /// - find_audits_by_value
     pub value: HeaplessString<100>,
 
@@ -409,6 +479,11 @@ pub struct MessagingModel {
 /// - FQN: banking-db/src/repository/person_repository.rs/EntityReferenceRepository
 /// ## Trait method
 /// - create_audit
+/// ## Additional field: `pub version: i32`
+/// ### Nature
+/// - composite-primary with self.id
+/// ## Additional field: `pub hash: i64,`
+/// ## Additional field: `pub audit_log_id: Uuid,`
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct EntityReferenceModel {
     /// # Trait method
@@ -420,17 +495,12 @@ pub struct EntityReferenceModel {
     /// ## Nature
     /// - primary
     /// 
-    /// # Audit
+    /// # Audit: entity_reference_id
     /// ## Nature
-    /// - compound-primary with self.version
+    /// - composite-primary with self.version
     /// ## Trait method
     /// - find_audits_by_id
     pub id: Uuid,
-
-    /// # Audit
-    /// ## Nature
-    /// - compound-primary with self.id
-    pub version: i32,
 
     /// # Documentation
     /// - References PersonModel.person_id
@@ -446,6 +516,8 @@ pub struct EntityReferenceModel {
     /// # Audit
     /// ## Trait method
     /// - find_audits_by_person_id
+    /// ## Constraint
+    /// - exists(PersonModel.id)
     pub person_id: Uuid,
 
     /// # Documentation
@@ -467,8 +539,6 @@ pub struct EntityReferenceModel {
     pub reference_details_l1: Option<HeaplessString<50>>,
     pub reference_details_l2: Option<HeaplessString<50>>,
     pub reference_details_l3: Option<HeaplessString<50>>,
-
-    pub audit_log_id: Uuid,
 }
 
 /// # Repository Trait
@@ -478,14 +548,16 @@ pub struct EntityReferenceModel {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct EntityReferenceAuditModel {
     /// # Nature
-    /// - compound-primary with self.version
+    /// - composite-primary with self.version
     /// # Trait method
     /// - find_audits_by_id
-    pub id: Uuid,
+    pub entity_reference_id: Uuid,
 
     /// # Nature
-    /// - compound-primary with self.id
+    /// - composite-primary with self.id
     pub version: i32,
+
+    pub hash: i64,
 
     /// # Trait method
     /// - find_audits_by_person_id
@@ -529,6 +601,11 @@ pub struct EntityReferenceAuditModel {
 /// - FQN: banking-db/src/repository/person_repository.rs/PersonRepository
 /// ## Trait method
 /// - create_audit
+/// ## Additional field: `pub version: i32`
+/// ### Nature
+/// - composite-primary with self.id
+/// ## Additional field: `pub hash: i64,`
+/// ## Additional field: `pub audit_log_id: Uuid,`
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PersonModel {
     /// # Trait method
@@ -540,9 +617,9 @@ pub struct PersonModel {
     /// ## Nature
     /// - primary
     /// 
-    /// # Audit
+    /// # Audit: person_id
     /// ## Nature
-    /// - compound-primary with self.version
+    /// - composite-primary with self.version
     /// ## Trait method
     /// - find_audits_by_id
     pub id: Uuid,
@@ -577,7 +654,9 @@ pub struct PersonModel {
     pub entity_reference_count: i32,
     
     /// # Documentation
-    /// References PersonModel.person_id for organizational hierarchy
+    /// References PersonModel.id for organizational hierarchy
+    /// ## Constraint
+    /// - exists(PersonModel.id)
     pub organization_person_id: Option<Uuid>,
     
     /// # Documentation
@@ -603,12 +682,14 @@ pub struct PersonModel {
     pub department: Option<HeaplessString<50>>,
 
     /// # Documentation
-    /// References LocationModel.location_id for person's location
+    /// References LocationModel.id for person's location
+    /// ## Constraint
+    /// - exists(LocationModel.id)
     pub location_id: Option<Uuid>,
     
+    /// ## Constraint
+    /// - exists(PersonModel.id)
     pub duplicate_of_person_id: Option<Uuid>,
-
-    pub audit_log_id: Uuid,
 }
 
 /// # Repository Trait
@@ -618,13 +699,13 @@ pub struct PersonModel {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PersonAuditModel {
     /// # Nature
-    /// - compound-primary with self.version
+    /// - composite-primary with self.version
     /// # Trait method
     /// - find_audits_by_person_id
     pub person_id: Uuid,
     
     /// # Nature
-    /// - compound-primary with self.person_id
+    /// - composite-primary with self.person_id
     pub version: i32,
 
     pub hash: i64,
@@ -896,7 +977,7 @@ pub struct CountryIdxModelCache {
 impl CountryIdxModelCache {
     pub fn new(
         items: Vec<CountryIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    ) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_iso2 = HashMap::new();
 
@@ -914,10 +995,24 @@ impl CountryIdxModelCache {
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(CountryIdxModelCache {
+        Ok(CountryIdxModelCache {
             by_id,
             by_iso2,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: CountryIdxModel) {
+        let primary_key = item.country_id;
+        if self.by_id.contains_key(&primary_key) {
+            return;
+        }
+
+        if self.by_iso2.contains_key(&item.iso2) {
+            return;
+        }
+        self.by_iso2.insert(item.iso2.clone(), primary_key);
+        
+        self.by_id.insert(primary_key, item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
@@ -969,7 +1064,7 @@ pub struct CountrySubdivisionIdxModelCache {
 impl CountrySubdivisionIdxModelCache {
     pub fn new(
         items: Vec<CountrySubdivisionIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    ) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_code_hash = HashMap::new();
         let mut by_country_id = HashMap::new();
@@ -993,11 +1088,25 @@ impl CountrySubdivisionIdxModelCache {
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(CountrySubdivisionIdxModelCache {
+        Ok(CountrySubdivisionIdxModelCache {
             by_id,
             by_code_hash,
             by_country_id,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: CountrySubdivisionIdxModel) {
+        let primary_key = item.country_subdivision_id;
+        if self.by_id.contains_key(&primary_key) {
+            return;
+        }
+
+        self.by_code_hash.insert(item.code_hash, primary_key);
+        self.by_country_id
+            .entry(item.country_id)
+            .or_default()
+            .push(primary_key);
+        self.by_id.insert(primary_key, item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
@@ -1034,7 +1143,7 @@ pub struct LocalityIdxModel {
     pub locality_id: Uuid,
     /// # Nature
     /// - secondary
-    pub country_subdivision_id: Option<Uuid>,
+    pub country_subdivision_id: Uuid,
     /// # Nature
     /// - secondary
     /// - unique
@@ -1048,9 +1157,7 @@ pub struct LocalityIdxModelCache {
 }
 
 impl LocalityIdxModelCache {
-    pub fn new(
-        items: Vec<LocalityIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    pub fn new(items: Vec<LocalityIdxModel>) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_code_hash = HashMap::new();
         let mut by_country_subdivision_id = HashMap::new();
@@ -1066,21 +1173,33 @@ impl LocalityIdxModelCache {
             }
             by_code_hash.insert(item.code_hash, primary_key);
 
-            if let Some(country_subdivision_id) = item.country_subdivision_id {
-                by_country_subdivision_id
-                    .entry(country_subdivision_id)
-                    .or_insert_with(Vec::new)
-                    .push(primary_key);
-            }
-            
+            by_country_subdivision_id
+                .entry(item.country_subdivision_id)
+                .or_insert_with(Vec::new)
+                .push(primary_key);
+
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(LocalityIdxModelCache {
+        Ok(LocalityIdxModelCache {
             by_id,
             by_code_hash,
             by_country_subdivision_id,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: LocalityIdxModel) {
+        let primary_key = item.locality_id;
+        if self.by_id.contains_key(&primary_key) {
+            return;
+        }
+
+        self.by_code_hash.insert(item.code_hash, primary_key);
+        self.by_country_subdivision_id
+            .entry(item.country_subdivision_id)
+            .or_default()
+            .push(primary_key);
+        self.by_id.insert(primary_key, item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
@@ -1119,7 +1238,9 @@ pub struct LocationIdxModel {
     pub location_id: Uuid,
     /// # Nature
     /// - secondary
-    pub locality_id: Option<Uuid>,
+    pub locality_id: Uuid,
+    pub version: i32,
+    pub hash: i64,
 }
 
 pub struct LocationIdxModelCache {
@@ -1128,11 +1249,9 @@ pub struct LocationIdxModelCache {
 }
 
 impl LocationIdxModelCache {
-    pub fn new(
-        items: Vec<LocationIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    pub fn new(items: Vec<LocationIdxModel>) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
-        let mut by_locality_id = HashMap::new();
+        let mut by_locality_id: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
 
         for item in items {
             let primary_key = item.location_id;
@@ -1140,20 +1259,50 @@ impl LocationIdxModelCache {
                 return Err("Duplicate primary key: location_id");
             }
 
-            if let Some(locality_id) = item.locality_id {
-                by_locality_id
-                    .entry(locality_id)
-                    .or_insert_with(Vec::new)
-                    .push(primary_key);
-            }
-            
+            by_locality_id
+                .entry(item.locality_id)
+                .or_default()
+                .push(primary_key);
+
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(LocationIdxModelCache {
+        Ok(LocationIdxModelCache {
             by_id,
             by_locality_id,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: LocationIdxModel) {
+        let primary_key = item.location_id;
+        if self.by_id.contains_key(&primary_key) {
+            self.update(item);
+            return;
+        }
+
+        self.by_locality_id
+            .entry(item.locality_id)
+            .or_default()
+            .push(primary_key);
+        self.by_id.insert(primary_key, item);
+    }
+
+    pub fn remove(&mut self, location_id: &Uuid) -> Option<LocationIdxModel> {
+        if let Some(item) = self.by_id.remove(location_id) {
+            if let Some(ids) = self.by_locality_id.get_mut(&item.locality_id) {
+                ids.retain(|&id| id != *location_id);
+                if ids.is_empty() {
+                    self.by_locality_id.remove(&item.locality_id);
+                }
+            }
+            return Some(item);
+        }
+        None
+    }
+
+    pub fn update(&mut self, item: LocationIdxModel) {
+        self.remove(&item.location_id);
+        self.add(item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
@@ -1189,6 +1338,8 @@ pub struct MessagingIdxModel {
     /// - secondary
     /// - unique
     pub value_hash: i64,
+    pub version: i32,
+    pub hash: i64,
 }
 
 pub struct MessagingIdxModelCache {
@@ -1197,9 +1348,7 @@ pub struct MessagingIdxModelCache {
 }
 
 impl MessagingIdxModelCache {
-    pub fn new(
-        items: Vec<MessagingIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    pub fn new(items: Vec<MessagingIdxModel>) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_value_hash = HashMap::new();
 
@@ -1213,14 +1362,38 @@ impl MessagingIdxModelCache {
                 return Err("Duplicate unique index value: value_hash");
             }
             by_value_hash.insert(item.value_hash, primary_key);
-            
+
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(MessagingIdxModelCache {
+        Ok(MessagingIdxModelCache {
             by_id,
             by_value_hash,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: MessagingIdxModel) {
+        let primary_key = item.messaging_id;
+        if self.by_id.contains_key(&primary_key) {
+            self.update(item);
+            return;
+        }
+
+        self.by_value_hash.insert(item.value_hash, primary_key);
+        self.by_id.insert(primary_key, item);
+    }
+
+    pub fn remove(&mut self, messaging_id: &Uuid) -> Option<MessagingIdxModel> {
+        if let Some(item) = self.by_id.remove(messaging_id) {
+            self.by_value_hash.remove(&item.value_hash);
+            return Some(item);
+        }
+        None
+    }
+
+    pub fn update(&mut self, item: MessagingIdxModel) {
+        self.remove(&item.messaging_id);
+        self.add(item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
@@ -1256,6 +1429,8 @@ pub struct EntityReferenceIdxModel {
     /// # Nature
     /// - secondary
     pub person_id: Uuid,
+    pub version: i32,
+    pub hash: i64,
 }
 
 pub struct EntityReferenceIdxModelCache {
@@ -1264,11 +1439,9 @@ pub struct EntityReferenceIdxModelCache {
 }
 
 impl EntityReferenceIdxModelCache {
-    pub fn new(
-        items: Vec<EntityReferenceIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    pub fn new(items: Vec<EntityReferenceIdxModel>) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
-        let mut by_person_id = HashMap::new();
+        let mut by_person_id: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
 
         for item in items {
             let primary_key = item.entity_reference_id;
@@ -1278,16 +1451,48 @@ impl EntityReferenceIdxModelCache {
 
             by_person_id
                 .entry(item.person_id)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(primary_key);
-            
+
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(EntityReferenceIdxModelCache {
+        Ok(EntityReferenceIdxModelCache {
             by_id,
             by_person_id,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: EntityReferenceIdxModel) {
+        let primary_key = item.entity_reference_id;
+        if self.by_id.contains_key(&primary_key) {
+            self.update(item);
+            return;
+        }
+
+        self.by_person_id
+            .entry(item.person_id)
+            .or_default()
+            .push(primary_key);
+        self.by_id.insert(primary_key, item);
+    }
+
+    pub fn remove(&mut self, entity_reference_id: &Uuid) -> Option<EntityReferenceIdxModel> {
+        if let Some(item) = self.by_id.remove(entity_reference_id) {
+            if let Some(ids) = self.by_person_id.get_mut(&item.person_id) {
+                ids.retain(|&id| id != *entity_reference_id);
+                if ids.is_empty() {
+                    self.by_person_id.remove(&item.person_id);
+                }
+            }
+            return Some(item);
+        }
+        None
+    }
+
+    pub fn update(&mut self, item: EntityReferenceIdxModel) {
+        self.remove(&item.entity_reference_id);
+        self.add(item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {

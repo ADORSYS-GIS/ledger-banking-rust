@@ -95,7 +95,6 @@ impl ToDomain<Location> for LocationModel {
     fn to_domain(self) -> Location {
         Location {
             id: self.id,
-            version: self.version,
             street_line1: self.street_line1,
             street_line2: self.street_line2,
             street_line3: self.street_line3,
@@ -106,7 +105,6 @@ impl ToDomain<Location> for LocationModel {
             longitude: self.longitude,
             accuracy_meters: self.accuracy_meters,
             location_type: self.location_type.to_domain(),
-            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -115,7 +113,6 @@ impl ToModel<LocationModel> for Location {
     fn to_model(self) -> LocationModel {
         LocationModel {
             id: self.id,
-            version: self.version,
             street_line1: self.street_line1,
             street_line2: self.street_line2,
             street_line3: self.street_line3,
@@ -126,7 +123,6 @@ impl ToModel<LocationModel> for Location {
             longitude: self.longitude,
             accuracy_meters: self.accuracy_meters,
             location_type: self.location_type.to_model(),
-            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -135,11 +131,9 @@ impl ToDomain<Messaging> for MessagingModel {
     fn to_domain(self) -> Messaging {
         Messaging {
             id: self.id,
-            version: self.version,
             messaging_type: self.messaging_type.to_domain(),
             value: self.value,
             other_type: self.other_type,
-            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -148,11 +142,9 @@ impl ToModel<MessagingModel> for Messaging {
     fn to_model(self) -> MessagingModel {
         MessagingModel {
             id: self.id,
-            version: self.version,
             messaging_type: self.messaging_type.to_model(),
             value: self.value,
             other_type: self.other_type,
-            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -161,14 +153,12 @@ impl ToDomain<EntityReference> for EntityReferenceModel {
     fn to_domain(self) -> EntityReference {
         EntityReference {
             id: self.id,
-            version: self.version,
             person_id: self.person_id,
             entity_role: self.entity_role.to_domain(),
             reference_external_id: self.reference_external_id,
             reference_details_l1: self.reference_details_l1,
             reference_details_l2: self.reference_details_l2,
             reference_details_l3: self.reference_details_l3,
-            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -177,14 +167,12 @@ impl ToModel<EntityReferenceModel> for EntityReference {
     fn to_model(self) -> EntityReferenceModel {
         EntityReferenceModel {
             id: self.id,
-            version: self.version,
             person_id: self.person_id,
             entity_role: self.entity_role.to_model(),
             reference_external_id: self.reference_external_id,
             reference_details_l1: self.reference_details_l1,
             reference_details_l2: self.reference_details_l2,
             reference_details_l3: self.reference_details_l3,
-            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -211,7 +199,6 @@ impl ToDomain<Person> for PersonModel {
             department: self.department,
             location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
-            audit_log_id: self.audit_log_id,
         }
     }
 }
@@ -238,7 +225,6 @@ impl ToModel<PersonModel> for Person {
             department: self.department,
             location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
-            audit_log_id: self.audit_log_id,
         }
     }
 }

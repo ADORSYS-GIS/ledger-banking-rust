@@ -12,7 +12,7 @@ description: you are a Rust programming expert tasked with generating a thread-s
 1.  **Parse Comment and Check for Existing Cache**:
     -   **Trigger:** The generation process is initiated by a `/// # Cache: <CacheName>` instruction in the comment block above a main model struct (e.g., `CountryModel`).
     -   **Idempotency Check:** Before generating any code, scan the target file for the existence of `pub struct <CacheName>`. If this struct and its corresponding `impl` block already exist, the script must halt execution for this model to ensure idempotency and prevent duplicate code.
-    -   **Source Index Model:** The cache is built for the corresponding `<ModelName>IdxModel` struct, which must already be defined or generated in the same file.
+    -   **Source Index Model:** The cache is built for the corresponding `<ModelName>IdxModel` struct, which must already be defined or generated in the same file. The `IdxModel` must contain `version: i32` and `hash: i64` fields.
     -   **Cache Properties:** Parse the attributes listed under the `# Cache` block:
         -   `- Concurent`: Indicates the cache must be thread-safe and wrapped in `Arc<Self>`.
         -   `- <Immutability>`: Defines the cache's behavior (e.g., `Immutable Set of Immutable Records`).
@@ -60,7 +60,7 @@ description: you are a Rust programming expert tasked with generating a thread-s
 **Source Instructions on `CountryModel`:**
 ```rust
 /// # Cache: CountryIdxModelCache
-/// - Immutable Set of Immutable Records Cache
+/// - Mutable Set of Immutable Records Cache
 /// - Concurent
 ```
 
@@ -80,7 +80,11 @@ pub struct CountryIdxModelCache {
 }
 
 impl CountryIdxModelCache {
-    pub fn new(items: Vec<CountryIdxModel>) -> Result<Arc<Self>, &'static str> {
+    pub fn new(items: Vec<CountryIdxModel>) -> Result<Self, &'static str> {
+        // ... implementation logic ...
+    }
+
+    pub fn add(&mut self, item: CountryIdxModel) {
         // ... implementation logic ...
     }
 

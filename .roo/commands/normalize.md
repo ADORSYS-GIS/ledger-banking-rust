@@ -36,7 +36,7 @@ Using the database models in @banking-db/src/models/{file_name}.rs as the source
     -   Identify all `...Model` structs and their fields.
     -   Document all database enums and their variants.
     -   Note field types, especially HeaplessString sizes and enum types.
-    -   Identify model-only structs (e.g., `...IdxModel`, `...IdxModelCache`) that should not have a domain counterpart.
+    -   Identify model-only structs (e.g., `...IdxModel`, `...IdxModelCache`, `...AuditModel`) that should not have a domain counterpart.
 
 2.  **Read API Domain Model (`banking-api/src/domain/{file_name}.rs`) for Comparison**
     -   Compare with the database model to identify discrepancies.
@@ -95,7 +95,7 @@ Upon approval, perform changes as indicated in the files `target/modules/{file_n
 
 8.  **Update Domain Model to Align with Database Model**
     -   Using the database model as the single source of truth, align all corresponding structs and enums in `@banking-api/src/domain/{file_name}.rs`.
-    -   For each `...Model` struct in `banking-db`, ensure a corresponding domain struct exists in `banking-api`, unless it is a model-only struct (e.g., `...IdxModel`, `...IdxModelCache`).
+    -   For each `...Model` struct in `banking-db`, ensure a corresponding domain struct exists in `banking-api`, unless it is a model-only struct (e.g., `...IdxModel`, `...IdxModelCache`, `...AuditModel`).
     -   Add any missing structs or enums to the domain layer to match the database model layer.
     -   Update fields and enum variants in the domain layer to match the types and definitions in the database model layer.
 
@@ -253,13 +253,9 @@ Always suggest change of String type to HeaplessString.
 ### 8. Model Only Struct
 
 Following structs will not have counterpart in the domain:
-- **<StructName>IdxModel**
-Index model are used to cache indexes in memory. In orther to check if a person with id uuid exists, the repository can simply querry the index repository. there is no need to issue a querry to the database.
-
-Indes models have a corresponding database table representation as describes in .roo/commands/application-managed-indexes.md.
-
-- **<StructName>IdxModelCache**
-Cache for index models do not have a domain representation and do not have a database repesentation.
+- **`<StructName>IdxModel`**: Index models are used to cache indexes in memory. To check if an entity exists, the repository can query the index cache instead of the database. They have a corresponding database table and must include `version` and `hash` fields.
+- **`<StructName>IdxModelCache`**: Cache for index models. They do not have a domain or database representation.
+- **`<StructName>AuditModel`**: Audit models are used to track changes to an entity. They have a corresponding database table and must include `version`, `hash`, and `audit_log_id` fields. They do not have a domain representation.
 
 ## Serialization
 

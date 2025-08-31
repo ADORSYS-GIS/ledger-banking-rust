@@ -104,7 +104,6 @@ pub struct Location {
     /// # Nature
     /// - primary index
     pub id: Uuid,
-    pub version: i32,
     /// # Trait method
     /// - find_locations_by_street_line1
     /// # Documentation
@@ -128,7 +127,6 @@ pub struct Location {
     /// # Documentation
     /// - Location type for categorization
     pub location_type: LocationType,
-    pub audit_log_id: Uuid,
 }
 
 /// Type of location for categorization
@@ -201,7 +199,6 @@ pub struct Messaging {
     /// # Nature
     /// - primary index
     pub id: Uuid,
-    pub version: i32,
     /// # Documentation
     /// - Type of messaging/communication method
     pub messaging_type: MessagingType,
@@ -213,7 +210,6 @@ pub struct Messaging {
     /// # Documentation
     /// - Description of the messaging type when MessagingType::Other is used
     pub other_type: Option<HeaplessString<20>>,
-    pub audit_log_id: Uuid,
 }
 
 /// Type of person being referenced in the system
@@ -265,10 +261,7 @@ pub enum RelationshipRole {
 /// # Documentation
 /// - Entity reference table for managing person-to-entity relationships
 /// # Nature
-/// - Mutable 
-///     - version field used to track changes.
-///     - store a copy in table EntityReferenceAudit during modification. 
-/// - AuditLog
+/// - Mutable
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityReference {
     /// # Trait method
@@ -276,11 +269,6 @@ pub struct EntityReference {
     /// # Nature
     /// - primary index
     pub id: Uuid,
-
-    /// # Documentation
-    /// - version number, increased whenever a reference changes.
-    /// - change triggers storage of old version in an audit database.
-    pub version: i32,
 
     /// # Documentation
     /// - References Person.person_id
@@ -304,7 +292,6 @@ pub struct EntityReference {
     pub reference_details_l2: Option<HeaplessString<50>>,
     pub reference_details_l3: Option<HeaplessString<50>>,
 
-    pub audit_log_id: Uuid,
 }
 
 /// # Service Trait
@@ -312,10 +299,7 @@ pub struct EntityReference {
 /// # Documentation
 /// - Represents a person throughout the system for audit and tracking purposes
 /// # Nature
-/// - Mutable 
-///     - version field used to track changes.
-///     - store a copy in table EntityReferenceAudit during modification. 
-/// - AuditLog
+/// - Mutable
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Person {
     /// # Trait method
@@ -368,6 +352,4 @@ pub struct Person {
     /// # Documentation
     /// Reference to another Person if this is a duplicate
     pub duplicate_of_person_id: Option<Uuid>,
-
-    pub audit_log_id: Uuid,    
 }

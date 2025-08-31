@@ -22,7 +22,7 @@
 - **FeeRepositoryImpl** - Complete fee management system (17/17 tests)
 - **ReasonAndPurposeRepositoryImpl** - Regulatory compliance framework (18/18 tests)
 - **ChannelRepositoryImpl** - Banking channel management (15/15 tests)
-- **PersonRepositoryImpl** - Full CRUD + Business Logic (rewritten with new test suite, 6/6 tests)
+- **PersonRepositoryImpl** - Monolithic repository refactored into 7 specialized repositories for improved modularity and maintainability (31+ tests).
 - **ComplianceRepositoryImpl** - KYC/AML framework with enum handling
 - **CollateralRepositoryImpl** - Comprehensive collateral management
 - **TransactionRepositoryImpl** - Full transaction processing
@@ -105,6 +105,13 @@ This commit introduces a comprehensive refactoring of the Person domain and a co
 - **Repository Rewrite**: The `PersonRepositoryImpl` has been completely rewritten for clarity and performance.
 - **Test Suite Architecture**: Replaced dozens of individual test files with a structured, suite-based integration testing approach under `tests/suites/`.
 - **Code Quality**: Enhances maintainability, testability, and consistency across the person-related components.
+
+### 🎉 Architectural Refactoring: Person Repository Decomposition
+This commit introduces a major architectural refactoring of the Person repository, decomposing the monolithic `PersonRepositoryImpl` into seven specialized, single-responsibility repositories.
+- **Improved Modularity**: Each new repository (`Person`, `Country`, `Location`, etc.) manages a specific aggregate, improving code clarity and reducing complexity.
+- **Enhanced Maintainability**: Smaller, focused repositories are easier to understand, test, and maintain.
+- **Testability**: The new structure allows for more granular and isolated testing, as evidenced by the 31+ new unit and integration tests.
+- **Scalability**: This decomposition lays a solid foundation for future expansion of the Person domain.
 
 ### 🎉 Comprehensive Testing Overhaul: Service Mocks & Guidelines
 This commit introduces a major overhaul of the testing strategy, including comprehensive guidelines and the first full suite of service-level unit tests using mock repositories.

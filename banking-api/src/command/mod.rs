@@ -36,7 +36,7 @@ impl Command for AddPersonOfInterestCommand {
     type Result = Person;
 
     async fn execute(&self, context: &Self::Context) -> Result<Self::Result, BankingError> {
-        context.create_person(self.person_data.clone()).await
+        context.create_person(self.person_data.clone(), self.audit_log.clone()).await
     }
 }
 

@@ -5,9 +5,11 @@ use banking_api::domain::person::{
 };
 use banking_api::service::PersonService;
 use banking_db::models::person::{
-    LocationModel, LocationType as LocationTypeModel, LocalityModel, CountryModel, EntityReferenceModel,
-    MessagingModel, PersonModel, PersonIdxModel,
-    CountrySubdivisionModel,
+    LocationModel, LocationIdxModel, LocationAuditModel, LocationType as LocationTypeModel,
+    LocalityModel, LocalityIdxModel, CountryModel, CountryIdxModel, EntityReferenceModel,
+    EntityReferenceIdxModel, EntityReferenceAuditModel, MessagingModel, MessagingIdxModel,
+    MessagingAuditModel, PersonModel, PersonIdxModel, PersonAuditModel, CountrySubdivisionModel,
+    CountrySubdivisionIdxModel,
 };
 use banking_db::models::audit::AuditLogModel;
 
@@ -28,11 +30,12 @@ use sqlx::Postgres;
 struct MockPersonRepository {
     persons: Mutex<Vec<PersonModel>>,
     person_ixes: Mutex<Vec<PersonIdxModel>>,
+    person_audits: Mutex<Vec<PersonAuditModel>>,
 }
 
 #[async_trait]
 impl PersonRepository<Postgres> for MockPersonRepository {
-    async fn save(&self, person: PersonModel) -> Result<PersonModel, sqlx::Error> {
+    async fn save(&self, person: PersonModel, audit_log_id: Uuid) -> Result<PersonModel, sqlx::Error> {
         self.persons.lock().unwrap().push(person.clone());
         // In a real scenario, we'd create a proper hash and version.
         let person_idx = PersonIdxModel {
@@ -42,6 +45,33 @@ impl PersonRepository<Postgres> for MockPersonRepository {
             hash: 0,
         };
         self.person_ixes.lock().unwrap().push(person_idx);
+
+        let person_audit = PersonAuditModel {
+            person_id: person.id,
+            version: 0,
+            hash: 0,
+            person_type: person.person_type,
+            display_name: person.display_name.clone(),
+            external_identifier: person.external_identifier.clone(),
+            entity_reference_count: person.entity_reference_count,
+            organization_person_id: person.organization_person_id,
+            messaging1_id: person.messaging1_id,
+            messaging1_type: person.messaging1_type,
+            messaging2_id: person.messaging2_id,
+            messaging2_type: person.messaging2_type,
+            messaging3_id: person.messaging3_id,
+            messaging3_type: person.messaging3_type,
+            messaging4_id: person.messaging4_id,
+            messaging4_type: person.messaging4_type,
+            messaging5_id: person.messaging5_id,
+            messaging5_type: person.messaging5_type,
+            department: person.department.clone(),
+            location_id: person.location_id,
+            duplicate_of_person_id: person.duplicate_of_person_id,
+            audit_log_id,
+        };
+        self.person_audits.lock().unwrap().push(person_audit);
+
         Ok(person)
     }
 
@@ -111,6 +141,7 @@ impl PersonRepository<Postgres> for MockPersonRepository {
 #[derive(Default)]
 struct MockCountryRepository {
     countries: Mutex<Vec<CountryModel>>,
+    country_ixes: Mutex<Vec<CountryIdxModel>>,
 }
 
 #[async_trait]
@@ -120,32 +151,48 @@ impl CountryRepository<Postgres> for MockCountryRepository {
         country: CountryModel,
     ) -> Result<CountryModel, sqlx::Error> {
         self.countries.lock().unwrap().push(country.clone());
+        let country_idx = CountryIdxModel {
+            country_id: country.id,
+            iso2: country.iso2.clone(),
+        };
+        self.country_ixes.lock().unwrap().push(country_idx);
         Ok(country)
     }
 
-    async fn find_by_id(
-        &self,
-        id: Uuid,
-    ) -> Result<Option<CountryModel>, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> Result<CountryModel, sqlx::Error> {
         Ok(self
             .countries
             .lock()
             .unwrap()
             .iter()
             .find(|c| c.id == id)
+            .cloned()
+            .unwrap())
+    }
+
+    async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<CountryIdxModel>, sqlx::Error> {
+        Ok(self
+            .country_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|c| c.country_id == id)
             .cloned())
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<CountryModel>, sqlx::Error> {
+    ) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
         let countries = self
-            .countries
+            .country_ixes
             .lock()
             .unwrap()
             .iter()
-            .filter(|c| ids.contains(&c.id))
+            .filter(|c| ids.contains(&c.country_id))
             .cloned()
             .collect();
         Ok(countries)
@@ -167,9 +214,9 @@ impl CountryRepository<Postgres> for MockCountryRepository {
         iso2: &str,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<CountryModel>, sqlx::Error> {
+    ) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
         let countries = self
-            .countries
+            .country_ixes
             .lock()
             .unwrap()
             .iter()
@@ -183,6 +230,7 @@ impl CountryRepository<Postgres> for MockCountryRepository {
 #[derive(Default)]
 struct MockCountrySubdivisionRepository {
     country_subdivisions: Mutex<Vec<CountrySubdivisionModel>>,
+    country_subdivision_ixes: Mutex<Vec<CountrySubdivisionIdxModel>>,
 }
 
 #[async_trait]
@@ -192,21 +240,55 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
         country_subdivision: CountrySubdivisionModel,
     ) -> Result<CountrySubdivisionModel, sqlx::Error> {
         self.country_subdivisions.lock().unwrap().push(country_subdivision.clone());
+        let country_subdivision_idx = CountrySubdivisionIdxModel {
+            country_subdivision_id: country_subdivision.id,
+            country_id: country_subdivision.country_id,
+            code_hash: 0, // dummy hash
+        };
+        self.country_subdivision_ixes
+            .lock()
+            .unwrap()
+            .push(country_subdivision_idx);
         Ok(country_subdivision)
+    }
+
+    async fn load(&self, id: Uuid) -> Result<CountrySubdivisionModel, sqlx::Error> {
+        Ok(self
+            .country_subdivisions
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|s| s.id == id)
+            .cloned()
+            .unwrap())
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<CountrySubdivisionModel>, sqlx::Error> {
-        Ok(self.country_subdivisions.lock().unwrap().iter().find(|s| s.id == id).cloned())
+    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
+        Ok(self
+            .country_subdivision_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|s| s.country_subdivision_id == id)
+            .cloned())
     }
 
     async fn find_by_ids(
         &self,
-        _ids: &[Uuid],
-    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        ids: &[Uuid],
+    ) -> Result<Vec<CountrySubdivisionIdxModel>, Box<dyn Error + Send + Sync>> {
+        let subdivisions = self
+            .country_subdivision_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|s| ids.contains(&s.country_subdivision_id))
+            .cloned()
+            .collect();
+        Ok(subdivisions)
     }
 
     async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
@@ -225,9 +307,9 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
         country_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<CountrySubdivisionModel>, sqlx::Error> {
+    ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
         let country_subdivisions = self
-            .country_subdivisions
+            .country_subdivision_ixes
             .lock()
             .unwrap()
             .iter()
@@ -241,38 +323,82 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
         &self,
         country_id: Uuid,
         code: &str,
-    ) -> Result<Option<CountrySubdivisionModel>, sqlx::Error> {
-        Ok(self
+    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
+        let subdivision = self
             .country_subdivisions
             .lock()
             .unwrap()
             .iter()
             .find(|s| s.country_id == country_id && s.code == code)
-            .cloned())
+            .cloned();
+
+        if let Some(sub) = subdivision {
+            Ok(self
+                .country_subdivision_ixes
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|s| s.country_subdivision_id == sub.id)
+                .cloned())
+        } else {
+            Ok(None)
+        }
     }
 }
 
 #[derive(Default)]
 struct MockLocalityRepository {
     localities: Mutex<Vec<LocalityModel>>,
+    locality_ixes: Mutex<Vec<LocalityIdxModel>>,
 }
 
 #[async_trait]
 impl LocalityRepository<Postgres> for MockLocalityRepository {
     async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, sqlx::Error> {
         self.localities.lock().unwrap().push(locality.clone());
+        let locality_idx = LocalityIdxModel {
+            locality_id: locality.id,
+            country_subdivision_id: locality.country_subdivision_id,
+            code_hash: 0, // dummy hash
+        };
+        self.locality_ixes.lock().unwrap().push(locality_idx);
         Ok(locality)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityModel>, sqlx::Error> {
-        Ok(self.localities.lock().unwrap().iter().find(|c| c.id == id).cloned())
+    async fn load(&self, id: Uuid) -> Result<LocalityModel, sqlx::Error> {
+        Ok(self
+            .localities
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|c| c.id == id)
+            .cloned()
+            .unwrap())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
+        Ok(self
+            .locality_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|c| c.locality_id == id)
+            .cloned())
     }
 
     async fn find_by_ids(
         &self,
-        _ids: &[Uuid],
-    ) -> Result<Vec<LocalityModel>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        ids: &[Uuid],
+    ) -> Result<Vec<LocalityIdxModel>, Box<dyn Error + Send + Sync>> {
+        let localities = self
+            .locality_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|l| ids.contains(&l.locality_id))
+            .cloned()
+            .collect();
+        Ok(localities)
     }
 
     async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
@@ -291,9 +417,9 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
         country_subdivision_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<LocalityModel>, sqlx::Error> {
+    ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
         let localities = self
-            .localities
+            .locality_ixes
             .lock()
             .unwrap()
             .iter()
@@ -307,52 +433,103 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
         &self,
         country_subdivision_id: Uuid,
         code: &str,
-    ) -> Result<Option<LocalityModel>, sqlx::Error> {
-        Ok(self
+    ) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
+        let locality = self
             .localities
             .lock()
             .unwrap()
             .iter()
             .find(|c| c.country_subdivision_id == country_subdivision_id && c.code == code)
-            .cloned())
+            .cloned();
+
+        if let Some(loc) = locality {
+            Ok(self
+                .locality_ixes
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|l| l.locality_id == loc.id)
+                .cloned())
+        } else {
+            Ok(None)
+        }
     }
 }
 
 #[derive(Default)]
 struct MockLocationRepository {
     locations: Mutex<Vec<LocationModel>>,
+    location_ixes: Mutex<Vec<LocationIdxModel>>,
+    location_audits: Mutex<Vec<LocationAuditModel>>,
 }
 
 #[async_trait]
 impl LocationRepository<Postgres> for MockLocationRepository {
-    async fn save(&self, location: LocationModel) -> Result<LocationModel, sqlx::Error> {
+    async fn save(&self, location: LocationModel, audit_log_id: Uuid) -> Result<LocationModel, sqlx::Error> {
         self.locations.lock().unwrap().push(location.clone());
+        let location_idx = LocationIdxModel {
+            location_id: location.id,
+            locality_id: location.locality_id,
+            version: 0,
+            hash: 0,
+        };
+        self.location_ixes.lock().unwrap().push(location_idx);
+
+        let location_audit = LocationAuditModel {
+            location_id: location.id,
+            version: 0,
+            hash: 0,
+            street_line1: location.street_line1.clone(),
+            street_line2: location.street_line2.clone(),
+            street_line3: location.street_line3.clone(),
+            street_line4: location.street_line4.clone(),
+            locality_id: location.locality_id,
+            postal_code: location.postal_code.clone(),
+            latitude: location.latitude,
+            longitude: location.longitude,
+            accuracy_meters: location.accuracy_meters,
+            location_type: location.location_type,
+            audit_log_id,
+        };
+        self.location_audits.lock().unwrap().push(location_audit);
+
         Ok(location)
     }
 
-    async fn find_by_id(
-        &self,
-        id: Uuid,
-    ) -> Result<Option<LocationModel>, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> Result<LocationModel, sqlx::Error> {
         Ok(self
             .locations
             .lock()
             .unwrap()
             .iter()
             .find(|a| a.id == id)
+            .cloned()
+            .unwrap())
+    }
+
+    async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<LocationIdxModel>, sqlx::Error> {
+        Ok(self
+            .location_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|a| a.location_id == id)
             .cloned())
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<LocationModel>, sqlx::Error> {
+    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
         let locations = self
-            .locations
+            .location_ixes
             .lock()
             .unwrap()
             .iter()
-            .filter(|a| ids.contains(&a.id))
+            .filter(|a| ids.contains(&a.location_id))
             .cloned()
             .collect();
         Ok(locations)
@@ -381,9 +558,9 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         locality_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<LocationModel>, sqlx::Error> {
+    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
         let locations = self
-            .locations
+            .location_ixes
             .lock()
             .unwrap()
             .iter()
@@ -414,14 +591,22 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         locality_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<LocationModel>, sqlx::Error> {
+    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
         let locations = self
             .locations
             .lock()
             .unwrap()
             .iter()
             .filter(|l| l.location_type == location_type && l.locality_id == locality_id)
-            .cloned()
+            .map(|l| {
+                self.location_ixes
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .find(|i| i.location_id == l.id)
+                    .cloned()
+                    .unwrap()
+            })
             .collect();
         Ok(locations)
     }
@@ -430,6 +615,8 @@ impl LocationRepository<Postgres> for MockLocationRepository {
 #[derive(Default)]
 struct MockMessagingRepository {
     messages: Mutex<Vec<MessagingModel>>,
+    message_ixes: Mutex<Vec<MessagingIdxModel>>,
+    message_audits: Mutex<Vec<MessagingAuditModel>>,
 }
 
 #[async_trait]
@@ -437,29 +624,61 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
     async fn save(
         &self,
         messaging: MessagingModel,
+        audit_log_id: Uuid,
     ) -> Result<MessagingModel, sqlx::Error> {
         self.messages.lock().unwrap().push(messaging.clone());
+        let msg_idx = MessagingIdxModel {
+            messaging_id: messaging.id,
+            value_hash: 0, // dummy hash
+            version: 0,
+            hash: 0,
+        };
+        self.message_ixes.lock().unwrap().push(msg_idx);
+
+        let msg_audit = MessagingAuditModel {
+            messaging_id: messaging.id,
+            version: 0,
+            hash: 0,
+            messaging_type: messaging.messaging_type,
+            value: messaging.value.clone(),
+            other_type: messaging.other_type.clone(),
+            audit_log_id,
+        };
+        self.message_audits.lock().unwrap().push(msg_audit);
+
         Ok(messaging)
+    }
+
+    async fn load(&self, id: Uuid) -> Result<MessagingModel, sqlx::Error> {
+        Ok(self.messages.lock().unwrap().iter().find(|p| p.id == id).cloned().unwrap())
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<MessagingModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
         Ok(self
-            .messages
+            .message_ixes
             .lock()
             .unwrap()
             .iter()
-            .find(|m| m.id == id)
+            .find(|m| m.messaging_id == id)
             .cloned())
     }
 
     async fn find_by_ids(
         &self,
-        _ids: &[Uuid],
-    ) -> Result<Vec<MessagingModel>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        ids: &[Uuid],
+    ) -> Result<Vec<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
+        let messages = self
+            .message_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|m| ids.contains(&m.messaging_id))
+            .cloned()
+            .collect();
+        Ok(messages)
     }
 
     async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
@@ -485,6 +704,8 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
 #[derive(Default)]
 struct MockEntityReferenceRepository {
     entities: Mutex<Vec<EntityReferenceModel>>,
+    entity_ixes: Mutex<Vec<EntityReferenceIdxModel>>,
+    entity_audits: Mutex<Vec<EntityReferenceAuditModel>>,
 }
 
 #[async_trait]
@@ -492,34 +713,61 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
     async fn save(
         &self,
         entity_ref: EntityReferenceModel,
+        audit_log_id: Uuid,
     ) -> Result<EntityReferenceModel, sqlx::Error> {
         self.entities.lock().unwrap().push(entity_ref.clone());
+        let entity_idx = EntityReferenceIdxModel {
+            entity_reference_id: entity_ref.id,
+            person_id: entity_ref.person_id,
+            version: 0,
+            hash: 0,
+        };
+        self.entity_ixes.lock().unwrap().push(entity_idx);
+
+        let entity_audit = EntityReferenceAuditModel {
+            entity_reference_id: entity_ref.id,
+            version: 0,
+            hash: 0,
+            person_id: entity_ref.person_id,
+            entity_role: entity_ref.entity_role,
+            reference_external_id: entity_ref.reference_external_id.clone(),
+            reference_details_l1: entity_ref.reference_details_l1.clone(),
+            reference_details_l2: entity_ref.reference_details_l2.clone(),
+            reference_details_l3: entity_ref.reference_details_l3.clone(),
+            audit_log_id,
+        };
+        self.entity_audits.lock().unwrap().push(entity_audit);
+
         Ok(entity_ref)
+    }
+
+    async fn load(&self, id: Uuid) -> Result<EntityReferenceModel, sqlx::Error> {
+        Ok(self.entities.lock().unwrap().iter().find(|p| p.id == id).cloned().unwrap())
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<EntityReferenceModel>, sqlx::Error> {
+    ) -> Result<Option<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
         Ok(self
-            .entities
+            .entity_ixes
             .lock()
             .unwrap()
             .iter()
-            .find(|e| e.id == id)
+            .find(|e| e.entity_reference_id == id)
             .cloned())
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<EntityReferenceModel>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
         let entities = self
-            .entities
+            .entity_ixes
             .lock()
             .unwrap()
             .iter()
-            .filter(|e| ids.contains(&e.id))
+            .filter(|e| ids.contains(&e.entity_reference_id))
             .cloned()
             .collect();
         Ok(entities)
@@ -549,9 +797,9 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
         person_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<EntityReferenceModel>, sqlx::Error> {
+    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
         let entities = self
-            .entities
+            .entity_ixes
             .lock()
             .unwrap()
             .iter()
@@ -566,7 +814,7 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
         _reference_external_id: &str,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<EntityReferenceModel>, sqlx::Error> {
+    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
         unimplemented!()
     }
 }
@@ -608,6 +856,14 @@ fn create_test_service() -> PersonServiceImpl {
     PersonServiceImpl::new(repositories)
 }
 
+fn create_test_audit_log() -> banking_api::domain::AuditLog {
+    banking_api::domain::AuditLog {
+        id: Uuid::new_v4(),
+        updated_at: chrono::Utc::now(),
+        updated_by_person_id: Uuid::new_v4(),
+    }
+}
+
 // Helper functions for creating test data
 fn create_test_country() -> Country {
     Country {
@@ -644,7 +900,6 @@ fn create_test_locality(country_subdivision_id: Uuid) -> Locality {
 fn create_test_location(locality_id: Uuid) -> Location {
     Location {
         id: Uuid::new_v4(),
-        version: 1,
         location_type: LocationType::Residential,
         street_line1: HeaplessString::try_from("123 Main St").unwrap(),
         street_line2: None,
@@ -655,32 +910,27 @@ fn create_test_location(locality_id: Uuid) -> Location {
         latitude: None,
         longitude: None,
         accuracy_meters: None,
-        audit_log_id: Uuid::new_v4(),
     }
 }
 
 fn create_test_messaging() -> Messaging {
     Messaging {
         id: Uuid::new_v4(),
-        version: 1,
         messaging_type: banking_api::domain::person::MessagingType::Email,
         value: HeaplessString::try_from("test@example.com").unwrap(),
         other_type: None,
-        audit_log_id: Uuid::new_v4(),
     }
 }
 
 fn create_test_entity_reference(person_id: Uuid) -> EntityReference {
     EntityReference {
         id: Uuid::new_v4(),
-        version: 1,
         person_id,
         entity_role: RelationshipRole::Customer,
         reference_external_id: HeaplessString::new(),
         reference_details_l1: None,
         reference_details_l2: None,
         reference_details_l3: None,
-        audit_log_id: Uuid::new_v4(),
     }
 }
 
@@ -705,7 +955,6 @@ fn create_test_person() -> Person {
         department: None,
         location_id: None,
         duplicate_of_person_id: None,
-        audit_log_id: Uuid::new_v4(),
     }
 }
 
@@ -867,7 +1116,8 @@ async fn test_create_location() {
     let locality = create_test_locality(country_subdivision.id);
     service.create_locality(locality.clone()).await.unwrap();
     let location = create_test_location(locality.id);
-    let created_location = service.create_location(location.clone()).await.unwrap();
+    let audit_log = create_test_audit_log();
+    let created_location = service.create_location(location.clone(), audit_log).await.unwrap();
     assert_eq!(location.id, created_location.id);
 }
 
@@ -881,7 +1131,7 @@ async fn test_find_location_by_id() {
     let locality = create_test_locality(country_subdivision.id);
     service.create_locality(locality.clone()).await.unwrap();
     let location = create_test_location(locality.id);
-    service.create_location(location.clone()).await.unwrap();
+    service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
     let found_location = service
         .find_location_by_id(location.id)
         .await
@@ -900,7 +1150,7 @@ async fn test_find_locations_by_street_line1() {
     let locality = create_test_locality(country_subdivision.id);
     service.create_locality(locality.clone()).await.unwrap();
     let location = create_test_location(locality.id);
-    service.create_location(location.clone()).await.unwrap();
+    service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
     let locations = service
         .find_locations_by_street_line1(location.street_line1.clone())
         .await
@@ -918,7 +1168,7 @@ async fn test_find_locations_by_locality_id() {
     let locality = create_test_locality(country_subdivision.id);
     service.create_locality(locality.clone()).await.unwrap();
     let location = create_test_location(locality.id);
-    service.create_location(location.clone()).await.unwrap();
+    service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
     let locations = service.find_locations_by_locality_id(locality.id).await.unwrap();
     assert!(!locations.is_empty());
 }
@@ -933,7 +1183,7 @@ async fn test_find_locations_by_type_and_locality() {
     let locality = create_test_locality(country_subdivision.id);
     service.create_locality(locality.clone()).await.unwrap();
     let location = create_test_location(locality.id);
-    service.create_location(location.clone()).await.unwrap();
+    service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
     let locations = service
         .find_locations_by_type_and_locality(location.location_type, locality.id)
         .await
@@ -945,7 +1195,7 @@ async fn test_find_locations_by_type_and_locality() {
 async fn test_create_messaging() {
     let service = create_test_service();
     let messaging = create_test_messaging();
-    let created_messaging = service.create_messaging(messaging.clone()).await.unwrap();
+    let created_messaging = service.create_messaging(messaging.clone(), create_test_audit_log()).await.unwrap();
     assert_eq!(messaging.id, created_messaging.id);
 }
 
@@ -953,7 +1203,7 @@ async fn test_create_messaging() {
 async fn test_find_messaging_by_id() {
     let service = create_test_service();
     let messaging = create_test_messaging();
-    service.create_messaging(messaging.clone()).await.unwrap();
+    service.create_messaging(messaging.clone(), create_test_audit_log()).await.unwrap();
     let found_messaging = service
         .find_messaging_by_id(messaging.id)
         .await
@@ -966,7 +1216,7 @@ async fn test_find_messaging_by_id() {
 async fn test_find_messaging_by_value() {
     let service = create_test_service();
     let messaging = create_test_messaging();
-    service.create_messaging(messaging.clone()).await.unwrap();
+    service.create_messaging(messaging.clone(), create_test_audit_log()).await.unwrap();
     let found_messaging = service
         .find_messaging_by_value(messaging.value.clone())
         .await
@@ -979,10 +1229,10 @@ async fn test_find_messaging_by_value() {
 async fn test_create_entity_reference() {
     let service = create_test_service();
     let person = create_test_person();
-    service.create_person(person.clone()).await.unwrap();
+    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
     let entity_ref = create_test_entity_reference(person.id);
     let created_entity_ref = service
-        .create_entity_reference(entity_ref.clone(), banking_api::domain::AuditLog { id: Uuid::new_v4(), updated_at: chrono::Utc::now(), updated_by_person_id: Uuid::new_v4() })
+        .create_entity_reference(entity_ref.clone(), create_test_audit_log())
         .await
         .unwrap();
     assert_eq!(entity_ref.id, created_entity_ref.id);
@@ -992,10 +1242,10 @@ async fn test_create_entity_reference() {
 async fn test_find_entity_reference_by_id() {
     let service = create_test_service();
     let person = create_test_person();
-    service.create_person(person.clone()).await.unwrap();
+    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
     let entity_ref = create_test_entity_reference(person.id);
     service
-        .create_entity_reference(entity_ref.clone(), banking_api::domain::AuditLog { id: Uuid::new_v4(), updated_at: chrono::Utc::now(), updated_by_person_id: Uuid::new_v4() })
+        .create_entity_reference(entity_ref.clone(), create_test_audit_log())
         .await
         .unwrap();
     let found_entity_ref = service
@@ -1010,10 +1260,10 @@ async fn test_find_entity_reference_by_id() {
 async fn test_find_entity_references_by_person_id() {
     let service = create_test_service();
     let person = create_test_person();
-    service.create_person(person.clone()).await.unwrap();
+    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
     let entity_ref = create_test_entity_reference(person.id);
     service
-        .create_entity_reference(entity_ref.clone(), banking_api::domain::AuditLog { id: Uuid::new_v4(), updated_at: chrono::Utc::now(), updated_by_person_id: Uuid::new_v4() })
+        .create_entity_reference(entity_ref.clone(), create_test_audit_log())
         .await
         .unwrap();
     let entity_refs = service
@@ -1027,7 +1277,7 @@ async fn test_find_entity_references_by_person_id() {
 async fn test_create_person() {
     let service = create_test_service();
     let person = create_test_person();
-    let created_person = service.create_person(person.clone()).await.unwrap();
+    let created_person = service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
     assert_eq!(person.id, created_person.id);
 }
 
@@ -1035,7 +1285,7 @@ async fn test_create_person() {
 async fn test_find_person_by_id() {
     let service = create_test_service();
     let person = create_test_person();
-    service.create_person(person.clone()).await.unwrap();
+    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
     let found_person = service.find_person_by_id(person.id).await.unwrap().unwrap();
     assert_eq!(person.id, found_person.id);
 }
@@ -1044,7 +1294,7 @@ async fn test_find_person_by_id() {
 async fn test_get_person_by_external_identifier() {
     let service = create_test_service();
     let person = create_test_person();
-    service.create_person(person.clone()).await.unwrap();
+    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
     let found_person = service
         .get_persons_by_external_identifier(person.external_identifier.clone().unwrap())
         .await

@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use sqlx::Database;
 use uuid::Uuid;
 use crate::models::person::{
-    CountryModel, CountrySubdivisionModel, EntityReferenceModel, LocationModel, LocationType,
-    LocalityModel, MessagingModel, PersonModel, PersonIdxModel,
+    CountryModel, CountryIdxModel, CountrySubdivisionModel, CountrySubdivisionIdxModel, EntityReferenceModel, EntityReferenceIdxModel, LocationModel, LocationIdxModel, LocationType,
+    LocalityModel, LocalityIdxModel, MessagingModel, MessagingIdxModel, PersonModel, PersonIdxModel,
 };
 
 #[async_trait]
 pub trait PersonRepository<DB: Database>: Send + Sync {
-    async fn save(&self, person: PersonModel) -> Result<PersonModel, sqlx::Error>;
+    async fn save(&self, person: PersonModel, audit_log_id: Uuid) -> Result<PersonModel, sqlx::Error>;
     async fn load(&self, id: Uuid) -> Result<PersonModel, sqlx::Error>;
     async fn find_by_id(
         &self,
@@ -35,14 +35,15 @@ pub trait PersonRepository<DB: Database>: Send + Sync {
 #[async_trait]
 pub trait CountryRepository<DB: Database>: Send + Sync {
     async fn save(&self, country: CountryModel) -> Result<CountryModel, sqlx::Error>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<CountryModel>, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<CountryModel, sqlx::Error>;
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<CountryIdxModel>, sqlx::Error>;
     async fn find_by_iso2(
         &self,
         iso2: &str,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<CountryModel>, sqlx::Error>;
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CountryModel>, sqlx::Error>;
+    ) -> Result<Vec<CountryIdxModel>, sqlx::Error>;
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CountryIdxModel>, sqlx::Error>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_ids_by_iso2(
         &self,
@@ -56,22 +57,23 @@ pub trait CountrySubdivisionRepository<DB: Database>: Send + Sync {
         &self,
         country_subdivision: CountrySubdivisionModel,
     ) -> Result<CountrySubdivisionModel, sqlx::Error>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<CountrySubdivisionModel>, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<CountrySubdivisionModel, sqlx::Error>;
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error>;
     async fn find_by_country_id(
         &self,
         country_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<CountrySubdivisionModel>, sqlx::Error>;
+    ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error>;
     async fn find_by_code(
         &self,
         country_id: Uuid,
         code: &str,
-    ) -> Result<Option<CountrySubdivisionModel>, sqlx::Error>;
+    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error>;
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<CountrySubdivisionModel>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<Vec<CountrySubdivisionIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_ids_by_country_id(
         &self,
@@ -82,22 +84,23 @@ pub trait CountrySubdivisionRepository<DB: Database>: Send + Sync {
 #[async_trait]
 pub trait LocalityRepository<DB: Database>: Send + Sync {
     async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, sqlx::Error>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityModel>, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<LocalityModel, sqlx::Error>;
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityIdxModel>, sqlx::Error>;
     async fn find_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<LocalityModel>, sqlx::Error>;
+    ) -> Result<Vec<LocalityIdxModel>, sqlx::Error>;
     async fn find_by_code(
         &self,
         country_id: Uuid,
         code: &str,
-    ) -> Result<Option<LocalityModel>, sqlx::Error>;
+    ) -> Result<Option<LocalityIdxModel>, sqlx::Error>;
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<LocalityModel>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<Vec<LocalityIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_ids_by_country_subdivision_id(
         &self,
@@ -107,23 +110,24 @@ pub trait LocalityRepository<DB: Database>: Send + Sync {
 
 #[async_trait]
 pub trait LocationRepository<DB: Database>: Send + Sync {
-    async fn save(&self, location: LocationModel) -> Result<LocationModel, sqlx::Error>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationModel>, sqlx::Error>;
+    async fn save(&self, location: LocationModel, audit_log_id: Uuid) -> Result<LocationModel, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<LocationModel, sqlx::Error>;
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationIdxModel>, sqlx::Error>;
     async fn find_ids_by_street_line1(&self, street_line1: &str) -> Result<Vec<Uuid>, sqlx::Error>;
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationModel>, sqlx::Error>;
+    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationIdxModel>, sqlx::Error>;
     async fn find_by_locality_id(
         &self,
         locality_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<LocationModel>, sqlx::Error>;
+    ) -> Result<Vec<LocationIdxModel>, sqlx::Error>;
     async fn find_by_type_and_locality(
         &self,
         location_type: LocationType,
         locality_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<LocationModel>, sqlx::Error>;
+    ) -> Result<Vec<LocationIdxModel>, sqlx::Error>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_ids_by_location_type(
         &self,
@@ -140,16 +144,18 @@ pub trait MessagingRepository<DB: Database>: Send + Sync {
     async fn save(
         &self,
         messaging: MessagingModel,
+        audit_log_id: Uuid,
     ) -> Result<MessagingModel, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<MessagingModel, sqlx::Error>;
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<MessagingModel>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<Option<MessagingIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<MessagingModel>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<Vec<MessagingIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -164,24 +170,29 @@ pub trait EntityReferenceRepository<DB: Database>: Send + Sync {
     async fn save(
         &self,
         entity_ref: EntityReferenceModel,
+        audit_log_id: Uuid,
     ) -> Result<EntityReferenceModel, sqlx::Error>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<EntityReferenceModel>, sqlx::Error>;
+    async fn load(&self, id: Uuid) -> Result<EntityReferenceModel, sqlx::Error>;
+    async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<EntityReferenceIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_by_person_id(
         &self,
         person_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<EntityReferenceModel>, sqlx::Error>;
+    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error>;
     async fn find_by_reference_external_id(
         &self,
         reference_external_id: &str,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<EntityReferenceModel>, sqlx::Error>;
+    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error>;
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<EntityReferenceModel>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<Vec<EntityReferenceIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_ids_by_person_id(
         &self,
