@@ -1,5 +1,5 @@
 use banking_logic::services::repositories::Repositories;
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres};
 use std::sync::Arc;
 
 pub mod repository;
@@ -24,7 +24,7 @@ impl PostgresRepositories {
         Self { pool }
     }
 
-    pub async fn create_person_service_repositories(&self) -> Repositories {
+    pub async fn create_person_service_repositories(&self) -> Repositories<Postgres> {
         let country_repository =
             Arc::new(CountryRepositoryImpl::new(self.pool.clone()).await);
         let country_subdivision_repository = Arc::new(

@@ -13,19 +13,20 @@ use uuid::Uuid;
 
 use crate::mappers::person_mapper::{ToDomain, ToModel};
 use crate::services::repositories::Repositories;
+use sqlx::Database;
 
-pub struct PersonServiceImpl {
-    repositories: Repositories,
+pub struct PersonServiceImpl<DB: Database> {
+    repositories: Repositories<DB>,
 }
 
-impl PersonServiceImpl {
-    pub fn new(repositories: Repositories) -> Self {
+impl<DB: Database> PersonServiceImpl<DB> {
+    pub fn new(repositories: Repositories<DB>) -> Self {
         Self { repositories }
     }
 }
 
 #[async_trait]
-impl PersonService for PersonServiceImpl {
+impl<DB: Database + Send + Sync> PersonService for PersonServiceImpl<DB> {
     async fn create_country(&self, country: Country) -> BankingResult<Country> {
         let model = country.to_model();
         let saved_model = self.repositories.country_repository.save(model).await?;
