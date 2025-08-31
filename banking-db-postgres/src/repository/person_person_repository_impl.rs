@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use banking_db::models::person::{
     PersonAuditModel, PersonIdxModel, PersonIdxModelCache, PersonModel,
 };
-use banking_db::repository::PersonRepository;
+use banking_db::repository::{LocationRepository, PersonRepository};
+use crate::repository::person_location_repository_impl::LocationRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
@@ -14,16 +15,21 @@ use uuid::Uuid;
 pub struct PersonRepositoryImpl {
     pool: Arc<PgPool>,
     person_idx_cache: Arc<RwLock<PersonIdxModelCache>>,
+    location_repository: Arc<LocationRepositoryImpl>,
 }
 
 impl PersonRepositoryImpl {
-    pub async fn new(pool: Arc<PgPool>) -> Self {
+    pub async fn new(
+        pool: Arc<PgPool>,
+        location_repository: Arc<LocationRepositoryImpl>,
+    ) -> Self {
         let person_idx_models = Self::load_all_person_idx(&pool).await.unwrap();
         let person_idx_cache =
             Arc::new(RwLock::new(PersonIdxModelCache::new(person_idx_models).unwrap()));
         Self {
             pool,
             person_idx_cache,
+            location_repository,
         }
     }
 
@@ -44,8 +50,38 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         person: PersonModel,
         audit_log_id: Uuid,
     ) -> Result<PersonModel, sqlx::Error> {
+        if let Some(org_id) = person.organization_person_id {
+            if !self
+                .exists_by_id(org_id)
+                .await
+                .map_err(sqlx::Error::Configuration)?
+            {
+                return Err(sqlx::Error::RowNotFound);
+            }
+        }
+        if let Some(loc_id) = person.location_id {
+            if !self
+                .location_repository
+                .exists_by_id(loc_id)
+                .await
+                .map_err(sqlx::Error::Configuration)?
+            {
+                return Err(sqlx::Error::RowNotFound);
+            }
+        }
+        if let Some(dup_id) = person.duplicate_of_person_id {
+            if !self
+                .exists_by_id(dup_id)
+                .await
+                .map_err(sqlx::Error::Configuration)?
+            {
+                return Err(sqlx::Error::RowNotFound);
+            }
+        }
+
         let mut hasher = XxHash64::with_seed(0);
-        let person_cbor = serde_cbor::to_vec(&person).unwrap();
+        let mut person_cbor = Vec::new();
+        ciborium::ser::into_writer(&person, &mut person_cbor).unwrap();
         hasher.write(&person_cbor);
         let new_hash = hasher.finish() as i64;
 

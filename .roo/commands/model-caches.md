@@ -60,7 +60,7 @@ description: you are a Rust programming expert tasked with generating a thread-s
 **Source Instructions on `CountryModel`:**
 ```rust
 /// # Cache: CountryIdxModelCache
-/// - Immutable Set of Immutable Records Cache
+/// - Mutable Set of Immutable Records Cache
 /// - Concurent
 ```
 
@@ -80,7 +80,11 @@ pub struct CountryIdxModelCache {
 }
 
 impl CountryIdxModelCache {
-    pub fn new(items: Vec<CountryIdxModel>) -> Result<Arc<Self>, &'static str> {
+    pub fn new(items: Vec<CountryIdxModel>) -> Result<Self, &'static str> {
+        // ... implementation logic ...
+    }
+
+    pub fn add(&mut self, item: CountryIdxModel) {
         // ... implementation logic ...
     }
 

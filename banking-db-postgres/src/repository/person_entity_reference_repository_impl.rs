@@ -4,7 +4,8 @@ use banking_db::models::person::{
     EntityReferenceAuditModel, EntityReferenceIdxModel, EntityReferenceIdxModelCache,
     EntityReferenceModel,
 };
-use banking_db::repository::EntityReferenceRepository;
+use banking_db::repository::{EntityReferenceRepository, PersonRepository};
+use crate::repository::person_person_repository_impl::PersonRepositoryImpl;
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
@@ -15,10 +16,14 @@ use uuid::Uuid;
 pub struct EntityReferenceRepositoryImpl {
     pool: Arc<PgPool>,
     entity_reference_idx_cache: Arc<RwLock<EntityReferenceIdxModelCache>>,
+    person_repository: Arc<PersonRepositoryImpl>,
 }
 
 impl EntityReferenceRepositoryImpl {
-    pub async fn new(pool: Arc<PgPool>) -> Self {
+    pub async fn new(
+        pool: Arc<PgPool>,
+        person_repository: Arc<PersonRepositoryImpl>,
+    ) -> Self {
         let entity_reference_idx_models =
             Self::load_all_entity_reference_idx(&pool).await.unwrap();
         let entity_reference_idx_cache = Arc::new(RwLock::new(
@@ -27,6 +32,7 @@ impl EntityReferenceRepositoryImpl {
         Self {
             pool,
             entity_reference_idx_cache,
+            person_repository,
         }
     }
 
@@ -46,8 +52,18 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         entity_ref: EntityReferenceModel,
         audit_log_id: Uuid,
     ) -> Result<EntityReferenceModel, sqlx::Error> {
+        if !self
+            .person_repository
+            .exists_by_id(entity_ref.person_id)
+            .await
+            .map_err(sqlx::Error::Configuration)?
+        {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
         let mut hasher = XxHash64::with_seed(0);
-        let entity_ref_cbor = serde_cbor::to_vec(&entity_ref).unwrap();
+        let mut entity_ref_cbor = Vec::new();
+        ciborium::ser::into_writer(&entity_ref, &mut entity_ref_cbor).unwrap();
         hasher.write(&entity_ref_cbor);
         let new_hash = hasher.finish() as i64;
 

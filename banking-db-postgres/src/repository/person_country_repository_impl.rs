@@ -9,15 +9,18 @@ use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 
+use parking_lot::RwLock;
+
 pub struct CountryRepositoryImpl {
     pool: Arc<PgPool>,
-    country_idx_cache: Arc<CountryIdxModelCache>,
+    country_idx_cache: Arc<RwLock<CountryIdxModelCache>>,
 }
 
 impl CountryRepositoryImpl {
     pub async fn new(pool: Arc<PgPool>) -> Self {
         let country_idx_models = Self::load_all_country_idx(&pool).await.unwrap();
-        let country_idx_cache = CountryIdxModelCache::new(country_idx_models).unwrap();
+        let country_idx_cache =
+            Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
         Self {
             pool,
             country_idx_cache,
@@ -37,6 +40,19 @@ impl CountryRepositoryImpl {
 #[async_trait]
 impl CountryRepository<Postgres> for CountryRepositoryImpl {
     async fn save(&self, country: CountryModel) -> Result<CountryModel, sqlx::Error> {
+        let id_to_load = {
+            let cache = self.country_idx_cache.read();
+            if cache.contains_primary(&country.id) {
+                Some(country.id)
+            } else {
+                cache.get_by_iso2(&country.iso2)
+            }
+        };
+
+        if let Some(id) = id_to_load {
+            return self.load(id).await;
+        }
+
         sqlx::query(
             r#"
             INSERT INTO country (id, iso2, name_l1, name_l2, name_l3)
@@ -62,6 +78,10 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         .execute(&*self.pool)
         .await?;
 
+        let country_idx_models = Self::load_all_country_idx(&self.pool).await?;
+        let new_cache = CountryIdxModelCache::new(country_idx_models).unwrap();
+        *self.country_idx_cache.write() = new_cache;
+
         Ok(country)
     }
 
@@ -79,7 +99,8 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<CountryIdxModel>, sqlx::Error> {
-        Ok(self.country_idx_cache.get_by_primary(&id))
+        let cache = self.country_idx_cache.read();
+        Ok(cache.get_by_primary(&id))
     }
 
     async fn find_by_iso2(
@@ -91,8 +112,9 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         let mut result = Vec::new();
         let iso2_heapless = HeaplessString::<2>::from_str(iso2)
             .map_err(|_| sqlx::Error::Configuration("Invalid iso2 format".into()))?;
-        if let Some(country_id) = self.country_idx_cache.get_by_iso2(&iso2_heapless) {
-            if let Some(country_idx) = self.country_idx_cache.get_by_primary(&country_id) {
+        let cache = self.country_idx_cache.read();
+        if let Some(country_id) = cache.get_by_iso2(&iso2_heapless) {
+            if let Some(country_idx) = cache.get_by_primary(&country_id) {
                 result.push(country_idx);
             }
         }
@@ -101,8 +123,9 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
     async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
         let mut result = Vec::new();
+        let cache = self.country_idx_cache.read();
         for id in ids {
-            if let Some(country_idx) = self.country_idx_cache.get_by_primary(id) {
+            if let Some(country_idx) = cache.get_by_primary(id) {
                 result.push(country_idx);
             }
         }
@@ -110,7 +133,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.country_idx_cache.contains_primary(&id))
+        Ok(self.country_idx_cache.read().contains_primary(&id))
     }
 
     async fn find_ids_by_iso2(
@@ -120,7 +143,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         let iso2_heapless = HeaplessString::<2>::from_str(iso2)
             .map_err(|_| "Invalid iso2 format".to_string())?;
         let mut result = Vec::new();
-        if let Some(country_id) = self.country_idx_cache.get_by_iso2(&iso2_heapless) {
+        if let Some(country_id) = self.country_idx_cache.read().get_by_iso2(&iso2_heapless) {
             result.push(country_id);
         }
         Ok(result)

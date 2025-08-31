@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// Database model for location type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
@@ -159,6 +158,8 @@ pub struct CountrySubdivisionModel {
     /// # Index
     /// ## Nature
     /// - secondary
+    /// ## Constraint
+    /// - exists(CountryModel.id)
     pub country_id: Uuid,
 
     /// # Documentation
@@ -213,6 +214,8 @@ pub struct LocalityModel {
     /// # Index
     /// ## Nature
     /// - secondary
+    /// ## Constraint
+    /// - exists(CountrySubdivisionModel.id)
     pub country_subdivision_id: Uuid,
 
     /// # Documentation
@@ -292,6 +295,8 @@ pub struct LocationModel {
     /// # Index:
     /// ## Nature
     /// - secondary
+    /// ## Constraint
+    /// - exists(LocalityModel.id)
     pub locality_id: Uuid,
     pub postal_code: Option<HeaplessString<20>>,
 
@@ -511,6 +516,8 @@ pub struct EntityReferenceModel {
     /// # Audit
     /// ## Trait method
     /// - find_audits_by_person_id
+    /// ## Constraint
+    /// - exists(PersonModel.id)
     pub person_id: Uuid,
 
     /// # Documentation
@@ -647,7 +654,9 @@ pub struct PersonModel {
     pub entity_reference_count: i32,
     
     /// # Documentation
-    /// References PersonModel.person_id for organizational hierarchy
+    /// References PersonModel.id for organizational hierarchy
+    /// ## Constraint
+    /// - exists(PersonModel.id)
     pub organization_person_id: Option<Uuid>,
     
     /// # Documentation
@@ -673,9 +682,13 @@ pub struct PersonModel {
     pub department: Option<HeaplessString<50>>,
 
     /// # Documentation
-    /// References LocationModel.location_id for person's location
+    /// References LocationModel.id for person's location
+    /// ## Constraint
+    /// - exists(LocationModel.id)
     pub location_id: Option<Uuid>,
     
+    /// ## Constraint
+    /// - exists(PersonModel.id)
     pub duplicate_of_person_id: Option<Uuid>,
 }
 
@@ -964,7 +977,7 @@ pub struct CountryIdxModelCache {
 impl CountryIdxModelCache {
     pub fn new(
         items: Vec<CountryIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    ) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_iso2 = HashMap::new();
 
@@ -982,10 +995,24 @@ impl CountryIdxModelCache {
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(CountryIdxModelCache {
+        Ok(CountryIdxModelCache {
             by_id,
             by_iso2,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: CountryIdxModel) {
+        let primary_key = item.country_id;
+        if self.by_id.contains_key(&primary_key) {
+            return;
+        }
+
+        if self.by_iso2.contains_key(&item.iso2) {
+            return;
+        }
+        self.by_iso2.insert(item.iso2.clone(), primary_key);
+        
+        self.by_id.insert(primary_key, item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
@@ -1037,7 +1064,7 @@ pub struct CountrySubdivisionIdxModelCache {
 impl CountrySubdivisionIdxModelCache {
     pub fn new(
         items: Vec<CountrySubdivisionIdxModel>,
-    ) -> Result<Arc<Self>, &'static str> {
+    ) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_code_hash = HashMap::new();
         let mut by_country_id = HashMap::new();
@@ -1061,11 +1088,25 @@ impl CountrySubdivisionIdxModelCache {
             by_id.insert(primary_key, item);
         }
 
-        Ok(Arc::new(CountrySubdivisionIdxModelCache {
+        Ok(CountrySubdivisionIdxModelCache {
             by_id,
             by_code_hash,
             by_country_id,
-        }))
+        })
+    }
+
+    pub fn add(&mut self, item: CountrySubdivisionIdxModel) {
+        let primary_key = item.country_subdivision_id;
+        if self.by_id.contains_key(&primary_key) {
+            return;
+        }
+
+        self.by_code_hash.insert(item.code_hash, primary_key);
+        self.by_country_id
+            .entry(item.country_id)
+            .or_default()
+            .push(primary_key);
+        self.by_id.insert(primary_key, item);
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {

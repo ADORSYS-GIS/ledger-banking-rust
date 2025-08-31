@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use banking_db::models::person::{
     LocationAuditModel, LocationIdxModel, LocationIdxModelCache, LocationModel, LocationType,
 };
-use banking_db::repository::LocationRepository;
+use banking_db::repository::{LocalityRepository, LocationRepository};
+use crate::repository::person_locality_repository_impl::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
@@ -14,16 +15,21 @@ use uuid::Uuid;
 pub struct LocationRepositoryImpl {
     pool: Arc<PgPool>,
     location_idx_cache: Arc<RwLock<LocationIdxModelCache>>,
+    locality_repository: Arc<LocalityRepositoryImpl>,
 }
 
 impl LocationRepositoryImpl {
-    pub async fn new(pool: Arc<PgPool>) -> Self {
+    pub async fn new(
+        pool: Arc<PgPool>,
+        locality_repository: Arc<LocalityRepositoryImpl>,
+    ) -> Self {
         let location_idx_models = Self::load_all_location_idx(&pool).await.unwrap();
         let location_idx_cache =
             Arc::new(RwLock::new(LocationIdxModelCache::new(location_idx_models).unwrap()));
         Self {
             pool,
             location_idx_cache,
+            locality_repository,
         }
     }
 
@@ -43,8 +49,18 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         location: LocationModel,
         audit_log_id: Uuid,
     ) -> Result<LocationModel, sqlx::Error> {
+        if !self
+            .locality_repository
+            .exists_by_id(location.locality_id)
+            .await
+            .map_err(sqlx::Error::Configuration)?
+        {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
         let mut hasher = XxHash64::with_seed(0);
-        let location_cbor = serde_cbor::to_vec(&location).unwrap();
+        let mut location_cbor = Vec::new();
+        ciborium::ser::into_writer(&location, &mut location_cbor).unwrap();
         hasher.write(&location_cbor);
         let new_hash = hasher.finish() as i64;
 

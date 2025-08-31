@@ -45,7 +45,8 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         audit_log_id: Uuid,
     ) -> Result<MessagingModel, sqlx::Error> {
         let mut hasher = XxHash64::with_seed(0);
-        let messaging_cbor = serde_cbor::to_vec(&messaging).unwrap();
+        let mut messaging_cbor = Vec::new();
+        ciborium::ser::into_writer(&messaging, &mut messaging_cbor).unwrap();
         hasher.write(&messaging_cbor);
         let new_hash = hasher.finish() as i64;
 

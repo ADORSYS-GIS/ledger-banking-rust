@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use banking_db::models::person::{LocalityIdxModel, LocalityIdxModelCache, LocalityModel};
-use banking_db::repository::LocalityRepository;
+use banking_db::repository::{CountrySubdivisionRepository, LocalityRepository};
+use crate::repository::person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
 use std::error::Error;
@@ -12,10 +13,14 @@ use uuid::Uuid;
 pub struct LocalityRepositoryImpl {
     pool: Arc<PgPool>,
     locality_idx_cache: Arc<RwLock<LocalityIdxModelCache>>,
+    country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
 }
 
 impl LocalityRepositoryImpl {
-    pub async fn new(pool: Arc<PgPool>) -> Self {
+    pub async fn new(
+        pool: Arc<PgPool>,
+        country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
+    ) -> Self {
         let locality_idx_models = Self::load_all_locality_idx(&pool).await.unwrap();
         let locality_idx_cache = Arc::new(RwLock::new(
             LocalityIdxModelCache::new(locality_idx_models).unwrap(),
@@ -23,6 +28,7 @@ impl LocalityRepositoryImpl {
         Self {
             pool,
             locality_idx_cache,
+            country_subdivision_repository,
         }
     }
 
@@ -41,6 +47,15 @@ impl LocalityRepositoryImpl {
 #[async_trait]
 impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
     async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, sqlx::Error> {
+        if !self
+            .country_subdivision_repository
+            .exists_by_id(locality.country_subdivision_id)
+            .await
+            .map_err(sqlx::Error::Configuration)?
+        {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
         sqlx::query(
             r#"
             INSERT INTO locality (id, country_subdivision_id, code, name_l1, name_l2, name_l3)

@@ -66,6 +66,55 @@ To support data partitioning and polyglot persistence, **no foreign key constrai
     *   **Database Check (Fallback):** If no in-memory index is available (e.g., for highly dynamic or non-indexed entities), the repository should fall back to a direct database lookup to verify existence.
 *   **Database Schema:** Database schemas should define table structures and native data types only. All relationships and business rules are managed by the application.
 
+#### Repository Dependencies for Constraint Validation
+
+When a repository (`Repo A`) needs to validate a constraint against an entity managed by another repository (`Repo B`), `Repo B` must be injected into `Repo A` as a dependency. This is achieved through constructor injection.
+
+*   **Dependency Injection:** The dependent repository (`Repo A`) should hold an `Arc<dyn TraitOfRepoB>` to the dependency. This dependency is passed in during instantiation.
+*   **Centralized Instantiation:** All repositories are instantiated centrally (e.g., within the `UnitOfWork` or a dedicated factory like `PostgresRepositories`). This central location is responsible for creating repository instances and wiring their dependencies correctly.
+*   **Validation Logic:** Inside the `save` method of `Repo A`, it will call `repo_b.exists_by_id(foreign_key_id)` before proceeding with the insert or update operation. If the check fails, it should return an appropriate error (e.g., `sqlx::Error::RowNotFound`).
+
+**Example: `CountrySubdivisionRepository` depending on `CountryRepository`**
+
+```rust
+// In banking-db-postgres/src/repository/person_country_subdivision_repository_impl.rs
+
+pub struct CountrySubdivisionRepositoryImpl {
+    pool: Arc<PgPool>,
+    country_subdivision_idx_cache: Arc<CountrySubdivisionIdxModelCache>,
+    country_repository: Arc<dyn CountryRepository<Postgres>>, // Dependency
+}
+
+impl CountrySubdivisionRepositoryImpl {
+    pub async fn new(
+        pool: Arc<PgPool>,
+        country_repository: Arc<dyn CountryRepository<Postgres>>, // Injected
+    ) -> Self {
+        // ... constructor logic
+    }
+}
+
+#[async_trait]
+impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl {
+    async fn save(
+        &self,
+        country_subdivision: CountrySubdivisionModel,
+    ) -> Result<CountrySubdivisionModel, sqlx::Error> {
+        // Constraint validation using the injected repository
+        if !self
+            .country_repository
+            .exists_by_id(country_subdivision.country_id)
+            .await
+            .map_err(|e| sqlx::Error::Configuration(e.into()))?
+        {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
+        // ... rest of the save logic
+    }
+}
+```
+
 ### 3. Repository Trait Design (`banking-db/src/repository/`)
 
 To ensure consistency and correctly implement the architectural patterns of application-managed indexes and referential integrity, all repository traits must follow these design guidelines.
