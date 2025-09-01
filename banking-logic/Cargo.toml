@@ -34,7 +34,9 @@ rand = { workspace = true }
 
 [dev-dependencies]
 banking-db-postgres = { path = "../banking-db-postgres", features = ["test-utils"] }
-sqlx = { version = "0.8.0", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "bigdecimal"] }
+sqlx = { workspace = true, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "rust_decimal", "macros"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+anyhow = "1.0"
 
 [features]
 postgres_tests = []

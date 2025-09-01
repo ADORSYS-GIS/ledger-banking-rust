@@ -211,6 +211,7 @@ dependencies = [
 name = "banking-logic"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "banking-api",
  "banking-db",

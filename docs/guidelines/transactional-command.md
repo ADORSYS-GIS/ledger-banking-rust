@@ -32,6 +32,52 @@ The `PostgresUnitOfWorkSession` holds an `sqlx::Transaction`. The `sqlx::Transac
 
 Therefore, **there is no need to add an explicit `Drop` implementation to `PostgresUnitOfWorkSession`**. If a panic occurs, the stack will unwind, the `PostgresUnitOfWorkSession` will be dropped, which in turn drops the `sqlx::Transaction`, triggering an automatic rollback. This ensures that the transaction is always cleaned up correctly, even in the case of unexpected panics.
 
+
+## Repository Implementation with `Executor`
+
+To allow repository methods to operate both within a transaction and with a direct connection pool, we use an `Executor` enum. This pattern is crucial for code reuse and flexibility, as some operations might not need to be part of a larger transaction.
+
+### The `Executor` Enum
+
+Defined in `banking-db-postgres/src/repository/executor.rs`, the `Executor` is a simple enum that holds either a database pool or a transaction:
+
+```rust
+#[derive(Clone)]
+pub enum Executor {
+    Pool(Arc<PgPool>),
+    Tx(Arc<Mutex<Transaction<'static, Postgres>>>),
+}
+```
+
+-   `Executor::Pool`: Wraps an `Arc<PgPool>`, representing a connection to the database connection pool. Used for non-transactional operations.
+-   `Executor::Tx`: Wraps an `Arc<Mutex<Transaction<'...>>>`, representing an active database transaction. This is used when repositories are created within a `UnitOfWorkSession`. The `Mutex` is necessary to allow mutable access to the transaction across `async` calls.
+
+### Usage in Repositories
+
+Each repository implementation holds an instance of `Executor`. Inside the repository methods, a `match` statement is used to get the underlying database executor (`&PgPool` or `&mut Transaction`).
+
+This allows the same method to execute a query against either a standalone connection or within an ongoing transaction.
+
+Here is a typical implementation within a repository method:
+
+```rust
+// Inside a repository method
+let query = sqlx::query("SELECT * FROM country WHERE id = $1").bind(id);
+
+let row = match &self.executor {
+    Executor::Pool(pool) => {
+        // Execute directly on the pool
+        query.fetch_one(&**pool).await?
+    }
+    Executor::Tx(tx) => {
+        // Lock the mutex and execute on the transaction
+        let mut tx = tx.lock().await;
+        query.fetch_one(&mut **tx).await?
+    }
+};
+```
+
+This pattern centralizes the logic for handling both transactional and non-transactional database access, making the repositories clean and adaptable. When a `UnitOfWorkSession` is created, it instantiates repositories with an `Executor::Tx`, ensuring all subsequent operations are part of the same transaction.
 ## Example Usage
 
 ```rust

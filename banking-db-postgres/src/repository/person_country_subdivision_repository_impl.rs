@@ -3,44 +3,52 @@ use banking_db::models::person::{
     CountrySubdivisionIdxModel, CountrySubdivisionIdxModelCache, CountrySubdivisionModel,
 };
 use banking_db::repository::{CountryRepository, CountrySubdivisionRepository};
+use crate::repository::executor::Executor;
 use crate::repository::person_country_repository_impl::CountryRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
-use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
+use parking_lot::RwLock;
+use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::Arc;
 use twox_hash::XxHash64;
 use uuid::Uuid;
-use parking_lot::RwLock;
 
 pub struct CountrySubdivisionRepositoryImpl {
-    pool: Arc<PgPool>,
+    executor: Executor,
     country_subdivision_idx_cache: Arc<RwLock<CountrySubdivisionIdxModelCache>>,
     country_repository: Arc<CountryRepositoryImpl>,
 }
 
 impl CountrySubdivisionRepositoryImpl {
     pub async fn new(
-        pool: Arc<PgPool>,
+        executor: Executor,
         country_repository: Arc<CountryRepositoryImpl>,
     ) -> Self {
         let country_subdivision_idx_models =
-            Self::load_all_country_subdivision_idx(&pool).await.unwrap();
+            Self::load_all_country_subdivision_idx(&executor)
+                .await
+                .unwrap();
         let country_subdivision_idx_cache =
             CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap();
         Self {
-            pool,
+            executor,
             country_subdivision_idx_cache: Arc::new(RwLock::new(country_subdivision_idx_cache)),
             country_repository,
         }
     }
 
     async fn load_all_country_subdivision_idx(
-        pool: &PgPool,
+        executor: &Executor,
     ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
-        let rows = sqlx::query("SELECT * FROM country_subdivision_idx")
-            .fetch_all(pool)
-            .await?;
+        let query = sqlx::query("SELECT * FROM country_subdivision_idx");
+        let rows = match executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         let mut idx_models = Vec::with_capacity(rows.len());
         for row in rows {
             idx_models
@@ -65,7 +73,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
             return Err(sqlx::Error::RowNotFound);
         }
 
-        sqlx::query(
+        let query1 = sqlx::query(
             r#"
             INSERT INTO country_subdivision (id, country_id, code, name_l1, name_l2, name_l3)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -86,15 +94,13 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
                 .name_l3
                 .as_ref()
                 .map(|s| s.as_str()),
-        )
-        .execute(&*self.pool)
-        .await?;
+        );
 
         let mut hasher = twox_hash::XxHash64::with_seed(0);
         hasher.write(country_subdivision.code.as_bytes());
         let code_hash = hasher.finish() as i64;
 
-        sqlx::query(
+        let query2 = sqlx::query(
             r#"
             INSERT INTO country_subdivision_idx (country_subdivision_id, country_id, code_hash)
             VALUES ($1, $2, $3)
@@ -102,9 +108,19 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         )
         .bind(country_subdivision.id)
         .bind(country_subdivision.country_id)
-        .bind(code_hash)
-        .execute(&*self.pool)
-        .await?;
+        .bind(code_hash);
+
+        match &self.executor {
+            Executor::Pool(pool) => {
+                query1.execute(&**pool).await?;
+                query2.execute(&**pool).await?;
+            }
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query1.execute(&mut **tx).await?;
+                query2.execute(&mut **tx).await?;
+            }
+        }
 
         let idx_model = CountrySubdivisionIdxModel {
             country_subdivision_id: country_subdivision.id,
@@ -117,14 +133,20 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
     }
 
     async fn load(&self, id: Uuid) -> Result<CountrySubdivisionModel, sqlx::Error> {
-        let row = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM country_subdivision WHERE id = $1
             "#,
         )
-        .bind(id)
-        .fetch_one(&*self.pool)
-        .await?;
+        .bind(id);
+
+        let row = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
 
         CountrySubdivisionModel::try_from_row(&row).map_err(sqlx::Error::Decode)
     }

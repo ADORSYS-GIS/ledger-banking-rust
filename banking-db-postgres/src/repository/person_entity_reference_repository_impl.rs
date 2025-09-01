@@ -5,8 +5,9 @@ use banking_db::models::person::{
     EntityReferenceModel,
 };
 use banking_db::repository::{EntityReferenceRepository, PersonRepository};
+use crate::repository::executor::Executor;
 use crate::repository::person_person_repository_impl::PersonRepositoryImpl;
-use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
+use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::{Arc, RwLock};
@@ -14,34 +15,40 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct EntityReferenceRepositoryImpl {
-    pool: Arc<PgPool>,
+    executor: Executor,
     entity_reference_idx_cache: Arc<RwLock<EntityReferenceIdxModelCache>>,
     person_repository: Arc<PersonRepositoryImpl>,
 }
 
 impl EntityReferenceRepositoryImpl {
     pub async fn new(
-        pool: Arc<PgPool>,
+        executor: Executor,
         person_repository: Arc<PersonRepositoryImpl>,
     ) -> Self {
         let entity_reference_idx_models =
-            Self::load_all_entity_reference_idx(&pool).await.unwrap();
+            Self::load_all_entity_reference_idx(&executor).await.unwrap();
         let entity_reference_idx_cache = Arc::new(RwLock::new(
             EntityReferenceIdxModelCache::new(entity_reference_idx_models).unwrap(),
         ));
         Self {
-            pool,
+            executor,
             entity_reference_idx_cache,
             person_repository,
         }
     }
 
     async fn load_all_entity_reference_idx(
-        pool: &PgPool,
+        executor: &Executor,
     ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
-        sqlx::query_as::<_, EntityReferenceIdxModel>("SELECT * FROM entity_reference_idx")
-            .fetch_all(pool)
-            .await
+        let query =
+            sqlx::query_as::<_, EntityReferenceIdxModel>("SELECT * FROM entity_reference_idx");
+        match executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await
+            }
+        }
     }
 }
 
@@ -93,7 +100,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
                 audit_log_id,
             };
 
-            sqlx::query(
+            let query1 = sqlx::query(
                 r#"
                 INSERT INTO entity_reference_audit (entity_reference_id, version, hash, person_id, entity_role, reference_external_id, reference_details_l1, reference_details_l2, reference_details_l3, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -123,11 +130,9 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
                     .as_ref()
                     .map(|s| s.as_str()),
             )
-            .bind(audit_model.audit_log_id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(audit_model.audit_log_id);
 
-            sqlx::query(
+            let query2 = sqlx::query(
                 r#"
                 UPDATE entity_reference SET
                     person_id = $2, entity_role = $3::person_entity_type, reference_external_id = $4,
@@ -156,11 +161,9 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
                     .reference_details_l3
                     .as_ref()
                     .map(|s| s.as_str()),
-            )
-            .execute(&*self.pool)
-            .await?;
+            );
 
-            sqlx::query(
+            let query3 = sqlx::query(
                 r#"
                 UPDATE entity_reference_idx SET
                     version = $2,
@@ -170,9 +173,21 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             )
             .bind(entity_ref.id)
             .bind(new_version)
-            .bind(new_hash)
-            .execute(&*self.pool)
-            .await?;
+            .bind(new_hash);
+
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                    query3.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                    query3.execute(&mut **tx).await?;
+                }
+            }
 
             let new_idx = EntityReferenceIdxModel {
                 entity_reference_id: entity_ref.id,
@@ -200,7 +215,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
                 audit_log_id,
             };
 
-            sqlx::query(
+            let query1 = sqlx::query(
                 r#"
                 INSERT INTO entity_reference_audit (entity_reference_id, version, hash, person_id, entity_role, reference_external_id, reference_details_l1, reference_details_l2, reference_details_l3, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -230,11 +245,9 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
                     .as_ref()
                     .map(|s| s.as_str()),
             )
-            .bind(audit_model.audit_log_id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(audit_model.audit_log_id);
 
-            sqlx::query(
+            let query2 = sqlx::query(
                 r#"
                 INSERT INTO entity_reference (id, person_id, entity_role, reference_external_id, reference_details_l1, reference_details_l2, reference_details_l3)
                 VALUES ($1, $2, $3::person_entity_type, $4, $5, $6, $7)
@@ -261,11 +274,9 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
                     .reference_details_l3
                     .as_ref()
                     .map(|s| s.as_str()),
-            )
-            .execute(&*self.pool)
-            .await?;
+            );
 
-            sqlx::query(
+            let query3 = sqlx::query(
                 r#"
                 INSERT INTO entity_reference_idx (entity_reference_id, person_id, version, hash)
                 VALUES ($1, $2, $3, $4)
@@ -274,9 +285,21 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             .bind(entity_ref.id)
             .bind(entity_ref.person_id)
             .bind(version)
-            .bind(new_hash)
-            .execute(&*self.pool)
-            .await?;
+            .bind(new_hash);
+
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                    query3.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                    query3.execute(&mut **tx).await?;
+                }
+            }
 
             let new_idx = EntityReferenceIdxModel {
                 entity_reference_id: entity_ref.id,
@@ -294,14 +317,20 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
     }
 
     async fn load(&self, id: Uuid) -> Result<EntityReferenceModel, sqlx::Error> {
-        let row = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM entity_reference WHERE id = $1
             "#,
         )
-        .bind(id)
-        .fetch_one(&*self.pool)
-        .await?;
+        .bind(id);
+
+        let row = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
 
         EntityReferenceModel::try_from_row(&row).map_err(sqlx::Error::Decode)
     }
@@ -323,7 +352,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         page: i32,
         page_size: i32,
     ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
-        let rows = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM entity_reference_idx WHERE person_id = $1
             LIMIT $2 OFFSET $3
@@ -331,9 +360,15 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         )
         .bind(person_id)
         .bind(page_size)
-        .bind((page - 1) * page_size)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind((page - 1) * page_size);
+
+        let rows = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
 
         let mut refs = Vec::new();
         for row in rows {
@@ -350,7 +385,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         page: i32,
         page_size: i32,
     ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
-        let rows = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT ei.*
             FROM entity_reference_idx ei
@@ -361,9 +396,15 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         )
         .bind(reference_external_id)
         .bind(page_size)
-        .bind((page - 1) * page_size)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind((page - 1) * page_size);
+
+        let rows = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
 
         let mut refs = Vec::new();
         for row in rows {
@@ -378,14 +419,20 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM entity_reference_idx WHERE entity_reference_id = ANY($1)
             "#,
         )
-        .bind(ids)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind(ids);
+
+        let rows = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
 
         let mut refs = Vec::new();
         for row in rows {
@@ -395,12 +442,17 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!(
+        let query = sqlx::query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM entity_reference WHERE id = $1)",
             id
-        )
-        .fetch_one(&*self.pool)
-        .await?;
+        );
+        let exists = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
         Ok(exists.unwrap_or(false))
     }
 
@@ -408,14 +460,20 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         &self,
         person_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             r#"
             SELECT id FROM entity_reference WHERE person_id = $1
             "#,
         )
-        .bind(person_id)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind(person_id);
+
+        let ids = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         Ok(ids)
     }
 }

@@ -14,6 +14,7 @@ use banking_db_postgres::repository::{
     person_messaging_repository_impl::MessagingRepositoryImpl,
     person_person_repository_impl::PersonRepositoryImpl,
 };
+use banking_db_postgres::repository::executor::Executor;
 use heapless::String as HeaplessString;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -120,18 +121,18 @@ fn create_test_messaging_model(email: &str) -> MessagingModel {
 async fn test_person_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let db_pool_arc = Arc::new(db_pool);
+    let executor = Executor::Pool(Arc::new(db_pool));
 
-    let country_repo = Arc::new(CountryRepositoryImpl::new(db_pool_arc.clone()).await);
+    let country_repo = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
     let country_subdivision_repo = Arc::new(
-        CountrySubdivisionRepositoryImpl::new(db_pool_arc.clone(), country_repo.clone()).await,
+        CountrySubdivisionRepositoryImpl::new(executor.clone(), country_repo.clone()).await,
     );
     let locality_repo = Arc::new(
-        LocalityRepositoryImpl::new(db_pool_arc.clone(), country_subdivision_repo.clone()).await,
+        LocalityRepositoryImpl::new(executor.clone(), country_subdivision_repo.clone()).await,
     );
     let location_repo =
-        Arc::new(LocationRepositoryImpl::new(db_pool_arc.clone(), locality_repo.clone()).await);
-    let repo = PersonRepositoryImpl::new(db_pool_arc.clone(), location_repo.clone()).await;
+        Arc::new(LocationRepositoryImpl::new(executor.clone(), locality_repo.clone()).await);
+    let repo = PersonRepositoryImpl::new(executor, location_repo.clone()).await;
 
     // Test save and find_by_id
     let audit_log_id = Uuid::new_v4();
@@ -168,7 +169,8 @@ async fn test_person_repository() {
 async fn test_country_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let repo = CountryRepositoryImpl::new(Arc::new(db_pool.clone())).await;
+    let executor = Executor::Pool(Arc::new(db_pool));
+    let repo = CountryRepositoryImpl::new(executor).await;
 
     // Test save and find_by_id
     let new_country = create_test_country_model("CM", "Cameroon");
@@ -202,11 +204,12 @@ async fn test_country_repository() {
 async fn test_country_subdivision_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let country_repo = Arc::new(CountryRepositoryImpl::new(Arc::new(db_pool.clone())).await);
+    let executor = Executor::Pool(Arc::new(db_pool));
+    let country_repo = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
     let country = create_test_country_model("CM", "Cameroon");
     country_repo.save(country.clone()).await.unwrap();
     let repo =
-        CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone()), country_repo.clone())
+        CountrySubdivisionRepositoryImpl::new(executor, country_repo.clone())
             .await;
 
     // Test save and find_by_id
@@ -226,11 +229,12 @@ async fn test_country_subdivision_repository() {
 async fn test_locality_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let country_repo = Arc::new(CountryRepositoryImpl::new(Arc::new(db_pool.clone())).await);
+    let executor = Executor::Pool(Arc::new(db_pool));
+    let country_repo = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
     let country = create_test_country_model("CM", "Cameroon");
     country_repo.save(country.clone()).await.unwrap();
     let country_subdivision_repo = Arc::new(
-        CountrySubdivisionRepositoryImpl::new(Arc::new(db_pool.clone()), country_repo.clone())
+        CountrySubdivisionRepositoryImpl::new(executor.clone(), country_repo.clone())
             .await,
     );
     let country_subdivision = create_test_country_subdivision_model(country.id, "OU", "Ouest");
@@ -239,7 +243,7 @@ async fn test_locality_repository() {
         .await
         .unwrap();
     let repo = LocalityRepositoryImpl::new(
-        Arc::new(db_pool.clone()),
+        executor,
         country_subdivision_repo.clone(),
     )
     .await;
@@ -261,14 +265,14 @@ async fn test_locality_repository() {
 async fn test_location_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let db_pool_arc = Arc::new(db_pool);
+    let executor = Executor::Pool(Arc::new(db_pool));
 
-    let country_repo = Arc::new(CountryRepositoryImpl::new(db_pool_arc.clone()).await);
+    let country_repo = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
     let country = create_test_country_model("CM", "Cameroon");
     country_repo.save(country.clone()).await.unwrap();
 
     let country_subdivision_repo = Arc::new(
-        CountrySubdivisionRepositoryImpl::new(db_pool_arc.clone(), country_repo.clone()).await,
+        CountrySubdivisionRepositoryImpl::new(executor.clone(), country_repo.clone()).await,
     );
     let country_subdivision = create_test_country_subdivision_model(country.id, "OU", "Ouest");
     country_subdivision_repo
@@ -277,12 +281,12 @@ async fn test_location_repository() {
         .unwrap();
 
     let locality_repo = Arc::new(
-        LocalityRepositoryImpl::new(db_pool_arc.clone(), country_subdivision_repo.clone()).await,
+        LocalityRepositoryImpl::new(executor.clone(), country_subdivision_repo.clone()).await,
     );
     let locality = create_test_locality_model(country_subdivision.id, "BANA_001", "Bana");
     locality_repo.save(locality.clone()).await.unwrap();
 
-    let repo = LocationRepositoryImpl::new(db_pool_arc, locality_repo).await;
+    let repo = LocationRepositoryImpl::new(executor, locality_repo).await;
 
     // Test save and find_by_id
     let new_location = create_test_location_model(locality.id, "Mission Catholique", "30321");
@@ -302,7 +306,8 @@ async fn test_location_repository() {
 async fn test_messaging_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
-    let repo = MessagingRepositoryImpl::new(Arc::new(db_pool.clone())).await;
+    let executor = Executor::Pool(Arc::new(db_pool));
+    let repo = MessagingRepositoryImpl::new(executor).await;
 
     // Test save and find_by_id
     let new_messaging = create_test_messaging_model("francis@ledgers-rust.com");

@@ -1,17 +1,18 @@
 use async_trait::async_trait;
 use banking_api::BankingResult;
-use banking_db::repository::{
-    AuditLogRepository, CountryRepository, CountrySubdivisionRepository, EntityReferenceRepository,
-    LocationRepository, LocalityRepository, MessagingRepository, PersonRepository, UnitOfWork,
-    UnitOfWorkSession,
-};
+use banking_db::repository::{UnitOfWork, UnitOfWorkSession};
 use sqlx::{PgPool, Postgres, Transaction};
 use std::sync::Arc;
 
 use crate::repository::{
-    AuditLogRepositoryImpl, CountryRepositoryImpl, CountrySubdivisionRepositoryImpl,
-    EntityReferenceRepositoryImpl, LocalityRepositoryImpl, LocationRepositoryImpl,
-    MessagingRepositoryImpl, PersonRepositoryImpl,
+    audit_repository_impl::AuditLogRepositoryImpl,
+    person_country_repository_impl::CountryRepositoryImpl,
+    person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
+    person_entity_reference_repository_impl::EntityReferenceRepositoryImpl,
+    person_locality_repository_impl::LocalityRepositoryImpl,
+    person_location_repository_impl::LocationRepositoryImpl,
+    person_messaging_repository_impl::MessagingRepositoryImpl,
+    person_person_repository_impl::PersonRepositoryImpl,
 };
 
 pub struct PostgresUnitOfWork {
@@ -34,7 +35,7 @@ impl UnitOfWork<Postgres> for PostgresUnitOfWork {
 }
 
 pub struct PostgresUnitOfWorkSession {
-    tx: Transaction<'static, Postgres>,
+    tx: crate::repository::executor::Executor,
     audit_logs: Arc<AuditLogRepositoryImpl>,
     persons: Arc<PersonRepositoryImpl>,
     countries: Arc<CountryRepositoryImpl>,
@@ -47,21 +48,27 @@ pub struct PostgresUnitOfWorkSession {
 
 impl PostgresUnitOfWorkSession {
     pub async fn new(tx: Transaction<'static, Postgres>) -> Self {
-        let audit_logs = Arc::new(AuditLogRepositoryImpl::new(tx.clone()));
-        let countries = Arc::new(CountryRepositoryImpl::new(tx.clone()).await);
-        let country_subdivisions =
-            Arc::new(CountrySubdivisionRepositoryImpl::new(tx.clone(), countries.clone()).await);
-        let localities =
-            Arc::new(LocalityRepositoryImpl::new(tx.clone(), country_subdivisions.clone()).await);
+        let executor =
+            crate::repository::executor::Executor::Tx(Arc::new(tokio::sync::Mutex::new(tx)));
+        let audit_logs = Arc::new(AuditLogRepositoryImpl::new(executor.clone()));
+        let countries = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
+        let country_subdivisions = Arc::new(
+            CountrySubdivisionRepositoryImpl::new(executor.clone(), countries.clone()).await,
+        );
+        let localities = Arc::new(
+            LocalityRepositoryImpl::new(executor.clone(), country_subdivisions.clone()).await,
+        );
         let locations =
-            Arc::new(LocationRepositoryImpl::new(tx.clone(), localities.clone()).await);
-        let persons = Arc::new(PersonRepositoryImpl::new(tx.clone(), locations.clone()).await);
-        let messagings = Arc::new(MessagingRepositoryImpl::new(tx.clone()).await);
-        let entity_references =
-            Arc::new(EntityReferenceRepositoryImpl::new(tx.clone(), persons.clone()).await);
+            Arc::new(LocationRepositoryImpl::new(executor.clone(), localities.clone()).await);
+        let persons =
+            Arc::new(PersonRepositoryImpl::new(executor.clone(), locations.clone()).await);
+        let messagings = Arc::new(MessagingRepositoryImpl::new(executor.clone()).await);
+        let entity_references = Arc::new(
+            EntityReferenceRepositoryImpl::new(executor.clone(), persons.clone()).await,
+        );
 
         Self {
-            tx,
+            tx: executor,
             audit_logs,
             persons,
             countries,
@@ -118,12 +125,22 @@ impl UnitOfWorkSession<Postgres> for PostgresUnitOfWorkSession {
     }
 
     async fn commit(self) -> BankingResult<()> {
-        self.tx.commit().await?;
+        if let crate::repository::executor::Executor::Tx(tx_arc) = self.tx {
+            let tx = Arc::try_unwrap(tx_arc)
+                .expect("Cannot commit transaction with multiple references")
+                .into_inner();
+            tx.commit().await?;
+        }
         Ok(())
     }
 
     async fn rollback(self) -> BankingResult<()> {
-        self.tx.rollback().await?;
+        if let crate::repository::executor::Executor::Tx(tx_arc) = self.tx {
+            let tx = Arc::try_unwrap(tx_arc)
+                .expect("Cannot rollback transaction with multiple references")
+                .into_inner();
+            tx.rollback().await?;
+        }
         Ok(())
     }
 }

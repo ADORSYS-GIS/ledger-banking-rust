@@ -1,34 +1,43 @@
 use async_trait::async_trait;
 use banking_db::models::person::{CountryIdxModel, CountryIdxModelCache, CountryModel};
 use banking_db::repository::CountryRepository;
+use crate::repository::executor::Executor;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use heapless::String as HeaplessString;
-use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
+use parking_lot::RwLock;
+use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use parking_lot::RwLock;
-
 pub struct CountryRepositoryImpl {
-    pool: Arc<PgPool>,
+    executor: Executor,
     country_idx_cache: Arc<RwLock<CountryIdxModelCache>>,
 }
 
 impl CountryRepositoryImpl {
-    pub async fn new(pool: Arc<PgPool>) -> Self {
-        let country_idx_models = Self::load_all_country_idx(&pool).await.unwrap();
+    pub async fn new(executor: Executor) -> Self {
+        let country_idx_models = Self::load_all_country_idx(&executor).await.unwrap();
         let country_idx_cache =
             Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
         Self {
-            pool,
+            executor,
             country_idx_cache,
         }
     }
 
-    async fn load_all_country_idx(pool: &PgPool) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
-        let rows = sqlx::query("SELECT * FROM country_idx").fetch_all(pool).await?;
+    async fn load_all_country_idx(
+        executor: &Executor,
+    ) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
+        let query = sqlx::query("SELECT * FROM country_idx");
+        let rows = match executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         let mut idx_models = Vec::with_capacity(rows.len());
         for row in rows {
             idx_models.push(CountryIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
@@ -53,7 +62,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
             return self.load(id).await;
         }
 
-        sqlx::query(
+        let query1 = sqlx::query(
             r#"
             INSERT INTO country (id, iso2, name_l1, name_l2, name_l3)
             VALUES ($1, $2, $3, $4, $5)
@@ -63,37 +72,53 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         .bind(country.iso2.as_str())
         .bind(country.name_l1.as_str())
         .bind(country.name_l2.as_ref().map(|s| s.as_str()))
-        .bind(country.name_l3.as_ref().map(|s| s.as_str()))
-        .execute(&*self.pool)
-        .await?;
+        .bind(country.name_l3.as_ref().map(|s| s.as_str()));
 
-        sqlx::query(
+        let query2 = sqlx::query(
             r#"
             INSERT INTO country_idx (country_id, iso2)
             VALUES ($1, $2)
             "#,
         )
         .bind(country.id)
-        .bind(country.iso2.as_str())
-        .execute(&*self.pool)
-        .await?;
+        .bind(country.iso2.as_str());
 
-        let country_idx_models = Self::load_all_country_idx(&self.pool).await?;
-        let new_cache = CountryIdxModelCache::new(country_idx_models).unwrap();
-        *self.country_idx_cache.write() = new_cache;
+        match &self.executor {
+            Executor::Pool(pool) => {
+                query1.execute(&**pool).await?;
+                query2.execute(&**pool).await?;
+            }
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query1.execute(&mut **tx).await?;
+                query2.execute(&mut **tx).await?;
+            }
+        }
+
+        let new_idx_model = CountryIdxModel {
+            country_id: country.id,
+            iso2: country.iso2.clone(),
+        };
+        self.country_idx_cache.write().add(new_idx_model);
 
         Ok(country)
     }
 
     async fn load(&self, id: Uuid) -> Result<CountryModel, sqlx::Error> {
-        let row = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM country WHERE id = $1
             "#,
         )
-        .bind(id)
-        .fetch_one(&*self.pool)
-        .await?;
+        .bind(id);
+
+        let row = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
 
         CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)
     }
