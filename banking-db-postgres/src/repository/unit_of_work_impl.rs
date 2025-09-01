@@ -1,11 +1,19 @@
 use async_trait::async_trait;
 use banking_api::BankingResult;
-use banking_db::repository::{UnitOfWork, UnitOfWorkSession};
+use banking_db::{
+    models::person::{
+        CountryIdxModelCache, CountrySubdivisionIdxModelCache, EntityReferenceIdxModelCache,
+        LocalityIdxModelCache, LocationIdxModelCache, MessagingIdxModelCache, PersonIdxModelCache,
+    },
+    repository::{UnitOfWork, UnitOfWorkSession},
+};
+use parking_lot::RwLock;
 use sqlx::{PgPool, Postgres, Transaction};
 use std::sync::Arc;
 
 use crate::repository::{
     audit_repository_impl::AuditLogRepositoryImpl,
+    executor::Executor,
     person_country_repository_impl::CountryRepositoryImpl,
     person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
     person_entity_reference_repository_impl::EntityReferenceRepositoryImpl,
@@ -15,13 +23,86 @@ use crate::repository::{
     person_person_repository_impl::PersonRepositoryImpl,
 };
 
+#[derive(Clone)]
+pub struct PersonCaches {
+    pub country_idx_cache: Arc<RwLock<CountryIdxModelCache>>,
+    pub country_subdivision_idx_cache: Arc<RwLock<CountrySubdivisionIdxModelCache>>,
+    pub locality_idx_cache: Arc<RwLock<LocalityIdxModelCache>>,
+    pub location_idx_cache: Arc<RwLock<LocationIdxModelCache>>,
+    pub person_idx_cache: Arc<RwLock<PersonIdxModelCache>>,
+    pub messaging_idx_cache: Arc<RwLock<MessagingIdxModelCache>>,
+    pub entity_reference_idx_cache: Arc<RwLock<EntityReferenceIdxModelCache>>,
+}
+
 pub struct PostgresUnitOfWork {
     pool: Arc<PgPool>,
+    caches: PersonCaches,
 }
 
 impl PostgresUnitOfWork {
-    pub fn new(pool: Arc<PgPool>) -> Self {
-        Self { pool }
+    pub async fn new(pool: Arc<PgPool>) -> Self {
+        let executor = Executor::Pool(pool.clone());
+
+        let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
+            .await
+            .unwrap();
+        let country_idx_cache =
+            Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+
+        let country_subdivision_idx_models =
+            CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
+                .await
+                .unwrap();
+        let country_subdivision_idx_cache = Arc::new(RwLock::new(
+            CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
+        ));
+
+        let locality_idx_models = LocalityRepositoryImpl::load_all_locality_idx(&executor)
+            .await
+            .unwrap();
+        let locality_idx_cache = Arc::new(RwLock::new(
+            LocalityIdxModelCache::new(locality_idx_models).unwrap(),
+        ));
+
+        let location_idx_models = LocationRepositoryImpl::load_all_location_idx(&executor)
+            .await
+            .unwrap();
+        let location_idx_cache = Arc::new(RwLock::new(
+            LocationIdxModelCache::new(location_idx_models).unwrap(),
+        ));
+
+        let person_idx_models = PersonRepositoryImpl::load_all_person_idx(&executor)
+            .await
+            .unwrap();
+        let person_idx_cache =
+            Arc::new(RwLock::new(PersonIdxModelCache::new(person_idx_models).unwrap()));
+
+        let messaging_idx_models = MessagingRepositoryImpl::load_all_messaging_idx(&executor)
+            .await
+            .unwrap();
+        let messaging_idx_cache = Arc::new(RwLock::new(
+            MessagingIdxModelCache::new(messaging_idx_models).unwrap(),
+        ));
+
+        let entity_reference_idx_models =
+            EntityReferenceRepositoryImpl::load_all_entity_reference_idx(&executor)
+                .await
+                .unwrap();
+        let entity_reference_idx_cache = Arc::new(RwLock::new(
+            EntityReferenceIdxModelCache::new(entity_reference_idx_models).unwrap(),
+        ));
+
+        let caches = PersonCaches {
+            country_idx_cache,
+            country_subdivision_idx_cache,
+            locality_idx_cache,
+            location_idx_cache,
+            person_idx_cache,
+            messaging_idx_cache,
+            entity_reference_idx_cache,
+        };
+
+        Self { pool, caches }
     }
 }
 
@@ -30,7 +111,7 @@ impl UnitOfWork<Postgres> for PostgresUnitOfWork {
     type Session = PostgresUnitOfWorkSession;
     async fn begin(&self) -> BankingResult<Self::Session> {
         let tx = self.pool.begin().await?;
-        Ok(PostgresUnitOfWorkSession::new(tx).await)
+        Ok(PostgresUnitOfWorkSession::new(tx, self.caches.clone()))
     }
 }
 
@@ -47,25 +128,41 @@ pub struct PostgresUnitOfWorkSession {
 }
 
 impl PostgresUnitOfWorkSession {
-    pub async fn new(tx: Transaction<'static, Postgres>) -> Self {
+    pub fn new(tx: Transaction<'static, Postgres>, caches: PersonCaches) -> Self {
         let executor =
             crate::repository::executor::Executor::Tx(Arc::new(tokio::sync::Mutex::new(tx)));
         let audit_logs = Arc::new(AuditLogRepositoryImpl::new(executor.clone()));
-        let countries = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
-        let country_subdivisions = Arc::new(
-            CountrySubdivisionRepositoryImpl::new(executor.clone(), countries.clone()).await,
-        );
-        let localities = Arc::new(
-            LocalityRepositoryImpl::new(executor.clone(), country_subdivisions.clone()).await,
-        );
-        let locations =
-            Arc::new(LocationRepositoryImpl::new(executor.clone(), localities.clone()).await);
-        let persons =
-            Arc::new(PersonRepositoryImpl::new(executor.clone(), locations.clone()).await);
-        let messagings = Arc::new(MessagingRepositoryImpl::new(executor.clone()).await);
-        let entity_references = Arc::new(
-            EntityReferenceRepositoryImpl::new(executor.clone(), persons.clone()).await,
-        );
+        let countries =
+            Arc::new(CountryRepositoryImpl::new(executor.clone(), caches.country_idx_cache));
+        let country_subdivisions = Arc::new(CountrySubdivisionRepositoryImpl::new(
+            executor.clone(),
+            countries.clone(),
+            caches.country_subdivision_idx_cache,
+        ));
+        let localities = Arc::new(LocalityRepositoryImpl::new(
+            executor.clone(),
+            country_subdivisions.clone(),
+            caches.locality_idx_cache,
+        ));
+        let locations = Arc::new(LocationRepositoryImpl::new(
+            executor.clone(),
+            localities.clone(),
+            caches.location_idx_cache,
+        ));
+        let persons = Arc::new(PersonRepositoryImpl::new(
+            executor.clone(),
+            locations.clone(),
+            caches.person_idx_cache,
+        ));
+        let messagings = Arc::new(MessagingRepositoryImpl::new(
+            executor.clone(),
+            caches.messaging_idx_cache,
+        ));
+        let entity_references = Arc::new(EntityReferenceRepositoryImpl::new(
+            executor.clone(),
+            persons.clone(),
+            caches.entity_reference_idx_cache,
+        ));
 
         Self {
             tx: executor,

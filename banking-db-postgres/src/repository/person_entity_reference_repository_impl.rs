@@ -10,7 +10,8 @@ use crate::repository::person_person_repository_impl::PersonRepositoryImpl;
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
@@ -21,15 +22,11 @@ pub struct EntityReferenceRepositoryImpl {
 }
 
 impl EntityReferenceRepositoryImpl {
-    pub async fn new(
+    pub fn new(
         executor: Executor,
         person_repository: Arc<PersonRepositoryImpl>,
+        entity_reference_idx_cache: Arc<RwLock<EntityReferenceIdxModelCache>>,
     ) -> Self {
-        let entity_reference_idx_models =
-            Self::load_all_entity_reference_idx(&executor).await.unwrap();
-        let entity_reference_idx_cache = Arc::new(RwLock::new(
-            EntityReferenceIdxModelCache::new(entity_reference_idx_models).unwrap(),
-        ));
         Self {
             executor,
             entity_reference_idx_cache,
@@ -37,7 +34,7 @@ impl EntityReferenceRepositoryImpl {
         }
     }
 
-    async fn load_all_entity_reference_idx(
+    pub async fn load_all_entity_reference_idx(
         executor: &Executor,
     ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
         let query =
@@ -75,7 +72,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {
-            let cache_read_guard = self.entity_reference_idx_cache.read().unwrap();
+            let cache_read_guard = self.entity_reference_idx_cache.read();
             cache_read_guard.get_by_primary(&entity_ref.id)
         };
 
@@ -197,7 +194,6 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             };
             self.entity_reference_idx_cache
                 .write()
-                .unwrap()
                 .update(new_idx);
         } else {
             // INSERT
@@ -309,7 +305,6 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             };
             self.entity_reference_idx_cache
                 .write()
-                .unwrap()
                 .add(new_idx);
         }
 
@@ -342,7 +337,6 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         Ok(self
             .entity_reference_idx_cache
             .read()
-            .unwrap()
             .get_by_primary(&id))
     }
 

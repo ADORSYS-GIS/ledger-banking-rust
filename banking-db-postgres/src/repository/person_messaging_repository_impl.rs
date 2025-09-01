@@ -8,7 +8,8 @@ use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::RwLock;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
@@ -18,18 +19,14 @@ pub struct MessagingRepositoryImpl {
 }
 
 impl MessagingRepositoryImpl {
-    pub async fn new(executor: Executor) -> Self {
-        let messaging_idx_models = Self::load_all_messaging_idx(&executor).await.unwrap();
-        let messaging_idx_cache = Arc::new(RwLock::new(
-            MessagingIdxModelCache::new(messaging_idx_models).unwrap(),
-        ));
+    pub fn new(executor: Executor, messaging_idx_cache: Arc<RwLock<MessagingIdxModelCache>>) -> Self {
         Self {
             executor,
             messaging_idx_cache,
         }
     }
 
-    async fn load_all_messaging_idx(
+    pub async fn load_all_messaging_idx(
         executor: &Executor,
     ) -> Result<Vec<MessagingIdxModel>, sqlx::Error> {
         let query = sqlx::query_as::<_, MessagingIdxModel>("SELECT * FROM messaging_idx");
@@ -57,7 +54,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {
-            let cache_read_guard = self.messaging_idx_cache.read().unwrap();
+            let cache_read_guard = self.messaging_idx_cache.read();
             cache_read_guard.get_by_primary(&messaging.id)
         };
 
@@ -143,7 +140,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
                 version: new_version,
                 hash: new_hash,
             };
-            self.messaging_idx_cache.write().unwrap().update(new_idx);
+            self.messaging_idx_cache.write().update(new_idx);
         } else {
             // INSERT
             let version = 0;
@@ -213,7 +210,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
                 version,
                 hash: new_hash,
             };
-            self.messaging_idx_cache.write().unwrap().add(new_idx);
+            self.messaging_idx_cache.write().add(new_idx);
         }
 
         Ok(messaging)
@@ -235,7 +232,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         &self,
         id: Uuid,
     ) -> Result<Option<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
-        Ok(self.messaging_idx_cache.read().unwrap().get_by_primary(&id))
+        Ok(self.messaging_idx_cache.read().get_by_primary(&id))
     }
     async fn find_by_ids(
         &self,

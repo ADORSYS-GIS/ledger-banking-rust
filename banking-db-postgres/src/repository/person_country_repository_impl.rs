@@ -17,17 +17,14 @@ pub struct CountryRepositoryImpl {
 }
 
 impl CountryRepositoryImpl {
-    pub async fn new(executor: Executor) -> Self {
-        let country_idx_models = Self::load_all_country_idx(&executor).await.unwrap();
-        let country_idx_cache =
-            Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+    pub fn new(executor: Executor, country_idx_cache: Arc<RwLock<CountryIdxModelCache>>) -> Self {
         Self {
             executor,
             country_idx_cache,
         }
     }
 
-    async fn load_all_country_idx(
+    pub async fn load_all_country_idx(
         executor: &Executor,
     ) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
         let query = sqlx::query("SELECT * FROM country_idx");

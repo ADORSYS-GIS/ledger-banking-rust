@@ -33,6 +33,14 @@ The `PostgresUnitOfWorkSession` holds an `sqlx::Transaction`. The `sqlx::Transac
 Therefore, **there is no need to add an explicit `Drop` implementation to `PostgresUnitOfWorkSession`**. If a panic occurs, the stack will unwind, the `PostgresUnitOfWorkSession` will be dropped, which in turn drops the `sqlx::Transaction`, triggering an automatic rollback. This ensures that the transaction is always cleaned up correctly, even in the case of unexpected panics.
 
 
+## Caching Strategy
+
+To optimize performance, the system employs in-memory caches for frequently accessed, rarely changing data (e.g., countries, subdivisions).
+
+-   **Cache Lifecycle**: Caches are initialized once when the `PostgresUnitOfWork` is created. This ensures that all subsequent transactions share the same cache instances, avoiding redundant database queries.
+-   **Cache Propagation**: The `PostgresUnitOfWork` holds the caches and passes them down to the `PostgresUnitOfWorkSession` when a transaction begins. The session then provides the caches to the repositories that need them.
+-   **Implementation**: The caches are implemented using `parking_lot::RwLock` for efficient, thread-safe access.
+
 ## Repository Implementation with `Executor`
 
 To allow repository methods to operate both within a transaction and with a direct connection pool, we use an `Executor` enum. This pattern is crucial for code reuse and flexibility, as some operations might not need to be part of a larger transaction.
@@ -85,7 +93,7 @@ This pattern centralizes the logic for handling both transactional and non-trans
 
 // 1. Create the database pool and the UnitOfWork
 let pool = Arc::new(PgPoolOptions::new().connect(&db_url).await?);
-let uow = Arc::new(PostgresUnitOfWork::new(pool.clone()));
+let uow = Arc::new(PostgresUnitOfWork::new(pool.clone()).await);
 
 // 2. Create the concrete ServiceFactory
 struct AppServiceFactory;

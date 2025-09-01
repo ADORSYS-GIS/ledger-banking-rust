@@ -9,7 +9,8 @@ use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
@@ -20,13 +21,11 @@ pub struct LocationRepositoryImpl {
 }
 
 impl LocationRepositoryImpl {
-    pub async fn new(
+    pub fn new(
         executor: Executor,
         locality_repository: Arc<LocalityRepositoryImpl>,
+        location_idx_cache: Arc<RwLock<LocationIdxModelCache>>,
     ) -> Self {
-        let location_idx_models = Self::load_all_location_idx(&executor).await.unwrap();
-        let location_idx_cache =
-            Arc::new(RwLock::new(LocationIdxModelCache::new(location_idx_models).unwrap()));
         Self {
             executor,
             location_idx_cache,
@@ -34,7 +33,7 @@ impl LocationRepositoryImpl {
         }
     }
 
-    async fn load_all_location_idx(
+    pub async fn load_all_location_idx(
         executor: &Executor,
     ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
         let query = sqlx::query_as::<_, LocationIdxModel>("SELECT * FROM location_idx");
@@ -71,7 +70,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {
-            let cache_read_guard = self.location_idx_cache.read().unwrap();
+            let cache_read_guard = self.location_idx_cache.read();
             cache_read_guard.get_by_primary(&location.id)
         };
 
@@ -174,7 +173,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
                 version: new_version,
                 hash: new_hash,
             };
-            self.location_idx_cache.write().unwrap().update(new_idx);
+            self.location_idx_cache.write().update(new_idx);
         } else {
             // INSERT
             let version = 0;
@@ -265,7 +264,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
                 version,
                 hash: new_hash,
             };
-            self.location_idx_cache.write().unwrap().add(new_idx);
+            self.location_idx_cache.write().add(new_idx);
         }
 
         Ok(location)

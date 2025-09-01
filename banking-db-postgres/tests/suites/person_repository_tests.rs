@@ -1,6 +1,8 @@
 use banking_db::models::person::{
-    LocationModel, LocationType, LocalityModel, CountryModel, MessagingModel, MessagingType, PersonModel,
-    PersonType, CountrySubdivisionModel,
+    CountryIdxModelCache, CountryModel, CountrySubdivisionIdxModelCache, CountrySubdivisionModel,
+    LocalityIdxModelCache, LocalityModel, LocationIdxModelCache, LocationModel, LocationType,
+    MessagingIdxModelCache, MessagingModel, MessagingType, PersonIdxModelCache, PersonModel,
+    PersonType,
 };
 use banking_db::repository::{
     LocationRepository, LocalityRepository, CountryRepository, MessagingRepository, PersonRepository,
@@ -16,6 +18,7 @@ use banking_db_postgres::repository::{
 };
 use banking_db_postgres::repository::executor::Executor;
 use heapless::String as HeaplessString;
+use parking_lot::RwLock;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -123,16 +126,57 @@ async fn test_person_repository() {
     commons::cleanup_database(&db_pool).await;
     let executor = Executor::Pool(Arc::new(db_pool));
 
-    let country_repo = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
-    let country_subdivision_repo = Arc::new(
-        CountrySubdivisionRepositoryImpl::new(executor.clone(), country_repo.clone()).await,
-    );
-    let locality_repo = Arc::new(
-        LocalityRepositoryImpl::new(executor.clone(), country_subdivision_repo.clone()).await,
-    );
-    let location_repo =
-        Arc::new(LocationRepositoryImpl::new(executor.clone(), locality_repo.clone()).await);
-    let repo = PersonRepositoryImpl::new(executor, location_repo.clone()).await;
+    let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
+        .await
+        .unwrap();
+    let country_idx_cache =
+        Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+    let country_repo = Arc::new(CountryRepositoryImpl::new(
+        executor.clone(),
+        country_idx_cache,
+    ));
+
+    let country_subdivision_idx_models =
+        CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
+            .await
+            .unwrap();
+    let country_subdivision_idx_cache = Arc::new(RwLock::new(
+        CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
+    ));
+    let country_subdivision_repo = Arc::new(CountrySubdivisionRepositoryImpl::new(
+        executor.clone(),
+        country_repo.clone(),
+        country_subdivision_idx_cache,
+    ));
+
+    let locality_idx_models = LocalityRepositoryImpl::load_all_locality_idx(&executor)
+        .await
+        .unwrap();
+    let locality_idx_cache =
+        Arc::new(RwLock::new(LocalityIdxModelCache::new(locality_idx_models).unwrap()));
+    let locality_repo = Arc::new(LocalityRepositoryImpl::new(
+        executor.clone(),
+        country_subdivision_repo.clone(),
+        locality_idx_cache,
+    ));
+
+    let location_idx_models = LocationRepositoryImpl::load_all_location_idx(&executor)
+        .await
+        .unwrap();
+    let location_idx_cache =
+        Arc::new(RwLock::new(LocationIdxModelCache::new(location_idx_models).unwrap()));
+    let location_repo = Arc::new(LocationRepositoryImpl::new(
+        executor.clone(),
+        locality_repo.clone(),
+        location_idx_cache,
+    ));
+
+    let person_idx_models = PersonRepositoryImpl::load_all_person_idx(&executor)
+        .await
+        .unwrap();
+    let person_idx_cache =
+        Arc::new(RwLock::new(PersonIdxModelCache::new(person_idx_models).unwrap()));
+    let repo = PersonRepositoryImpl::new(executor, location_repo.clone(), person_idx_cache);
 
     // Test save and find_by_id
     let audit_log_id = Uuid::new_v4();
@@ -170,7 +214,12 @@ async fn test_country_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
     let executor = Executor::Pool(Arc::new(db_pool));
-    let repo = CountryRepositoryImpl::new(executor).await;
+    let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
+        .await
+        .unwrap();
+    let country_idx_cache =
+        Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+    let repo = CountryRepositoryImpl::new(executor, country_idx_cache);
 
     // Test save and find_by_id
     let new_country = create_test_country_model("CM", "Cameroon");
@@ -205,12 +254,30 @@ async fn test_country_subdivision_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
     let executor = Executor::Pool(Arc::new(db_pool));
-    let country_repo = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
+    let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
+        .await
+        .unwrap();
+    let country_idx_cache =
+        Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+    let country_repo = Arc::new(CountryRepositoryImpl::new(
+        executor.clone(),
+        country_idx_cache,
+    ));
     let country = create_test_country_model("CM", "Cameroon");
     country_repo.save(country.clone()).await.unwrap();
-    let repo =
-        CountrySubdivisionRepositoryImpl::new(executor, country_repo.clone())
-            .await;
+
+    let country_subdivision_idx_models =
+        CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
+            .await
+            .unwrap();
+    let country_subdivision_idx_cache = Arc::new(RwLock::new(
+        CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
+    ));
+    let repo = CountrySubdivisionRepositoryImpl::new(
+        executor,
+        country_repo.clone(),
+        country_subdivision_idx_cache,
+    );
 
     // Test save and find_by_id
     let new_country_subdivision = create_test_country_subdivision_model(country.id, "OU", "Ouest");
@@ -230,23 +297,46 @@ async fn test_locality_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
     let executor = Executor::Pool(Arc::new(db_pool));
-    let country_repo = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
+    let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
+        .await
+        .unwrap();
+    let country_idx_cache =
+        Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+    let country_repo = Arc::new(CountryRepositoryImpl::new(
+        executor.clone(),
+        country_idx_cache,
+    ));
     let country = create_test_country_model("CM", "Cameroon");
     country_repo.save(country.clone()).await.unwrap();
-    let country_subdivision_repo = Arc::new(
-        CountrySubdivisionRepositoryImpl::new(executor.clone(), country_repo.clone())
-            .await,
-    );
+
+    let country_subdivision_idx_models =
+        CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
+            .await
+            .unwrap();
+    let country_subdivision_idx_cache = Arc::new(RwLock::new(
+        CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
+    ));
+    let country_subdivision_repo = Arc::new(CountrySubdivisionRepositoryImpl::new(
+        executor.clone(),
+        country_repo.clone(),
+        country_subdivision_idx_cache,
+    ));
     let country_subdivision = create_test_country_subdivision_model(country.id, "OU", "Ouest");
     country_subdivision_repo
         .save(country_subdivision.clone())
         .await
         .unwrap();
+
+    let locality_idx_models = LocalityRepositoryImpl::load_all_locality_idx(&executor)
+        .await
+        .unwrap();
+    let locality_idx_cache =
+        Arc::new(RwLock::new(LocalityIdxModelCache::new(locality_idx_models).unwrap()));
     let repo = LocalityRepositoryImpl::new(
         executor,
         country_subdivision_repo.clone(),
-    )
-    .await;
+        locality_idx_cache,
+    );
 
     // Test save and find_by_id
     let new_locality = create_test_locality_model(country_subdivision.id, "BANA_001", "Bana");
@@ -267,26 +357,55 @@ async fn test_location_repository() {
     commons::cleanup_database(&db_pool).await;
     let executor = Executor::Pool(Arc::new(db_pool));
 
-    let country_repo = Arc::new(CountryRepositoryImpl::new(executor.clone()).await);
+    let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
+        .await
+        .unwrap();
+    let country_idx_cache =
+        Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+    let country_repo = Arc::new(CountryRepositoryImpl::new(
+        executor.clone(),
+        country_idx_cache,
+    ));
     let country = create_test_country_model("CM", "Cameroon");
     country_repo.save(country.clone()).await.unwrap();
 
-    let country_subdivision_repo = Arc::new(
-        CountrySubdivisionRepositoryImpl::new(executor.clone(), country_repo.clone()).await,
-    );
+    let country_subdivision_idx_models =
+        CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
+            .await
+            .unwrap();
+    let country_subdivision_idx_cache = Arc::new(RwLock::new(
+        CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
+    ));
+    let country_subdivision_repo = Arc::new(CountrySubdivisionRepositoryImpl::new(
+        executor.clone(),
+        country_repo.clone(),
+        country_subdivision_idx_cache,
+    ));
     let country_subdivision = create_test_country_subdivision_model(country.id, "OU", "Ouest");
     country_subdivision_repo
         .save(country_subdivision.clone())
         .await
         .unwrap();
 
-    let locality_repo = Arc::new(
-        LocalityRepositoryImpl::new(executor.clone(), country_subdivision_repo.clone()).await,
-    );
+    let locality_idx_models = LocalityRepositoryImpl::load_all_locality_idx(&executor)
+        .await
+        .unwrap();
+    let locality_idx_cache =
+        Arc::new(RwLock::new(LocalityIdxModelCache::new(locality_idx_models).unwrap()));
+    let locality_repo = Arc::new(LocalityRepositoryImpl::new(
+        executor.clone(),
+        country_subdivision_repo.clone(),
+        locality_idx_cache,
+    ));
     let locality = create_test_locality_model(country_subdivision.id, "BANA_001", "Bana");
     locality_repo.save(locality.clone()).await.unwrap();
 
-    let repo = LocationRepositoryImpl::new(executor, locality_repo).await;
+    let location_idx_models = LocationRepositoryImpl::load_all_location_idx(&executor)
+        .await
+        .unwrap();
+    let location_idx_cache =
+        Arc::new(RwLock::new(LocationIdxModelCache::new(location_idx_models).unwrap()));
+    let repo = LocationRepositoryImpl::new(executor, locality_repo, location_idx_cache);
 
     // Test save and find_by_id
     let new_location = create_test_location_model(locality.id, "Mission Catholique", "30321");
@@ -307,7 +426,13 @@ async fn test_messaging_repository() {
     let db_pool = commons::establish_connection().await;
     commons::cleanup_database(&db_pool).await;
     let executor = Executor::Pool(Arc::new(db_pool));
-    let repo = MessagingRepositoryImpl::new(executor).await;
+    let messaging_idx_models = MessagingRepositoryImpl::load_all_messaging_idx(&executor)
+        .await
+        .unwrap();
+    let messaging_idx_cache = Arc::new(RwLock::new(
+        MessagingIdxModelCache::new(messaging_idx_models).unwrap(),
+    ));
+    let repo = MessagingRepositoryImpl::new(executor, messaging_idx_cache);
 
     // Test save and find_by_id
     let new_messaging = create_test_messaging_model("francis@ledgers-rust.com");

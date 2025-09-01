@@ -21,24 +21,19 @@ pub struct CountrySubdivisionRepositoryImpl {
 }
 
 impl CountrySubdivisionRepositoryImpl {
-    pub async fn new(
+    pub fn new(
         executor: Executor,
         country_repository: Arc<CountryRepositoryImpl>,
+        country_subdivision_idx_cache: Arc<RwLock<CountrySubdivisionIdxModelCache>>,
     ) -> Self {
-        let country_subdivision_idx_models =
-            Self::load_all_country_subdivision_idx(&executor)
-                .await
-                .unwrap();
-        let country_subdivision_idx_cache =
-            CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap();
         Self {
             executor,
-            country_subdivision_idx_cache: Arc::new(RwLock::new(country_subdivision_idx_cache)),
+            country_subdivision_idx_cache,
             country_repository,
         }
     }
 
-    async fn load_all_country_subdivision_idx(
+    pub async fn load_all_country_subdivision_idx(
         executor: &Executor,
     ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
         let query = sqlx::query("SELECT * FROM country_subdivision_idx");

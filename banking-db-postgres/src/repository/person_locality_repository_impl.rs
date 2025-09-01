@@ -7,7 +7,8 @@ use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
@@ -18,14 +19,11 @@ pub struct LocalityRepositoryImpl {
 }
 
 impl LocalityRepositoryImpl {
-    pub async fn new(
+    pub fn new(
         executor: Executor,
         country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
+        locality_idx_cache: Arc<RwLock<LocalityIdxModelCache>>,
     ) -> Self {
-        let locality_idx_models = Self::load_all_locality_idx(&executor).await.unwrap();
-        let locality_idx_cache = Arc::new(RwLock::new(
-            LocalityIdxModelCache::new(locality_idx_models).unwrap(),
-        ));
         Self {
             executor,
             locality_idx_cache,
@@ -33,7 +31,7 @@ impl LocalityRepositoryImpl {
         }
     }
 
-    async fn load_all_locality_idx(
+    pub async fn load_all_locality_idx(
         executor: &Executor,
     ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
         let query = sqlx::query("SELECT * FROM locality_idx");
@@ -108,7 +106,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
             country_subdivision_id: locality.country_subdivision_id,
             code_hash,
         };
-        self.locality_idx_cache.write().unwrap().add(new_idx);
+        self.locality_idx_cache.write().add(new_idx);
 
         Ok(locality)
     }
@@ -133,7 +131,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
-        Ok(self.locality_idx_cache.read().unwrap().get_by_primary(&id))
+        Ok(self.locality_idx_cache.read().get_by_primary(&id))
     }
 
     async fn find_by_country_subdivision_id(
@@ -142,7 +140,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         _page: i32,
         _page_size: i32,
     ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
-        let cache = self.locality_idx_cache.read().unwrap();
+        let cache = self.locality_idx_cache.read();
         let mut result = Vec::new();
         if let Some(ids) = cache.get_by_country_subdivision_id(&country_subdivision_id) {
             for id in ids {
@@ -163,7 +161,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         hasher.write(code.as_bytes());
         let code_hash = hasher.finish() as i64;
 
-        let cache = self.locality_idx_cache.read().unwrap();
+        let cache = self.locality_idx_cache.read();
         if let Some(id) = cache.get_by_code_hash(&code_hash) {
             Ok(cache.get_by_primary(&id))
         } else {
@@ -175,7 +173,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<LocalityIdxModel>, Box<dyn Error + Send + Sync>> {
-        let cache = self.locality_idx_cache.read().unwrap();
+        let cache = self.locality_idx_cache.read();
         let mut result = Vec::new();
         for id in ids {
             if let Some(idx) = cache.get_by_primary(id) {
@@ -186,14 +184,14 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.locality_idx_cache.read().unwrap().contains_primary(&id))
+        Ok(self.locality_idx_cache.read().contains_primary(&id))
     }
 
     async fn find_ids_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let cache = self.locality_idx_cache.read().unwrap();
+        let cache = self.locality_idx_cache.read();
         Ok(cache
             .get_by_country_subdivision_id(&country_subdivision_id)
             .cloned()

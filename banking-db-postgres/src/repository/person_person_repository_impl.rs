@@ -9,7 +9,8 @@ use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
@@ -20,13 +21,11 @@ pub struct PersonRepositoryImpl {
 }
 
 impl PersonRepositoryImpl {
-    pub async fn new(
+    pub fn new(
         executor: Executor,
         location_repository: Arc<LocationRepositoryImpl>,
+        person_idx_cache: Arc<RwLock<PersonIdxModelCache>>,
     ) -> Self {
-        let person_idx_models = Self::load_all_person_idx(&executor).await.unwrap();
-        let person_idx_cache =
-            Arc::new(RwLock::new(PersonIdxModelCache::new(person_idx_models).unwrap()));
         Self {
             executor,
             person_idx_cache,
@@ -34,7 +33,7 @@ impl PersonRepositoryImpl {
         }
     }
 
-    async fn load_all_person_idx(
+    pub async fn load_all_person_idx(
         executor: &Executor,
     ) -> Result<Vec<PersonIdxModel>, sqlx::Error> {
         let query = sqlx::query_as::<_, PersonIdxModel>("SELECT * FROM person_idx");
@@ -94,7 +93,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {
-            let cache_read_guard = self.person_idx_cache.read().unwrap();
+            let cache_read_guard = self.person_idx_cache.read();
             cache_read_guard.get_by_primary(&person.id)
         };
 
@@ -237,7 +236,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 version: new_version,
                 hash: new_hash,
             };
-            self.person_idx_cache.write().unwrap().update(new_idx);
+            self.person_idx_cache.write().update(new_idx);
         } else {
             // INSERT
             let version = 0;
@@ -357,7 +356,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 version,
                 hash: new_hash,
             };
-            self.person_idx_cache.write().unwrap().add(new_idx);
+            self.person_idx_cache.write().add(new_idx);
         }
 
         Ok(person)
@@ -386,14 +385,14 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         &self,
         id: Uuid,
     ) -> Result<Option<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
-        Ok(self.person_idx_cache.read().unwrap().get_by_primary(&id))
+        Ok(self.person_idx_cache.read().get_by_primary(&id))
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
-        let cache = self.person_idx_cache.read().unwrap();
+        let cache = self.person_idx_cache.read();
         let results = ids
             .iter()
             .filter_map(|id| cache.get_by_primary(id))
@@ -402,7 +401,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.person_idx_cache.read().unwrap().contains_primary(&id))
+        Ok(self.person_idx_cache.read().contains_primary(&id))
     }
 
     async fn get_ids_by_external_identifier(
@@ -413,7 +412,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         hasher.write(identifier.as_bytes());
         let hash = hasher.finish() as i64;
 
-        let cache = self.person_idx_cache.read().unwrap();
+        let cache = self.person_idx_cache.read();
         Ok(cache
             .get_by_external_identifier_hash(&hash)
             .cloned()
@@ -428,7 +427,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         hasher.write(identifier.as_bytes());
         let hash = hasher.finish() as i64;
 
-        let cache = self.person_idx_cache.read().unwrap();
+        let cache = self.person_idx_cache.read();
         let ids = cache
             .get_by_external_identifier_hash(&hash)
             .cloned()
