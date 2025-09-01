@@ -166,6 +166,13 @@ A major refactoring of the product, account, and fee domains to align with the n
 - **Schema Alignment**: Updated `banking-db-postgres/migrations/*.sql` to reflect the new, more robust schema.
 - **Code Cleanup**: Removed significant amounts of outdated documentation and dead code.
 
+### 🎉 Unit of Work and Transaction Management Refactoring
+This commit introduces a `UnitOfWork` pattern for improved transaction management and data consistency across all repository operations.
+- **Transactional Integrity**: Ensures that all database operations within a single business transaction are committed or rolled back as a single atomic unit.
+- **Repository Refactoring**: All PostgreSQL repositories have been refactored to use the `UnitOfWork`'s transaction executor, centralizing transaction control.
+- **Reduced Boilerplate**: Eliminates repetitive transaction management code from individual repository methods.
+- **Enhanced Testability**: Simplifies testing of transactional logic.
+
 ## Key Achievements (January 2025)
 
 ### 🎉 100% PostgreSQL Repository Implementation Complete

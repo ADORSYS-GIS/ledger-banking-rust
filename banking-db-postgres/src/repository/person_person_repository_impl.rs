@@ -3,9 +3,10 @@ use banking_db::models::person::{
     PersonAuditModel, PersonIdxModel, PersonIdxModelCache, PersonModel,
 };
 use banking_db::repository::{LocationRepository, PersonRepository};
+use crate::repository::executor::Executor;
 use crate::repository::person_location_repository_impl::LocationRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
-use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
+use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::{Arc, RwLock};
@@ -13,30 +14,37 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct PersonRepositoryImpl {
-    pool: Arc<PgPool>,
+    executor: Executor,
     person_idx_cache: Arc<RwLock<PersonIdxModelCache>>,
     location_repository: Arc<LocationRepositoryImpl>,
 }
 
 impl PersonRepositoryImpl {
     pub async fn new(
-        pool: Arc<PgPool>,
+        executor: Executor,
         location_repository: Arc<LocationRepositoryImpl>,
     ) -> Self {
-        let person_idx_models = Self::load_all_person_idx(&pool).await.unwrap();
+        let person_idx_models = Self::load_all_person_idx(&executor).await.unwrap();
         let person_idx_cache =
             Arc::new(RwLock::new(PersonIdxModelCache::new(person_idx_models).unwrap()));
         Self {
-            pool,
+            executor,
             person_idx_cache,
             location_repository,
         }
     }
 
-    async fn load_all_person_idx(pool: &PgPool) -> Result<Vec<PersonIdxModel>, sqlx::Error> {
-        sqlx::query_as::<_, PersonIdxModel>("SELECT * FROM person_idx")
-            .fetch_all(pool)
-            .await
+    async fn load_all_person_idx(
+        executor: &Executor,
+    ) -> Result<Vec<PersonIdxModel>, sqlx::Error> {
+        let query = sqlx::query_as::<_, PersonIdxModel>("SELECT * FROM person_idx");
+        match executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await
+            }
+        }
     }
 }
 
@@ -129,7 +137,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 audit_log_id,
             };
 
-            sqlx::query(
+            let query1 = sqlx::query(
                 r#"
                 INSERT INTO person_audit (person_id, version, hash, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
@@ -161,11 +169,9 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(audit_model.location_id)
             .bind(audit_model.duplicate_of_person_id)
             .bind(audit_model.entity_reference_count)
-            .bind(audit_model.audit_log_id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(audit_model.audit_log_id);
 
-            sqlx::query(
+            let query2 = sqlx::query(
                 r#"
                 UPDATE person SET
                     person_type = $2::person_type, display_name = $3, external_identifier = $4,
@@ -195,11 +201,9 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(person.department.as_ref().map(|s| s.as_str()))
             .bind(person.location_id)
             .bind(person.duplicate_of_person_id)
-            .bind(person.entity_reference_count)
-            .execute(&*self.pool)
-            .await?;
+            .bind(person.entity_reference_count);
 
-            sqlx::query(
+            let query3 = sqlx::query(
                 r#"
                 UPDATE person_idx SET
                     external_identifier_hash = $2,
@@ -211,9 +215,21 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(person.id)
             .bind(new_external_hash)
             .bind(new_version)
-            .bind(new_hash)
-            .execute(&*self.pool)
-            .await?;
+            .bind(new_hash);
+
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                    query3.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                    query3.execute(&mut **tx).await?;
+                }
+            }
 
             let new_idx = PersonIdxModel {
                 person_id: person.id,
@@ -250,7 +266,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 audit_log_id,
             };
 
-            sqlx::query(
+            let query1 = sqlx::query(
                 r#"
                 INSERT INTO person_audit (person_id, version, hash, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
@@ -282,11 +298,9 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(audit_model.location_id)
             .bind(audit_model.duplicate_of_person_id)
             .bind(audit_model.entity_reference_count)
-            .bind(audit_model.audit_log_id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(audit_model.audit_log_id);
 
-            sqlx::query(
+            let query2 = sqlx::query(
                 r#"
                 INSERT INTO person (id, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count)
                 VALUES ($1, $2::person_type, $3, $4, $5, $6, $7::messaging_type, $8, $9::messaging_type, $10, $11::messaging_type, $12, $13::messaging_type, $14, $15, $16, $17, $18, $19)
@@ -310,11 +324,9 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(person.department.as_ref().map(|s| s.as_str()))
             .bind(person.location_id)
             .bind(person.duplicate_of_person_id)
-            .bind(person.entity_reference_count)
-            .execute(&*self.pool)
-            .await?;
+            .bind(person.entity_reference_count);
 
-            sqlx::query(
+            let query3 = sqlx::query(
                 r#"
                 INSERT INTO person_idx (person_id, external_identifier_hash, version, hash)
                 VALUES ($1, $2, $3, $4)
@@ -323,9 +335,21 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(person.id)
             .bind(new_external_hash)
             .bind(version)
-            .bind(new_hash)
-            .execute(&*self.pool)
-            .await?;
+            .bind(new_hash);
+
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                    query3.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                    query3.execute(&mut **tx).await?;
+                }
+            }
 
             let new_idx = PersonIdxModel {
                 person_id: person.id,
@@ -340,14 +364,20 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
     }
 
     async fn load(&self, id: Uuid) -> Result<PersonModel, sqlx::Error> {
-        let row = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM person WHERE id = $1
             "#,
         )
-        .bind(id)
-        .fetch_one(&*self.pool)
-        .await?;
+        .bind(id);
+
+        let row = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
 
         PersonModel::try_from_row(&row).map_err(sqlx::Error::Decode)
     }

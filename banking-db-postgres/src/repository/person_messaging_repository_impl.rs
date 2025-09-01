@@ -3,8 +3,9 @@ use banking_db::models::person::{
     MessagingAuditModel, MessagingIdxModel, MessagingIdxModelCache, MessagingModel,
 };
 use banking_db::repository::MessagingRepository;
+use crate::repository::executor::Executor;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
-use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
+use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::{Arc, RwLock};
@@ -12,28 +13,33 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct MessagingRepositoryImpl {
-    pool: Arc<PgPool>,
+    executor: Executor,
     messaging_idx_cache: Arc<RwLock<MessagingIdxModelCache>>,
 }
 
 impl MessagingRepositoryImpl {
-    pub async fn new(pool: Arc<PgPool>) -> Self {
-        let messaging_idx_models = Self::load_all_messaging_idx(&pool).await.unwrap();
+    pub async fn new(executor: Executor) -> Self {
+        let messaging_idx_models = Self::load_all_messaging_idx(&executor).await.unwrap();
         let messaging_idx_cache = Arc::new(RwLock::new(
             MessagingIdxModelCache::new(messaging_idx_models).unwrap(),
         ));
         Self {
-            pool,
+            executor,
             messaging_idx_cache,
         }
     }
 
     async fn load_all_messaging_idx(
-        pool: &PgPool,
+        executor: &Executor,
     ) -> Result<Vec<MessagingIdxModel>, sqlx::Error> {
-        sqlx::query_as::<_, MessagingIdxModel>("SELECT * FROM messaging_idx")
-            .fetch_all(pool)
-            .await
+        let query = sqlx::query_as::<_, MessagingIdxModel>("SELECT * FROM messaging_idx");
+        match executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await
+            }
+        }
     }
 }
 
@@ -77,7 +83,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
                 audit_log_id,
             };
 
-            sqlx::query(
+            let query1 = sqlx::query(
                 r#"
                 INSERT INTO messaging_audit (messaging_id, version, hash, messaging_type, value, other_type, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -89,11 +95,9 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
             .bind(audit_model.messaging_type)
             .bind(audit_model.value.as_str())
             .bind(audit_model.other_type.as_ref().map(|s| s.as_str()))
-            .bind(audit_model.audit_log_id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(audit_model.audit_log_id);
 
-            sqlx::query(
+            let query2 = sqlx::query(
                 r#"
                 UPDATE messaging SET
                     messaging_type = $2::messaging_type, value = $3, other_type = $4
@@ -103,11 +107,9 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
             .bind(messaging.id)
             .bind(messaging.messaging_type)
             .bind(messaging.value.as_str())
-            .bind(messaging.other_type.as_ref().map(|s| s.as_str()))
-            .execute(&*self.pool)
-            .await?;
+            .bind(messaging.other_type.as_ref().map(|s| s.as_str()));
 
-            sqlx::query(
+            let query3 = sqlx::query(
                 r#"
                 UPDATE messaging_idx SET
                     value_hash = $2,
@@ -119,9 +121,21 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
             .bind(messaging.id)
             .bind(new_value_hash)
             .bind(new_version)
-            .bind(new_hash)
-            .execute(&*self.pool)
-            .await?;
+            .bind(new_hash);
+
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                    query3.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                    query3.execute(&mut **tx).await?;
+                }
+            }
 
             let new_idx = MessagingIdxModel {
                 messaging_id: messaging.id,
@@ -143,7 +157,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
                 audit_log_id,
             };
 
-            sqlx::query(
+            let query1 = sqlx::query(
                 r#"
                 INSERT INTO messaging_audit (messaging_id, version, hash, messaging_type, value, other_type, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -155,11 +169,9 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
             .bind(audit_model.messaging_type)
             .bind(audit_model.value.as_str())
             .bind(audit_model.other_type.as_ref().map(|s| s.as_str()))
-            .bind(audit_model.audit_log_id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(audit_model.audit_log_id);
 
-            sqlx::query(
+            let query2 = sqlx::query(
                 r#"
                 INSERT INTO messaging (id, messaging_type, value, other_type)
                 VALUES ($1, $2::messaging_type, $3, $4)
@@ -168,11 +180,9 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
             .bind(messaging.id)
             .bind(messaging.messaging_type)
             .bind(messaging.value.as_str())
-            .bind(messaging.other_type.as_ref().map(|s| s.as_str()))
-            .execute(&*self.pool)
-            .await?;
+            .bind(messaging.other_type.as_ref().map(|s| s.as_str()));
 
-            sqlx::query(
+            let query3 = sqlx::query(
                 r#"
                 INSERT INTO messaging_idx (messaging_id, value_hash, version, hash)
                 VALUES ($1, $2, $3, $4)
@@ -181,9 +191,21 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
             .bind(messaging.id)
             .bind(new_value_hash)
             .bind(version)
-            .bind(new_hash)
-            .execute(&*self.pool)
-            .await?;
+            .bind(new_hash);
+
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                    query3.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                    query3.execute(&mut **tx).await?;
+                }
+            }
 
             let new_idx = MessagingIdxModel {
                 messaging_id: messaging.id,
@@ -198,10 +220,14 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
     }
 
     async fn load(&self, id: Uuid) -> Result<MessagingModel, sqlx::Error> {
-        let row = sqlx::query("SELECT * FROM messaging WHERE id = $1")
-            .bind(id)
-            .fetch_one(&*self.pool)
-            .await?;
+        let query = sqlx::query("SELECT * FROM messaging WHERE id = $1").bind(id);
+        let row = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
         MessagingModel::try_from_row(&row).map_err(sqlx::Error::Decode)
     }
 
@@ -215,10 +241,14 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
-        let rows = sqlx::query("SELECT * FROM messaging_idx WHERE messaging_id = ANY($1)")
-            .bind(ids)
-            .fetch_all(&*self.pool)
-            .await?;
+        let query = sqlx::query("SELECT * FROM messaging_idx WHERE messaging_id = ANY($1)").bind(ids);
+        let rows = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         let mut messagings = Vec::new();
         for row in rows {
             messagings.push(MessagingIdxModel::try_from_row(&row)?);
@@ -226,9 +256,14 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         Ok(messagings)
     }
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM messaging WHERE id = $1)", id)
-            .fetch_one(&*self.pool)
-            .await?;
+        let query = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM messaging WHERE id = $1)", id);
+        let exists = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
         Ok(exists.unwrap_or(false))
     }
     async fn find_ids_by_value(
@@ -239,10 +274,16 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         hasher.write(value.as_bytes());
         let hash = hasher.finish() as i64;
 
-        let ids = sqlx::query_scalar("SELECT messaging_id FROM messaging_idx WHERE value_hash = $1")
-            .bind(hash)
-            .fetch_all(&*self.pool)
-            .await?;
+        let query =
+            sqlx::query_scalar("SELECT messaging_id FROM messaging_idx WHERE value_hash = $1")
+                .bind(hash);
+        let ids = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         Ok(ids)
     }
 }

@@ -3,9 +3,10 @@ use banking_db::models::person::{
     LocationAuditModel, LocationIdxModel, LocationIdxModelCache, LocationModel, LocationType,
 };
 use banking_db::repository::{LocalityRepository, LocationRepository};
+use crate::repository::executor::Executor;
 use crate::repository::person_locality_repository_impl::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
-use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
+use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::{Arc, RwLock};
@@ -13,32 +14,37 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocationRepositoryImpl {
-    pool: Arc<PgPool>,
+    executor: Executor,
     location_idx_cache: Arc<RwLock<LocationIdxModelCache>>,
     locality_repository: Arc<LocalityRepositoryImpl>,
 }
 
 impl LocationRepositoryImpl {
     pub async fn new(
-        pool: Arc<PgPool>,
+        executor: Executor,
         locality_repository: Arc<LocalityRepositoryImpl>,
     ) -> Self {
-        let location_idx_models = Self::load_all_location_idx(&pool).await.unwrap();
+        let location_idx_models = Self::load_all_location_idx(&executor).await.unwrap();
         let location_idx_cache =
             Arc::new(RwLock::new(LocationIdxModelCache::new(location_idx_models).unwrap()));
         Self {
-            pool,
+            executor,
             location_idx_cache,
             locality_repository,
         }
     }
 
     async fn load_all_location_idx(
-        pool: &PgPool,
+        executor: &Executor,
     ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
-        sqlx::query_as::<_, LocationIdxModel>("SELECT * FROM location_idx")
-            .fetch_all(pool)
-            .await
+        let query = sqlx::query_as::<_, LocationIdxModel>("SELECT * FROM location_idx");
+        match executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await
+            }
+        }
     }
 }
 
@@ -94,7 +100,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
                 audit_log_id,
             };
 
-            sqlx::query(
+            let query1 = sqlx::query(
                 r#"
                 INSERT INTO location_audit (location_id, version, hash, street_line1, street_line2, street_line3, street_line4, locality_id, postal_code, latitude, longitude, accuracy_meters, location_type, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -113,11 +119,9 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             .bind(audit_model.longitude)
             .bind(audit_model.accuracy_meters)
             .bind(audit_model.location_type)
-            .bind(audit_model.audit_log_id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(audit_model.audit_log_id);
 
-            sqlx::query(
+            let query2 = sqlx::query(
                 r#"
                 UPDATE location SET
                     street_line1 = $2, street_line2 = $3, street_line3 = $4, street_line4 = $5,
@@ -136,11 +140,9 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             .bind(location.latitude)
             .bind(location.longitude)
             .bind(location.accuracy_meters)
-            .bind(location.location_type)
-            .execute(&*self.pool)
-            .await?;
+            .bind(location.location_type);
 
-            sqlx::query(
+            let query3 = sqlx::query(
                 r#"
                 UPDATE location_idx SET
                     version = $2,
@@ -150,9 +152,21 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             )
             .bind(location.id)
             .bind(new_version)
-            .bind(new_hash)
-            .execute(&*self.pool)
-            .await?;
+            .bind(new_hash);
+
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                    query3.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                    query3.execute(&mut **tx).await?;
+                }
+            }
 
             let new_idx = LocationIdxModel {
                 location_id: location.id,
@@ -181,7 +195,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
                 audit_log_id,
             };
 
-            sqlx::query(
+            let query1 = sqlx::query(
                 r#"
                 INSERT INTO location_audit (location_id, version, hash, street_line1, street_line2, street_line3, street_line4, locality_id, postal_code, latitude, longitude, accuracy_meters, location_type, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -200,11 +214,9 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             .bind(audit_model.longitude)
             .bind(audit_model.accuracy_meters)
             .bind(audit_model.location_type)
-            .bind(audit_model.audit_log_id)
-            .execute(&*self.pool)
-            .await?;
+            .bind(audit_model.audit_log_id);
 
-            sqlx::query(
+            let query2 = sqlx::query(
                 r#"
                 INSERT INTO location (id, street_line1, street_line2, street_line3, street_line4, locality_id, postal_code, latitude, longitude, accuracy_meters, location_type)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -220,11 +232,9 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             .bind(location.latitude)
             .bind(location.longitude)
             .bind(location.accuracy_meters)
-            .bind(location.location_type)
-            .execute(&*self.pool)
-            .await?;
+            .bind(location.location_type);
 
-            sqlx::query(
+            let query3 = sqlx::query(
                 r#"
                 INSERT INTO location_idx (location_id, locality_id, version, hash)
                 VALUES ($1, $2, $3, $4)
@@ -233,9 +243,21 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             .bind(location.id)
             .bind(location.locality_id)
             .bind(version)
-            .bind(new_hash)
-            .execute(&*self.pool)
-            .await?;
+            .bind(new_hash);
+
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                    query3.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                    query3.execute(&mut **tx).await?;
+                }
+            }
 
             let new_idx = LocationIdxModel {
                 location_id: location.id,
@@ -250,27 +272,39 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
     }
 
     async fn load(&self, id: Uuid) -> Result<LocationModel, sqlx::Error> {
-        let row = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM location WHERE id = $1
             "#,
         )
-        .bind(id)
-        .fetch_one(&*self.pool)
-        .await?;
+        .bind(id);
+
+        let row = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
 
         LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationIdxModel>, sqlx::Error> {
-        let row = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM location_idx WHERE location_id = $1
             "#,
         )
-        .bind(id)
-        .fetch_optional(&*self.pool)
-        .await?;
+        .bind(id);
+
+        let row = match &self.executor {
+            Executor::Pool(pool) => query.fetch_optional(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_optional(&mut **tx).await?
+            }
+        };
 
         match row {
             Some(row) => Ok(Some(
@@ -284,26 +318,38 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         &self,
         street_line1: &str,
     ) -> Result<Vec<Uuid>, sqlx::Error> {
-        let ids = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             r#"
             SELECT id FROM location WHERE street_line1 = $1
             "#,
         )
-        .bind(street_line1)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind(street_line1);
+
+        let ids = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         Ok(ids)
     }
 
     async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
-        let rows = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM location_idx WHERE location_id = ANY($1)
             "#,
         )
-        .bind(ids)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind(ids);
+
+        let rows = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
 
         let mut locations = Vec::new();
         for row in rows {
@@ -319,7 +365,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         page: i32,
         page_size: i32,
     ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
-        let rows = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM location_idx WHERE locality_id = $1
             LIMIT $2 OFFSET $3
@@ -327,9 +373,15 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         )
         .bind(locality_id)
         .bind(page_size)
-        .bind((page - 1) * page_size)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind((page - 1) * page_size);
+
+        let rows = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
 
         let mut locations = Vec::new();
         for row in rows {
@@ -346,7 +398,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         page: i32,
         page_size: i32,
     ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
-        let rows = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT li.*
             FROM location_idx li
@@ -358,9 +410,15 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         .bind(location_type)
         .bind(locality_id)
         .bind(page_size)
-        .bind((page - 1) * page_size)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind((page - 1) * page_size);
+
+        let rows = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
 
         let mut locations = Vec::new();
         for row in rows {
@@ -371,12 +429,17 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let exists = sqlx::query_scalar!(
+        let query = sqlx::query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM location WHERE id = $1)",
             id
-        )
-        .fetch_one(&*self.pool)
-        .await?;
+        );
+        let exists = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
         Ok(exists.unwrap_or(false))
     }
 
@@ -384,14 +447,20 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         &self,
         location_type: LocationType,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             r#"
             SELECT id FROM location WHERE location_type = $1
             "#,
         )
-        .bind(location_type)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind(location_type);
+
+        let ids = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         Ok(ids)
     }
 
@@ -399,14 +468,20 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         &self,
         locality_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let ids = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             r#"
             SELECT id FROM location WHERE locality_id = $1
             "#,
         )
-        .bind(locality_id)
-        .fetch_all(&*self.pool)
-        .await?;
+        .bind(locality_id);
+
+        let ids = match &self.executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         Ok(ids)
     }
 }

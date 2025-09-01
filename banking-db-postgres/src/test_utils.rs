@@ -83,10 +83,11 @@ pub mod commons {
     /// This function truncates all tables and resets the database to a clean state
     /// for the next test. It reads and executes the cleanup.sql file.
     pub async fn cleanup_database(pool: &PgPool) {
-        let cleanup_path = Path::new("tests/fixtures/cleanup.sql");
-        let sql = fs::read_to_string(cleanup_path)
-            .expect("Failed to read cleanup file: tests/fixtures/cleanup.sql");
-
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let cleanup_path = Path::new(manifest_dir).join("tests/fixtures/cleanup.sql");
+        let sql = fs::read_to_string(&cleanup_path)
+            .expect(&format!("Failed to read cleanup file from banking-db-postgres crate: {:?}", cleanup_path));
+    
         sqlx::raw_sql(&sql)
             .execute(pool)
             .await

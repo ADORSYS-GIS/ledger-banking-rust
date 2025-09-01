@@ -1,0 +1,143 @@
+{
+  "countries": [
+    {
+      "id": "a7a5b7a0-3b7e-4b0e-8c1a-2b0a9b8a7a5b",
+      "iso2": "CM",
+      "name_l1": "Cameroon",
+      "name_l2": "Cameroun",
+      "name_l3": null
+    }
+  ],
+  "subdivisions": [
+    {
+      "id": "b8b6c8b1-4c8f-5c1f-9d2b-3c1b0c9b8b6c",
+      "country_id": "a7a5b7a0-3b7e-4b0e-8c1a-2b0a9b8a7a5b",
+      "code": "LT",
+      "name_l1": "Littoral Region",
+      "name_l2": "Région du Littoral",
+      "name_l3": null
+    },
+    {
+      "id": "d1d2e3d4-1a2b-3c4d-4e5f-6a7b8c9d0e1f",
+      "country_id": "a7a5b7a0-3b7e-4b0e-8c1a-2b0a9b8a7a5b",
+      "code": "CE",
+      "name_l1": "Centre Region",
+      "name_l2": "Région du Centre",
+      "name_l3": null
+    },
+    {
+      "id": "e1e2f3f4-1b2c-3d4e-4f5a-6b7c8d9e0f1a",
+      "country_id": "a7a5b7a0-3b7e-4b0e-8c1a-2b0a9b8a7a5b",
+      "code": "WE",
+      "name_l1": "West Region",
+      "name_l2": "Région de l'Ouest",
+      "name_l3": null
+    },
+    {
+      "id": "f1f2a3a4-1c2d-3e4f-4a5b-6c7d8e9f0a1b",
+      "country_id": "a7a5b7a0-3b7e-4b0e-8c1a-2b0a9b8a7a5b",
+      "code": "SW",
+      "name_l1": "South-West Region",
+      "name_l2": "Région du Sud-Ouest",
+      "name_l3": null
+    }
+  ],
+  "localities": [
+    {
+      "id": "c9c7d9c2-5d90-6d20-0e3c-4d2c1da0c9c7",
+      "country_subdivision_id": "b8b6c8b1-4c8f-5c1f-9d2b-3c1b0c9b8b6c",
+      "code": "DLA",
+      "name_l1": "Douala",
+      "name_l2": "Douala",
+      "name_l3": null
+    },
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "country_subdivision_id": "b8b6c8b1-4c8f-5c1f-9d2b-3c1b0c9b8b6c",
+      "code": "EDA",
+      "name_l1": "Edea",
+      "name_l2": "Edéa",
+      "name_l3": null
+    },
+    {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "country_subdivision_id": "b8b6c8b1-4c8f-5c1f-9d2b-3c1b0c9b8b6c",
+      "code": "NKS",
+      "name_l1": "Nkongsamba",
+      "name_l2": "Nkongsamba",
+      "name_l3": null
+    },
+    {
+      "id": "33333333-3333-3333-3333-333333333333",
+      "country_subdivision_id": "d1d2e3d4-1a2b-3c4d-4e5f-6a7b8c9d0e1f",
+      "code": "YDE",
+      "name_l1": "Yaounde",
+      "name_l2": "Yaoundé",
+      "name_l3": null
+    },
+    {
+      "id": "44444444-4444-4444-4444-444444444444",
+      "country_subdivision_id": "d1d2e3d4-1a2b-3c4d-4e5f-6a7b8c9d0e1f",
+      "code": "MBM",
+      "name_l1": "Mbalmayo",
+      "name_l2": "Mbalmayo",
+      "name_l3": null
+    },
+    {
+      "id": "55555555-5555-5555-5555-555555555555",
+      "country_subdivision_id": "d1d2e3d4-1a2b-3c4d-4e5f-6a7b8c9d0e1f",
+      "code": "OBA",
+      "name_l1": "Obala",
+      "name_l2": "Obala",
+      "name_l3": null
+    },
+    {
+      "id": "66666666-6666-6666-6666-666666666666",
+      "country_subdivision_id": "e1e2f3f4-1b2c-3d4e-4f5a-6b7c8d9e0f1a",
+      "code": "BFM",
+      "name_l1": "Bafoussam",
+      "name_l2": "Bafoussam",
+      "name_l3": null
+    },
+    {
+      "id": "77777777-7777-7777-7777-777777777777",
+      "country_subdivision_id": "e1e2f3f4-1b2c-3d4e-4f5a-6b7c8d9e0f1a",
+      "code": "DSC",
+      "name_l1": "Dschang",
+      "name_l2": "Dschang",
+      "name_l3": null
+    },
+    {
+      "id": "88888888-8888-8888-8888-888888888888",
+      "country_subdivision_id": "e1e2f3f4-1b2c-3d4e-4f5a-6b7c8d9e0f1a",
+      "code": "FBN",
+      "name_l1": "Foumban",
+      "name_l2": "Foumban",
+      "name_l3": null
+    },
+    {
+      "id": "99999999-9999-9999-9999-999999999999",
+      "country_subdivision_id": "f1f2a3a4-1c2d-3e4f-4a5b-6c7d8e9f0a1b",
+      "code": "BUA",
+      "name_l1": "Buea",
+      "name_l2": "Buea",
+      "name_l3": null
+    },
+    {
+      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "country_subdivision_id": "f1f2a3a4-1c2d-3e4f-4a5b-6c7d8e9f0a1b",
+      "code": "LBE",
+      "name_l1": "Limbe",
+      "name_l2": "Limbe",
+      "name_l3": null
+    },
+    {
+      "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "country_subdivision_id": "f1f2a3a4-1c2d-3e4f-4a5b-6c7d8e9f0a1b",
+      "code": "KBA",
+      "name_l1": "Kumba",
+      "name_l2": "Kumba",
+      "name_l3": null
+    }
+  ]
+}

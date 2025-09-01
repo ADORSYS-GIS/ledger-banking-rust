@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use banking_db::models::person::{LocalityIdxModel, LocalityIdxModelCache, LocalityModel};
 use banking_db::repository::{CountrySubdivisionRepository, LocalityRepository};
+use crate::repository::executor::Executor;
 use crate::repository::person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
-use sqlx::{postgres::PgRow, PgPool, Postgres, Row};
+use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::{Arc, RwLock};
@@ -11,31 +12,38 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocalityRepositoryImpl {
-    pool: Arc<PgPool>,
+    executor: Executor,
     locality_idx_cache: Arc<RwLock<LocalityIdxModelCache>>,
     country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
 }
 
 impl LocalityRepositoryImpl {
     pub async fn new(
-        pool: Arc<PgPool>,
+        executor: Executor,
         country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
     ) -> Self {
-        let locality_idx_models = Self::load_all_locality_idx(&pool).await.unwrap();
+        let locality_idx_models = Self::load_all_locality_idx(&executor).await.unwrap();
         let locality_idx_cache = Arc::new(RwLock::new(
             LocalityIdxModelCache::new(locality_idx_models).unwrap(),
         ));
         Self {
-            pool,
+            executor,
             locality_idx_cache,
             country_subdivision_repository,
         }
     }
 
-    async fn load_all_locality_idx(pool: &PgPool) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
-        let rows = sqlx::query("SELECT * FROM locality_idx")
-            .fetch_all(pool)
-            .await?;
+    async fn load_all_locality_idx(
+        executor: &Executor,
+    ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
+        let query = sqlx::query("SELECT * FROM locality_idx");
+        let rows = match executor {
+            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_all(&mut **tx).await?
+            }
+        };
         let mut idx_models = Vec::with_capacity(rows.len());
         for row in rows {
             idx_models.push(LocalityIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
@@ -56,7 +64,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
             return Err(sqlx::Error::RowNotFound);
         }
 
-        sqlx::query(
+        let query1 = sqlx::query(
             r#"
             INSERT INTO locality (id, country_subdivision_id, code, name_l1, name_l2, name_l3)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -67,15 +75,13 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         .bind(locality.code.as_str())
         .bind(locality.name_l1.as_str())
         .bind(locality.name_l2.as_ref().map(|s| s.as_str()))
-        .bind(locality.name_l3.as_ref().map(|s| s.as_str()))
-        .execute(&*self.pool)
-        .await?;
+        .bind(locality.name_l3.as_ref().map(|s| s.as_str()));
 
         let mut hasher = twox_hash::XxHash64::with_seed(0);
         hasher.write(locality.code.as_bytes());
         let code_hash = hasher.finish() as i64;
 
-        sqlx::query(
+        let query2 = sqlx::query(
             r#"
             INSERT INTO locality_idx (locality_id, country_subdivision_id, code_hash)
             VALUES ($1, $2, $3)
@@ -83,9 +89,19 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         )
         .bind(locality.id)
         .bind(locality.country_subdivision_id)
-        .bind(code_hash)
-        .execute(&*self.pool)
-        .await?;
+        .bind(code_hash);
+
+        match &self.executor {
+            Executor::Pool(pool) => {
+                query1.execute(&**pool).await?;
+                query2.execute(&**pool).await?;
+            }
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query1.execute(&mut **tx).await?;
+                query2.execute(&mut **tx).await?;
+            }
+        }
 
         let new_idx = LocalityIdxModel {
             locality_id: locality.id,
@@ -98,14 +114,20 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
     }
 
     async fn load(&self, id: Uuid) -> Result<LocalityModel, sqlx::Error> {
-        let row = sqlx::query(
+        let query = sqlx::query(
             r#"
             SELECT * FROM locality WHERE id = $1
             "#,
         )
-        .bind(id)
-        .fetch_one(&*self.pool)
-        .await?;
+        .bind(id);
+
+        let row = match &self.executor {
+            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query.fetch_one(&mut **tx).await?
+            }
+        };
 
         LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)
     }
