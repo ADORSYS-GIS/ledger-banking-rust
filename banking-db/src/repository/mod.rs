@@ -1,5 +1,6 @@
 pub mod person_repository;
 pub mod audit_repository;
+pub mod person_repos;
 pub mod unit_of_work;
 // pub mod customer_repository;
 // pub mod account_repository;
@@ -18,6 +19,7 @@ pub mod unit_of_work;
 
 pub use person_repository::*;
 pub use audit_repository::*;
+pub use person_repos::*;
 // pub use customer_repository::*;
 // pub use account_repository::*;
 // pub use account_hold_repository::*;

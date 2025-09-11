@@ -5,7 +5,7 @@ use banking_db::{
         CountryIdxModelCache, CountrySubdivisionIdxModelCache, EntityReferenceIdxModelCache,
         LocalityIdxModelCache, LocationIdxModelCache, MessagingIdxModelCache, PersonIdxModelCache,
     },
-    repository::{UnitOfWork, UnitOfWorkSession},
+    repository::{PersonRepos, UnitOfWork, UnitOfWorkSession},
 };
 use parking_lot::RwLock;
 use sqlx::{PgPool, Postgres, Transaction};
@@ -115,9 +115,7 @@ impl UnitOfWork<Postgres> for PostgresUnitOfWork {
     }
 }
 
-pub struct PostgresUnitOfWorkSession {
-    tx: crate::repository::executor::Executor,
-    audit_logs: Arc<AuditLogRepositoryImpl>,
+pub struct PostgresPersonRepos {
     persons: Arc<PersonRepositoryImpl>,
     countries: Arc<CountryRepositoryImpl>,
     country_subdivisions: Arc<CountrySubdivisionRepositoryImpl>,
@@ -125,6 +123,50 @@ pub struct PostgresUnitOfWorkSession {
     locations: Arc<LocationRepositoryImpl>,
     messagings: Arc<MessagingRepositoryImpl>,
     entity_references: Arc<EntityReferenceRepositoryImpl>,
+}
+
+impl PersonRepos<Postgres> for PostgresPersonRepos {
+    type PersonRepo = PersonRepositoryImpl;
+    type CountryRepo = CountryRepositoryImpl;
+    type CountrySubdivisionRepo = CountrySubdivisionRepositoryImpl;
+    type LocalityRepo = LocalityRepositoryImpl;
+    type LocationRepo = LocationRepositoryImpl;
+    type MessagingRepo = MessagingRepositoryImpl;
+    type EntityReferenceRepo = EntityReferenceRepositoryImpl;
+
+    fn persons(&self) -> &Self::PersonRepo {
+        &self.persons
+    }
+
+    fn countries(&self) -> &Self::CountryRepo {
+        &self.countries
+    }
+
+    fn country_subdivisions(&self) -> &Self::CountrySubdivisionRepo {
+        &self.country_subdivisions
+    }
+
+    fn localities(&self) -> &Self::LocalityRepo {
+        &self.localities
+    }
+
+    fn locations(&self) -> &Self::LocationRepo {
+        &self.locations
+    }
+
+    fn messagings(&self) -> &Self::MessagingRepo {
+        &self.messagings
+    }
+
+    fn entity_references(&self) -> &Self::EntityReferenceRepo {
+        &self.entity_references
+    }
+}
+
+pub struct PostgresUnitOfWorkSession {
+    tx: crate::repository::executor::Executor,
+    audit_logs: Arc<AuditLogRepositoryImpl>,
+    person_repos: Arc<PostgresPersonRepos>,
 }
 
 impl PostgresUnitOfWorkSession {
@@ -164,9 +206,7 @@ impl PostgresUnitOfWorkSession {
             caches.entity_reference_idx_cache,
         ));
 
-        Self {
-            tx: executor,
-            audit_logs,
+        let person_repos = Arc::new(PostgresPersonRepos {
             persons,
             countries,
             country_subdivisions,
@@ -174,6 +214,12 @@ impl PostgresUnitOfWorkSession {
             locations,
             messagings,
             entity_references,
+        });
+
+        Self {
+            tx: executor,
+            audit_logs,
+            person_repos,
         }
     }
 }
@@ -181,44 +227,14 @@ impl PostgresUnitOfWorkSession {
 #[async_trait]
 impl UnitOfWorkSession<Postgres> for PostgresUnitOfWorkSession {
     type AuditLogRepo = AuditLogRepositoryImpl;
-    type PersonRepo = PersonRepositoryImpl;
-    type CountryRepo = CountryRepositoryImpl;
-    type CountrySubdivisionRepo = CountrySubdivisionRepositoryImpl;
-    type LocalityRepo = LocalityRepositoryImpl;
-    type LocationRepo = LocationRepositoryImpl;
-    type MessagingRepo = MessagingRepositoryImpl;
-    type EntityReferenceRepo = EntityReferenceRepositoryImpl;
+    type PersonRepos = PostgresPersonRepos;
 
     fn audit_logs(&self) -> &Self::AuditLogRepo {
         &self.audit_logs
     }
 
-    fn persons(&self) -> &Self::PersonRepo {
-        &self.persons
-    }
-
-    fn countries(&self) -> &Self::CountryRepo {
-        &self.countries
-    }
-
-    fn country_subdivisions(&self) -> &Self::CountrySubdivisionRepo {
-        &self.country_subdivisions
-    }
-
-    fn localities(&self) -> &Self::LocalityRepo {
-        &self.localities
-    }
-
-    fn locations(&self) -> &Self::LocationRepo {
-        &self.locations
-    }
-
-    fn messagings(&self) -> &Self::MessagingRepo {
-        &self.messagings
-    }
-
-    fn entity_references(&self) -> &Self::EntityReferenceRepo {
-        &self.entity_references
+    fn person_repos(&self) -> &Self::PersonRepos {
+        &self.person_repos
     }
 
     async fn commit(self) -> BankingResult<()> {

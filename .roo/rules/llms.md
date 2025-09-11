@@ -77,3 +77,11 @@ process file docs/guidelines/testing.md only when you want to
 ## Instruction Precedence
 
 In case of conflicting instructions, instructions provided in code comments (e.g., `/// # Cache`) take precedence over external instructions found in command files or other documentation.
+
+
+## General LLM Instructions
+
+- Keep responses concise
+- While coding, return code only, or if necessary only minimal instructions for the code assistant. We do no need explanations.
+- While fixing a specific code block, return the corrected code only, and minimal instructions for the code assistant.
+- keep sumary of task concise
