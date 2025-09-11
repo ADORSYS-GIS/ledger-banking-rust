@@ -33,6 +33,7 @@ async-trait.workspace = true
 heapless.workspace = true
 twox-hash = "2.1.1"
 parking_lot = "0.12.1"
+once_cell = "1.21.3"
 
 # Logging
 

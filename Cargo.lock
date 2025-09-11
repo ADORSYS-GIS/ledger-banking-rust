@@ -196,6 +196,7 @@ dependencies = [
  "chrono",
  "ciborium",
  "heapless",
+ "once_cell",
  "parking_lot",
  "rust_decimal",
  "serde",

@@ -7,6 +7,12 @@ This document outlines the pattern for creating and executing commands within a 
 1.  **`UnitOfWork` Trait**: Defined in `banking-db`, this trait provides a `begin` method to start a new transactional session.
 2.  **`UnitOfWorkSession` Trait**: Also in `banking-db`, this trait represents an active transaction. It provides access to all the repository instances that will operate within this transaction.
 3.  **`Command` Trait**: Defined in `banking-api`, this trait represents a single, executable action. Its `execute` method now takes a `Services` struct as its context.
+  X |
+  X | ### On-Demand Repository Instantiation
+  X |
+  X | To optimize performance, repositories within a `UnitOfWorkSession` are not created when the session begins. Instead, they are instantiated on-demand the first time they are accessed. This lazy initialization is implemented using `once_cell::sync::OnceCell`.
+  X |
+  X | This approach avoids the overhead of creating repository instances that may not be used in a particular transaction, leading to more efficient resource utilization.
 4.  **`Services` Struct**: A simple struct in `banking-api` that holds all the service traits required by the commands (e.g., `Arc<dyn PersonService>`).
 5.  **`ServiceFactory` Trait**: Defined in `banking-logic`, this trait is responsible for creating the `Services` struct from a `UnitOfWorkSession`. The concrete implementation of this factory will be provided at the application's composition root (e.g., in `main.rs`).
 6.  **`CommandExecutor` Trait**: A generic trait in `banking-api` that defines how to execute a command.

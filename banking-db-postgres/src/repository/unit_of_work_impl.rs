@@ -7,6 +7,7 @@ use banking_db::{
     },
     repository::{PersonRepos, UnitOfWork, UnitOfWorkSession},
 };
+use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use sqlx::{PgPool, Postgres, Transaction};
 use std::sync::Arc;
@@ -116,13 +117,31 @@ impl UnitOfWork<Postgres> for PostgresUnitOfWork {
 }
 
 pub struct PostgresPersonRepos {
-    persons: Arc<PersonRepositoryImpl>,
-    countries: Arc<CountryRepositoryImpl>,
-    country_subdivisions: Arc<CountrySubdivisionRepositoryImpl>,
-    localities: Arc<LocalityRepositoryImpl>,
-    locations: Arc<LocationRepositoryImpl>,
-    messagings: Arc<MessagingRepositoryImpl>,
-    entity_references: Arc<EntityReferenceRepositoryImpl>,
+    executor: Executor,
+    caches: PersonCaches,
+    persons: OnceCell<Arc<PersonRepositoryImpl>>,
+    countries: OnceCell<Arc<CountryRepositoryImpl>>,
+    country_subdivisions: OnceCell<Arc<CountrySubdivisionRepositoryImpl>>,
+    localities: OnceCell<Arc<LocalityRepositoryImpl>>,
+    locations: OnceCell<Arc<LocationRepositoryImpl>>,
+    messagings: OnceCell<Arc<MessagingRepositoryImpl>>,
+    entity_references: OnceCell<Arc<EntityReferenceRepositoryImpl>>,
+}
+
+impl PostgresPersonRepos {
+    fn new(executor: Executor, caches: PersonCaches) -> Self {
+        Self {
+            executor,
+            caches,
+            persons: OnceCell::new(),
+            countries: OnceCell::new(),
+            country_subdivisions: OnceCell::new(),
+            localities: OnceCell::new(),
+            locations: OnceCell::new(),
+            messagings: OnceCell::new(),
+            entity_references: OnceCell::new(),
+        }
+    }
 }
 
 impl PersonRepos<Postgres> for PostgresPersonRepos {
@@ -135,91 +154,112 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
     type EntityReferenceRepo = EntityReferenceRepositoryImpl;
 
     fn persons(&self) -> &Self::PersonRepo {
-        &self.persons
+        self.persons.get_or_init(|| {
+            Arc::new(PersonRepositoryImpl::new(
+                self.executor.clone(),
+                {
+                    self.locations();
+                    self.locations.get().unwrap().clone()
+                },
+                self.caches.person_idx_cache.clone(),
+            ))
+        })
     }
 
     fn countries(&self) -> &Self::CountryRepo {
-        &self.countries
+        self.countries.get_or_init(|| {
+            Arc::new(CountryRepositoryImpl::new(
+                self.executor.clone(),
+                self.caches.country_idx_cache.clone(),
+            ))
+        })
     }
 
     fn country_subdivisions(&self) -> &Self::CountrySubdivisionRepo {
-        &self.country_subdivisions
+        self.country_subdivisions.get_or_init(|| {
+            Arc::new(CountrySubdivisionRepositoryImpl::new(
+                self.executor.clone(),
+                {
+                    self.countries();
+                    self.countries.get().unwrap().clone()
+                },
+                self.caches.country_subdivision_idx_cache.clone(),
+            ))
+        })
     }
 
     fn localities(&self) -> &Self::LocalityRepo {
-        &self.localities
+        self.localities.get_or_init(|| {
+            Arc::new(LocalityRepositoryImpl::new(
+                self.executor.clone(),
+                {
+                    self.country_subdivisions();
+                    self.country_subdivisions.get().unwrap().clone()
+                },
+                self.caches.locality_idx_cache.clone(),
+            ))
+        })
     }
 
     fn locations(&self) -> &Self::LocationRepo {
-        &self.locations
+        self.locations.get_or_init(|| {
+            Arc::new(LocationRepositoryImpl::new(
+                self.executor.clone(),
+                {
+                    self.localities();
+                    self.localities.get().unwrap().clone()
+                },
+                self.caches.location_idx_cache.clone(),
+            ))
+        })
     }
 
     fn messagings(&self) -> &Self::MessagingRepo {
-        &self.messagings
+        self.messagings.get_or_init(|| {
+            Arc::new(MessagingRepositoryImpl::new(
+                self.executor.clone(),
+                self.caches.messaging_idx_cache.clone(),
+            ))
+        })
     }
 
     fn entity_references(&self) -> &Self::EntityReferenceRepo {
-        &self.entity_references
+        self.entity_references.get_or_init(|| {
+            Arc::new(EntityReferenceRepositoryImpl::new(
+                self.executor.clone(),
+                {
+                    self.persons();
+                    self.persons.get().unwrap().clone()
+                },
+                self.caches.entity_reference_idx_cache.clone(),
+            ))
+        })
     }
 }
 
+/// Represents a single database transaction and provides access to repositories.
+///
+/// This session implements the Unit of Work pattern, ensuring that all database
+/// operations within its scope are part of a single, atomic transaction.
+/// Repositories are instantiated on-demand the first time they are accessed,
+/// improving performance by avoiding unnecessary object creation.
 pub struct PostgresUnitOfWorkSession {
     tx: crate::repository::executor::Executor,
-    audit_logs: Arc<AuditLogRepositoryImpl>,
-    person_repos: Arc<PostgresPersonRepos>,
+    caches: PersonCaches,
+    audit_logs: OnceCell<Arc<AuditLogRepositoryImpl>>,
+    person_repos: OnceCell<Arc<PostgresPersonRepos>>,
 }
 
 impl PostgresUnitOfWorkSession {
     pub fn new(tx: Transaction<'static, Postgres>, caches: PersonCaches) -> Self {
         let executor =
             crate::repository::executor::Executor::Tx(Arc::new(tokio::sync::Mutex::new(tx)));
-        let audit_logs = Arc::new(AuditLogRepositoryImpl::new(executor.clone()));
-        let countries =
-            Arc::new(CountryRepositoryImpl::new(executor.clone(), caches.country_idx_cache));
-        let country_subdivisions = Arc::new(CountrySubdivisionRepositoryImpl::new(
-            executor.clone(),
-            countries.clone(),
-            caches.country_subdivision_idx_cache,
-        ));
-        let localities = Arc::new(LocalityRepositoryImpl::new(
-            executor.clone(),
-            country_subdivisions.clone(),
-            caches.locality_idx_cache,
-        ));
-        let locations = Arc::new(LocationRepositoryImpl::new(
-            executor.clone(),
-            localities.clone(),
-            caches.location_idx_cache,
-        ));
-        let persons = Arc::new(PersonRepositoryImpl::new(
-            executor.clone(),
-            locations.clone(),
-            caches.person_idx_cache,
-        ));
-        let messagings = Arc::new(MessagingRepositoryImpl::new(
-            executor.clone(),
-            caches.messaging_idx_cache,
-        ));
-        let entity_references = Arc::new(EntityReferenceRepositoryImpl::new(
-            executor.clone(),
-            persons.clone(),
-            caches.entity_reference_idx_cache,
-        ));
-
-        let person_repos = Arc::new(PostgresPersonRepos {
-            persons,
-            countries,
-            country_subdivisions,
-            localities,
-            locations,
-            messagings,
-            entity_references,
-        });
 
         Self {
             tx: executor,
-            audit_logs,
-            person_repos,
+            caches,
+            audit_logs: OnceCell::new(),
+            person_repos: OnceCell::new(),
         }
     }
 }
@@ -230,11 +270,18 @@ impl UnitOfWorkSession<Postgres> for PostgresUnitOfWorkSession {
     type PersonRepos = PostgresPersonRepos;
 
     fn audit_logs(&self) -> &Self::AuditLogRepo {
-        &self.audit_logs
+        self.audit_logs.get_or_init(|| {
+            Arc::new(AuditLogRepositoryImpl::new(self.tx.clone()))
+        })
     }
 
     fn person_repos(&self) -> &Self::PersonRepos {
-        &self.person_repos
+        self.person_repos.get_or_init(|| {
+            Arc::new(PostgresPersonRepos::new(
+                self.tx.clone(),
+                self.caches.clone(),
+            ))
+        })
     }
 
     async fn commit(self) -> BankingResult<()> {
