@@ -1,6 +1,7 @@
 use async_trait::async_trait;
+use banking_api::BankingResult;
 use banking_db::models::person::{CountryIdxModel, CountryIdxModelCache, CountryModel};
-use banking_db::repository::CountryRepository;
+use banking_db::repository::{CountryRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use heapless::String as HeaplessString;
@@ -169,6 +170,17 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
             result.push(country_id);
         }
         Ok(result)
+    }
+}
+
+#[async_trait]
+impl TransactionAware for CountryRepositoryImpl {
+    async fn on_commit(&self) -> BankingResult<()> {
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        Ok(())
     }
 }
 

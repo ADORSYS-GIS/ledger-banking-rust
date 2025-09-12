@@ -1,8 +1,9 @@
 use async_trait::async_trait;
+use banking_api::BankingResult;
 use banking_db::models::person::{
     MessagingAuditModel, MessagingIdxModel, MessagingIdxModelCache, MessagingModel,
 };
-use banking_db::repository::MessagingRepository;
+use banking_db::repository::{MessagingRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
@@ -282,6 +283,17 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
             }
         };
         Ok(ids)
+    }
+}
+
+#[async_trait]
+impl TransactionAware for MessagingRepositoryImpl {
+    async fn on_commit(&self) -> BankingResult<()> {
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        Ok(())
     }
 }
 

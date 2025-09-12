@@ -7,16 +7,35 @@ This document outlines the pattern for creating and executing commands within a 
 1.  **`UnitOfWork` Trait**: Defined in `banking-db`, this trait provides a `begin` method to start a new transactional session.
 2.  **`UnitOfWorkSession` Trait**: Also in `banking-db`, this trait represents an active transaction. It provides access to all the repository instances that will operate within this transaction.
 3.  **`Command` Trait**: Defined in `banking-api`, this trait represents a single, executable action. Its `execute` method now takes a `Services` struct as its context.
-  X |
-  X | ### On-Demand Repository Instantiation
-  X |
-  X | To optimize performance, repositories within a `UnitOfWorkSession` are not created when the session begins. Instead, they are instantiated on-demand the first time they are accessed. This lazy initialization is implemented using `once_cell::sync::OnceCell`.
-  X |
-  X | This approach avoids the overhead of creating repository instances that may not be used in a particular transaction, leading to more efficient resource utilization.
 4.  **`Services` Struct**: A simple struct in `banking-api` that holds all the service traits required by the commands (e.g., `Arc<dyn PersonService>`).
 5.  **`ServiceFactory` Trait**: Defined in `banking-logic`, this trait is responsible for creating the `Services` struct from a `UnitOfWorkSession`. The concrete implementation of this factory will be provided at the application's composition root (e.g., in `main.rs`).
 6.  **`CommandExecutor` Trait**: A generic trait in `banking-api` that defines how to execute a command.
 7.  **`CommandExecutorImpl`**: The concrete implementation in `banking-logic`. This struct is generic over the database type and a `ServiceFactory`. It manages the transaction lifecycle: begin, execute, commit/rollback.
+
+## On-Demand Repository Instantiation
+
+To optimize performance, repositories within a `UnitOfWorkSession` are not created when the session begins. Instead, they are instantiated on-demand the first time they are accessed. This lazy initialization is implemented using `once_cell::sync::OnceCell`.
+
+This approach avoids the overhead of creating repository instances that may not be used in a particular transaction, leading to more efficient resource utilization. For example, the `PostgresPersonRepos` and all the individual repositories it manages (`PersonRepository`, `CountryRepository`, etc.) are only created if they are explicitly requested during a transaction.
+
+## Transaction-Aware Repositories
+
+To support advanced caching strategies and other behaviors that need to react to the outcome of a transaction, the system uses a `TransactionAware` trait.
+
+### The `TransactionAware` Trait
+
+Defined in `banking-db/src/repository/transaction_aware.rs`, this trait provides two methods:
+
+-   `on_commit(&self) -> BankingResult<()>`: Called after the transaction has been successfully committed.
+-   `on_rollback(&self) -> BankingResult<()>`: Called after the transaction has been rolled back.
+
+Repositories that need to be notified of transaction outcomes can implement this trait.
+
+### Integration with `UnitOfWorkSession`
+
+The `UnitOfWorkSession` trait provides a `register_transaction_aware` method. The `PostgresUnitOfWorkSession` implementation maintains a list of registered `TransactionAware` components. When its `commit` or `rollback` methods are called, it iterates through the list and invokes the corresponding method on each registered component.
+
+This mechanism allows repositories to safely manage state that should only be finalized upon a successful transaction, such as updating a shared cache.
 
 ## Workflow
 
@@ -27,8 +46,8 @@ This document outlines the pattern for creating and executing commands within a 
 5.  It uses the `ServiceFactory` to create a `Services` struct, which contains instances of all the necessary services, all sharing the same transactional session.
 6.  It calls the `execute` method on the command, passing the `Services` struct as the context.
 7.  The command's `execute` method uses the services to perform its business logic. All database operations performed by the services will be part of the same transaction.
-8.  If the command's execution is successful, the `CommandExecutorImpl` commits the transaction.
-9.  If the command's execution fails at any point, the `CommandExecutorImpl` rolls back the transaction, undoing all changes.
+8.  If the command's execution is successful, the `CommandExecutorImpl` commits the transaction. This will trigger the `on_commit` hook on all registered `TransactionAware` repositories.
+9.  If the command's execution fails at any point, the `CommandExecutorImpl` rolls back the transaction, undoing all changes. This will trigger the `on_rollback` hook.
 
 ## Panic Safety and Transaction Rollback
 
@@ -43,9 +62,13 @@ Therefore, **there is no need to add an explicit `Drop` implementation to `Postg
 
 To optimize performance, the system employs in-memory caches for frequently accessed, rarely changing data (e.g., countries, subdivisions).
 
--   **Cache Lifecycle**: Caches are initialized once when the `PostgresUnitOfWork` is created. This ensures that all subsequent transactions share the same cache instances, avoiding redundant database queries.
--   **Cache Propagation**: The `PostgresUnitOfWork` holds the caches and passes them down to the `PostgresUnitOfWorkSession` when a transaction begins. The session then provides the caches to the repositories that need them.
--   **Implementation**: The caches are implemented using `parking_lot::RwLock` for efficient, thread-safe access.
+-   **Cache Lifecycle**: Shared caches are initialized once when the `PostgresUnitOfWork` is created. This ensures that all subsequent transactions share the same cache instances, avoiding redundant database queries.
+-   **Transactional Caching**: To ensure cache consistency, repositories use a two-tiered caching strategy enabled by the `TransactionAware` trait:
+    1.  **Local Cache**: During a transaction, all modifications to cached data are held in a repository-local, temporary cache. Reads will first check this local cache before consulting the shared cache.
+    2.  **Shared Cache**: This is the global, application-wide cache.
+    3.  **On Commit**: When the transaction is committed, the `on_commit` hook is called, and the changes from the local cache are merged into the shared cache.
+    4.  **On Rollback**: If the transaction is rolled back, the `on_rollback` hook is called, and the local cache is simply discarded, leaving the shared cache untouched.
+-   **Implementation**: The shared caches are implemented using `parking_lot::RwLock` for efficient, thread-safe access.
 
 ## Repository Implementation with `Executor`
 

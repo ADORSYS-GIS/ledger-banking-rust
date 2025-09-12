@@ -1,9 +1,11 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use banking_api::BankingResult;
 use sqlx::Database;
 
 use crate::repository::{
-    AuditLogRepository, PersonRepos,
+    AuditLogRepository, PersonRepos, TransactionAware,
 };
 
 #[async_trait]
@@ -19,6 +21,7 @@ pub trait UnitOfWorkSession<DB: Database>: Send + Sync {
 
     fn audit_logs(&self) -> &Self::AuditLogRepo;
     fn person_repos(&self) -> &Self::PersonRepos;
+    fn register_transaction_aware(&self, observer: Arc<dyn TransactionAware>);
 
     async fn commit(self) -> BankingResult<()>;
     async fn rollback(self) -> BankingResult<()>;

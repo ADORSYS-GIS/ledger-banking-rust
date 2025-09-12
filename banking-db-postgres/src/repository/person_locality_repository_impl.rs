@@ -1,6 +1,7 @@
 use async_trait::async_trait;
+use banking_api::BankingResult;
 use banking_db::models::person::{LocalityIdxModel, LocalityIdxModelCache, LocalityModel};
-use banking_db::repository::{CountrySubdivisionRepository, LocalityRepository};
+use banking_db::repository::{CountrySubdivisionRepository, LocalityRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::repository::person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
@@ -196,6 +197,17 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
             .get_by_country_subdivision_id(&country_subdivision_id)
             .cloned()
             .unwrap_or_default())
+    }
+}
+
+#[async_trait]
+impl TransactionAware for LocalityRepositoryImpl {
+    async fn on_commit(&self) -> BankingResult<()> {
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        Ok(())
     }
 }
 

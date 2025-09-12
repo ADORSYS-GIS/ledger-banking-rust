@@ -1,8 +1,9 @@
 use async_trait::async_trait;
+use banking_api::BankingResult;
 use banking_db::models::person::{
     PersonAuditModel, PersonIdxModel, PersonIdxModelCache, PersonModel,
 };
-use banking_db::repository::{LocationRepository, PersonRepository};
+use banking_db::repository::{LocationRepository, PersonRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::repository::person_location_repository_impl::LocationRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
@@ -437,6 +438,19 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .filter_map(|id| cache.get_by_primary(id))
             .collect();
         Ok(results)
+    }
+}
+
+#[async_trait]
+impl TransactionAware for PersonRepositoryImpl {
+    async fn on_commit(&self) -> BankingResult<()> {
+        // In a real implementation, this is where the local cache would be merged into the shared cache.
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        // In a real implementation, this is where the local cache would be discarded.
+        Ok(())
     }
 }
 

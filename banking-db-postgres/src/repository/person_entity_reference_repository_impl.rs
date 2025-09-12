@@ -1,10 +1,11 @@
 use async_trait::async_trait;
+use banking_api::BankingResult;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use banking_db::models::person::{
     EntityReferenceAuditModel, EntityReferenceIdxModel, EntityReferenceIdxModelCache,
     EntityReferenceModel,
 };
-use banking_db::repository::{EntityReferenceRepository, PersonRepository};
+use banking_db::repository::{EntityReferenceRepository, PersonRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::repository::person_person_repository_impl::PersonRepositoryImpl;
 use sqlx::{postgres::PgRow, Postgres, Row};
@@ -469,6 +470,17 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             }
         };
         Ok(ids)
+    }
+}
+
+#[async_trait]
+impl TransactionAware for EntityReferenceRepositoryImpl {
+    async fn on_commit(&self) -> BankingResult<()> {
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        Ok(())
     }
 }
 

@@ -5,7 +5,7 @@ use banking_db::{
         CountryIdxModelCache, CountrySubdivisionIdxModelCache, EntityReferenceIdxModelCache,
         LocalityIdxModelCache, LocationIdxModelCache, MessagingIdxModelCache, PersonIdxModelCache,
     },
-    repository::{PersonRepos, UnitOfWork, UnitOfWorkSession},
+    repository::{PersonRepos, TransactionAware, UnitOfWork, UnitOfWorkSession},
 };
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
@@ -237,6 +237,59 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
     }
 }
 
+#[async_trait]
+impl TransactionAware for PostgresPersonRepos {
+    async fn on_commit(&self) -> BankingResult<()> {
+        if let Some(persons) = self.persons.get() {
+            persons.on_commit().await?;
+        }
+        if let Some(countries) = self.countries.get() {
+            countries.on_commit().await?;
+        }
+        if let Some(country_subdivisions) = self.country_subdivisions.get() {
+            country_subdivisions.on_commit().await?;
+        }
+        if let Some(localities) = self.localities.get() {
+            localities.on_commit().await?;
+        }
+        if let Some(locations) = self.locations.get() {
+            locations.on_commit().await?;
+        }
+        if let Some(messagings) = self.messagings.get() {
+            messagings.on_commit().await?;
+        }
+        if let Some(entity_references) = self.entity_references.get() {
+            entity_references.on_commit().await?;
+        }
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        if let Some(persons) = self.persons.get() {
+            persons.on_rollback().await?;
+        }
+        if let Some(countries) = self.countries.get() {
+            countries.on_rollback().await?;
+        }
+        if let Some(country_subdivisions) = self.country_subdivisions.get() {
+            country_subdivisions.on_rollback().await?;
+        }
+        if let Some(localities) = self.localities.get() {
+            localities.on_rollback().await?;
+        }
+        if let Some(locations) = self.locations.get() {
+            locations.on_rollback().await?;
+        }
+        if let Some(messagings) = self.messagings.get() {
+            messagings.on_rollback().await?;
+        }
+        if let Some(entity_references) = self.entity_references.get() {
+            entity_references.on_rollback().await?;
+        }
+        Ok(())
+    }
+}
+
 /// Represents a single database transaction and provides access to repositories.
 ///
 /// This session implements the Unit of Work pattern, ensuring that all database
@@ -248,6 +301,7 @@ pub struct PostgresUnitOfWorkSession {
     caches: PersonCaches,
     audit_logs: OnceCell<Arc<AuditLogRepositoryImpl>>,
     person_repos: OnceCell<Arc<PostgresPersonRepos>>,
+    observers: Arc<RwLock<Vec<Arc<dyn TransactionAware>>>>,
 }
 
 impl PostgresUnitOfWorkSession {
@@ -260,6 +314,7 @@ impl PostgresUnitOfWorkSession {
             caches,
             audit_logs: OnceCell::new(),
             person_repos: OnceCell::new(),
+            observers: Arc::new(RwLock::new(Vec::new())),
         }
     }
 }
@@ -276,12 +331,18 @@ impl UnitOfWorkSession<Postgres> for PostgresUnitOfWorkSession {
     }
 
     fn person_repos(&self) -> &Self::PersonRepos {
-        self.person_repos.get_or_init(|| {
+        let person_repos = self.person_repos.get_or_init(|| {
             Arc::new(PostgresPersonRepos::new(
                 self.tx.clone(),
                 self.caches.clone(),
             ))
-        })
+        });
+        self.register_transaction_aware(person_repos.clone());
+        person_repos
+    }
+
+    fn register_transaction_aware(&self, observer: Arc<dyn TransactionAware>) {
+        self.observers.write().push(observer);
     }
 
     async fn commit(self) -> BankingResult<()> {
@@ -290,6 +351,10 @@ impl UnitOfWorkSession<Postgres> for PostgresUnitOfWorkSession {
                 .expect("Cannot commit transaction with multiple references")
                 .into_inner();
             tx.commit().await?;
+        }
+        let observers = self.observers.read().clone();
+        for observer in observers.iter() {
+            observer.on_commit().await?;
         }
         Ok(())
     }
@@ -300,6 +365,10 @@ impl UnitOfWorkSession<Postgres> for PostgresUnitOfWorkSession {
                 .expect("Cannot rollback transaction with multiple references")
                 .into_inner();
             tx.rollback().await?;
+        }
+        let observers = self.observers.read().clone();
+        for observer in observers.iter() {
+            observer.on_rollback().await?;
         }
         Ok(())
     }

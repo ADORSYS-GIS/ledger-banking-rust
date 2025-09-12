@@ -1,8 +1,9 @@
 use async_trait::async_trait;
+use banking_api::BankingResult;
 use banking_db::models::person::{
     LocationAuditModel, LocationIdxModel, LocationIdxModelCache, LocationModel, LocationType,
 };
-use banking_db::repository::{LocalityRepository, LocationRepository};
+use banking_db::repository::{LocalityRepository, LocationRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::repository::person_locality_repository_impl::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
@@ -482,6 +483,17 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             }
         };
         Ok(ids)
+    }
+}
+
+#[async_trait]
+impl TransactionAware for LocationRepositoryImpl {
+    async fn on_commit(&self) -> BankingResult<()> {
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        Ok(())
     }
 }
 
