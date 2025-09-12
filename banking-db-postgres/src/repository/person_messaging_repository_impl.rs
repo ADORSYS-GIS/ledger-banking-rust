@@ -247,30 +247,22 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
-        let query = sqlx::query("SELECT * FROM messaging_idx WHERE messaging_id = ANY($1)").bind(ids);
-        let rows = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
+        let cache_read_guard = self.messaging_idx_cache.read().await;
+        let mut messagings = Vec::with_capacity(ids.len());
+        for id in ids {
+            if let Some(messaging) = cache_read_guard.get_by_primary(id) {
+                messagings.push(messaging);
             }
-        };
-        let mut messagings = Vec::new();
-        for row in rows {
-            messagings.push(MessagingIdxModel::try_from_row(&row)?);
         }
         Ok(messagings)
     }
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let query = sqlx::query_scalar!("SELECT EXISTS(SELECT 1 FROM messaging WHERE id = $1)", id);
-        let exists = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await?
-            }
-        };
-        Ok(exists.unwrap_or(false))
+        Ok(self
+            .messaging_idx_cache
+            .read()
+            .await
+            .get_by_primary(&id)
+            .is_some())
     }
     async fn find_ids_by_value(
         &self,
@@ -280,17 +272,12 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         hasher.write(value.as_bytes());
         let hash = hasher.finish() as i64;
 
-        let query =
-            sqlx::query_scalar("SELECT messaging_id FROM messaging_idx WHERE value_hash = $1")
-                .bind(hash);
-        let ids = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
-            }
-        };
-        Ok(ids)
+        let cache_read_guard = self.messaging_idx_cache.read().await;
+        if let Some(id) = cache_read_guard.get_by_value_hash(&hash) {
+            Ok(vec![id])
+        } else {
+            Ok(Vec::new())
+        }
     }
 }
 
@@ -356,6 +343,37 @@ impl TransactionAwareMessagingIdxModelCache {
             return Some(item.clone());
         }
         self.shared_cache.read().get_by_primary(primary_key)
+    }
+
+    pub fn get_by_value_hash(&self, value_hash: &i64) -> Option<Uuid> {
+        // Search in additions.
+        for item in self.local_additions.read().values() {
+            if item.value_hash == *value_hash {
+                return Some(item.messaging_id);
+            }
+        }
+
+        // Search in updates.
+        for item in self.local_updates.read().values() {
+            if item.value_hash == *value_hash {
+                return Some(item.messaging_id);
+            }
+        }
+
+        // If found in shared cache, we need to ensure it wasn't updated or deleted.
+        if let Some(shared_id) = self.shared_cache.read().get_by_value_hash(value_hash) {
+            // If it was deleted, it's not found.
+            if self.local_deletions.read().contains(&shared_id) {
+                return None;
+            }
+            // If it was updated, the shared cache version is stale.
+            if self.local_updates.read().contains_key(&shared_id) {
+                return None;
+            }
+            return Some(shared_id);
+        }
+
+        None
     }
 }
 
