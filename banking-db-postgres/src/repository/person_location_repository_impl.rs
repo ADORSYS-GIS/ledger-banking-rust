@@ -8,16 +8,18 @@ use crate::repository::executor::Executor;
 use crate::repository::person_locality_repository_impl::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::hash::Hasher;
 use parking_lot::RwLock;
 use std::sync::Arc;
+use tokio::sync::RwLock as TokioRwLock;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocationRepositoryImpl {
     executor: Executor,
-    location_idx_cache: Arc<RwLock<LocationIdxModelCache>>,
+    location_idx_cache: Arc<TokioRwLock<TransactionAwareLocationIdxModelCache>>,
     locality_repository: Arc<LocalityRepositoryImpl>,
 }
 
@@ -29,7 +31,9 @@ impl LocationRepositoryImpl {
     ) -> Self {
         Self {
             executor,
-            location_idx_cache,
+            location_idx_cache: Arc::new(TokioRwLock::new(
+                TransactionAwareLocationIdxModelCache::new(location_idx_cache),
+            )),
             locality_repository,
         }
     }
@@ -71,7 +75,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {
-            let cache_read_guard = self.location_idx_cache.read();
+            let cache_read_guard = self.location_idx_cache.read().await;
             cache_read_guard.get_by_primary(&location.id)
         };
 
@@ -174,7 +178,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
                 version: new_version,
                 hash: new_hash,
             };
-            self.location_idx_cache.write().update(new_idx);
+            self.location_idx_cache.read().await.update(new_idx);
         } else {
             // INSERT
             let version = 0;
@@ -265,7 +269,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
                 version,
                 hash: new_hash,
             };
-            self.location_idx_cache.write().add(new_idx);
+            self.location_idx_cache.read().await.add(new_idx);
         }
 
         Ok(location)
@@ -291,27 +295,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationIdxModel>, sqlx::Error> {
-        let query = sqlx::query(
-            r#"
-            SELECT * FROM location_idx WHERE location_id = $1
-            "#,
-        )
-        .bind(id);
-
-        let row = match &self.executor {
-            Executor::Pool(pool) => query.fetch_optional(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_optional(&mut **tx).await?
-            }
-        };
-
-        match row {
-            Some(row) => Ok(Some(
-                LocationIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
-            )),
-            None => Ok(None),
-        }
+        Ok(self.location_idx_cache.read().await.get_by_primary(&id))
     }
 
     async fn find_ids_by_street_line1(
@@ -362,33 +346,11 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
     async fn find_by_locality_id(
         &self,
         locality_id: Uuid,
-        page: i32,
-        page_size: i32,
+        _page: i32,
+        _page_size: i32,
     ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
-        let query = sqlx::query(
-            r#"
-            SELECT * FROM location_idx WHERE locality_id = $1
-            LIMIT $2 OFFSET $3
-            "#,
-        )
-        .bind(locality_id)
-        .bind(page_size)
-        .bind((page - 1) * page_size);
-
-        let rows = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
-            }
-        };
-
-        let mut locations = Vec::new();
-        for row in rows {
-            locations
-                .push(LocationIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
-        }
-        Ok(locations)
+        let cache = self.location_idx_cache.read().await;
+        Ok(cache.get_by_locality_id(&locality_id))
     }
 
     async fn find_by_type_and_locality(
@@ -429,18 +391,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let query = sqlx::query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM location WHERE id = $1)",
-            id
-        );
-        let exists = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await?
-            }
-        };
-        Ok(exists.unwrap_or(false))
+        Ok(self.location_idx_cache.read().await.get_by_primary(&id).is_some())
     }
 
     async fn find_ids_by_location_type(
@@ -489,10 +440,126 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
 #[async_trait]
 impl TransactionAware for LocationRepositoryImpl {
     async fn on_commit(&self) -> BankingResult<()> {
+        self.location_idx_cache.read().await.on_commit().await
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        self.location_idx_cache.read().await.on_rollback().await
+    }
+}
+
+pub struct TransactionAwareLocationIdxModelCache {
+    shared_cache: Arc<RwLock<LocationIdxModelCache>>,
+    local_additions: RwLock<HashMap<Uuid, LocationIdxModel>>,
+    local_updates: RwLock<HashMap<Uuid, LocationIdxModel>>,
+    local_deletions: RwLock<HashSet<Uuid>>,
+}
+
+impl TransactionAwareLocationIdxModelCache {
+    pub fn new(shared_cache: Arc<RwLock<LocationIdxModelCache>>) -> Self {
+        Self {
+            shared_cache,
+            local_additions: RwLock::new(HashMap::new()),
+            local_updates: RwLock::new(HashMap::new()),
+            local_deletions: RwLock::new(HashSet::new()),
+        }
+    }
+
+    pub fn add(&self, item: LocationIdxModel) {
+        let primary_key = item.location_id;
+        self.local_deletions.write().remove(&primary_key);
+        self.local_additions.write().insert(primary_key, item);
+    }
+
+    pub fn update(&self, item: LocationIdxModel) {
+        let primary_key = item.location_id;
+        self.local_deletions.write().remove(&primary_key);
+        if let Some(local_item) = self.local_additions.write().get_mut(&primary_key) {
+            *local_item = item;
+            return;
+        }
+        self.local_updates.write().insert(primary_key, item);
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<LocationIdxModel> {
+        if self.local_deletions.read().contains(primary_key) {
+            return None;
+        }
+        if let Some(item) = self.local_additions.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        if let Some(item) = self.local_updates.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        self.shared_cache.read().get_by_primary(primary_key)
+    }
+
+    pub fn get_by_locality_id(&self, locality_id: &Uuid) -> Vec<LocationIdxModel> {
+        let shared_cache = self.shared_cache.read();
+        let local_additions = self.local_additions.read();
+        let local_updates = self.local_updates.read();
+        let local_deletions = self.local_deletions.read();
+
+        let mut results: HashMap<Uuid, LocationIdxModel> = HashMap::new();
+
+        if let Some(ids) = shared_cache.get_by_locality_id(locality_id) {
+            for id in ids {
+                if let Some(item) = shared_cache.get_by_primary(id) {
+                    results.insert(item.location_id, item);
+                }
+            }
+        }
+
+        for id in local_updates.keys() {
+            results.remove(id);
+        }
+        for id in local_deletions.iter() {
+            results.remove(id);
+        }
+
+        for item in local_additions.values() {
+            if item.locality_id == *locality_id {
+                results.insert(item.location_id, item.clone());
+            }
+        }
+        for item in local_updates.values() {
+            if item.locality_id == *locality_id {
+                results.insert(item.location_id, item.clone());
+            }
+        }
+
+        results.into_values().collect()
+    }
+}
+
+#[async_trait]
+impl TransactionAware for TransactionAwareLocationIdxModelCache {
+    async fn on_commit(&self) -> BankingResult<()> {
+        let mut shared_cache = self.shared_cache.write();
+        let mut local_additions = self.local_additions.write();
+        let mut local_updates = self.local_updates.write();
+        let mut local_deletions = self.local_deletions.write();
+
+        for item in local_additions.values() {
+            shared_cache.add(item.clone());
+        }
+        for item in local_updates.values() {
+            shared_cache.update(item.clone());
+        }
+        for primary_key in local_deletions.iter() {
+            shared_cache.remove(primary_key);
+        }
+
+        local_additions.clear();
+        local_updates.clear();
+        local_deletions.clear();
         Ok(())
     }
 
     async fn on_rollback(&self) -> BankingResult<()> {
+        self.local_additions.write().clear();
+        self.local_updates.write().clear();
+        self.local_deletions.write().clear();
         Ok(())
     }
 }
