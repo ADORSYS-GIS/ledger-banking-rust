@@ -321,3 +321,21 @@ For data that is static or changes very infrequently (e.g., countries, currencie
     -   The `new()` function for the repository is `async`. It loads all records from the `*_idx` table and initializes the cache once.
     -   Finder methods (`find_by_*`, `exists_by_*`) perform read-only lookups against the immutable cache.
     -   The `save` method in the repository does *not* interact with the cache. It only performs the necessary database operations. This is acceptable because the underlying data is considered static.
+
+##### Transaction-Aware Caching for Shared Caches
+
+For shared caches that can be modified during a transaction (e.g., adding a new `Person` or `EntityReference`), the cache must be updated in a transaction-aware manner to maintain consistency. This applies to both statically initialized caches (like `Country`) and dynamically loaded caches (like `Person`).
+
+This is achieved by wrapping the shared cache (e.g., `Arc<parking_lot::RwLock<EntityReferenceIdxModelCache>>`) in a transaction-specific, `Send`-compatible wrapper.
+
+**Principles:**
+
+-   **Wrapper Struct**: A dedicated struct (e.g., `TransactionAwareEntityReferenceIdxModelCache`) is created. It holds a reference to the shared cache (`Arc<parking_lot::RwLock<EntityReferenceIdxModelCache>>`) and transaction-local collections for additions, updates, and deletions (e.g., `parking_lot::RwLock<HashMap<...>>` and `parking_lot::RwLock<HashSet<...>>`).
+-   **Repository Storage**: The repository (`EntityReferenceRepositoryImpl`) stores the wrapped, transaction-aware cache inside an `Arc<tokio::sync::RwLock<TransactionAwareEntityReferenceIdxModelCache>>`. The outer `tokio::sync::RwLock` is crucial because its read guard is `Send`, allowing it to be held across `.await` calls, which prevents compilation errors in `async` code.
+-   **Delegation and Overlay**: The wrapper's finder methods implement an overlay pattern. They first check the transaction-local additions, updates, and deletions. If a result is found locally, it is returned. Otherwise, the request is delegated to the shared cache, filtering out any entries marked for deletion.
+-   **`TransactionAware` Implementation**: The wrapper struct implements the `TransactionAware` trait.
+    -   `on_commit`: Acquires a write lock on the shared cache and merges all local additions and processes deletions. The local collections are then cleared.
+    -   `on_rollback`: Simply clears the local collections, discarding all changes.
+-   **Repository `new()`**: The repository's constructor is responsible for creating the shared cache and wrapping it in the `TransactionAware...Cache`.
+
+This pattern ensures that finder methods within a transaction see a consistent, up-to-date view of the data, and that the global cache is only updated if and when the transaction successfully commits.

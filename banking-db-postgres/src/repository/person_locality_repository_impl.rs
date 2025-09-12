@@ -1,39 +1,42 @@
 use async_trait::async_trait;
+use banking_api::BankingResult;
 use banking_db::models::person::{LocalityIdxModel, LocalityIdxModelCache, LocalityModel};
-use banking_db::repository::{CountrySubdivisionRepository, LocalityRepository};
+use banking_db::repository::{CountrySubdivisionRepository, LocalityRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::repository::person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
+use std::collections::HashMap;
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::sync::Arc;
+use tokio::sync::RwLock as TokioRwLock;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocalityRepositoryImpl {
     executor: Executor,
-    locality_idx_cache: Arc<RwLock<LocalityIdxModelCache>>,
+    locality_idx_cache: Arc<TokioRwLock<TransactionAwareLocalityIdxModelCache>>,
     country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
 }
 
 impl LocalityRepositoryImpl {
-    pub async fn new(
+    pub fn new(
         executor: Executor,
         country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
+        locality_idx_cache: Arc<RwLock<LocalityIdxModelCache>>,
     ) -> Self {
-        let locality_idx_models = Self::load_all_locality_idx(&executor).await.unwrap();
-        let locality_idx_cache = Arc::new(RwLock::new(
-            LocalityIdxModelCache::new(locality_idx_models).unwrap(),
-        ));
         Self {
             executor,
-            locality_idx_cache,
+            locality_idx_cache: Arc::new(TokioRwLock::new(
+                TransactionAwareLocalityIdxModelCache::new(locality_idx_cache),
+            )),
             country_subdivision_repository,
         }
     }
 
-    async fn load_all_locality_idx(
+    pub async fn load_all_locality_idx(
         executor: &Executor,
     ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
         let query = sqlx::query("SELECT * FROM locality_idx");
@@ -108,7 +111,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
             country_subdivision_id: locality.country_subdivision_id,
             code_hash,
         };
-        self.locality_idx_cache.write().unwrap().add(new_idx);
+        self.locality_idx_cache.read().await.add(new_idx);
 
         Ok(locality)
     }
@@ -133,7 +136,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
-        Ok(self.locality_idx_cache.read().unwrap().get_by_primary(&id))
+        Ok(self.locality_idx_cache.read().await.get_by_primary(&id))
     }
 
     async fn find_by_country_subdivision_id(
@@ -142,11 +145,11 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         _page: i32,
         _page_size: i32,
     ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
-        let cache = self.locality_idx_cache.read().unwrap();
+        let cache = self.locality_idx_cache.read().await;
         let mut result = Vec::new();
         if let Some(ids) = cache.get_by_country_subdivision_id(&country_subdivision_id) {
             for id in ids {
-                if let Some(idx) = cache.get_by_primary(id) {
+                if let Some(idx) = cache.get_by_primary(&id) {
                     result.push(idx);
                 }
             }
@@ -163,7 +166,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         hasher.write(code.as_bytes());
         let code_hash = hasher.finish() as i64;
 
-        let cache = self.locality_idx_cache.read().unwrap();
+        let cache = self.locality_idx_cache.read().await;
         if let Some(id) = cache.get_by_code_hash(&code_hash) {
             Ok(cache.get_by_primary(&id))
         } else {
@@ -175,7 +178,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<LocalityIdxModel>, Box<dyn Error + Send + Sync>> {
-        let cache = self.locality_idx_cache.read().unwrap();
+        let cache = self.locality_idx_cache.read().await;
         let mut result = Vec::new();
         for id in ids {
             if let Some(idx) = cache.get_by_primary(id) {
@@ -186,18 +189,112 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.locality_idx_cache.read().unwrap().contains_primary(&id))
+        Ok(self.locality_idx_cache.read().await.contains_primary(&id))
     }
 
     async fn find_ids_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let cache = self.locality_idx_cache.read().unwrap();
+        let cache = self.locality_idx_cache.read().await;
         Ok(cache
             .get_by_country_subdivision_id(&country_subdivision_id)
-            .cloned()
             .unwrap_or_default())
+    }
+}
+
+#[async_trait]
+impl TransactionAware for LocalityRepositoryImpl {
+    async fn on_commit(&self) -> BankingResult<()> {
+        self.locality_idx_cache.read().await.on_commit().await
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        self.locality_idx_cache.read().await.on_rollback().await
+    }
+}
+
+pub struct TransactionAwareLocalityIdxModelCache {
+    shared_cache: Arc<RwLock<LocalityIdxModelCache>>,
+    local_additions: RwLock<HashMap<Uuid, LocalityIdxModel>>,
+}
+
+impl TransactionAwareLocalityIdxModelCache {
+    pub fn new(shared_cache: Arc<RwLock<LocalityIdxModelCache>>) -> Self {
+        Self {
+            shared_cache,
+            local_additions: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub fn add(&self, item: LocalityIdxModel) {
+        self.local_additions
+            .write()
+            .insert(item.locality_id, item);
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<LocalityIdxModel> {
+        if let Some(item) = self.local_additions.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        self.shared_cache.read().get_by_primary(primary_key)
+    }
+
+    pub fn get_by_country_subdivision_id(&self, country_subdivision_id: &Uuid) -> Option<Vec<Uuid>> {
+        let mut shared_ids = self
+            .shared_cache
+            .read()
+            .get_by_country_subdivision_id(country_subdivision_id)
+            .cloned()
+            .unwrap_or_default();
+
+        for item in self.local_additions.read().values() {
+            if item.country_subdivision_id == *country_subdivision_id {
+                shared_ids.push(item.locality_id);
+            }
+        }
+
+        if shared_ids.is_empty() {
+            None
+        } else {
+            shared_ids.sort();
+            shared_ids.dedup();
+            Some(shared_ids)
+        }
+    }
+
+    pub fn get_by_code_hash(&self, code_hash: &i64) -> Option<Uuid> {
+        for item in self.local_additions.read().values() {
+            if item.code_hash == *code_hash {
+                return Some(item.locality_id);
+            }
+        }
+        self.shared_cache.read().get_by_code_hash(code_hash)
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        self.local_additions.read().contains_key(primary_key)
+            || self.shared_cache.read().contains_primary(primary_key)
+    }
+}
+
+#[async_trait]
+impl TransactionAware for TransactionAwareLocalityIdxModelCache {
+    async fn on_commit(&self) -> BankingResult<()> {
+        let mut shared_cache = self.shared_cache.write();
+        let mut local_additions = self.local_additions.write();
+
+        for item in local_additions.values() {
+            shared_cache.add(item.clone());
+        }
+
+        local_additions.clear();
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        self.local_additions.write().clear();
+        Ok(())
     }
 }
 

@@ -173,6 +173,12 @@ This commit introduces a `UnitOfWork` pattern for improved transaction managemen
 - **Reduced Boilerplate**: Eliminates repetitive transaction management code from individual repository methods.
 - **Enhanced Testability**: Simplifies testing of transactional logic.
 
+### 🎉 Transaction-Aware Caching
+This commit implements a transaction-aware cache for `PersonIdxModel` in the `PersonRepositoryImpl`.
+- **Transactional Integrity**: Ensures that the `PersonIdxModelCache` is updated atomically with the database transaction.
+- **Data Consistency**: Improves data consistency and reliability by ensuring the cache reflects the committed state of the database.
+- **Architectural Alignment**: Aligns the `PersonRepositoryImpl` with the project's established caching strategy.
+
 ## Key Achievements (January 2025)
 
 ### 🎉 100% PostgreSQL Repository Implementation Complete
@@ -195,7 +201,7 @@ Agent-mediated banking operations supporting micro-finance and emerging markets:
 
 ### Core Features
 - **Collection Programs**: Territory-based programs with performance targets
-- **Agent Management**: License tracking, device integration, route optimization  
+- **Agent Management**: License tracking, device integration, route optimization
 - **Collection Processing**: Individual/batch collections with receipt generation
 - **Analytics**: Trend analysis, agent rankings, performance reporting
 

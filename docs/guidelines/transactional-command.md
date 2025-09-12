@@ -12,6 +12,31 @@ This document outlines the pattern for creating and executing commands within a 
 6.  **`CommandExecutor` Trait**: A generic trait in `banking-api` that defines how to execute a command.
 7.  **`CommandExecutorImpl`**: The concrete implementation in `banking-logic`. This struct is generic over the database type and a `ServiceFactory`. It manages the transaction lifecycle: begin, execute, commit/rollback.
 
+## On-Demand Repository Instantiation
+
+To optimize performance, repositories within a `UnitOfWorkSession` are not created when the session begins. Instead, they are instantiated on-demand the first time they are accessed. This lazy initialization is implemented using `once_cell::sync::OnceCell`.
+
+This approach avoids the overhead of creating repository instances that may not be used in a particular transaction, leading to more efficient resource utilization. For example, the `PostgresPersonRepos` and all the individual repositories it manages (`PersonRepository`, `CountryRepository`, etc.) are only created if they are explicitly requested during a transaction.
+
+## Transaction-Aware Repositories
+
+To support advanced caching strategies and other behaviors that need to react to the outcome of a transaction, the system uses a `TransactionAware` trait.
+
+### The `TransactionAware` Trait
+
+Defined in `banking-db/src/repository/transaction_aware.rs`, this trait provides two methods:
+
+-   `on_commit(&self) -> BankingResult<()>`: Called after the transaction has been successfully committed.
+-   `on_rollback(&self) -> BankingResult<()>`: Called after the transaction has been rolled back.
+
+Repositories that need to be notified of transaction outcomes can implement this trait.
+
+### Integration with `UnitOfWorkSession`
+
+The `UnitOfWorkSession` trait provides a `register_transaction_aware` method. The `PostgresUnitOfWorkSession` implementation maintains a list of registered `TransactionAware` components. When its `commit` or `rollback` methods are called, it iterates through the list and invokes the corresponding method on each registered component.
+
+This mechanism allows repositories to safely manage state that should only be finalized upon a successful transaction, such as updating a shared cache.
+
 ## Workflow
 
 1.  An application component (e.g., an API endpoint handler) receives a request to perform an action.
@@ -21,8 +46,8 @@ This document outlines the pattern for creating and executing commands within a 
 5.  It uses the `ServiceFactory` to create a `Services` struct, which contains instances of all the necessary services, all sharing the same transactional session.
 6.  It calls the `execute` method on the command, passing the `Services` struct as the context.
 7.  The command's `execute` method uses the services to perform its business logic. All database operations performed by the services will be part of the same transaction.
-8.  If the command's execution is successful, the `CommandExecutorImpl` commits the transaction.
-9.  If the command's execution fails at any point, the `CommandExecutorImpl` rolls back the transaction, undoing all changes.
+8.  If the command's execution is successful, the `CommandExecutorImpl` commits the transaction. This will trigger the `on_commit` hook on all registered `TransactionAware` repositories.
+9.  If the command's execution fails at any point, the `CommandExecutorImpl` rolls back the transaction, undoing all changes. This will trigger the `on_rollback` hook.
 
 ## Panic Safety and Transaction Rollback
 
@@ -32,6 +57,19 @@ The `PostgresUnitOfWorkSession` holds an `sqlx::Transaction`. The `sqlx::Transac
 
 Therefore, **there is no need to add an explicit `Drop` implementation to `PostgresUnitOfWorkSession`**. If a panic occurs, the stack will unwind, the `PostgresUnitOfWorkSession` will be dropped, which in turn drops the `sqlx::Transaction`, triggering an automatic rollback. This ensures that the transaction is always cleaned up correctly, even in the case of unexpected panics.
 
+
+## Caching Strategy
+
+To optimize performance, the system employs in-memory caches for frequently accessed, rarely changing data (e.g., countries, subdivisions).
+
+-   **Cache Lifecycle**: Shared caches are initialized once when the `PostgresUnitOfWork` is created. This ensures that all subsequent transactions share the same cache instances, avoiding redundant database queries.
+-   **Transactional Caching**: To ensure cache consistency, repositories use a two-tiered caching strategy enabled by the `TransactionAware` trait:
+    1.  **Shared Cache**: A global, application-wide cache (e.g., for `Person` or `EntityReference`) is initialized when the application starts. This cache is typically wrapped in an `Arc<parking_lot::RwLock<...>>` for thread-safe interior mutability.
+    2.  **Transaction-Aware Wrapper**: To handle transactional updates, this shared cache is wrapped in a dedicated transaction-aware cache struct (e.g., `TransactionAwarePersonIdxModelCache`). This wrapper holds a reference to the shared cache and also maintains transaction-local collections for new additions, updates, and deletions.
+    3.  **Local Caching**: During a transaction, any writes (`add`, `update`, or `remove`) are captured in the wrapper's local collections. Read operations first check these local collections before consulting the shared cache, providing a transaction-consistent view of the data.
+    4.  **`Send`-Compatibility**: The repository holds the transaction-aware wrapper in an `Arc<tokio::sync::RwLock<...>>`. The use of `tokio::sync::RwLock` is critical, as its read guard is `Send`, which allows it to be held across `.await` calls, preventing common compilation errors in `async` code.
+    5.  **On Commit**: When the transaction is committed, the `on_commit` hook is called on the repository, which in turn calls `on_commit` on the transaction-aware wrapper. The wrapper then acquires a write lock on the shared cache and merges the local changes.
+    6.  **On Rollback**: If the transaction is rolled back, the `on_rollback` hook is called, and the wrapper simply discards its local changes, leaving the shared cache unmodified.
 
 ## Repository Implementation with `Executor`
 
@@ -85,7 +123,7 @@ This pattern centralizes the logic for handling both transactional and non-trans
 
 // 1. Create the database pool and the UnitOfWork
 let pool = Arc::new(PgPoolOptions::new().connect(&db_url).await?);
-let uow = Arc::new(PostgresUnitOfWork::new(pool.clone()));
+let uow = Arc::new(PostgresUnitOfWork::new(pool.clone()).await);
 
 // 2. Create the concrete ServiceFactory
 struct AppServiceFactory;

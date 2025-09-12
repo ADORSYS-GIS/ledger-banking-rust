@@ -1,40 +1,44 @@
 use async_trait::async_trait;
+use banking_api::BankingResult;
 use banking_db::models::person::{
     PersonAuditModel, PersonIdxModel, PersonIdxModelCache, PersonModel,
 };
-use banking_db::repository::{LocationRepository, PersonRepository};
+use banking_db::repository::{LocationRepository, PersonRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::repository::person_location_repository_impl::LocationRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
 use std::hash::Hasher;
-use std::sync::{Arc, RwLock};
+use parking_lot::RwLock;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use tokio::sync::RwLock as TokioRwLock;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct PersonRepositoryImpl {
     executor: Executor,
-    person_idx_cache: Arc<RwLock<PersonIdxModelCache>>,
+    person_idx_cache: Arc<TokioRwLock<TransactionAwarePersonIdxModelCache>>,
     location_repository: Arc<LocationRepositoryImpl>,
 }
 
 impl PersonRepositoryImpl {
-    pub async fn new(
+    pub fn new(
         executor: Executor,
         location_repository: Arc<LocationRepositoryImpl>,
+        person_idx_cache: Arc<RwLock<PersonIdxModelCache>>,
     ) -> Self {
-        let person_idx_models = Self::load_all_person_idx(&executor).await.unwrap();
-        let person_idx_cache =
-            Arc::new(RwLock::new(PersonIdxModelCache::new(person_idx_models).unwrap()));
         Self {
             executor,
-            person_idx_cache,
+            person_idx_cache: Arc::new(TokioRwLock::new(
+                TransactionAwarePersonIdxModelCache::new(person_idx_cache),
+            )),
             location_repository,
         }
     }
 
-    async fn load_all_person_idx(
+    pub async fn load_all_person_idx(
         executor: &Executor,
     ) -> Result<Vec<PersonIdxModel>, sqlx::Error> {
         let query = sqlx::query_as::<_, PersonIdxModel>("SELECT * FROM person_idx");
@@ -94,7 +98,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {
-            let cache_read_guard = self.person_idx_cache.read().unwrap();
+            let cache_read_guard = self.person_idx_cache.read().await;
             cache_read_guard.get_by_primary(&person.id)
         };
 
@@ -237,7 +241,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 version: new_version,
                 hash: new_hash,
             };
-            self.person_idx_cache.write().unwrap().update(new_idx);
+            self.person_idx_cache.read().await.update(new_idx);
         } else {
             // INSERT
             let version = 0;
@@ -357,7 +361,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 version,
                 hash: new_hash,
             };
-            self.person_idx_cache.write().unwrap().add(new_idx);
+            self.person_idx_cache.read().await.add(new_idx);
         }
 
         Ok(person)
@@ -386,14 +390,14 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         &self,
         id: Uuid,
     ) -> Result<Option<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
-        Ok(self.person_idx_cache.read().unwrap().get_by_primary(&id))
+        Ok(self.person_idx_cache.read().await.get_by_primary(&id))
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
-        let cache = self.person_idx_cache.read().unwrap();
+        let cache = self.person_idx_cache.read().await;
         let results = ids
             .iter()
             .filter_map(|id| cache.get_by_primary(id))
@@ -402,7 +406,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.person_idx_cache.read().unwrap().contains_primary(&id))
+        Ok(self.person_idx_cache.read().await.contains_primary(&id))
     }
 
     async fn get_ids_by_external_identifier(
@@ -413,10 +417,9 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         hasher.write(identifier.as_bytes());
         let hash = hasher.finish() as i64;
 
-        let cache = self.person_idx_cache.read().unwrap();
+        let cache = self.person_idx_cache.read().await;
         Ok(cache
             .get_by_external_identifier_hash(&hash)
-            .cloned()
             .unwrap_or_default())
     }
 
@@ -428,16 +431,160 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         hasher.write(identifier.as_bytes());
         let hash = hasher.finish() as i64;
 
-        let cache = self.person_idx_cache.read().unwrap();
+        let cache = self.person_idx_cache.read().await;
         let ids = cache
             .get_by_external_identifier_hash(&hash)
-            .cloned()
             .unwrap_or_default();
         let results = ids
             .iter()
             .filter_map(|id| cache.get_by_primary(id))
             .collect();
         Ok(results)
+    }
+}
+
+#[async_trait]
+impl TransactionAware for PersonRepositoryImpl {
+    async fn on_commit(&self) -> BankingResult<()> {
+        self.person_idx_cache.read().await.on_commit().await
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        self.person_idx_cache.read().await.on_rollback().await
+    }
+}
+
+pub struct TransactionAwarePersonIdxModelCache {
+    shared_cache: Arc<RwLock<PersonIdxModelCache>>,
+    local_additions: RwLock<HashMap<Uuid, PersonIdxModel>>,
+    local_updates: RwLock<HashMap<Uuid, PersonIdxModel>>,
+    local_deletions: RwLock<HashSet<Uuid>>,
+}
+
+impl TransactionAwarePersonIdxModelCache {
+    pub fn new(shared_cache: Arc<RwLock<PersonIdxModelCache>>) -> Self {
+        Self {
+            shared_cache,
+            local_additions: RwLock::new(HashMap::new()),
+            local_updates: RwLock::new(HashMap::new()),
+            local_deletions: RwLock::new(HashSet::new()),
+        }
+    }
+
+    pub fn add(&self, item: PersonIdxModel) {
+        let primary_key = item.person_id;
+        self.local_deletions.write().remove(&primary_key);
+        self.local_additions.write().insert(primary_key, item);
+    }
+
+    pub fn update(&self, item: PersonIdxModel) {
+        let primary_key = item.person_id;
+        self.local_deletions.write().remove(&primary_key);
+        if let Some(local_item) = self.local_additions.write().get_mut(&primary_key) {
+            *local_item = item;
+            return;
+        }
+        self.local_updates.write().insert(primary_key, item);
+    }
+
+    #[allow(dead_code)]
+    pub fn remove(&self, primary_key: &Uuid) {
+        if self.local_additions.write().remove(primary_key).is_none() {
+            self.local_deletions.write().insert(*primary_key);
+        }
+        self.local_updates.write().remove(primary_key);
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<PersonIdxModel> {
+        if self.local_deletions.read().contains(primary_key) {
+            return None;
+        }
+        if let Some(item) = self.local_additions.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        if let Some(item) = self.local_updates.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        self.shared_cache.read().get_by_primary(primary_key)
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        if self.local_deletions.read().contains(primary_key) {
+            return false;
+        }
+        if self.local_additions.read().contains_key(primary_key) {
+            return true;
+        }
+        if self.local_updates.read().contains_key(primary_key) {
+            return true;
+        }
+        self.shared_cache.read().contains_primary(primary_key)
+    }
+
+    pub fn get_by_external_identifier_hash(&self, hash: &i64) -> Option<Vec<Uuid>> {
+        let shared_cache = self.shared_cache.read();
+        let local_deletions = self.local_deletions.read();
+        let local_updates = self.local_updates.read();
+        let local_additions = self.local_additions.read();
+
+        let mut result: HashSet<Uuid> = shared_cache
+            .get_by_external_identifier_hash(hash)
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
+
+        result.retain(|id| !local_deletions.contains(id) && !local_updates.contains_key(id));
+
+        for item in local_additions.values() {
+            if item.external_identifier_hash == Some(*hash) {
+                result.insert(item.person_id);
+            }
+        }
+
+        for item in local_updates.values() {
+            if item.external_identifier_hash == Some(*hash) {
+                result.insert(item.person_id);
+            }
+        }
+
+        if result.is_empty() {
+            None
+        } else {
+            Some(result.into_iter().collect())
+        }
+    }
+}
+
+#[async_trait]
+impl TransactionAware for TransactionAwarePersonIdxModelCache {
+    async fn on_commit(&self) -> BankingResult<()> {
+        let mut shared_cache = self.shared_cache.write();
+        let mut local_additions = self.local_additions.write();
+        let mut local_updates = self.local_updates.write();
+        let mut local_deletions = self.local_deletions.write();
+
+        for item in local_additions.values() {
+            shared_cache.add(item.clone());
+        }
+        for item in local_updates.values() {
+            shared_cache.update(item.clone());
+        }
+        for primary_key in local_deletions.iter() {
+            shared_cache.remove(primary_key);
+        }
+
+        local_additions.clear();
+        local_updates.clear();
+        local_deletions.clear();
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        self.local_additions.write().clear();
+        self.local_updates.write().clear();
+        self.local_deletions.write().clear();
+        Ok(())
     }
 }
 

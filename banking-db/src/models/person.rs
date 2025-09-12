@@ -1014,6 +1014,15 @@ impl CountryIdxModelCache {
         
         self.by_id.insert(primary_key, item);
     }
+    pub fn remove(&mut self, primary_key: &Uuid) -> Option<CountryIdxModel> {
+        if let Some(item) = self.by_id.remove(primary_key) {
+            self.by_iso2.remove(&item.iso2);
+            Some(item)
+        } else {
+            None
+        }
+    }
+
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
         self.by_id.contains_key(primary_key)
