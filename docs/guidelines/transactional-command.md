@@ -64,11 +64,12 @@ To optimize performance, the system employs in-memory caches for frequently acce
 
 -   **Cache Lifecycle**: Shared caches are initialized once when the `PostgresUnitOfWork` is created. This ensures that all subsequent transactions share the same cache instances, avoiding redundant database queries.
 -   **Transactional Caching**: To ensure cache consistency, repositories use a two-tiered caching strategy enabled by the `TransactionAware` trait:
-    1.  **Local Cache**: During a transaction, all modifications to cached data are held in a repository-local, temporary cache. Reads will first check this local cache before consulting the shared cache.
-    2.  **Shared Cache**: This is the global, application-wide cache.
-    3.  **On Commit**: When the transaction is committed, the `on_commit` hook is called, and the changes from the local cache are merged into the shared cache.
-    4.  **On Rollback**: If the transaction is rolled back, the `on_rollback` hook is called, and the local cache is simply discarded, leaving the shared cache untouched.
--   **Implementation**: The shared caches are implemented using `parking_lot::RwLock` for efficient, thread-safe access.
+    1.  **Shared Cache**: A global, application-wide cache (e.g., for countries) is initialized when the application starts. This cache is typically wrapped in an `Arc<parking_lot::RwLock<...>>` for thread-safe interior mutability.
+    2.  **Transaction-Aware Wrapper**: To handle transactional updates, this shared cache is wrapped in a dedicated transaction-aware cache struct (e.g., `TransactionAwareCountryIdxModelCache`). This wrapper holds a reference to the shared cache and also maintains transaction-local collections for new additions and deletions.
+    3.  **Local Caching**: During a transaction, any writes (`add` or `remove`) are captured in the wrapper's local collections. Read operations first check these local collections before consulting the shared cache, providing a transaction-consistent view of the data.
+    4.  **`Send`-Compatibility**: The repository holds the transaction-aware wrapper in an `Arc<tokio::sync::RwLock<...>>`. The use of `tokio::sync::RwLock` is critical, as its read guard is `Send`, which allows it to be held across `.await` calls, preventing common compilation errors in `async` code.
+    5.  **On Commit**: When the transaction is committed, the `on_commit` hook is called on the repository, which in turn calls `on_commit` on the transaction-aware wrapper. The wrapper then acquires a write lock on the shared cache and merges the local changes.
+    6.  **On Rollback**: If the transaction is rolled back, the `on_rollback` hook is called, and the wrapper simply discards its local changes, leaving the shared cache unmodified.
 
 ## Repository Implementation with `Executor`
 

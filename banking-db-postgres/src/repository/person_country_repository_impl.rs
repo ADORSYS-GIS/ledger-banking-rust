@@ -5,23 +5,30 @@ use banking_db::repository::{CountryRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use heapless::String as HeaplessString;
-use parking_lot::RwLock;
+use parking_lot::RwLock as ParkingRwLock;
 use sqlx::{postgres::PgRow, Postgres, Row};
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 pub struct CountryRepositoryImpl {
     executor: Executor,
-    country_idx_cache: Arc<RwLock<CountryIdxModelCache>>,
+    country_idx_cache: Arc<RwLock<TransactionAwareCountryIdxModelCache>>,
 }
 
 impl CountryRepositoryImpl {
-    pub fn new(executor: Executor, country_idx_cache: Arc<RwLock<CountryIdxModelCache>>) -> Self {
+    pub fn new(
+        executor: Executor,
+        country_idx_cache: Arc<ParkingRwLock<CountryIdxModelCache>>,
+    ) -> Self {
         Self {
             executor,
-            country_idx_cache,
+            country_idx_cache: Arc::new(RwLock::new(TransactionAwareCountryIdxModelCache::new(
+                country_idx_cache,
+            ))),
         }
     }
 
@@ -48,7 +55,7 @@ impl CountryRepositoryImpl {
 impl CountryRepository<Postgres> for CountryRepositoryImpl {
     async fn save(&self, country: CountryModel) -> Result<CountryModel, sqlx::Error> {
         let id_to_load = {
-            let cache = self.country_idx_cache.read();
+            let cache = self.country_idx_cache.read().await;
             if cache.contains_primary(&country.id) {
                 Some(country.id)
             } else {
@@ -97,7 +104,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
             country_id: country.id,
             iso2: country.iso2.clone(),
         };
-        self.country_idx_cache.write().add(new_idx_model);
+        self.country_idx_cache.read().await.add(new_idx_model);
 
         Ok(country)
     }
@@ -122,7 +129,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<CountryIdxModel>, sqlx::Error> {
-        let cache = self.country_idx_cache.read();
+        let cache = self.country_idx_cache.read().await;
         Ok(cache.get_by_primary(&id))
     }
 
@@ -135,7 +142,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         let mut result = Vec::new();
         let iso2_heapless = HeaplessString::<2>::from_str(iso2)
             .map_err(|_| sqlx::Error::Configuration("Invalid iso2 format".into()))?;
-        let cache = self.country_idx_cache.read();
+        let cache = self.country_idx_cache.read().await;
         if let Some(country_id) = cache.get_by_iso2(&iso2_heapless) {
             if let Some(country_idx) = cache.get_by_primary(&country_id) {
                 result.push(country_idx);
@@ -146,7 +153,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
     async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
         let mut result = Vec::new();
-        let cache = self.country_idx_cache.read();
+        let cache = self.country_idx_cache.read().await;
         for id in ids {
             if let Some(country_idx) = cache.get_by_primary(id) {
                 result.push(country_idx);
@@ -156,7 +163,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.country_idx_cache.read().contains_primary(&id))
+        Ok(self.country_idx_cache.read().await.contains_primary(&id))
     }
 
     async fn find_ids_by_iso2(
@@ -166,7 +173,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         let iso2_heapless = HeaplessString::<2>::from_str(iso2)
             .map_err(|_| "Invalid iso2 format".to_string())?;
         let mut result = Vec::new();
-        if let Some(country_id) = self.country_idx_cache.read().get_by_iso2(&iso2_heapless) {
+        if let Some(country_id) = self.country_idx_cache.read().await.get_by_iso2(&iso2_heapless) {
             result.push(country_id);
         }
         Ok(result)
@@ -176,11 +183,11 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 #[async_trait]
 impl TransactionAware for CountryRepositoryImpl {
     async fn on_commit(&self) -> BankingResult<()> {
-        Ok(())
+        self.country_idx_cache.read().await.on_commit().await
     }
 
     async fn on_rollback(&self) -> BankingResult<()> {
-        Ok(())
+        self.country_idx_cache.read().await.on_rollback().await
     }
 }
 
@@ -202,5 +209,97 @@ impl TryFromRow<PgRow> for CountryIdxModel {
             country_id: row.get("country_id"),
             iso2: get_heapless_string(row, "iso2")?,
         })
+    }
+}
+
+pub struct TransactionAwareCountryIdxModelCache {
+    shared_cache: Arc<ParkingRwLock<CountryIdxModelCache>>,
+    local_additions: ParkingRwLock<HashMap<Uuid, CountryIdxModel>>,
+    local_deletions: ParkingRwLock<HashSet<Uuid>>,
+}
+
+impl TransactionAwareCountryIdxModelCache {
+    pub fn new(shared_cache: Arc<ParkingRwLock<CountryIdxModelCache>>) -> Self {
+        Self {
+            shared_cache,
+            local_additions: ParkingRwLock::new(HashMap::new()),
+            local_deletions: ParkingRwLock::new(HashSet::new()),
+        }
+    }
+
+    pub fn add(&self, item: CountryIdxModel) {
+        let primary_key = item.country_id;
+        self.local_deletions.write().remove(&primary_key);
+        self.local_additions.write().insert(primary_key, item);
+    }
+
+    pub fn remove(&self, primary_key: &Uuid) {
+        if self.local_additions.write().remove(primary_key).is_none() {
+            self.local_deletions.write().insert(*primary_key);
+        }
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        if self.local_additions.read().contains_key(primary_key) {
+            return true;
+        }
+        if self.local_deletions.read().contains(primary_key) {
+            return false;
+        }
+        self.shared_cache.read().contains_primary(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<CountryIdxModel> {
+        if let Some(item) = self.local_additions.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        if self.local_deletions.read().contains(primary_key) {
+            return None;
+        }
+        self.shared_cache.read().get_by_primary(primary_key)
+    }
+
+    pub fn get_by_iso2(&self, key: &HeaplessString<2>) -> Option<Uuid> {
+        for item in self.local_additions.read().values() {
+            if item.iso2 == *key {
+                return Some(item.country_id);
+            }
+        }
+
+        let shared_cache = self.shared_cache.read();
+        if let Some(primary_key) = shared_cache.get_by_iso2(key) {
+            if self.local_deletions.read().contains(&primary_key) {
+                return None;
+            }
+            return Some(primary_key);
+        }
+
+        None
+    }
+}
+
+#[async_trait]
+impl TransactionAware for TransactionAwareCountryIdxModelCache {
+    async fn on_commit(&self) -> BankingResult<()> {
+        let mut shared_cache = self.shared_cache.write();
+        let mut local_additions = self.local_additions.write();
+        let mut local_deletions = self.local_deletions.write();
+
+        for item in local_additions.values() {
+            shared_cache.add(item.clone());
+        }
+        for primary_key in local_deletions.iter() {
+            shared_cache.remove(primary_key);
+        }
+
+        local_additions.clear();
+        local_deletions.clear();
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        self.local_additions.write().clear();
+        self.local_deletions.write().clear();
+        Ok(())
     }
 }
