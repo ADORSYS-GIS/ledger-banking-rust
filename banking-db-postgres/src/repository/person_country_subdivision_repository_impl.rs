@@ -7,17 +7,19 @@ use banking_db::repository::{CountryRepository, CountrySubdivisionRepository, Tr
 use crate::repository::executor::Executor;
 use crate::repository::person_country_repository_impl::CountryRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
-use parking_lot::RwLock;
+use parking_lot::RwLock as ParkingRwLock;
 use sqlx::{postgres::PgRow, Postgres, Row};
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct CountrySubdivisionRepositoryImpl {
     executor: Executor,
-    country_subdivision_idx_cache: Arc<RwLock<CountrySubdivisionIdxModelCache>>,
+    country_subdivision_idx_cache: Arc<RwLock<TransactionAwareCountrySubdivisionIdxModelCache>>,
     country_repository: Arc<CountryRepositoryImpl>,
 }
 
@@ -25,11 +27,13 @@ impl CountrySubdivisionRepositoryImpl {
     pub fn new(
         executor: Executor,
         country_repository: Arc<CountryRepositoryImpl>,
-        country_subdivision_idx_cache: Arc<RwLock<CountrySubdivisionIdxModelCache>>,
+        country_subdivision_idx_cache: Arc<ParkingRwLock<CountrySubdivisionIdxModelCache>>,
     ) -> Self {
         Self {
             executor,
-            country_subdivision_idx_cache,
+            country_subdivision_idx_cache: Arc::new(RwLock::new(
+                TransactionAwareCountrySubdivisionIdxModelCache::new(country_subdivision_idx_cache),
+            )),
             country_repository,
         }
     }
@@ -123,7 +127,10 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
             country_id: country_subdivision.country_id,
             code_hash,
         };
-        self.country_subdivision_idx_cache.write().add(idx_model);
+        self.country_subdivision_idx_cache
+            .read()
+            .await
+            .add(idx_model);
 
         Ok(country_subdivision)
     }
@@ -151,7 +158,11 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         &self,
         id: Uuid,
     ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
-        Ok(self.country_subdivision_idx_cache.read().get_by_primary(&id))
+        Ok(self
+            .country_subdivision_idx_cache
+            .read()
+            .await
+            .get_by_primary(&id))
     }
 
     async fn find_by_country_id(
@@ -161,13 +172,10 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         _page_size: i32,
     ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
         let mut result = Vec::new();
-        if let Some(ids) = self
-            .country_subdivision_idx_cache
-            .read()
-            .get_by_country_id(&country_id)
-        {
+        let cache = self.country_subdivision_idx_cache.read().await;
+        if let Some(ids) = cache.get_by_country_id(&country_id) {
             for id in ids {
-                if let Some(idx) = self.country_subdivision_idx_cache.read().get_by_primary(id) {
+                if let Some(idx) = cache.get_by_primary(&id) {
                     result.push(idx);
                 }
             }
@@ -184,12 +192,9 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         hasher.write(code.as_bytes());
         let code_hash = hasher.finish() as i64;
 
-        if let Some(id) = self
-            .country_subdivision_idx_cache
-            .read()
-            .get_by_code_hash(&code_hash)
-        {
-            Ok(self.country_subdivision_idx_cache.read().get_by_primary(&id))
+        let cache = self.country_subdivision_idx_cache.read().await;
+        if let Some(id) = cache.get_by_code_hash(&code_hash) {
+            Ok(cache.get_by_primary(&id))
         } else {
             Ok(None)
         }
@@ -200,8 +205,9 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         ids: &[Uuid],
     ) -> Result<Vec<CountrySubdivisionIdxModel>, Box<dyn Error + Send + Sync>> {
         let mut result = Vec::new();
+        let cache = self.country_subdivision_idx_cache.read().await;
         for id in ids {
-            if let Some(idx) = self.country_subdivision_idx_cache.read().get_by_primary(id) {
+            if let Some(idx) = cache.get_by_primary(id) {
                 result.push(idx);
             }
         }
@@ -209,7 +215,11 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.country_subdivision_idx_cache.read().contains_primary(&id))
+        Ok(self
+            .country_subdivision_idx_cache
+            .read()
+            .await
+            .contains_primary(&id))
     }
 
     async fn find_ids_by_country_id(
@@ -219,8 +229,8 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         Ok(self
             .country_subdivision_idx_cache
             .read()
+            .await
             .get_by_country_id(&country_id)
-            .cloned()
             .unwrap_or_default())
     }
 }
@@ -228,11 +238,19 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
 #[async_trait]
 impl TransactionAware for CountrySubdivisionRepositoryImpl {
     async fn on_commit(&self) -> BankingResult<()> {
-        Ok(())
+        self.country_subdivision_idx_cache
+            .read()
+            .await
+            .on_commit()
+            .await
     }
 
     async fn on_rollback(&self) -> BankingResult<()> {
-        Ok(())
+        self.country_subdivision_idx_cache
+            .read()
+            .await
+            .on_rollback()
+            .await
     }
 }
 
@@ -256,5 +274,93 @@ impl TryFromRow<PgRow> for CountrySubdivisionIdxModel {
             country_id: row.get("country_id"),
             code_hash: row.get("code_hash"),
         })
+    }
+}
+
+pub struct TransactionAwareCountrySubdivisionIdxModelCache {
+    shared_cache: Arc<ParkingRwLock<CountrySubdivisionIdxModelCache>>,
+    local_additions: ParkingRwLock<HashMap<Uuid, CountrySubdivisionIdxModel>>,
+}
+
+impl TransactionAwareCountrySubdivisionIdxModelCache {
+    pub fn new(shared_cache: Arc<ParkingRwLock<CountrySubdivisionIdxModelCache>>) -> Self {
+        Self {
+            shared_cache,
+            local_additions: ParkingRwLock::new(HashMap::new()),
+        }
+    }
+
+    pub fn add(&self, item: CountrySubdivisionIdxModel) {
+        let primary_key = item.country_subdivision_id;
+        self.local_additions.write().insert(primary_key, item);
+    }
+
+    pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        if self.local_additions.read().contains_key(primary_key) {
+            return true;
+        }
+        self.shared_cache.read().contains_primary(primary_key)
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<CountrySubdivisionIdxModel> {
+        if let Some(item) = self.local_additions.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        self.shared_cache.read().get_by_primary(primary_key)
+    }
+
+    pub fn get_by_country_id(&self, key: &Uuid) -> Option<Vec<Uuid>> {
+        let shared_cache = self.shared_cache.read();
+        let mut result_set: HashSet<Uuid> = shared_cache
+            .get_by_country_id(key)
+            .map(|v| v.iter().cloned().collect())
+            .unwrap_or_default();
+
+        for item in self.local_additions.read().values() {
+            if item.country_id == *key {
+                result_set.insert(item.country_subdivision_id);
+            }
+        }
+
+        if result_set.is_empty() {
+            None
+        } else {
+            Some(result_set.into_iter().collect())
+        }
+    }
+
+    pub fn get_by_code_hash(&self, key: &i64) -> Option<Uuid> {
+        for item in self.local_additions.read().values() {
+            if item.code_hash == *key {
+                return Some(item.country_subdivision_id);
+            }
+        }
+
+        let shared_cache = self.shared_cache.read();
+        if let Some(primary_key) = shared_cache.get_by_code_hash(key) {
+            return Some(primary_key);
+        }
+
+        None
+    }
+}
+
+#[async_trait]
+impl TransactionAware for TransactionAwareCountrySubdivisionIdxModelCache {
+    async fn on_commit(&self) -> BankingResult<()> {
+        let mut shared_cache = self.shared_cache.write();
+        let mut local_additions = self.local_additions.write();
+
+        for item in local_additions.values() {
+            shared_cache.add(item.clone());
+        }
+
+        local_additions.clear();
+        Ok(())
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        self.local_additions.write().clear();
+        Ok(())
     }
 }
