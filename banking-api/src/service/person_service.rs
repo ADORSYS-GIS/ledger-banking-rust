@@ -1,5 +1,5 @@
 use crate::domain::person::{
-    Location, LocationType, Locality, Country, EntityReference, Messaging, Person, CountrySubdivision,
+    Location, Locality, Country, EntityReference, Messaging, Person, CountrySubdivision,
 };
 use crate::domain::AuditLog;
 use crate::BankingResult;
@@ -42,16 +42,7 @@ pub trait PersonService: Send + Sync {
     async fn create_location(&self, location: Location, audit_log: AuditLog) -> BankingResult<Location>;
     async fn fix_location(&self, location: Location) -> BankingResult<Location>;
     async fn find_location_by_id(&self, id: Uuid) -> BankingResult<Option<Location>>;
-    async fn find_locations_by_street_line1(
-        &self,
-        street_line1: HeaplessString<50>,
-    ) -> BankingResult<Vec<Location>>;
     async fn find_locations_by_locality_id(&self, locality_id: Uuid) -> BankingResult<Vec<Location>>;
-    async fn find_locations_by_type_and_locality(
-        &self,
-        location_type: LocationType,
-        locality_id: Uuid,
-    ) -> BankingResult<Vec<Location>>;
 
     // Messaging methods
     async fn create_messaging(&self, messaging: Messaging, audit_log: AuditLog) -> BankingResult<Messaging>;

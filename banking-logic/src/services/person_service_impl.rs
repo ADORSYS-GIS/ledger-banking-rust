@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use banking_api::domain::person::{
-    Location, LocationType, Locality, Country, EntityReference, Messaging, Person, CountrySubdivision,
+    Location, Locality, Country, EntityReference, Messaging, Person, CountrySubdivision,
 };
 use banking_api::service::PersonService;
 use banking_api::BankingResult;
@@ -252,55 +252,11 @@ impl<DB: Database + Send + Sync> PersonService for PersonServiceImpl<DB> {
         }
     }
 
-    async fn find_locations_by_street_line1(
-        &self,
-        street_line1: HeaplessString<50>,
-    ) -> BankingResult<Vec<Location>> {
-        let ids = self
-            .repositories
-            .location_repository
-            .find_ids_by_street_line1(street_line1.as_str())
-            .await?;
-        let model_ixes = self.repositories.location_repository.find_by_ids(&ids).await?;
-        let mut locations = Vec::new();
-        for idx in model_ixes {
-            let location_model = self
-                .repositories
-                .location_repository
-                .load(idx.location_id)
-                .await?;
-            locations.push(location_model.to_domain());
-        }
-        Ok(locations)
-    }
-
     async fn find_locations_by_locality_id(&self, locality_id: Uuid) -> BankingResult<Vec<Location>> {
         let model_ixes = self
             .repositories
             .location_repository
             .find_by_locality_id(locality_id, 1, 1000)
-            .await?;
-        let mut locations = Vec::new();
-        for idx in model_ixes {
-            let location_model = self
-                .repositories
-                .location_repository
-                .load(idx.location_id)
-                .await?;
-            locations.push(location_model.to_domain());
-        }
-        Ok(locations)
-    }
-
-    async fn find_locations_by_type_and_locality(
-        &self,
-        location_type: LocationType,
-        locality_id: Uuid,
-    ) -> BankingResult<Vec<Location>> {
-        let model_ixes = self
-            .repositories
-            .location_repository
-            .find_by_type_and_locality(location_type.to_model(), locality_id, 1, 1000)
             .await?;
         let mut locations = Vec::new();
         for idx in model_ixes {

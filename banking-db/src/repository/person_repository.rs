@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::Database;
 use uuid::Uuid;
 use crate::models::person::{
-    CountryModel, CountryIdxModel, CountrySubdivisionModel, CountrySubdivisionIdxModel, EntityReferenceModel, EntityReferenceIdxModel, LocationModel, LocationIdxModel, LocationType,
+    CountryModel, CountryIdxModel, CountrySubdivisionModel, CountrySubdivisionIdxModel, EntityReferenceModel, EntityReferenceIdxModel, LocationModel, LocationIdxModel,
     LocalityModel, LocalityIdxModel, MessagingModel, MessagingIdxModel, PersonModel, PersonIdxModel,
 };
 
@@ -113,7 +113,6 @@ pub trait LocationRepository<DB: Database>: Send + Sync {
     async fn save(&self, location: LocationModel, audit_log_id: Uuid) -> Result<LocationModel, sqlx::Error>;
     async fn load(&self, id: Uuid) -> Result<LocationModel, sqlx::Error>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationIdxModel>, sqlx::Error>;
-    async fn find_ids_by_street_line1(&self, street_line1: &str) -> Result<Vec<Uuid>, sqlx::Error>;
     async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationIdxModel>, sqlx::Error>;
     async fn find_by_locality_id(
         &self,
@@ -121,18 +120,7 @@ pub trait LocationRepository<DB: Database>: Send + Sync {
         page: i32,
         page_size: i32,
     ) -> Result<Vec<LocationIdxModel>, sqlx::Error>;
-    async fn find_by_type_and_locality(
-        &self,
-        location_type: LocationType,
-        locality_id: Uuid,
-        page: i32,
-        page_size: i32,
-    ) -> Result<Vec<LocationIdxModel>, sqlx::Error>;
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
-    async fn find_ids_by_location_type(
-        &self,
-        location_type: LocationType,
-    ) -> Result<Vec<Uuid>, Box<dyn std::error::Error + Send + Sync>>;
     async fn find_ids_by_locality_id(
         &self,
         locality_id: Uuid,

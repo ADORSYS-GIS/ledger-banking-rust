@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use banking_api::BankingResult;
 use banking_db::models::person::{
-    LocationAuditModel, LocationIdxModel, LocationIdxModelCache, LocationModel, LocationType,
+    LocationAuditModel, LocationIdxModel, LocationIdxModelCache, LocationModel,
 };
 use banking_db::repository::{LocalityRepository, LocationRepository, TransactionAware};
 use crate::repository::executor::Executor;
@@ -298,47 +298,13 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         Ok(self.location_idx_cache.read().await.get_by_primary(&id))
     }
 
-    async fn find_ids_by_street_line1(
-        &self,
-        street_line1: &str,
-    ) -> Result<Vec<Uuid>, sqlx::Error> {
-        let query = sqlx::query_scalar(
-            r#"
-            SELECT id FROM location WHERE street_line1 = $1
-            "#,
-        )
-        .bind(street_line1);
-
-        let ids = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
-            }
-        };
-        Ok(ids)
-    }
-
     async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
-        let query = sqlx::query(
-            r#"
-            SELECT * FROM location_idx WHERE location_id = ANY($1)
-            "#,
-        )
-        .bind(ids);
-
-        let rows = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
+        let cache = self.location_idx_cache.read().await;
+        let mut locations = Vec::with_capacity(ids.len());
+        for id in ids {
+            if let Some(location_idx) = cache.get_by_primary(id) {
+                locations.push(location_idx);
             }
-        };
-
-        let mut locations = Vec::new();
-        for row in rows {
-            locations
-                .push(LocationIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
         }
         Ok(locations)
     }
@@ -353,86 +319,17 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         Ok(cache.get_by_locality_id(&locality_id))
     }
 
-    async fn find_by_type_and_locality(
-        &self,
-        location_type: LocationType,
-        locality_id: Uuid,
-        page: i32,
-        page_size: i32,
-    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
-        let query = sqlx::query(
-            r#"
-            SELECT li.*
-            FROM location_idx li
-            JOIN location l ON li.location_id = l.id
-            WHERE l.location_type = $1 AND l.locality_id = $2
-            LIMIT $3 OFFSET $4
-            "#,
-        )
-        .bind(location_type)
-        .bind(locality_id)
-        .bind(page_size)
-        .bind((page - 1) * page_size);
-
-        let rows = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
-            }
-        };
-
-        let mut locations = Vec::new();
-        for row in rows {
-            locations
-                .push(LocationIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?);
-        }
-        Ok(locations)
-    }
-
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
         Ok(self.location_idx_cache.read().await.get_by_primary(&id).is_some())
-    }
-
-    async fn find_ids_by_location_type(
-        &self,
-        location_type: LocationType,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let query = sqlx::query_scalar(
-            r#"
-            SELECT id FROM location WHERE location_type = $1
-            "#,
-        )
-        .bind(location_type);
-
-        let ids = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
-            }
-        };
-        Ok(ids)
     }
 
     async fn find_ids_by_locality_id(
         &self,
         locality_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let query = sqlx::query_scalar(
-            r#"
-            SELECT id FROM location WHERE locality_id = $1
-            "#,
-        )
-        .bind(locality_id);
-
-        let ids = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
-            }
-        };
+        let cache = self.location_idx_cache.read().await;
+        let locations = cache.get_by_locality_id(&locality_id);
+        let ids = locations.into_iter().map(|loc| loc.location_id).collect();
         Ok(ids)
     }
 }

@@ -5,7 +5,7 @@ use banking_api::domain::person::{
 };
 use banking_api::service::PersonService;
 use banking_db::models::person::{
-    LocationModel, LocationIdxModel, LocationAuditModel, LocationType as LocationTypeModel,
+    LocationModel, LocationIdxModel, LocationAuditModel,
     LocalityModel, LocalityIdxModel, CountryModel, CountryIdxModel, EntityReferenceModel,
     EntityReferenceIdxModel, EntityReferenceAuditModel, MessagingModel, MessagingIdxModel,
     MessagingAuditModel, PersonModel, PersonIdxModel, PersonAuditModel, CountrySubdivisionModel,
@@ -539,13 +539,6 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         unimplemented!()
     }
 
-    async fn find_ids_by_location_type(
-        &self,
-        _location_type: LocationTypeModel,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
-    }
-
     async fn find_ids_by_locality_id(
         &self,
         _locality_id: Uuid,
@@ -569,48 +562,8 @@ impl LocationRepository<Postgres> for MockLocationRepository {
             .collect();
         Ok(locations)
     }
-
-    async fn find_ids_by_street_line1(
-        &self,
-        street_line1: &str,
-    ) -> Result<Vec<Uuid>, sqlx::Error> {
-        let ids = self
-            .locations
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|a| a.street_line1 == street_line1)
-            .map(|a| a.id)
-            .collect();
-        Ok(ids)
-    }
-
-    async fn find_by_type_and_locality(
-        &self,
-        location_type: LocationTypeModel,
-        locality_id: Uuid,
-        _page: i32,
-        _page_size: i32,
-    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
-        let locations = self
-            .locations
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|l| l.location_type == location_type && l.locality_id == locality_id)
-            .map(|l| {
-                self.location_ixes
-                    .lock()
-                    .unwrap()
-                    .iter()
-                    .find(|i| i.location_id == l.id)
-                    .cloned()
-                    .unwrap()
-            })
-            .collect();
-        Ok(locations)
-    }
 }
+
 
 #[derive(Default)]
 struct MockMessagingRepository {
@@ -1141,24 +1094,6 @@ async fn test_find_location_by_id() {
 }
 
 #[tokio::test]
-async fn test_find_locations_by_street_line1() {
-    let service = create_test_service();
-    let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
-    let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
-    let locality = create_test_locality(country_subdivision.id);
-    service.create_locality(locality.clone()).await.unwrap();
-    let location = create_test_location(locality.id);
-    service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
-    let locations = service
-        .find_locations_by_street_line1(location.street_line1.clone())
-        .await
-        .unwrap();
-    assert!(!locations.is_empty());
-}
-
-#[tokio::test]
 async fn test_find_locations_by_locality_id() {
     let service = create_test_service();
     let country = create_test_country();
@@ -1170,24 +1105,6 @@ async fn test_find_locations_by_locality_id() {
     let location = create_test_location(locality.id);
     service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
     let locations = service.find_locations_by_locality_id(locality.id).await.unwrap();
-    assert!(!locations.is_empty());
-}
-
-#[tokio::test]
-async fn test_find_locations_by_type_and_locality() {
-    let service = create_test_service();
-    let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
-    let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
-    let locality = create_test_locality(country_subdivision.id);
-    service.create_locality(locality.clone()).await.unwrap();
-    let location = create_test_location(locality.id);
-    service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
-    let locations = service
-        .find_locations_by_type_and_locality(location.location_type, locality.id)
-        .await
-        .unwrap();
     assert!(!locations.is_empty());
 }
 
