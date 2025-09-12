@@ -672,6 +672,7 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
         let entity_idx = EntityReferenceIdxModel {
             entity_reference_id: entity_ref.id,
             person_id: entity_ref.person_id,
+            reference_external_id_hash: 0, // dummy hash
             version: 0,
             hash: 0,
         };

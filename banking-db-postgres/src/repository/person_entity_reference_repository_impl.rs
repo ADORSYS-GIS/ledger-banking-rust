@@ -76,6 +76,10 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         hasher.write(&entity_ref_cbor);
         let new_hash = hasher.finish() as i64;
 
+        let mut ref_hasher = XxHash64::with_seed(0);
+        ref_hasher.write(entity_ref.reference_external_id.as_bytes());
+        let reference_external_id_hash = ref_hasher.finish() as i64;
+
         let maybe_existing_idx = {
             let cache_read_guard = self.entity_reference_idx_cache.read().await;
             cache_read_guard.get_by_primary(&entity_ref.id)
@@ -194,6 +198,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             let new_idx = EntityReferenceIdxModel {
                 entity_reference_id: entity_ref.id,
                 person_id: entity_ref.person_id,
+                reference_external_id_hash,
                 version: new_version,
                 hash: new_hash,
             };
@@ -306,6 +311,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             let new_idx = EntityReferenceIdxModel {
                 entity_reference_id: entity_ref.id,
                 person_id: entity_ref.person_id,
+                reference_external_id_hash,
                 version,
                 hash: new_hash,
             };
@@ -351,31 +357,23 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         page: i32,
         page_size: i32,
     ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
-        let query = sqlx::query(
-            r#"
-            SELECT * FROM entity_reference_idx WHERE person_id = $1
-            LIMIT $2 OFFSET $3
-            "#,
-        )
-        .bind(person_id)
-        .bind(page_size)
-        .bind((page - 1) * page_size);
-
-        let rows = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
+        let cache = self.entity_reference_idx_cache.read().await;
+        if let Some(ids) = cache.get_by_person_id(&person_id) {
+            let start = ((page - 1) * page_size) as usize;
+            let end = (start + page_size as usize).min(ids.len());
+            if start >= ids.len() {
+                return Ok(Vec::new());
             }
-        };
-
-        let mut refs = Vec::new();
-        for row in rows {
-            refs.push(
-                EntityReferenceIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
-            );
+            let mut refs = Vec::with_capacity(end - start);
+            for id in &ids[start..end] {
+                if let Some(model) = cache.get_by_primary(id) {
+                    refs.push(model);
+                }
+            }
+            Ok(refs)
+        } else {
+            Ok(Vec::new())
         }
-        Ok(refs)
     }
 
     async fn find_by_reference_external_id(
@@ -384,96 +382,62 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         page: i32,
         page_size: i32,
     ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
-        let query = sqlx::query(
-            r#"
-            SELECT ei.*
-            FROM entity_reference_idx ei
-            JOIN entity_reference e ON ei.entity_reference_id = e.id
-            WHERE e.reference_external_id = $1
-            LIMIT $2 OFFSET $3
-            "#,
-        )
-        .bind(reference_external_id)
-        .bind(page_size)
-        .bind((page - 1) * page_size);
+        let mut hasher = XxHash64::with_seed(0);
+        hasher.write(reference_external_id.as_bytes());
+        let hash = hasher.finish() as i64;
 
-        let rows = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
+        let cache = self.entity_reference_idx_cache.read().await;
+        if let Some(ids) = cache.get_by_reference_external_id_hash(&hash) {
+            let start = ((page - 1) * page_size) as usize;
+            let end = (start + page_size as usize).min(ids.len());
+            if start >= ids.len() {
+                return Ok(Vec::new());
             }
-        };
-
-        let mut refs = Vec::new();
-        for row in rows {
-            refs.push(
-                EntityReferenceIdxModel::try_from_row(&row).map_err(sqlx::Error::Decode)?,
-            );
+            let mut refs = Vec::with_capacity(end - start);
+            for id in &ids[start..end] {
+                if let Some(model) = cache.get_by_primary(id) {
+                    refs.push(model);
+                }
+            }
+            Ok(refs)
+        } else {
+            Ok(Vec::new())
         }
-        Ok(refs)
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
     ) -> Result<Vec<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
-        let query = sqlx::query(
-            r#"
-            SELECT * FROM entity_reference_idx WHERE entity_reference_id = ANY($1)
-            "#,
-        )
-        .bind(ids);
-
-        let rows = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
+        let cache = self.entity_reference_idx_cache.read().await;
+        let mut refs = Vec::with_capacity(ids.len());
+        for id in ids {
+            if let Some(model) = cache.get_by_primary(id) {
+                refs.push(model);
             }
-        };
-
-        let mut refs = Vec::new();
-        for row in rows {
-            refs.push(EntityReferenceIdxModel::try_from_row(&row)?);
         }
         Ok(refs)
     }
 
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        let query = sqlx::query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM entity_reference WHERE id = $1)",
-            id
-        );
-        let exists = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await?
-            }
-        };
-        Ok(exists.unwrap_or(false))
+        Ok(self
+            .entity_reference_idx_cache
+            .read()
+            .await
+            .get_by_primary(&id)
+            .is_some())
     }
 
     async fn find_ids_by_person_id(
         &self,
         person_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        let query = sqlx::query_scalar(
-            r#"
-            SELECT id FROM entity_reference WHERE person_id = $1
-            "#,
-        )
-        .bind(person_id);
-
-        let ids = match &self.executor {
-            Executor::Pool(pool) => query.fetch_all(&**pool).await?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query.fetch_all(&mut **tx).await?
-            }
-        };
-        Ok(ids)
+        let cache = self.entity_reference_idx_cache.read().await;
+        if let Some(ids) = cache.get_by_person_id(&person_id) {
+            Ok(ids.clone())
+        } else {
+            Ok(Vec::new())
+        }
     }
 }
 
@@ -548,6 +512,96 @@ impl TransactionAwareEntityReferenceIdxModelCache {
         }
         self.shared_cache.read().get_by_primary(primary_key)
     }
+
+    pub fn get_by_person_id(&self, person_id: &Uuid) -> Option<Vec<Uuid>> {
+        let shared_cache = self.shared_cache.read();
+        let local_additions = self.local_additions.read();
+        let local_updates = self.local_updates.read();
+        let local_deletions = self.local_deletions.read();
+
+        let mut result_ids: HashSet<Uuid> = HashSet::new();
+
+        if let Some(ids) = shared_cache.get_by_person_id(person_id) {
+            for id in ids {
+                if !local_deletions.contains(id) {
+                    result_ids.insert(*id);
+                }
+            }
+        }
+
+        for updated_item in local_updates.values() {
+            if let Some(original_item) =
+                shared_cache.get_by_primary(&updated_item.entity_reference_id)
+            {
+                if original_item.person_id == *person_id && updated_item.person_id != *person_id {
+                    result_ids.remove(&updated_item.entity_reference_id);
+                }
+            }
+        }
+
+        for item in local_additions.values() {
+            if item.person_id == *person_id {
+                result_ids.insert(item.entity_reference_id);
+            }
+        }
+        for item in local_updates.values() {
+            if item.person_id == *person_id {
+                result_ids.insert(item.entity_reference_id);
+            }
+        }
+
+        if result_ids.is_empty() {
+            None
+        } else {
+            Some(result_ids.into_iter().collect())
+        }
+    }
+
+    pub fn get_by_reference_external_id_hash(&self, hash: &i64) -> Option<Vec<Uuid>> {
+        let shared_cache = self.shared_cache.read();
+        let local_additions = self.local_additions.read();
+        let local_updates = self.local_updates.read();
+        let local_deletions = self.local_deletions.read();
+
+        let mut result_ids: HashSet<Uuid> = HashSet::new();
+
+        if let Some(ids) = shared_cache.get_by_reference_external_id_hash(hash) {
+            for id in ids {
+                if !local_deletions.contains(id) {
+                    result_ids.insert(*id);
+                }
+            }
+        }
+
+        for updated_item in local_updates.values() {
+            if let Some(original_item) =
+                shared_cache.get_by_primary(&updated_item.entity_reference_id)
+            {
+                if original_item.reference_external_id_hash == *hash
+                    && updated_item.reference_external_id_hash != *hash
+                {
+                    result_ids.remove(&updated_item.entity_reference_id);
+                }
+            }
+        }
+
+        for item in local_additions.values() {
+            if item.reference_external_id_hash == *hash {
+                result_ids.insert(item.entity_reference_id);
+            }
+        }
+        for item in local_updates.values() {
+            if item.reference_external_id_hash == *hash {
+                result_ids.insert(item.entity_reference_id);
+            }
+        }
+
+        if result_ids.is_empty() {
+            None
+        } else {
+            Some(result_ids.into_iter().collect())
+        }
+    }
 }
 
 #[async_trait]
@@ -610,6 +664,7 @@ impl TryFromRow<PgRow> for EntityReferenceIdxModel {
         Ok(EntityReferenceIdxModel {
             entity_reference_id: row.get("entity_reference_id"),
             person_id: row.get("person_id"),
+            reference_external_id_hash: row.get("reference_external_id_hash"),
             version: row.get("version"),
             hash: row.get("hash"),
         })

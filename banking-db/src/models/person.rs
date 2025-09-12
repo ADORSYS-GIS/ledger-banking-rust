@@ -1438,6 +1438,9 @@ pub struct EntityReferenceIdxModel {
     /// # Nature
     /// - secondary
     pub person_id: Uuid,
+    /// # Nature
+    /// - secondary
+    pub reference_external_id_hash: i64,
     pub version: i32,
     pub hash: i64,
 }
@@ -1445,12 +1448,14 @@ pub struct EntityReferenceIdxModel {
 pub struct EntityReferenceIdxModelCache {
     by_id: HashMap<Uuid, EntityReferenceIdxModel>,
     by_person_id: HashMap<Uuid, Vec<Uuid>>,
+    by_reference_external_id_hash: HashMap<i64, Vec<Uuid>>,
 }
 
 impl EntityReferenceIdxModelCache {
     pub fn new(items: Vec<EntityReferenceIdxModel>) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_person_id: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
+        let mut by_reference_external_id_hash: HashMap<i64, Vec<Uuid>> = HashMap::new();
 
         for item in items {
             let primary_key = item.entity_reference_id;
@@ -1463,12 +1468,18 @@ impl EntityReferenceIdxModelCache {
                 .or_default()
                 .push(primary_key);
 
+            by_reference_external_id_hash
+                .entry(item.reference_external_id_hash)
+                .or_default()
+                .push(primary_key);
+
             by_id.insert(primary_key, item);
         }
 
         Ok(EntityReferenceIdxModelCache {
             by_id,
             by_person_id,
+            by_reference_external_id_hash,
         })
     }
 
@@ -1483,6 +1494,12 @@ impl EntityReferenceIdxModelCache {
             .entry(item.person_id)
             .or_default()
             .push(primary_key);
+
+        self.by_reference_external_id_hash
+            .entry(item.reference_external_id_hash)
+            .or_default()
+            .push(primary_key);
+
         self.by_id.insert(primary_key, item);
     }
 
@@ -1492,6 +1509,16 @@ impl EntityReferenceIdxModelCache {
                 ids.retain(|&id| id != *entity_reference_id);
                 if ids.is_empty() {
                     self.by_person_id.remove(&item.person_id);
+                }
+            }
+            if let Some(ids) = self
+                .by_reference_external_id_hash
+                .get_mut(&item.reference_external_id_hash)
+            {
+                ids.retain(|&id| id != *entity_reference_id);
+                if ids.is_empty() {
+                    self.by_reference_external_id_hash
+                        .remove(&item.reference_external_id_hash);
                 }
             }
             return Some(item);
@@ -1514,6 +1541,10 @@ impl EntityReferenceIdxModelCache {
 
     pub fn get_by_person_id(&self, key: &Uuid) -> Option<&Vec<Uuid>> {
         self.by_person_id.get(key)
+    }
+
+    pub fn get_by_reference_external_id_hash(&self, key: &i64) -> Option<&Vec<Uuid>> {
+        self.by_reference_external_id_hash.get(key)
     }
 }
 
