@@ -7,23 +7,27 @@ use banking_db::repository::{MessagingRepository, TransactionAware};
 use crate::repository::executor::Executor;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::Arc;
 use parking_lot::RwLock;
+use tokio::sync::RwLock as TokioRwLock;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct MessagingRepositoryImpl {
     executor: Executor,
-    messaging_idx_cache: Arc<RwLock<MessagingIdxModelCache>>,
+    messaging_idx_cache: Arc<TokioRwLock<TransactionAwareMessagingIdxModelCache>>,
 }
 
 impl MessagingRepositoryImpl {
     pub fn new(executor: Executor, messaging_idx_cache: Arc<RwLock<MessagingIdxModelCache>>) -> Self {
         Self {
             executor,
-            messaging_idx_cache,
+            messaging_idx_cache: Arc::new(TokioRwLock::new(
+                TransactionAwareMessagingIdxModelCache::new(messaging_idx_cache),
+            )),
         }
     }
 
@@ -55,7 +59,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         let new_hash = hasher.finish() as i64;
 
         let maybe_existing_idx = {
-            let cache_read_guard = self.messaging_idx_cache.read();
+            let cache_read_guard = self.messaging_idx_cache.read().await;
             cache_read_guard.get_by_primary(&messaging.id)
         };
 
@@ -141,7 +145,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
                 version: new_version,
                 hash: new_hash,
             };
-            self.messaging_idx_cache.write().update(new_idx);
+            self.messaging_idx_cache.read().await.update(new_idx);
         } else {
             // INSERT
             let version = 0;
@@ -211,7 +215,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
                 version,
                 hash: new_hash,
             };
-            self.messaging_idx_cache.write().add(new_idx);
+            self.messaging_idx_cache.read().await.add(new_idx);
         }
 
         Ok(messaging)
@@ -233,7 +237,11 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         &self,
         id: Uuid,
     ) -> Result<Option<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
-        Ok(self.messaging_idx_cache.read().get_by_primary(&id))
+        Ok(self
+            .messaging_idx_cache
+            .read()
+            .await
+            .get_by_primary(&id))
     }
     async fn find_by_ids(
         &self,
@@ -289,10 +297,96 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
 #[async_trait]
 impl TransactionAware for MessagingRepositoryImpl {
     async fn on_commit(&self) -> BankingResult<()> {
+        self.messaging_idx_cache.read().await.on_commit().await
+    }
+
+    async fn on_rollback(&self) -> BankingResult<()> {
+        self.messaging_idx_cache.read().await.on_rollback().await
+    }
+}
+
+pub struct TransactionAwareMessagingIdxModelCache {
+    shared_cache: Arc<RwLock<MessagingIdxModelCache>>,
+    local_additions: RwLock<HashMap<Uuid, MessagingIdxModel>>,
+    local_updates: RwLock<HashMap<Uuid, MessagingIdxModel>>,
+    local_deletions: RwLock<HashSet<Uuid>>,
+}
+
+impl TransactionAwareMessagingIdxModelCache {
+    pub fn new(shared_cache: Arc<RwLock<MessagingIdxModelCache>>) -> Self {
+        Self {
+            shared_cache,
+            local_additions: RwLock::new(HashMap::new()),
+            local_updates: RwLock::new(HashMap::new()),
+            local_deletions: RwLock::new(HashSet::new()),
+        }
+    }
+
+    pub fn add(&self, item: MessagingIdxModel) {
+        let primary_key = item.messaging_id;
+        self.local_deletions.write().remove(&primary_key);
+        self.local_additions.write().insert(primary_key, item);
+    }
+
+    pub fn update(&self, item: MessagingIdxModel) {
+        let primary_key = item.messaging_id;
+        self.local_deletions.write().remove(&primary_key);
+        if let Some(local_item) = self.local_additions.write().get_mut(&primary_key) {
+            *local_item = item;
+            return;
+        }
+        self.local_updates.write().insert(primary_key, item);
+    }
+
+    pub fn remove(&self, primary_key: &Uuid) {
+        if self.local_additions.write().remove(primary_key).is_none() {
+            self.local_deletions.write().insert(*primary_key);
+        }
+        self.local_updates.write().remove(primary_key);
+    }
+
+    pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<MessagingIdxModel> {
+        if self.local_deletions.read().contains(primary_key) {
+            return None;
+        }
+        if let Some(item) = self.local_additions.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        if let Some(item) = self.local_updates.read().get(primary_key) {
+            return Some(item.clone());
+        }
+        self.shared_cache.read().get_by_primary(primary_key)
+    }
+}
+
+#[async_trait]
+impl TransactionAware for TransactionAwareMessagingIdxModelCache {
+    async fn on_commit(&self) -> BankingResult<()> {
+        let mut shared_cache = self.shared_cache.write();
+        let mut local_additions = self.local_additions.write();
+        let mut local_updates = self.local_updates.write();
+        let mut local_deletions = self.local_deletions.write();
+
+        for item in local_additions.values() {
+            shared_cache.add(item.clone());
+        }
+        for item in local_updates.values() {
+            shared_cache.update(item.clone());
+        }
+        for primary_key in local_deletions.iter() {
+            shared_cache.remove(primary_key);
+        }
+
+        local_additions.clear();
+        local_updates.clear();
+        local_deletions.clear();
         Ok(())
     }
 
     async fn on_rollback(&self) -> BankingResult<()> {
+        self.local_additions.write().clear();
+        self.local_updates.write().clear();
+        self.local_deletions.write().clear();
         Ok(())
     }
 }
