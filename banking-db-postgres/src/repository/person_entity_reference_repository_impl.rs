@@ -9,7 +9,7 @@ use banking_db::repository::{EntityReferenceRepository, PersonRepository, Transa
 use crate::repository::executor::Executor;
 use crate::repository::person_person_repository_impl::PersonRepositoryImpl;
 use sqlx::{postgres::PgRow, Postgres, Row};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::hash::Hasher;
 use std::sync::Arc;
@@ -500,6 +500,7 @@ pub struct TransactionAwareEntityReferenceIdxModelCache {
     shared_cache: Arc<RwLock<EntityReferenceIdxModelCache>>,
     local_additions: RwLock<HashMap<Uuid, EntityReferenceIdxModel>>,
     local_updates: RwLock<HashMap<Uuid, EntityReferenceIdxModel>>,
+    local_deletions: RwLock<HashSet<Uuid>>,
 }
 
 impl TransactionAwareEntityReferenceIdxModelCache {
@@ -508,16 +509,19 @@ impl TransactionAwareEntityReferenceIdxModelCache {
             shared_cache,
             local_additions: RwLock::new(HashMap::new()),
             local_updates: RwLock::new(HashMap::new()),
+            local_deletions: RwLock::new(HashSet::new()),
         }
     }
 
     pub fn add(&self, item: EntityReferenceIdxModel) {
         let primary_key = item.entity_reference_id;
+        self.local_deletions.write().remove(&primary_key);
         self.local_additions.write().insert(primary_key, item);
     }
 
     pub fn update(&self, item: EntityReferenceIdxModel) {
         let primary_key = item.entity_reference_id;
+        self.local_deletions.write().remove(&primary_key);
         if let Some(local_item) = self.local_additions.write().get_mut(&primary_key) {
             *local_item = item;
             return;
@@ -525,7 +529,17 @@ impl TransactionAwareEntityReferenceIdxModelCache {
         self.local_updates.write().insert(primary_key, item);
     }
 
+    pub fn remove(&self, primary_key: &Uuid) {
+        if self.local_additions.write().remove(primary_key).is_none() {
+            self.local_deletions.write().insert(*primary_key);
+        }
+        self.local_updates.write().remove(primary_key);
+    }
+
     pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<EntityReferenceIdxModel> {
+        if self.local_deletions.read().contains(primary_key) {
+            return None;
+        }
         if let Some(item) = self.local_additions.read().get(primary_key) {
             return Some(item.clone());
         }
@@ -542,6 +556,7 @@ impl TransactionAware for TransactionAwareEntityReferenceIdxModelCache {
         let mut shared_cache = self.shared_cache.write();
         let mut local_additions = self.local_additions.write();
         let mut local_updates = self.local_updates.write();
+        let mut local_deletions = self.local_deletions.write();
 
         for item in local_additions.values() {
             shared_cache.add(item.clone());
@@ -549,15 +564,20 @@ impl TransactionAware for TransactionAwareEntityReferenceIdxModelCache {
         for item in local_updates.values() {
             shared_cache.update(item.clone());
         }
+        for primary_key in local_deletions.iter() {
+            shared_cache.remove(primary_key);
+        }
 
         local_additions.clear();
         local_updates.clear();
+        local_deletions.clear();
         Ok(())
     }
 
     async fn on_rollback(&self) -> BankingResult<()> {
         self.local_additions.write().clear();
         self.local_updates.write().clear();
+        self.local_deletions.write().clear();
         Ok(())
     }
 }
