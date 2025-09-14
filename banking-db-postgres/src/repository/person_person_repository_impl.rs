@@ -18,9 +18,9 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct PersonRepositoryImpl {
-    executor: Executor,
-    person_idx_cache: Arc<TokioRwLock<TransactionAwarePersonIdxModelCache>>,
-    location_repository: Arc<LocationRepositoryImpl>,
+    pub(crate) executor: Executor,
+    pub(crate) person_idx_cache: Arc<TokioRwLock<TransactionAwarePersonIdxModelCache>>,
+    pub(crate) location_repository: Arc<LocationRepositoryImpl>,
 }
 
 impl PersonRepositoryImpl {

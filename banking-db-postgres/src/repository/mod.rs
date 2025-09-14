@@ -18,6 +18,7 @@ pub mod person_locality_repository_impl;
 pub mod person_location_repository_impl;
 pub mod person_messaging_repository_impl;
 pub mod person_person_repository_impl;
+pub mod person_person_repository_batch_impl;
 // #[cfg(feature = "compliance")]
 // pub mod compliance_repository_impl;
 // #[cfg(feature = "collateral")]
