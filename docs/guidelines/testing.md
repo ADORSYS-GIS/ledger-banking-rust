@@ -42,155 +42,141 @@ When a service implementation (e.g., `PersonServiceImpl`) is complete, it is cru
 
 ### 1. Test File Structure
 
-For a service located at `banking-logic/src/services/my_service_impl.rs`, the corresponding test file should be created at `banking-logic/tests/my_service_tests.rs`.
+For a service like `PersonService`, located at `banking-logic/src/services/person/person_service_impl.rs`, the corresponding tests should be organized into a dedicated module at `banking-logic/tests/person/`.
+
+This modular structure enhances clarity and scalability. The main test file, `banking-logic/tests/person_module_tests.rs`, simply declares the module:
+
+```rust
+// In banking-logic/tests/person_module_tests.rs
+mod person;
+```
+
+The directory structure for the `person` service tests would look like this:
+
+```
+banking-logic/tests/
+├── person_module_tests.rs  // Main test entry point
+└── person/
+    ├── mod.rs                 // Declares all sub-modules
+    ├── common.rs              // Shared test helpers (e.g., service setup)
+    ├── country_tests.rs       // Tests for Country related logic
+    ├── locality_tests.rs      // Tests for Locality related logic
+    ├── ...                    // Other test files for different entities
+    ├── mock_country_repository.rs // Mock implementation for CountryRepository
+    ├── mock_locality_repository.rs// Mock implementation for LocalityRepository
+    └── ...                    // Other mock repository files
+```
+
+The `person/mod.rs` file ties everything together:
+
+```rust
+// In banking-logic/tests/person/mod.rs
+pub mod common;
+pub mod country_tests;
+pub mod mock_country_repository;
+// ... other modules
+```
 
 ### 2. Mocking Dependencies
 
-Service tests should be isolated from the database and other external layers. This is achieved by mocking the repository dependencies.
+Service tests must be isolated from the database. This is achieved by creating mock implementations for each repository dependency.
 
-For each repository trait the service depends on, create a mock struct:
+Each mock repository should reside in its own file within the test module. For example, `MockCountryRepository` is located in `banking-logic/tests/person/mock_country_repository.rs`.
+
+**Mock Repository Implementation:**
 
 ```rust
-// In banking-logic/tests/my_service_tests.rs
+// In banking-logic/tests/person/mock_country_repository.rs
 
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
+// ... other necessary imports
 
 #[derive(Default)]
-struct MockMyRepository {
-    // Use a Mutex to hold an in-memory collection of models
-    items: Mutex<Vec<MyModel>>,
+pub struct MockCountryRepository {
+    countries: Mutex<Vec<CountryModel>>,
+    country_ixes: Mutex<Vec<CountryIdxModel>>,
 }
 
 #[async_trait]
-impl MyRepository for MockMyRepository {
-    async fn save(&self, item: MyModel) -> Result<MyModel, Box<dyn Error + Send + Sync>> {
-        self.items.lock().unwrap().push(item.clone());
-        Ok(item)
+impl CountryRepository<Postgres> for MockCountryRepository {
+    async fn save(&self, country: CountryModel) -> CountryResult<CountryModel> {
+        // ... implementation to save to in-memory Vecs
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<MyModel>, Box<dyn Error + Send + Sync>> {
-        Ok(self.items.lock().unwrap().iter().find(|i| i.id == id).cloned())
-    }
+    // ... other required trait methods
+}
 
-    // ... implement other required trait methods
+// Helper for creating test data can also be included here
+pub fn create_test_country() -> Country {
+    // ...
 }
 ```
 
-**Handling `Idx` and `Audit` Models in Mocks**
-
-It is crucial that mock repositories accurately reflect the behavior of their real counterparts, especially concerning related data models like indexes (`Idx`) and audit trails (`Audit`).
-
-When implementing a mock repository, always inspect the corresponding model definition in `banking-db/src/models/`. If the documentation comments indicate the presence of an `Idx` or `Audit` model, the mock must be extended to handle them.
-
-**Example:**
-
-If `MyModel` has `MyIdxModel` and `MyAuditModel`, the mock repository should be structured as follows:
-
-```rust
-#[derive(Default)]
-struct MockMyRepository {
-    items: Mutex<Vec<MyModel>>,
-    item_ixes: Mutex<Vec<MyIdxModel>>,   // For the index model
-    item_audits: Mutex<Vec<MyAuditModel>>, // For the audit model
-}
-
-#[async_trait]
-impl MyRepository for MockMyRepository {
-    async fn save(&self, item: MyModel, audit_log_id: Uuid) -> Result<MyModel, sqlx::Error> {
-        // 1. Save the main model
-        self.items.lock().unwrap().push(item.clone());
-
-        // 2. Create and save the index model
-        let item_idx = MyIdxModel {
-            item_id: item.id,
-            // ... populate other fields (use dummy values if necessary)
-        };
-        self.item_ixes.lock().unwrap().push(item_idx);
-
-        // 3. Create and save the audit model
-        let item_audit = MyAuditModel {
-            item_id: item.id,
-            // ... copy relevant fields from the main model
-            audit_log_id,
-        };
-        self.item_audits.lock().unwrap().push(item_audit);
-
-        Ok(item)
-    }
-
-    // ... other methods
-}
-```
-
-This ensures that service logic relying on the existence of these related records can be tested accurately.
+This approach ensures that each mock is self-contained and easy to locate.
 
 ### 3. Test Setup Helpers
 
-To keep tests clean and readable, create helper functions for setup:
+To keep tests clean, a `common.rs` file within the test module centralizes setup logic.
 
-**Service Instantiation:**
-Create a function to instantiate the service with all its mocked dependencies.
+**Service Instantiation (`common.rs`):**
+
+This file contains a `TestServices` struct and a helper function to instantiate all services with their mocked dependencies.
 
 ```rust
-fn create_test_service() -> MyServiceImpl {
-    MyServiceImpl::new(
-        Arc::new(MockMyRepository::default()),
-        Arc::new(MockAnotherRepository::default()),
-        // ... other mocked dependencies
-    )
+// In banking-logic/tests/person/common.rs
+
+// ... imports for all services and mock repositories
+
+pub struct TestServices {
+    pub country_service: CountryServiceImpl<Postgres>,
+    // ... other services
 }
-```
 
-**Test Data Generation:**
-Create helper functions for each domain model to easily generate test data. Avoid using `..Default::default()` if the domain models do not implement the `Default` trait. Instead, initialize all fields explicitly.
-
-```rust
-fn create_test_model() -> MyDomainModel {
-    MyDomainModel {
-        id: Uuid::new_v4(),
-        name: HeaplessString::try_from("Test Name").unwrap(),
-        is_active: true,
-        // ... all other required fields
+pub fn create_test_services() -> TestServices {
+    let repositories = Repositories {
+        country_repository: Arc::new(MockCountryRepository::default()),
+        // ... other mocked repositories
+    };
+    TestServices {
+        country_service: CountryServiceImpl::new(repositories.clone()),
+        // ... instantiating other services
     }
+}
+
+// Other common helpers like creating an audit log
+pub fn create_test_audit_log() -> banking_api::domain::AuditLog {
+    // ...
 }
 ```
 
 ### 4. Writing Unit Tests
 
-Each public method in the service implementation must have a corresponding test function.
-
-**Naming Convention:**
-Use the `test_` prefix for all test functions (e.g., `test_create_item`).
+Each entity or logical group of functions within the service gets its own test file (e.g., `country_tests.rs`).
 
 **Test Structure (Arrange-Act-Assert):**
 
 ```rust
+// In banking-logic/tests/person/country_tests.rs
+
+use crate::person::common::create_test_services;
+use crate::person::mock_country_repository::create_test_country;
+use banking_api::service::CountryService;
+
 #[tokio::test]
-async fn test_create_item() {
-    // 1. Arrange: Set up the service and test data
-    let service = create_test_service();
-    let item = create_test_model();
+async fn test_create_country() {
+    // 1. Arrange: Set up the services and test data
+    let services = create_test_services();
+    let country = create_test_country();
 
     // 2. Act: Call the service method
-    let created_item = service.create_item(item.clone()).await.unwrap();
+    let created_country = services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
 
     // 3. Assert: Verify the outcome
-    assert_eq!(item.id, created_item.id);
-}
-
-#[tokio::test]
-async fn test_find_item_by_id() {
-    // 1. Arrange
-    let service = create_test_service();
-    let item = create_test_model();
-    // Pre-load data into the mock repository if needed for "find" operations
-    service.create_item(item.clone()).await.unwrap();
-
-    // 2. Act
-    let found_item = service.find_item_by_id(item.id).await.unwrap().unwrap();
-
-    // 3. Assert
-    assert_eq!(item.id, found_item.id);
+    assert_eq!(country.id, created_country.id);
 }
 ```
 
@@ -199,9 +185,10 @@ async fn test_find_item_by_id() {
 Run the tests for the specific service from the project root:
 
 ```bash
-cargo test -p banking-logic --test my_service_tests
+cargo test -p banking-logic --test person_module_tests
 ```
-This ensures that all methods are thoroughly tested in isolation, leading to a robust and reliable service layer.
+
+This modular structure keeps the test suite organized, maintainable, and easy to navigate, even as the number of tests grows.
 
 ## Repository Integration Testing
 
@@ -209,7 +196,39 @@ Repository tests are integration tests that validate the PostgreSQL implementati
 
 ### 1. Test File Structure
 
-For a repository defined in `banking-db-postgres/src/repository/my_repository_impl.rs`, the corresponding test file should be created at `banking-db-postgres/tests/suites/my_repository_tests.rs`.
+For repositories related to a specific domain, like `person`, tests are organized into a dedicated module. For a repository like `PersonRepositoryImpl`, the tests are located at `banking-db-postgres/tests/suites/person/`.
+
+The main test file for the suites, `banking-db-postgres/tests/suites/mod.rs`, declares the `person` module:
+
+```rust
+// In banking-db-postgres/tests/suites/mod.rs
+#[path = "person/mod.rs"]
+pub mod person;
+// ... other suite modules
+```
+
+The directory structure for the `person` repository tests is as follows:
+
+```
+banking-db-postgres/tests/suites/
+├── mod.rs       // Main suite entry point, declares the person module
+└── person/
+    ├── mod.rs   // Declares all repository test sub-modules
+    ├── helpers.rs // Shared helper functions for creating test models
+    ├── person_repository_tests.rs
+    ├── country_repository_tests.rs
+    └── ...      // Other repository test files
+```
+
+The `person/mod.rs` file includes all the individual test files:
+
+```rust
+// In banking-db-postgres/tests/suites/person/mod.rs
+pub mod helpers;
+pub mod person_repository_tests;
+pub mod country_repository_tests;
+// ... other modules
+```
 
 ### 2. Database Connection and Isolation
 
@@ -229,24 +248,18 @@ async fn test_my_repository() {
 
 ### 3. Test Data Generation
 
-Use helper functions to create consistent and valid test models.
-
--   **Location**: These helpers should be defined at the top of the test file.
--   **Naming**: `create_test_*_model()`.
--   **Foreign Keys**: For models with foreign key relationships (e.g., `created_by_person_id`), pass the required IDs as arguments to the helper function.
--   **Uniqueness**: For fields with `UNIQUE` constraints, generate a random value to avoid collisions (e.g., using `Uuid::new_v4()`).
+Helper functions for creating test models are centralized in `person/helpers.rs`.
 
 ```rust
-fn create_test_item_model(created_by: Uuid) -> ItemModel {
-    ItemModel {
-        id: Uuid::new_v4(),
-        name: HeaplessString::try_from("Test Item").unwrap(),
-        // Use a UUID to ensure the unique value is always different
-        unique_value: HeaplessString::try_from(Uuid::new_v4().to_string().as_str()).unwrap(),
-        created_by_person_id: created_by,
-        // ... other fields
-    }
+// In banking-db-postgres/tests/suites/person/helpers.rs
+use banking_db::models::person::{CountryModel, ...};
+// ... other imports
+
+pub fn create_test_country_model(iso2: &str, name_l1: &str) -> CountryModel {
+    // ... implementation
 }
+
+// ... other helper functions
 ```
 
 ### 4. Writing Repository Tests
@@ -284,12 +297,12 @@ async fn test_my_repository() {
 
 ### 5. Running Repository Tests
 
-Repository tests **must** be run sequentially to ensure proper database cleanup and avoid race conditions.
+Repository tests **must** be run sequentially.
 
 ```bash
-# Set the database URL (from project root)
+# Set the database URL
 export DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
 
-# Run a specific repository test suite sequentially
-cargo test -p banking-db-postgres --test my_repository_tests -- --test-threads=1
+# Run all integration tests sequentially
+cargo test -p banking-db-postgres --test integration -- --test-threads=1
 ```

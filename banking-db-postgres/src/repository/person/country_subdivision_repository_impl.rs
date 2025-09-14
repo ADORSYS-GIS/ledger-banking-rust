@@ -68,7 +68,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
             .country_repository
             .exists_by_id(country_subdivision.country_id)
             .await
-            .map_err(sqlx::Error::Configuration)?
+            .map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?
         {
             return Err(sqlx::Error::RowNotFound);
         }

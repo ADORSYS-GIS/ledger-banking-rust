@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use banking_api::BankingResult;
 use banking_db::models::person::{CountryIdxModel, CountryIdxModelCache, CountryModel};
-use banking_db::repository::{CountryRepository, TransactionAware};
+use banking_db::repository::person::country_repository::{
+    CountryRepository, CountryRepositoryError, CountryResult,
+};
+use banking_db::repository::TransactionAware;
 use crate::repository::executor::Executor;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use heapless::String as HeaplessString;
@@ -53,7 +56,7 @@ impl CountryRepositoryImpl {
 
 #[async_trait]
 impl CountryRepository<Postgres> for CountryRepositoryImpl {
-    async fn save(&self, country: CountryModel) -> Result<CountryModel, sqlx::Error> {
+    async fn save(&self, country: CountryModel) -> CountryResult<CountryModel> {
         let id_to_load = {
             let cache = self.country_idx_cache.read().await;
             if cache.contains_primary(&country.id) {
@@ -88,16 +91,30 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         .bind(country.id)
         .bind(country.iso2.as_str());
 
-        match &self.executor {
-            Executor::Pool(pool) => {
-                query1.execute(&**pool).await?;
-                query2.execute(&**pool).await?;
+        let execute_queries = async {
+            match &self.executor {
+                Executor::Pool(pool) => {
+                    query1.execute(&**pool).await?;
+                    query2.execute(&**pool).await?;
+                }
+                Executor::Tx(tx) => {
+                    let mut tx = tx.lock().await;
+                    query1.execute(&mut **tx).await?;
+                    query2.execute(&mut **tx).await?;
+                }
             }
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query1.execute(&mut **tx).await?;
-                query2.execute(&mut **tx).await?;
+            Ok::<(), sqlx::Error>(())
+        };
+
+        if let Err(e) = execute_queries.await {
+            if let Some(db_err) = e.as_database_error() {
+                if db_err.is_unique_violation() {
+                    return Err(CountryRepositoryError::DuplicateCountryISO2(
+                        country.iso2.to_string(),
+                    ));
+                }
             }
+            return Err(CountryRepositoryError::RepositoryError(e.into()));
         }
 
         let new_idx_model = CountryIdxModel {
@@ -109,7 +126,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         Ok(country)
     }
 
-    async fn load(&self, id: Uuid) -> Result<CountryModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> CountryResult<CountryModel> {
         let query = sqlx::query(
             r#"
             SELECT * FROM country WHERE id = $1
@@ -118,17 +135,22 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         .bind(id);
 
         let row = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Pool(pool) => query.fetch_one(&**pool).await,
             Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await?
+                query.fetch_one(&mut **tx).await
             }
         };
 
-        CountryModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+        match row {
+            Ok(row) => CountryModel::try_from_row(&row)
+                .map_err(|e| CountryRepositoryError::RepositoryError(e.into())),
+            Err(sqlx::Error::RowNotFound) => Err(CountryRepositoryError::CountryNotFound(id)),
+            Err(e) => Err(CountryRepositoryError::RepositoryError(e.into())),
+        }
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<CountryIdxModel>, sqlx::Error> {
+    async fn find_by_id(&self, id: Uuid) -> CountryResult<Option<CountryIdxModel>> {
         let cache = self.country_idx_cache.read().await;
         Ok(cache.get_by_primary(&id))
     }
@@ -138,10 +160,10 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         iso2: &str,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
+    ) -> CountryResult<Vec<CountryIdxModel>> {
         let mut result = Vec::new();
         let iso2_heapless = HeaplessString::<2>::from_str(iso2)
-            .map_err(|_| sqlx::Error::Configuration("Invalid iso2 format".into()))?;
+            .map_err(|_| CountryRepositoryError::InvalidCountryISO2(iso2.to_string()))?;
         let cache = self.country_idx_cache.read().await;
         if let Some(country_id) = cache.get_by_iso2(&iso2_heapless) {
             if let Some(country_idx) = cache.get_by_primary(&country_id) {
@@ -151,7 +173,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         Ok(result)
     }
 
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<CountryIdxModel>, sqlx::Error> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> CountryResult<Vec<CountryIdxModel>> {
         let mut result = Vec::new();
         let cache = self.country_idx_cache.read().await;
         for id in ids {
@@ -162,16 +184,13 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         Ok(result)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> CountryResult<bool> {
         Ok(self.country_idx_cache.read().await.contains_primary(&id))
     }
 
-    async fn find_ids_by_iso2(
-        &self,
-        iso2: &str,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    async fn find_ids_by_iso2(&self, iso2: &str) -> CountryResult<Vec<Uuid>> {
         let iso2_heapless = HeaplessString::<2>::from_str(iso2)
-            .map_err(|_| "Invalid iso2 format".to_string())?;
+            .map_err(|_| CountryRepositoryError::InvalidCountryISO2(iso2.to_string()))?;
         let mut result = Vec::new();
         if let Some(country_id) = self.country_idx_cache.read().await.get_by_iso2(&iso2_heapless) {
             result.push(country_id);
