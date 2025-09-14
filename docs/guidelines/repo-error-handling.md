@@ -99,6 +99,9 @@ pub type LocationResult<T> = Result<T, LocationRepositoryError>;
 
 // From banking-db/src/repository/person/messaging_repository.rs
 pub type MessagingResult<T> = Result<T, MessagingRepositoryError>;
+
+// From banking-db/src/repository/person/country_subdivision_repository.rs
+pub type CountrySubdivisionResult<T> = Result<T, CountrySubdivisionRepositoryError>;
 ```
 
 ### 4. Method Error Documentation
@@ -137,6 +140,23 @@ fn map_domain_error_to_service_error(error: LocationRepositoryError) -> Location
         LocationRepositoryError::RepositoryError(err) => LocationServiceError::RepositoryError(err),
     }
 }
+
+// Example from banking-logic/src/services/person/country_subdivision_service_impl.rs
+fn map_domain_error_to_service_error(
+    error: CountrySubdivisionRepositoryError,
+) -> CountrySubdivisionServiceError {
+    match error {
+        CountrySubdivisionRepositoryError::CountryNotFound(id) => {
+            CountrySubdivisionServiceError::CountryNotFound(id)
+        }
+        CountrySubdivisionRepositoryError::DuplicateCode { country_id, code } => {
+            CountrySubdivisionServiceError::DuplicateCode { country_id, code }
+        }
+        CountrySubdivisionRepositoryError::RepositoryError(err) => {
+            CountrySubdivisionServiceError::RepositoryError(err)
+        }
+    }
+}
 ```
 
 ## Migration Strategy
@@ -157,6 +177,7 @@ When creating a new repository or refactoring an existing one:
 - [`banking-db-postgres/src/repository/person/person_repository_impl.rs`](../../banking-db-postgres/src/repository/person/person_repository_impl.rs) - Implementation example.
 - [`banking-db/src/repository/person/location_repository.rs`](../../banking-db/src/repository/person/location_repository.rs) - Another trait and error definition example.
 - [`banking-db-postgres/src/repository/person/location_repository_impl.rs`](../../banking-db-postgres/src/repository/person/location_repository_impl.rs) - Another implementation example.
+- [`banking-db/src/repository/person/country_subdivision_repository.rs`](../../banking-db/src/repository/person/country_subdivision_repository.rs) - Another trait and error definition example.
 
 ## Summary
 

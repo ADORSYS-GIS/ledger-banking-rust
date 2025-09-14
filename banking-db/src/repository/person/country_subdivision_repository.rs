@@ -1,34 +1,65 @@
 use async_trait::async_trait;
 use sqlx::Database;
+use std::error::Error;
+use std::fmt;
 use uuid::Uuid;
+
 use crate::models::person::{CountrySubdivisionIdxModel, CountrySubdivisionModel};
+
+#[derive(Debug)]
+pub enum CountrySubdivisionRepositoryError {
+    CountryNotFound(Uuid),
+    DuplicateCode { country_id: Uuid, code: String },
+    RepositoryError(Box<dyn Error + Send + Sync>),
+}
+
+impl fmt::Display for CountrySubdivisionRepositoryError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CountryNotFound(id) => write!(f, "Country not found: {}", id),
+            Self::DuplicateCode { country_id, code } => {
+                write!(
+                    f,
+                    "Duplicate subdivision code '{}' for country {}",
+                    code, country_id
+                )
+            }
+            Self::RepositoryError(err) => write!(f, "Repository error: {}", err),
+        }
+    }
+}
+
+impl Error for CountrySubdivisionRepositoryError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::RepositoryError(err) => Some(err.as_ref()),
+            _ => None,
+        }
+    }
+}
+
+pub type CountrySubdivisionResult<T> = Result<T, CountrySubdivisionRepositoryError>;
 
 #[async_trait]
 pub trait CountrySubdivisionRepository<DB: Database>: Send + Sync {
     async fn save(
         &self,
         country_subdivision: CountrySubdivisionModel,
-    ) -> Result<CountrySubdivisionModel, sqlx::Error>;
-    async fn load(&self, id: Uuid) -> Result<CountrySubdivisionModel, sqlx::Error>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error>;
+    ) -> CountrySubdivisionResult<CountrySubdivisionModel>;
+    async fn load(&self, id: Uuid) -> CountrySubdivisionResult<CountrySubdivisionModel>;
+    async fn find_by_id(&self, id: Uuid) -> CountrySubdivisionResult<Option<CountrySubdivisionIdxModel>>;
     async fn find_by_country_id(
         &self,
         country_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error>;
+    ) -> CountrySubdivisionResult<Vec<CountrySubdivisionIdxModel>>;
     async fn find_by_code(
         &self,
         country_id: Uuid,
         code: &str,
-    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error>;
-    async fn find_by_ids(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<CountrySubdivisionIdxModel>, Box<dyn std::error::Error + Send + Sync>>;
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
-    async fn find_ids_by_country_id(
-        &self,
-        country_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> CountrySubdivisionResult<Option<CountrySubdivisionIdxModel>>;
+    async fn find_by_ids(&self, ids: &[Uuid]) -> CountrySubdivisionResult<Vec<CountrySubdivisionIdxModel>>;
+    async fn exists_by_id(&self, id: Uuid) -> CountrySubdivisionResult<bool>;
+    async fn find_ids_by_country_id(&self, country_id: Uuid) -> CountrySubdivisionResult<Vec<Uuid>>;
 }

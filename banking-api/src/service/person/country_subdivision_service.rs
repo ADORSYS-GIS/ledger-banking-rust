@@ -1,30 +1,43 @@
 use crate::domain::person::CountrySubdivision;
-use crate::BankingResult;
 use async_trait::async_trait;
 use heapless::String as HeaplessString;
+use std::error::Error;
+use thiserror::Error;
 use uuid::Uuid;
+
+#[derive(Error, Debug)]
+pub enum CountrySubdivisionServiceError {
+    #[error("Country not found: {0}")]
+    CountryNotFound(Uuid),
+    #[error("Duplicate subdivision code '{code}' for country {country_id}")]
+    DuplicateCode { country_id: Uuid, code: String },
+    #[error("Repository error: {0}")]
+    RepositoryError(Box<dyn Error + Send + Sync>),
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+}
 
 #[async_trait]
 pub trait CountrySubdivisionService: Send + Sync {
     async fn create_country_subdivision(
         &self,
         country_subdivision: CountrySubdivision,
-    ) -> BankingResult<CountrySubdivision>;
+    ) -> Result<CountrySubdivision, CountrySubdivisionServiceError>;
     async fn fix_country_subdivision(
         &self,
         country_subdivision: CountrySubdivision,
-    ) -> BankingResult<CountrySubdivision>;
+    ) -> Result<CountrySubdivision, CountrySubdivisionServiceError>;
     async fn find_country_subdivision_by_id(
         &self,
         id: Uuid,
-    ) -> BankingResult<Option<CountrySubdivision>>;
+    ) -> Result<Option<CountrySubdivision>, CountrySubdivisionServiceError>;
     async fn find_country_subdivisions_by_country_id(
         &self,
         country_id: Uuid,
-    ) -> BankingResult<Vec<CountrySubdivision>>;
+    ) -> Result<Vec<CountrySubdivision>, CountrySubdivisionServiceError>;
     async fn find_country_subdivision_by_code(
         &self,
         country_id: Uuid,
         code: HeaplessString<10>,
-    ) -> BankingResult<Option<CountrySubdivision>>;
+    ) -> Result<Option<CountrySubdivision>, CountrySubdivisionServiceError>;
 }
