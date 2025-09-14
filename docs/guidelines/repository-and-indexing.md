@@ -146,6 +146,12 @@ pub trait ProductRepository: Send + Sync {
 }
 ```
 
+#### Batch Operations
+
+For repositories that need to support bulk data processing, such as data migrations or large-scale updates, a separate `BatchRepository` trait should be implemented. This pattern is designed to optimize performance by reducing network round-trips and leveraging database-specific features for bulk operations.
+
+For a detailed explanation of the batch operations pattern, its benefits, and implementation guidelines, please refer to the [Batch Operations Implementation Summary](./batch_operations.md).
+
 #### Finder Methods and Index-Based Lookups
 
 For every finder method that queries entities based on their attributes (e.g., finding products by type), two corresponding methods must be defined in the trait. This pattern separates the index lookup from the final data retrieval.
