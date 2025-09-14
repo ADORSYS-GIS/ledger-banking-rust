@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use banking_db::models::person::{PersonIdxModel, PersonModel};
 use banking_db::repository::{
-    BatchOperationStats, BatchRepository, BatchResult, PersonDomainError, PersonRepository,
+    BatchOperationStats, BatchRepository, BatchResult, PersonRepository, PersonRepositoryError,
     LocationRepository,
 };
 use crate::repository::person::person_repository_impl::PersonRepositoryImpl;
@@ -627,7 +627,7 @@ impl PersonRepositoryImpl {
     pub async fn validate_batch(
         &self,
         items: &[PersonModel],
-    ) -> Result<Vec<bool>, PersonDomainError> {
+    ) -> Result<Vec<bool>, PersonRepositoryError> {
         let mut validations = Vec::with_capacity(items.len());
 
         for person in items {
@@ -645,7 +645,7 @@ impl PersonRepositoryImpl {
                         .location_repository
                         .exists_by_id(loc_id)
                         .await
-                        .map_err(|e| PersonDomainError::RepositoryError(e.into()))?;
+                        .map_err(|e| PersonRepositoryError::RepositoryError(e.into()))?;
             }
 
             // Check duplicate person exists if specified

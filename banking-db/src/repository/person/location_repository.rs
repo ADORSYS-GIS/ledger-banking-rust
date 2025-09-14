@@ -8,7 +8,7 @@ use crate::models::person::{LocationIdxModel, LocationModel};
 
 /// Domain-specific errors for Location repository operations
 #[derive(Debug)]
-pub enum LocationDomainError {
+pub enum LocationRepositoryError {
     /// Locality not found
     LocalityNotFound(Uuid),
 
@@ -28,7 +28,7 @@ pub enum LocationDomainError {
     RepositoryError(Box<dyn Error + Send + Sync>),
 }
 
-impl fmt::Display for LocationDomainError {
+impl fmt::Display for LocationRepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::LocalityNotFound(id) => {
@@ -60,7 +60,7 @@ impl fmt::Display for LocationDomainError {
     }
 }
 
-impl Error for LocationDomainError {
+impl Error for LocationRepositoryError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::RepositoryError(err) => Some(err.as_ref()),
@@ -69,8 +69,8 @@ impl Error for LocationDomainError {
     }
 }
 
-/// Result type using LocationDomainError
-pub type LocationResult<T> = Result<T, LocationDomainError>;
+/// Result type using LocationRepositoryError
+pub type LocationResult<T> = Result<T, LocationRepositoryError>;
 
 #[async_trait]
 pub trait LocationRepository<DB: Database>: Send + Sync {

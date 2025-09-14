@@ -3,7 +3,10 @@ use banking_api::BankingResult;
 use banking_db::models::person::{
     MessagingAuditModel, MessagingIdxModel, MessagingIdxModelCache, MessagingModel,
 };
-use banking_db::repository::{MessagingRepository, TransactionAware};
+use banking_db::repository::{
+    person::messaging_repository::{MessagingRepository, MessagingRepositoryError, MessagingResult},
+    TransactionAware,
+};
 use crate::repository::executor::Executor;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
@@ -51,7 +54,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         &self,
         messaging: MessagingModel,
         audit_log_id: Uuid,
-    ) -> Result<MessagingModel, sqlx::Error> {
+    ) -> MessagingResult<MessagingModel> {
         let mut hasher = XxHash64::with_seed(0);
         let mut messaging_cbor = Vec::new();
         ciborium::ser::into_writer(&messaging, &mut messaging_cbor).unwrap();
@@ -221,7 +224,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         Ok(messaging)
     }
 
-    async fn load(&self, id: Uuid) -> Result<MessagingModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> MessagingResult<MessagingModel> {
         let query = sqlx::query("SELECT * FROM messaging WHERE id = $1").bind(id);
         let row = match &self.executor {
             Executor::Pool(pool) => query.fetch_one(&**pool).await?,
@@ -230,23 +233,18 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
                 query.fetch_one(&mut **tx).await?
             }
         };
-        MessagingModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+        MessagingModel::try_from_row(&row)
+            .map_err(|e| MessagingRepositoryError::DatabaseError(sqlx::Error::Decode(e)))
     }
 
-    async fn find_by_id(
-        &self,
-        id: Uuid,
-    ) -> Result<Option<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_id(&self, id: Uuid) -> MessagingResult<Option<MessagingIdxModel>> {
         Ok(self
             .messaging_idx_cache
             .read()
             .await
             .get_by_primary(&id))
     }
-    async fn find_by_ids(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> MessagingResult<Vec<MessagingIdxModel>> {
         let cache_read_guard = self.messaging_idx_cache.read().await;
         let mut messagings = Vec::with_capacity(ids.len());
         for id in ids {
@@ -256,7 +254,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
         }
         Ok(messagings)
     }
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> MessagingResult<bool> {
         Ok(self
             .messaging_idx_cache
             .read()
@@ -264,10 +262,7 @@ impl MessagingRepository<Postgres> for MessagingRepositoryImpl {
             .get_by_primary(&id)
             .is_some())
     }
-    async fn find_ids_by_value(
-        &self,
-        value: &str,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    async fn find_ids_by_value(&self, value: &str) -> MessagingResult<Vec<Uuid>> {
         let mut hasher = XxHash64::with_seed(0);
         hasher.write(value.as_bytes());
         let hash = hasher.finish() as i64;

@@ -2,306 +2,166 @@
 
 ## Overview
 
-This document outlines the error handling patterns and best practices for the repository layer in the Ledger Banking Rust project. The repository layer uses domain-specific error types to provide meaningful context and improve debugging capabilities.
+This document outlines the error handling patterns and best practices for the repository layer in the Ledger Banking Rust project. The repository layer uses specific `RepositoryError` types for each domain to provide meaningful context, ensure type safety, and improve debugging capabilities.
 
 ## Core Principles
 
 ### 1. Domain-Specific Error Types
-- **Never expose raw database errors** directly to service layers
-- **Create domain-specific error enums** that map database errors to business context
-- **Use type aliases** for cleaner Result types in method signatures
+- **Never expose raw `sqlx::Error`** or other generic errors directly to service layers.
+- **Create a specific error enum for each repository** (e.g., `PersonRepositoryError`, `LocationRepositoryError`) that maps database issues to business context.
+- **Use type aliases** (e.g., `PersonResult<T>`) for cleaner `Result` types in method signatures.
 
 ### 2. Error Categories
 
-Repository errors should be categorized into logical groups:
+Repository error enums should be structured to handle different categories of failures. A good `RepositoryError` enum includes variants for:
+- **Not Found Errors**: For when a specific entity or a related dependency is not found.
+- **Validation/Constraint Errors**: For business rule violations like duplicates or invalid foreign keys.
+- **Generic Repository/Database Errors**: A fallback variant to wrap underlying database errors (e.g., `sqlx::Error`) or errors from other repositories.
 
 ```rust
-pub enum PersonDomainError {
-    // Entity not found errors
-    NotFound(String),
-    
-    // Validation and constraint errors
-    InvalidHierarchy(String),
-    DuplicateExternalId(String),
-    OrganizationNotFound(Uuid),
-    
-    // Concurrency control errors
-    StaleData {
-        id: Uuid,
-        expected_version: i32,
-        actual_version: i32,
+// Example from banking-db/src/repository/person/location_repository.rs
+
+pub enum LocationRepositoryError {
+    /// Locality not found
+    LocalityNotFound(Uuid),
+
+    /// Invalid location type
+    InvalidLocationType(String),
+
+    /// Invalid coordinates
+    InvalidCoordinates { latitude: f64, longitude: f64 },
+
+    /// Duplicate location for same address
+    DuplicateLocation {
+        street: String,
+        locality_id: Uuid,
     },
-    
-    // Cascade operation errors
-    CascadeDeleteBlocked(Vec<Uuid>),
-    
-    // Generic database errors (fallback)
-    DatabaseError(String),
+
+    /// Generic repository error, wrapping the source
+    RepositoryError(Box<dyn Error + Send + Sync>),
 }
 ```
 
 ## Implementation Patterns
 
-### 1. Error Mapping Functions
-
-Each repository implementation should have a dedicated error mapping function:
+### 1. Direct Error Mapping
+For straightforward cases where a database operation can fail, use `.map_err()` to wrap the underlying error into your specific `RepositoryError` variant. This is the most common pattern.
 
 ```rust
-impl PersonRepositoryImpl {
-    fn map_sqlx_error(err: sqlx::Error, context: &str) -> PersonDomainError {
-        match err {
-            sqlx::Error::RowNotFound => {
-                PersonDomainError::NotFound(context.to_string())
-            }
-            sqlx::Error::Database(db_err) => {
-                // Check for specific constraint violations
-                if let Some(constraint) = db_err.constraint() {
-                    match constraint {
-                        "person_external_id_unique" => {
-                            PersonDomainError::DuplicateExternalId(context.to_string())
-                        }
-                        "person_organization_fk" => {
-                            PersonDomainError::OrganizationNotFound(Uuid::nil())
-                        }
-                        _ => PersonDomainError::DatabaseError(db_err.to_string())
-                    }
-                } else {
-                    PersonDomainError::DatabaseError(db_err.to_string())
-                }
-            }
-            _ => PersonDomainError::DatabaseError(err.to_string())
+// Example from banking-db-postgres/src/repository/person/location_repository_impl.rs
+
+async fn load(&self, id: Uuid) -> LocationResult<LocationModel> {
+    let query = sqlx::query("SELECT * FROM location WHERE id = $1").bind(id);
+
+    let row = match &self.executor {
+        Executor::Pool(pool) => query.fetch_one(&**pool).await
+            .map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?,
+        Executor::Tx(tx) => {
+            let mut tx = tx.lock().await;
+            query.fetch_one(&mut **tx).await
+                .map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?
+        }
+    };
+
+    LocationModel::try_from_row(&row)
+        .map_err(|e| LocationRepositoryError::RepositoryError(e.into()))
+}
+```
+
+### 2. Foreign Key and Pre-Condition Checks
+Before performing an insert or update, validate the existence of foreign key dependencies. This provides clearer error messages than relying on database constraint violations.
+
+```rust
+// Example from banking-db-postgres/src/repository/person/person_repository_impl.rs
+
+async fn save(&self, person: PersonModel, audit_log_id: Uuid) -> PersonResult<PersonModel> {
+    if let Some(loc_id) = person.location_id {
+        if !self.location_repository.exists_by_id(loc_id).await
+            .map_err(|e| PersonRepositoryError::RepositoryError(e.into()))?
+        {
+            return Err(PersonRepositoryError::LocationNotFound(loc_id));
         }
     }
+    // ... rest of the save logic
+    Ok(person)
 }
 ```
 
-### 2. Result Type Aliases
-
-Define type aliases for cleaner method signatures:
+### 3. Result Type Aliases
+Define type aliases in the repository trait file for cleaner method signatures.
 
 ```rust
-pub type PersonResult<T> = Result<T, PersonDomainError>;
-pub type LocationResult<T> = Result<T, LocationDomainError>;
-pub type AuditResult<T> = Result<T, AuditDomainError>;
+// From banking-db/src/repository/person/person_repository.rs
+pub type PersonResult<T> = Result<T, PersonRepositoryError>;
+
+// From banking-db/src/repository/person/location_repository.rs
+pub type LocationResult<T> = Result<T, LocationRepositoryError>;
+
+// From banking-db/src/repository/person/messaging_repository.rs
+pub type MessagingResult<T> = Result<T, MessagingRepositoryError>;
 ```
 
-### 3. Method Error Documentation
-
-Every repository method should document its possible error conditions:
+### 4. Method Error Documentation
+Every repository method should document its possible error conditions in the trait definition.
 
 ```rust
-/// Find person by ID
-/// 
+/// Find person by ID.
+///
 /// # Errors
-/// - `PersonDomainError::NotFound` if person doesn't exist
-async fn find_by_id(&self, id: Uuid) -> PersonResult<Person>;
+/// - `PersonRepositoryError::RepositoryError` if there is a database issue.
+async fn load(&self, id: Uuid) -> PersonResult<PersonModel>;
 
-/// Create a new person with validation
-/// 
+/// Create a new person with validation.
+///
 /// # Errors
-/// - `PersonDomainError::InvalidHierarchy` if parent/organization relationship is invalid
-/// - `PersonDomainError::DuplicateExternalId` if external_id already exists
-/// - `PersonDomainError::OrganizationNotFound` if specified organization doesn't exist
-async fn create(&self, person: &Person) -> PersonResult<Person>;
-```
-
-## Error Handling Best Practices
-
-### 1. Early Validation
-- Validate business rules before database operations
-- Return specific errors for validation failures
-- Use the cache layer for constraint checking when possible
-
-```rust
-// Validate hierarchy first
-self.validate_hierarchy(person).await?;
-
-// Check for duplicate external ID
-if let Some(ref ext_id) = person.external_id {
-    self.check_duplicate_external_id(ext_id, None).await?;
-}
-
-// Then perform the database operation
-let result = sqlx::query_as::<_, Person>(...)
-    .fetch_one(&self.pool)
-    .await
-    .map_err(|e| Self::map_sqlx_error(e, "Failed to create person"))?;
-```
-
-### 2. Contextual Error Messages
-- Include relevant IDs and values in error messages
-- Provide enough context to understand what failed
-- Avoid exposing internal implementation details
-
-```rust
-PersonDomainError::NotFound(
-    format!("Person with id {} not found", id)
-)
-
-PersonDomainError::DuplicateExternalId(
-    format!("External ID '{}' is already in use", external_id)
-)
-```
-
-### 3. Optimistic Locking Errors
-- Check version numbers for concurrent updates
-- Return specific error types for stale data
-- Include both expected and actual versions
-
-```rust
-if current.version != person.version {
-    return Err(PersonDomainError::StaleData {
-        id: person.id,
-        expected_version: person.version,
-        actual_version: current.version,
-    });
-}
-```
-
-### 4. Cascade Operation Handling
-- Check for dependent records before deletion
-- Return lists of blocking IDs for cascade failures
-- Provide clear information about what prevents the operation
-
-```rust
-let dependents: Vec<Uuid> = sqlx::query_scalar(
-    "SELECT id FROM person WHERE parent_id = $1 LIMIT 10"
-)
-.bind(id)
-.fetch_all(&self.pool)
-.await?;
-
-if !dependents.is_empty() {
-    return Err(PersonDomainError::CascadeDeleteBlocked(dependents));
-}
+/// - `PersonRepositoryError::LocationNotFound` if the specified location doesn't exist.
+/// - `PersonRepositoryError::OrganizationNotFound` if the specified organization doesn't exist.
+async fn save(&self, person: PersonModel, audit_log_id: Uuid) -> PersonResult<PersonModel>;
 ```
 
 ## Integration with Service Layer
 
-### 1. Service Error Mapping
-Services should map repository errors to their own error types:
+### Service Error Mapping
+Services must map repository errors to their own service-specific error types. This decouples the service layer from the data layer's error details.
 
 ```rust
-impl From<PersonDomainError> for ServiceError {
-    fn from(err: PersonDomainError) -> Self {
-        match err {
-            PersonDomainError::NotFound(msg) => {
-                ServiceError::EntityNotFound(msg)
-            }
-            PersonDomainError::DuplicateExternalId(id) => {
-                ServiceError::DuplicateResource(format!("External ID: {}", id))
-            }
-            PersonDomainError::StaleData { .. } => {
-                ServiceError::ConcurrentModification
-            }
-            _ => ServiceError::InternalError(err.to_string())
+// Example from banking-logic/src/services/person/location_service_impl.rs
+
+fn map_domain_error_to_service_error(error: LocationRepositoryError) -> LocationServiceError {
+    match error {
+        LocationRepositoryError::LocalityNotFound(id) => LocationServiceError::LocalityNotFound(id),
+        LocationRepositoryError::InvalidLocationType(loc_type) => {
+            LocationServiceError::InvalidLocationType(loc_type)
         }
+        // ... other mappings
+        LocationRepositoryError::RepositoryError(err) => LocationServiceError::RepositoryError(err),
     }
 }
 ```
-
-### 2. Error Recovery Strategies
-- Retry transient errors at the service layer
-- Handle optimistic locking conflicts with retry logic
-- Provide fallback behavior for non-critical operations
-
-## Testing Error Conditions
-
-### 1. Unit Tests for Error Mapping
-```rust
-#[test]
-fn test_duplicate_key_error_mapping() {
-    // Create a mock SQLx error with constraint violation
-    let db_err = create_constraint_error("person_external_id_unique");
-    let mapped = PersonRepositoryImpl::map_sqlx_error(
-        sqlx::Error::Database(db_err),
-        "test context"
-    );
-    
-    assert!(matches!(
-        mapped,
-        PersonDomainError::DuplicateExternalId(_)
-    ));
-}
-```
-
-### 2. Integration Tests for Error Scenarios
-```rust
-#[tokio::test]
-async fn test_cascade_delete_blocked() {
-    let repo = create_test_repository().await;
-    
-    // Create parent and child persons
-    let parent = create_test_person();
-    let child = create_test_person()
-        .with_parent_id(parent.id);
-    
-    repo.save(parent, audit_id).await.unwrap();
-    repo.save(child, audit_id).await.unwrap();
-    
-    // Attempt to delete parent should fail
-    let result = repo.delete(parent.id).await;
-    
-    assert!(matches!(
-        result,
-        Err(PersonDomainError::CascadeDeleteBlocked(deps)) 
-        if deps.contains(&child.id)
-    ));
-}
-```
-
-## Error Monitoring and Logging
-
-### 1. Structured Logging
-```rust
-match self.create(&person).await {
-    Ok(p) => {
-        tracing::info!(
-            person_id = %p.id,
-            "Person created successfully"
-        );
-        Ok(p)
-    }
-    Err(e) => {
-        tracing::error!(
-            error = %e,
-            person_id = %person.id,
-            "Failed to create person"
-        );
-        Err(e)
-    }
-}
-```
-
-### 2. Error Metrics
-- Track error rates by error type
-- Monitor specific constraint violations
-- Alert on unusual error patterns
 
 ## Migration Strategy
 
-When migrating existing repositories to use domain-specific errors:
+When creating a new repository or refactoring an existing one:
 
-1. **Create error types** in `banking-db/src/repository/errors.rs`
-2. **Update repository traits** to use new Result types
-3. **Implement error mapping** in repository implementations
-4. **Update service layer** to handle new error types
-5. **Add tests** for error conditions
-6. **Update documentation** with error specifications
+1. **Define the error enum** (e.g., `<StructName>RepositoryError`) in the repository trait file (`banking-db/src/repository/person/<struct_name>_repository.rs`).
+2. **Define the result type alias** (e.g., `pub type <StructName>Result<T> = Result<T, <StructName>RepositoryError>;`).
+3. **Update repository trait methods** to use the new `Result` type.
+4. **Implement error handling** in the repository implementation (`banking-db-postgres/src/repository/person/<struct_name>_repository_impl.rs`), mapping `sqlx::Error` and other errors to the new error type.
+5. **Update the service layer** to handle the new repository error types and map them to service errors.
+6. **Add tests** for the new error conditions.
+7. **Update this documentation** with any new patterns or examples.
 
 ## References
 
-- [`banking-db/src/repository/errors.rs`](../../banking-db/src/repository/errors.rs) - Error type definitions
-- [`banking-db/src/repository/person_repository_enhanced.rs`](../../banking-db/src/repository/person_repository_enhanced.rs) - Example enhanced repository with domain errors
-- [`banking-db-postgres/src/repository/person_person_repository_impl.rs`](../../banking-db-postgres/src/repository/person_person_repository_impl.rs) - Implementation example
+- [`banking-db/src/repository/person/person_repository.rs`](../../banking-db/src/repository/person/person_repository.rs) - Trait and error definition example.
+- [`banking-db-postgres/src/repository/person/person_repository_impl.rs`](../../banking-db-postgres/src/repository/person/person_repository_impl.rs) - Implementation example.
+- [`banking-db/src/repository/person/location_repository.rs`](../../banking-db/src/repository/person/location_repository.rs) - Another trait and error definition example.
+- [`banking-db-postgres/src/repository/person/location_repository_impl.rs`](../../banking-db-postgres/src/repository/person/location_repository_impl.rs) - Another implementation example.
 
 ## Summary
 
-Domain-specific error handling in the repository layer provides:
-- **Clear separation** between database and business errors
-- **Better debugging** through contextual error messages
-- **Type safety** preventing error type mixing
-- **Improved maintainability** through centralized error logic
-- **Enhanced testing** capabilities for error scenarios
-
-Following these guidelines ensures consistent, meaningful error handling throughout the repository layer, improving both developer experience and system reliability.
+This domain-specific error handling approach provides:
+- **Clear Separation**: Decouples database concerns from business logic.
+- **Better Debugging**: Provides contextual, meaningful error messages.
+- **Type Safety**: Prevents accidental propagation of raw database errors.
+- **Improved Maintainability**: Centralizes error logic within each domain's repository.

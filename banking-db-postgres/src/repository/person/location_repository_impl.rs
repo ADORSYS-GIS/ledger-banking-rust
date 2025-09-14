@@ -4,7 +4,8 @@ use banking_db::models::person::{
     LocationAuditModel, LocationIdxModel, LocationIdxModelCache, LocationModel,
 };
 use banking_db::repository::{
-    LocalityRepository, LocationDomainError, LocationRepository, LocationResult, TransactionAware,
+    LocalityRepository, LocationRepository, LocationRepositoryError, LocationResult,
+    TransactionAware,
 };
 use crate::repository::executor::Executor;
 use crate::repository::person::locality_repository_impl::LocalityRepositoryImpl;
@@ -65,9 +66,11 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             .locality_repository
             .exists_by_id(location.locality_id)
             .await
-            .map_err(|e| LocationDomainError::RepositoryError(e.into()))?
+            .map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?
         {
-            return Err(LocationDomainError::LocalityNotFound(location.locality_id));
+            return Err(LocationRepositoryError::LocalityNotFound(
+                location.locality_id,
+            ));
         }
 
         let mut hasher = XxHash64::with_seed(0);
@@ -162,15 +165,15 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
 
             match &self.executor {
                 Executor::Pool(pool) => {
-                    query1.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
-                    query2.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
-                    query3.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query1.execute(&**pool).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
+                    query2.execute(&**pool).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
+                    query3.execute(&**pool).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
                 }
                 Executor::Tx(tx) => {
                     let mut tx = tx.lock().await;
-                    query1.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
-                    query2.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
-                    query3.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query1.execute(&mut **tx).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
+                    query2.execute(&mut **tx).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
+                    query3.execute(&mut **tx).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
                 }
             }
 
@@ -253,15 +256,15 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
 
             match &self.executor {
                 Executor::Pool(pool) => {
-                    query1.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
-                    query2.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
-                    query3.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query1.execute(&**pool).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
+                    query2.execute(&**pool).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
+                    query3.execute(&**pool).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
                 }
                 Executor::Tx(tx) => {
                     let mut tx = tx.lock().await;
-                    query1.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
-                    query2.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
-                    query3.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query1.execute(&mut **tx).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
+                    query2.execute(&mut **tx).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
+                    query3.execute(&mut **tx).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?;
                 }
             }
 
@@ -286,14 +289,14 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         .bind(id);
 
         let row = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?,
+            Executor::Pool(pool) => query.fetch_one(&**pool).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?,
             Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?
+                query.fetch_one(&mut **tx).await.map_err(|e| LocationRepositoryError::RepositoryError(e.into()))?
             }
         };
 
-        LocationModel::try_from_row(&row).map_err(|e| LocationDomainError::RepositoryError(e.into()))
+        LocationModel::try_from_row(&row).map_err(|e| LocationRepositoryError::RepositoryError(e.into()))
     }
 
     async fn find_by_id(&self, id: Uuid) -> LocationResult<Option<LocationIdxModel>> {

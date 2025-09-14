@@ -22,8 +22,9 @@ use banking_db::repository::{
 };
 use banking_db::repository::{
     audit_repository::AuditDomainError,
-    location_repository::LocationDomainError,
-    person::person_repository::{PersonDomainError, PersonResult},
+    location_repository::LocationRepositoryError,
+    person::messaging_repository::{MessagingRepositoryError, MessagingResult},
+    person::person_repository::{PersonRepositoryError, PersonResult},
 };
 use banking_logic::services::{
     CountryServiceImpl, CountrySubdivisionServiceImpl,
@@ -97,7 +98,7 @@ impl PersonRepository<Postgres> for MockPersonRepository {
             .cloned()
         {
             Some(person) => Ok(person),
-            None => Err(PersonDomainError::from(sqlx::Error::RowNotFound)),
+            None => Err(PersonRepositoryError::from(sqlx::Error::RowNotFound)),
         }
     }
 
@@ -532,7 +533,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         &self,
         location: LocationModel,
         audit_log_id: Uuid,
-    ) -> Result<LocationModel, LocationDomainError> {
+    ) -> Result<LocationModel, LocationRepositoryError> {
         self.locations.lock().unwrap().push(location.clone());
         let location_idx = LocationIdxModel {
             location_id: location.id,
@@ -563,7 +564,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         Ok(location)
     }
 
-    async fn load(&self, id: Uuid) -> Result<LocationModel, LocationDomainError> {
+    async fn load(&self, id: Uuid) -> Result<LocationModel, LocationRepositoryError> {
         match self
             .locations
             .lock()
@@ -573,7 +574,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
             .cloned()
         {
             Some(location) => Ok(location),
-            None => Err(LocationDomainError::RepositoryError(Box::new(
+            None => Err(LocationRepositoryError::RepositoryError(Box::new(
                 sqlx::Error::RowNotFound,
             ))),
         }
@@ -582,7 +583,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<LocationIdxModel>, LocationDomainError> {
+    ) -> Result<Option<LocationIdxModel>, LocationRepositoryError> {
         Ok(self
             .location_ixes
             .lock()
@@ -595,7 +596,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<LocationIdxModel>, LocationDomainError> {
+    ) -> Result<Vec<LocationIdxModel>, LocationRepositoryError> {
         let locations = self
             .location_ixes
             .lock()
@@ -607,7 +608,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         Ok(locations)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, LocationDomainError> {
+    async fn exists_by_id(&self, id: Uuid) -> Result<bool, LocationRepositoryError> {
         Ok(self
             .location_ixes
             .lock()
@@ -619,7 +620,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
     async fn find_ids_by_locality_id(
         &self,
         locality_id: Uuid,
-    ) -> Result<Vec<Uuid>, LocationDomainError> {
+    ) -> Result<Vec<Uuid>, LocationRepositoryError> {
         let ids = self
             .locations
             .lock()
@@ -636,7 +637,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         locality_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<LocationIdxModel>, LocationDomainError> {
+    ) -> Result<Vec<LocationIdxModel>, LocationRepositoryError> {
         let locations = self
             .location_ixes
             .lock()
@@ -663,7 +664,7 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
         &self,
         messaging: MessagingModel,
         audit_log_id: Uuid,
-    ) -> Result<MessagingModel, sqlx::Error> {
+    ) -> MessagingResult<MessagingModel> {
         self.messages.lock().unwrap().push(messaging.clone());
         let msg_idx = MessagingIdxModel {
             messaging_id: messaging.id,
@@ -687,14 +688,14 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
         Ok(messaging)
     }
 
-    async fn load(&self, id: Uuid) -> Result<MessagingModel, sqlx::Error> {
-        Ok(self.messages.lock().unwrap().iter().find(|p| p.id == id).cloned().unwrap())
+    async fn load(&self, id: Uuid) -> MessagingResult<MessagingModel> {
+        match self.messages.lock().unwrap().iter().find(|p| p.id == id).cloned() {
+            Some(messaging) => Ok(messaging),
+            None => Err(MessagingRepositoryError::NotFound(id)),
+        }
     }
 
-    async fn find_by_id(
-        &self,
-        id: Uuid,
-    ) -> Result<Option<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_id(&self, id: Uuid) -> MessagingResult<Option<MessagingIdxModel>> {
         Ok(self
             .message_ixes
             .lock()
@@ -704,10 +705,7 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
             .cloned())
     }
 
-    async fn find_by_ids(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<MessagingIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> MessagingResult<Vec<MessagingIdxModel>> {
         let messages = self
             .message_ixes
             .lock()
@@ -719,7 +717,7 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
         Ok(messages)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> MessagingResult<bool> {
         Ok(self
             .message_ixes
             .lock()
@@ -728,10 +726,7 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
             .any(|m| m.messaging_id == id))
     }
 
-    async fn find_ids_by_value(
-        &self,
-        value: &str,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    async fn find_ids_by_value(&self, value: &str) -> MessagingResult<Vec<Uuid>> {
         let ids = self
             .messages
             .lock()

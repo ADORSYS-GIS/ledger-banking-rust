@@ -4,7 +4,7 @@ use banking_db::models::person::{
     PersonAuditModel, PersonIdxModel, PersonIdxModelCache, PersonModel,
 };
 use banking_db::repository::{
-    LocationRepository, PersonDomainError, PersonRepository, PersonResult, TransactionAware,
+    LocationRepository, PersonRepository, PersonRepositoryError, PersonResult, TransactionAware,
 };
 use crate::repository::executor::Executor;
 use crate::repository::person::location_repository_impl::LocationRepositoryImpl;
@@ -66,7 +66,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
     ) -> PersonResult<PersonModel> {
         if let Some(org_id) = person.organization_person_id {
             if !self.exists_by_id(org_id).await? {
-                return Err(PersonDomainError::OrganizationNotFound(org_id));
+                return Err(PersonRepositoryError::OrganizationNotFound(org_id));
             }
         }
         if let Some(loc_id) = person.location_id {
@@ -74,14 +74,14 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 .location_repository
                 .exists_by_id(loc_id)
                 .await
-                .map_err(|e| PersonDomainError::RepositoryError(e.into()))?
+                .map_err(|e| PersonRepositoryError::RepositoryError(e.into()))?
             {
-                return Err(PersonDomainError::LocationNotFound(loc_id));
+                return Err(PersonRepositoryError::LocationNotFound(loc_id));
             }
         }
         if let Some(dup_id) = person.duplicate_of_person_id {
             if !self.exists_by_id(dup_id).await? {
-                return Err(PersonDomainError::DuplicatePersonNotFound(dup_id));
+                return Err(PersonRepositoryError::DuplicatePersonNotFound(dup_id));
             }
         }
 
@@ -377,7 +377,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             }
         };
 
-        PersonModel::try_from_row(&row).map_err(|e| PersonDomainError::RepositoryError(e))
+        PersonModel::try_from_row(&row).map_err(|e| PersonRepositoryError::RepositoryError(e))
     }
 
     async fn find_by_id(&self, id: Uuid) -> PersonResult<Option<PersonIdxModel>> {

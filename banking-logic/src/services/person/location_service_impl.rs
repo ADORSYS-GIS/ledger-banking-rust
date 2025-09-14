@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use banking_api::domain::person::Location;
 use banking_api::service::{LocationService, LocationServiceError, LocationServiceResult};
-use banking_db::repository::LocationDomainError;
+use banking_db::repository::LocationRepositoryError;
 use sqlx::Database;
 use uuid::Uuid;
 
@@ -18,27 +18,27 @@ impl<DB: Database> LocationServiceImpl<DB> {
     }
 }
 
-fn map_domain_error_to_service_error(error: LocationDomainError) -> LocationServiceError {
+fn map_domain_error_to_service_error(error: LocationRepositoryError) -> LocationServiceError {
     match error {
-        LocationDomainError::LocalityNotFound(id) => LocationServiceError::LocalityNotFound(id),
-        LocationDomainError::InvalidLocationType(loc_type) => {
+        LocationRepositoryError::LocalityNotFound(id) => LocationServiceError::LocalityNotFound(id),
+        LocationRepositoryError::InvalidLocationType(loc_type) => {
             LocationServiceError::InvalidLocationType(loc_type)
         }
-        LocationDomainError::InvalidCoordinates {
+        LocationRepositoryError::InvalidCoordinates {
             latitude,
             longitude,
         } => LocationServiceError::InvalidCoordinates {
             latitude,
             longitude,
         },
-        LocationDomainError::DuplicateLocation {
+        LocationRepositoryError::DuplicateLocation {
             street,
             locality_id,
         } => LocationServiceError::DuplicateLocation {
             street,
             locality_id,
         },
-        LocationDomainError::RepositoryError(err) => LocationServiceError::RepositoryError(err),
+        LocationRepositoryError::RepositoryError(err) => LocationServiceError::RepositoryError(err),
     }
 }
 

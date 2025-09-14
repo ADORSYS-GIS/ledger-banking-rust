@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use banking_api::domain::person::Person;
 use banking_api::service::{PersonService, PersonServiceError, PersonServiceResult};
-use banking_db::repository::PersonDomainError;
+use banking_db::repository::PersonRepositoryError;
 use heapless::String as HeaplessString;
 use sqlx::Database;
 use uuid::Uuid;
@@ -18,33 +18,33 @@ impl<DB: Database> PersonServiceImpl<DB> {
         Self { repositories }
     }
 
-    fn map_domain_error(err: PersonDomainError) -> PersonServiceError {
+    fn map_domain_error(err: PersonRepositoryError) -> PersonServiceError {
         match err {
-            PersonDomainError::InvalidHierarchy(msg) => PersonServiceError::InvalidHierarchy(msg),
-            PersonDomainError::DuplicateExternalId(id) => {
+            PersonRepositoryError::InvalidHierarchy(msg) => PersonServiceError::InvalidHierarchy(msg),
+            PersonRepositoryError::DuplicateExternalId(id) => {
                 PersonServiceError::DuplicateExternalId(id)
             }
-            PersonDomainError::CascadeDeleteBlocked(ids) => {
+            PersonRepositoryError::CascadeDeleteBlocked(ids) => {
                 PersonServiceError::CascadeDeleteBlocked(ids.len())
             }
-            PersonDomainError::OrganizationNotFound(id) => {
+            PersonRepositoryError::OrganizationNotFound(id) => {
                 PersonServiceError::OrganizationNotFound(id)
             }
-            PersonDomainError::LocationNotFound(id) => PersonServiceError::LocationNotFound(id),
-            PersonDomainError::DuplicatePersonNotFound(id) => {
+            PersonRepositoryError::LocationNotFound(id) => PersonServiceError::LocationNotFound(id),
+            PersonRepositoryError::DuplicatePersonNotFound(id) => {
                 PersonServiceError::DuplicatePersonNotFound(id)
             }
-            PersonDomainError::InvalidPersonTypeChange { from, to } => {
+            PersonRepositoryError::InvalidPersonTypeChange { from, to } => {
                 PersonServiceError::InvalidPersonTypeChange { from, to }
             }
-            PersonDomainError::MessagingNotFound(id) => PersonServiceError::MessagingNotFound(id),
-            PersonDomainError::BatchValidationFailed { failed_ids, errors } => {
+            PersonRepositoryError::MessagingNotFound(id) => PersonServiceError::MessagingNotFound(id),
+            PersonRepositoryError::BatchValidationFailed { failed_ids, errors } => {
                 PersonServiceError::BatchValidationFailed {
                     failed_ids_count: failed_ids.len(),
                     errors: errors.join(", "),
                 }
             }
-            PersonDomainError::RepositoryError(err) => {
+            PersonRepositoryError::RepositoryError(err) => {
                 PersonServiceError::RepositoryError(err.to_string())
             }
         }

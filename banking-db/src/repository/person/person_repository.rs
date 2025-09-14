@@ -8,7 +8,7 @@ use crate::models::person::{PersonIdxModel, PersonModel};
 
 /// Domain-specific errors for Person repository operations
 #[derive(Debug)]
-pub enum PersonDomainError {
+pub enum PersonRepositoryError {
     /// Invalid organizational hierarchy (e.g., circular reference)
     InvalidHierarchy(String),
     /// Duplicate external identifier constraint violation
@@ -34,7 +34,7 @@ pub enum PersonDomainError {
     RepositoryError(Box<dyn Error + Send + Sync>),
 }
 
-impl fmt::Display for PersonDomainError {
+impl fmt::Display for PersonRepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidHierarchy(msg) => write!(f, "Invalid organizational hierarchy: {}", msg),
@@ -62,7 +62,7 @@ impl fmt::Display for PersonDomainError {
     }
 }
 
-impl Error for PersonDomainError {
+impl Error for PersonRepositoryError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::RepositoryError(err) => Some(err.as_ref()),
@@ -71,7 +71,7 @@ impl Error for PersonDomainError {
     }
 }
 
-impl From<sqlx::Error> for PersonDomainError {
+impl From<sqlx::Error> for PersonRepositoryError {
     fn from(err: sqlx::Error) -> Self {
         match &err {
             sqlx::Error::Database(db_err) => {
@@ -137,8 +137,8 @@ fn extract_dependent_ids(message: &str) -> Vec<Uuid> {
         .collect()
 }
 
-/// Result type using PersonDomainError
-pub type PersonResult<T> = Result<T, PersonDomainError>;
+/// Result type using PersonRepositoryError
+pub type PersonResult<T> = Result<T, PersonRepositoryError>;
 
 #[async_trait]
 pub trait PersonRepository<DB: Database>: Send + Sync {
