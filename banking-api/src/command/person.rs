@@ -4,11 +4,20 @@ use crate::error::BankingError;
 use async_trait::async_trait;
 use serde::Deserialize;
 use std::sync::Arc;
-use crate::{service::person_service::PersonService};
+use crate::service::{
+    CountryService, CountrySubdivisionService, EntityReferenceService,
+    LocalityService, LocationService, MessagingService, PersonService,
+};
 
 use super::{Command, CommandResult};
 
 pub struct Services {
+    pub country_service: Arc<dyn CountryService>,
+    pub country_subdivision_service: Arc<dyn CountrySubdivisionService>,
+    pub locality_service: Arc<dyn LocalityService>,
+    pub location_service: Arc<dyn LocationService>,
+    pub messaging_service: Arc<dyn MessagingService>,
+    pub entity_reference_service: Arc<dyn EntityReferenceService>,
     pub person_service: Arc<dyn PersonService>,
 }
 
@@ -35,18 +44,24 @@ impl Command for PopulateGeoDataCommand {
         })?;
 
         for country in data.countries {
-            context.person_service.create_country(country).await?;
+            context
+                .country_service
+                .create_country(country)
+                .await?;
         }
 
         for subdivision in data.subdivisions {
             context
-                .person_service
+                .country_subdivision_service
                 .create_country_subdivision(subdivision)
                 .await?;
         }
 
         for locality in data.localities {
-            context.person_service.create_locality(locality).await?;
+            context
+                .locality_service
+                .create_locality(locality)
+                .await?;
         }
 
         Ok(())
@@ -69,10 +84,10 @@ impl Command for AddPersonOfInterestCommand {
     type Result = Person;
 
     async fn execute(&self, context: &Self::Context) -> Result<Self::Result, BankingError> {
-        context
+        Ok(context
             .person_service
             .create_person(self.person_data.clone(), self.audit_log.clone())
-            .await
+            .await?)
     }
 }
 

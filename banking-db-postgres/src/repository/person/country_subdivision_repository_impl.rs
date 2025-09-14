@@ -5,7 +5,7 @@ use banking_db::models::person::{
 };
 use banking_db::repository::{CountryRepository, CountrySubdivisionRepository, TransactionAware};
 use crate::repository::executor::Executor;
-use crate::repository::person_country_repository_impl::CountryRepositoryImpl;
+use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use parking_lot::RwLock as ParkingRwLock;
 use sqlx::{postgres::PgRow, Postgres, Row};

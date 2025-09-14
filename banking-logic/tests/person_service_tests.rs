@@ -3,7 +3,10 @@ use banking_api::domain::person::{
     Location, LocationType, Locality, Country, EntityReference, Messaging, Person, PersonType,
     RelationshipRole, CountrySubdivision,
 };
-use banking_api::service::PersonService;
+use banking_api::service::{
+    CountryService, CountrySubdivisionService, EntityReferenceService,
+    LocalityService, LocationService, MessagingService, PersonService,
+};
 use banking_db::models::person::{
     LocationModel, LocationIdxModel, LocationAuditModel,
     LocalityModel, LocalityIdxModel, CountryModel, CountryIdxModel, EntityReferenceModel,
@@ -15,9 +18,18 @@ use banking_db::models::audit::AuditLogModel;
 
 use banking_db::repository::{
     LocationRepository, LocalityRepository, CountryRepository, EntityReferenceRepository,
-    MessagingRepository, CountrySubdivisionRepository, PersonRepository, AuditLogRepository
+    MessagingRepository, CountrySubdivisionRepository, PersonRepository, AuditLogRepository,
 };
-use banking_logic::services::person_service_impl::PersonServiceImpl;
+use banking_db::repository::{
+    audit_repository::AuditDomainError,
+    location_repository::LocationDomainError,
+    person::person_repository::{PersonDomainError, PersonResult},
+};
+use banking_logic::services::{
+    CountryServiceImpl, CountrySubdivisionServiceImpl,
+    EntityReferenceServiceImpl, LocalityServiceImpl, LocationServiceImpl,
+    MessagingServiceImpl, PersonServiceImpl,
+};
 use banking_logic::services::repositories::Repositories;
 use heapless::String as HeaplessString;
 use std::error::Error;
@@ -35,7 +47,7 @@ struct MockPersonRepository {
 
 #[async_trait]
 impl PersonRepository<Postgres> for MockPersonRepository {
-    async fn save(&self, person: PersonModel, audit_log_id: Uuid) -> Result<PersonModel, sqlx::Error> {
+    async fn save(&self, person: PersonModel, audit_log_id: Uuid) -> PersonResult<PersonModel> {
         self.persons.lock().unwrap().push(person.clone());
         // In a real scenario, we'd create a proper hash and version.
         let person_idx = PersonIdxModel {
@@ -75,21 +87,31 @@ impl PersonRepository<Postgres> for MockPersonRepository {
         Ok(person)
     }
 
-    async fn load(&self, id: Uuid) -> Result<PersonModel, sqlx::Error> {
-        Ok(self.persons.lock().unwrap().iter().find(|p| p.id == id).cloned().unwrap())
+    async fn load(&self, id: Uuid) -> PersonResult<PersonModel> {
+        match self
+            .persons
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|p| p.id == id)
+            .cloned()
+        {
+            Some(person) => Ok(person),
+            None => Err(PersonDomainError::from(sqlx::Error::RowNotFound)),
+        }
     }
 
-    async fn find_by_id(
-        &self,
-        id: Uuid,
-    ) -> Result<Option<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
-        Ok(self.person_ixes.lock().unwrap().iter().find(|p| p.person_id == id).cloned())
+    async fn find_by_id(&self, id: Uuid) -> PersonResult<Option<PersonIdxModel>> {
+        Ok(self
+            .person_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|p| p.person_id == id)
+            .cloned())
     }
 
-    async fn find_by_ids(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> PersonResult<Vec<PersonIdxModel>> {
         let person_ixes = self
             .person_ixes
             .lock()
@@ -101,14 +123,16 @@ impl PersonRepository<Postgres> for MockPersonRepository {
         Ok(person_ixes)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.person_ixes.lock().unwrap().iter().any(|p| p.person_id == id))
+    async fn exists_by_id(&self, id: Uuid) -> PersonResult<bool> {
+        Ok(self
+            .person_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|p| p.person_id == id))
     }
 
-    async fn get_ids_by_external_identifier(
-        &self,
-        identifier: &str,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    async fn get_ids_by_external_identifier(&self, identifier: &str) -> PersonResult<Vec<Uuid>> {
         let persons = self.persons.lock().unwrap();
         let ids = persons
             .iter()
@@ -121,7 +145,7 @@ impl PersonRepository<Postgres> for MockPersonRepository {
     async fn get_by_external_identifier(
         &self,
         identifier: &str,
-    ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+    ) -> PersonResult<Vec<PersonIdxModel>> {
         let persons = self.persons.lock().unwrap();
         let person_ixes = self.person_ixes.lock().unwrap();
         let ids: Vec<Uuid> = persons
@@ -198,15 +222,28 @@ impl CountryRepository<Postgres> for MockCountryRepository {
         Ok(countries)
     }
 
-    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        Ok(self
+            .country_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|c| c.country_id == id))
     }
 
     async fn find_ids_by_iso2(
         &self,
-        _iso2: &str,
+        iso2: &str,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        let ids = self
+            .countries
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|c| c.iso2.as_str() == iso2)
+            .map(|c| c.id)
+            .collect();
+        Ok(ids)
     }
 
     async fn find_by_iso2(
@@ -220,7 +257,7 @@ impl CountryRepository<Postgres> for MockCountryRepository {
             .lock()
             .unwrap()
             .iter()
-            .filter(|c| c.iso2 == iso2)
+            .filter(|c| c.iso2.as_str() == iso2)
             .cloned()
             .collect();
         Ok(countries)
@@ -291,15 +328,28 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
         Ok(subdivisions)
     }
 
-    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        Ok(self
+            .country_subdivision_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|s| s.country_subdivision_id == id))
     }
 
     async fn find_ids_by_country_id(
         &self,
-        _country_id: Uuid,
+        country_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        let ids = self
+            .country_subdivisions
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|s| s.country_id == country_id)
+            .map(|s| s.id)
+            .collect();
+        Ok(ids)
     }
 
     async fn find_by_country_id(
@@ -329,7 +379,7 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
             .lock()
             .unwrap()
             .iter()
-            .find(|s| s.country_id == country_id && s.code == code)
+            .find(|s| s.country_id == country_id && s.code.as_str() == code)
             .cloned();
 
         if let Some(sub) = subdivision {
@@ -401,15 +451,28 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
         Ok(localities)
     }
 
-    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        Ok(self
+            .locality_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|l| l.locality_id == id))
     }
 
     async fn find_ids_by_country_subdivision_id(
         &self,
-        _country_subdivision_id: Uuid,
+        country_subdivision_id: Uuid,
     ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        let ids = self
+            .localities
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|l| l.country_subdivision_id == country_subdivision_id)
+            .map(|l| l.id)
+            .collect();
+        Ok(ids)
     }
 
     async fn find_by_country_subdivision_id(
@@ -439,7 +502,7 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
             .lock()
             .unwrap()
             .iter()
-            .find(|c| c.country_subdivision_id == country_subdivision_id && c.code == code)
+           .find(|c| c.country_subdivision_id == country_subdivision_id && c.code.as_str() == code)
             .cloned();
 
         if let Some(loc) = locality {
@@ -465,7 +528,11 @@ struct MockLocationRepository {
 
 #[async_trait]
 impl LocationRepository<Postgres> for MockLocationRepository {
-    async fn save(&self, location: LocationModel, audit_log_id: Uuid) -> Result<LocationModel, sqlx::Error> {
+    async fn save(
+        &self,
+        location: LocationModel,
+        audit_log_id: Uuid,
+    ) -> Result<LocationModel, LocationDomainError> {
         self.locations.lock().unwrap().push(location.clone());
         let location_idx = LocationIdxModel {
             location_id: location.id,
@@ -496,21 +563,26 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         Ok(location)
     }
 
-    async fn load(&self, id: Uuid) -> Result<LocationModel, sqlx::Error> {
-        Ok(self
+    async fn load(&self, id: Uuid) -> Result<LocationModel, LocationDomainError> {
+        match self
             .locations
             .lock()
             .unwrap()
             .iter()
             .find(|a| a.id == id)
             .cloned()
-            .unwrap())
+        {
+            Some(location) => Ok(location),
+            None => Err(LocationDomainError::RepositoryError(Box::new(
+                sqlx::Error::RowNotFound,
+            ))),
+        }
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<LocationIdxModel>, sqlx::Error> {
+    ) -> Result<Option<LocationIdxModel>, LocationDomainError> {
         Ok(self
             .location_ixes
             .lock()
@@ -523,7 +595,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
+    ) -> Result<Vec<LocationIdxModel>, LocationDomainError> {
         let locations = self
             .location_ixes
             .lock()
@@ -535,15 +607,28 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         Ok(locations)
     }
 
-    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+    async fn exists_by_id(&self, id: Uuid) -> Result<bool, LocationDomainError> {
+        Ok(self
+            .location_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|l| l.location_id == id))
     }
 
     async fn find_ids_by_locality_id(
         &self,
-        _locality_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+        locality_id: Uuid,
+    ) -> Result<Vec<Uuid>, LocationDomainError> {
+        let ids = self
+            .locations
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|l| l.locality_id == locality_id)
+            .map(|l| l.id)
+            .collect();
+        Ok(ids)
     }
 
     async fn find_by_locality_id(
@@ -551,7 +636,7 @@ impl LocationRepository<Postgres> for MockLocationRepository {
         locality_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
+    ) -> Result<Vec<LocationIdxModel>, LocationDomainError> {
         let locations = self
             .location_ixes
             .lock()
@@ -634,8 +719,13 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
         Ok(messages)
     }
 
-    async fn exists_by_id(&self, _id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        unimplemented!()
+    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+        Ok(self
+            .message_ixes
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|m| m.messaging_id == id))
     }
 
     async fn find_ids_by_value(
@@ -647,7 +737,7 @@ impl MessagingRepository<Postgres> for MockMessagingRepository {
             .lock()
             .unwrap()
             .iter()
-            .filter(|m| m.value == value)
+            .filter(|m| m.value.as_str() == value)
             .map(|m| m.id)
             .collect();
         Ok(ids)
@@ -765,11 +855,23 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
 
     async fn find_by_reference_external_id(
         &self,
-        _reference_external_id: &str,
+        reference_external_id: &str,
         _page: i32,
         _page_size: i32,
     ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
-        unimplemented!()
+        let entities = self.entities.lock().unwrap();
+        let entity_ixes = self.entity_ixes.lock().unwrap();
+        let ids: Vec<Uuid> = entities
+            .iter()
+            .filter(|e| e.reference_external_id.as_str() == reference_external_id)
+            .map(|e| e.id)
+            .collect();
+        let result = entity_ixes
+            .iter()
+            .filter(|e| ids.contains(&e.entity_reference_id))
+            .cloned()
+            .collect();
+        Ok(result)
     }
 }
 
@@ -780,12 +882,12 @@ struct MockAuditLogRepository {
 
 #[async_trait]
 impl AuditLogRepository<Postgres> for MockAuditLogRepository {
-    async fn create(&self, audit_log: &AuditLogModel) -> Result<AuditLogModel, sqlx::Error> {
+    async fn create(&self, audit_log: &AuditLogModel) -> Result<AuditLogModel, AuditDomainError> {
         self.audit_logs.lock().unwrap().push(audit_log.clone());
         Ok(audit_log.clone())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<AuditLogModel>, sqlx::Error> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<AuditLogModel>, AuditDomainError> {
         Ok(self
             .audit_logs
             .lock()
@@ -796,7 +898,17 @@ impl AuditLogRepository<Postgres> for MockAuditLogRepository {
     }
 }
 
-fn create_test_service() -> PersonServiceImpl<Postgres> {
+struct TestServices {
+    country_service: CountryServiceImpl<Postgres>,
+    country_subdivision_service: CountrySubdivisionServiceImpl<Postgres>,
+    locality_service: LocalityServiceImpl<Postgres>,
+    location_service: LocationServiceImpl<Postgres>,
+    messaging_service: MessagingServiceImpl<Postgres>,
+    entity_reference_service: EntityReferenceServiceImpl<Postgres>,
+    person_service: PersonServiceImpl<Postgres>,
+}
+
+fn create_test_services() -> TestServices {
     let repositories = Repositories {
         person_repository: Arc::new(MockPersonRepository::default()),
         audit_log_repository: Arc::new(MockAuditLogRepository::default()),
@@ -807,7 +919,19 @@ fn create_test_service() -> PersonServiceImpl<Postgres> {
         messaging_repository: Arc::new(MockMessagingRepository::default()),
         entity_reference_repository: Arc::new(MockEntityReferenceRepository::default()),
     };
-    PersonServiceImpl::new(repositories)
+    TestServices {
+        country_service: CountryServiceImpl::new(repositories.clone()),
+        country_subdivision_service: CountrySubdivisionServiceImpl::new(
+            repositories.clone(),
+        ),
+        locality_service: LocalityServiceImpl::new(repositories.clone()),
+        location_service: LocationServiceImpl::new(repositories.clone()),
+        messaging_service: MessagingServiceImpl::new(repositories.clone()),
+        entity_reference_service: EntityReferenceServiceImpl::new(
+            repositories.clone(),
+        ),
+        person_service: PersonServiceImpl::new(repositories),
+    }
 }
 
 fn create_test_audit_log() -> banking_api::domain::AuditLog {
@@ -914,27 +1038,45 @@ fn create_test_person() -> Person {
 
 #[tokio::test]
 async fn test_create_country() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    let created_country = service.create_country(country.clone()).await.unwrap();
+    let created_country = services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     assert_eq!(country.id, created_country.id);
 }
 
 #[tokio::test]
 async fn test_find_country_by_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
-    let found_country = service.find_country_by_id(country.id).await.unwrap().unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
+    let found_country = services
+        .country_service
+        .find_country_by_id(country.id)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(country.id, found_country.id);
 }
 
 #[tokio::test]
 async fn test_find_country_by_iso2() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
-    let found_country = service
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
+    let found_country = services
+        .country_service
         .find_country_by_iso2(country.iso2.clone())
         .await
         .unwrap()
@@ -944,31 +1086,56 @@ async fn test_find_country_by_iso2() {
 
 #[tokio::test]
 async fn test_get_all_countries() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
-    let countries = service.get_all_countries().await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
+    let countries = services
+        .country_service
+        .get_all_countries()
+        .await
+        .unwrap();
     assert!(countries.is_empty());
 }
 
 #[tokio::test]
 async fn test_create_country_subdivision() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    let created_country_subdivision = service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    let created_country_subdivision = services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
     assert_eq!(country_subdivision.id, created_country_subdivision.id);
 }
 
 #[tokio::test]
 async fn test_find_country_subdivision_by_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
-    let found_country_subdivision = service
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
+    let found_country_subdivision = services
+        .country_subdivision_service
         .find_country_subdivision_by_id(country_subdivision.id)
         .await
         .unwrap()
@@ -978,12 +1145,21 @@ async fn test_find_country_subdivision_by_id() {
 
 #[tokio::test]
 async fn test_find_country_subdivisions_by_country_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
-    let country_subdivisions = service
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
+    let country_subdivisions = services
+        .country_subdivision_service
         .find_country_subdivisions_by_country_id(country.id)
         .await
         .unwrap();
@@ -992,12 +1168,21 @@ async fn test_find_country_subdivisions_by_country_id() {
 
 #[tokio::test]
 async fn test_find_country_subdivision_by_code() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
-    let found_country_subdivision = service
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
+    let found_country_subdivision = services
+        .country_subdivision_service
         .find_country_subdivision_by_code(country.id, country_subdivision.code.clone())
         .await
         .unwrap()
@@ -1007,52 +1192,110 @@ async fn test_find_country_subdivision_by_code() {
 
 #[tokio::test]
 async fn test_create_locality() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
     let locality = create_test_locality(country_subdivision.id);
-    let created_locality = service.create_locality(locality.clone()).await.unwrap();
+    let created_locality = services
+        .locality_service
+        .create_locality(locality.clone())
+        .await
+        .unwrap();
     assert_eq!(locality.id, created_locality.id);
 }
 
 #[tokio::test]
 async fn test_find_locality_by_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
     let locality = create_test_locality(country_subdivision.id);
-    service.create_locality(locality.clone()).await.unwrap();
-    let found_locality = service.find_locality_by_id(locality.id).await.unwrap().unwrap();
+    services
+        .locality_service
+        .create_locality(locality.clone())
+        .await
+        .unwrap();
+    let found_locality = services
+        .locality_service
+        .find_locality_by_id(locality.id)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(locality.id, found_locality.id);
 }
 
 #[tokio::test]
 async fn test_find_localities_by_country_subdivision_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
     let locality = create_test_locality(country_subdivision.id);
-    service.create_locality(locality.clone()).await.unwrap();
-    let localities = service.find_localities_by_country_subdivision_id(country_subdivision.id).await.unwrap();
+    services
+        .locality_service
+        .create_locality(locality.clone())
+        .await
+        .unwrap();
+    let localities = services
+        .locality_service
+        .find_localities_by_country_subdivision_id(country_subdivision.id)
+        .await
+        .unwrap();
     assert!(!localities.is_empty());
 }
 
 #[tokio::test]
 async fn test_find_locality_by_code() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
     let locality = create_test_locality(country_subdivision.id);
-    service.create_locality(locality.clone()).await.unwrap();
-    let found_locality = service
+    services
+        .locality_service
+        .create_locality(locality.clone())
+        .await
+        .unwrap();
+    let found_locality = services
+        .locality_service
         .find_locality_by_code(country_subdivision.id, locality.code.clone())
         .await
         .unwrap()
@@ -1062,31 +1305,64 @@ async fn test_find_locality_by_code() {
 
 #[tokio::test]
 async fn test_create_location() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
     let locality = create_test_locality(country_subdivision.id);
-    service.create_locality(locality.clone()).await.unwrap();
+    services
+        .locality_service
+        .create_locality(locality.clone())
+        .await
+        .unwrap();
     let location = create_test_location(locality.id);
     let audit_log = create_test_audit_log();
-    let created_location = service.create_location(location.clone(), audit_log).await.unwrap();
+    let created_location = services
+        .location_service
+        .create_location(location.clone(), audit_log)
+        .await
+        .unwrap();
     assert_eq!(location.id, created_location.id);
 }
 
 #[tokio::test]
 async fn test_find_location_by_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
     let locality = create_test_locality(country_subdivision.id);
-    service.create_locality(locality.clone()).await.unwrap();
+    services
+        .locality_service
+        .create_locality(locality.clone())
+        .await
+        .unwrap();
     let location = create_test_location(locality.id);
-    service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
-    let found_location = service
+    services
+        .location_service
+        .create_location(location.clone(), create_test_audit_log())
+        .await
+        .unwrap();
+    let found_location = services
+        .location_service
         .find_location_by_id(location.id)
         .await
         .unwrap()
@@ -1096,33 +1372,62 @@ async fn test_find_location_by_id() {
 
 #[tokio::test]
 async fn test_find_locations_by_locality_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let country = create_test_country();
-    service.create_country(country.clone()).await.unwrap();
+    services
+        .country_service
+        .create_country(country.clone())
+        .await
+        .unwrap();
     let country_subdivision = create_test_country_subdivision(country.id);
-    service.create_country_subdivision(country_subdivision.clone()).await.unwrap();
+    services
+        .country_subdivision_service
+        .create_country_subdivision(country_subdivision.clone())
+        .await
+        .unwrap();
     let locality = create_test_locality(country_subdivision.id);
-    service.create_locality(locality.clone()).await.unwrap();
+    services
+        .locality_service
+        .create_locality(locality.clone())
+        .await
+        .unwrap();
     let location = create_test_location(locality.id);
-    service.create_location(location.clone(), create_test_audit_log()).await.unwrap();
-    let locations = service.find_locations_by_locality_id(locality.id).await.unwrap();
+    services
+        .location_service
+        .create_location(location.clone(), create_test_audit_log())
+        .await
+        .unwrap();
+    let locations = services
+        .location_service
+        .find_locations_by_locality_id(locality.id)
+        .await
+        .unwrap();
     assert!(!locations.is_empty());
 }
 
 #[tokio::test]
 async fn test_create_messaging() {
-    let service = create_test_service();
+    let services = create_test_services();
     let messaging = create_test_messaging();
-    let created_messaging = service.create_messaging(messaging.clone(), create_test_audit_log()).await.unwrap();
+    let created_messaging = services
+        .messaging_service
+        .create_messaging(messaging.clone(), create_test_audit_log())
+        .await
+        .unwrap();
     assert_eq!(messaging.id, created_messaging.id);
 }
 
 #[tokio::test]
 async fn test_find_messaging_by_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let messaging = create_test_messaging();
-    service.create_messaging(messaging.clone(), create_test_audit_log()).await.unwrap();
-    let found_messaging = service
+    services
+        .messaging_service
+        .create_messaging(messaging.clone(), create_test_audit_log())
+        .await
+        .unwrap();
+    let found_messaging = services
+        .messaging_service
         .find_messaging_by_id(messaging.id)
         .await
         .unwrap()
@@ -1132,10 +1437,15 @@ async fn test_find_messaging_by_id() {
 
 #[tokio::test]
 async fn test_find_messaging_by_value() {
-    let service = create_test_service();
+    let services = create_test_services();
     let messaging = create_test_messaging();
-    service.create_messaging(messaging.clone(), create_test_audit_log()).await.unwrap();
-    let found_messaging = service
+    services
+        .messaging_service
+        .create_messaging(messaging.clone(), create_test_audit_log())
+        .await
+        .unwrap();
+    let found_messaging = services
+        .messaging_service
         .find_messaging_by_value(messaging.value.clone())
         .await
         .unwrap()
@@ -1145,11 +1455,16 @@ async fn test_find_messaging_by_value() {
 
 #[tokio::test]
 async fn test_create_entity_reference() {
-    let service = create_test_service();
+    let services = create_test_services();
     let person = create_test_person();
-    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
+    services
+        .person_service
+        .create_person(person.clone(), create_test_audit_log())
+        .await
+        .unwrap();
     let entity_ref = create_test_entity_reference(person.id);
-    let created_entity_ref = service
+    let created_entity_ref = services
+        .entity_reference_service
         .create_entity_reference(entity_ref.clone(), create_test_audit_log())
         .await
         .unwrap();
@@ -1158,15 +1473,21 @@ async fn test_create_entity_reference() {
 
 #[tokio::test]
 async fn test_find_entity_reference_by_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let person = create_test_person();
-    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
+    services
+        .person_service
+        .create_person(person.clone(), create_test_audit_log())
+        .await
+        .unwrap();
     let entity_ref = create_test_entity_reference(person.id);
-    service
+    services
+        .entity_reference_service
         .create_entity_reference(entity_ref.clone(), create_test_audit_log())
         .await
         .unwrap();
-    let found_entity_ref = service
+    let found_entity_ref = services
+        .entity_reference_service
         .find_entity_reference_by_id(entity_ref.id)
         .await
         .unwrap()
@@ -1176,15 +1497,21 @@ async fn test_find_entity_reference_by_id() {
 
 #[tokio::test]
 async fn test_find_entity_references_by_person_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let person = create_test_person();
-    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
+    services
+        .person_service
+        .create_person(person.clone(), create_test_audit_log())
+        .await
+        .unwrap();
     let entity_ref = create_test_entity_reference(person.id);
-    service
+    services
+        .entity_reference_service
         .create_entity_reference(entity_ref.clone(), create_test_audit_log())
         .await
         .unwrap();
-    let entity_refs = service
+    let entity_refs = services
+        .entity_reference_service
         .find_entity_references_by_person_id(person.id)
         .await
         .unwrap();
@@ -1193,27 +1520,45 @@ async fn test_find_entity_references_by_person_id() {
 
 #[tokio::test]
 async fn test_create_person() {
-    let service = create_test_service();
+    let services = create_test_services();
     let person = create_test_person();
-    let created_person = service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
+    let created_person = services
+        .person_service
+        .create_person(person.clone(), create_test_audit_log())
+        .await
+        .unwrap();
     assert_eq!(person.id, created_person.id);
 }
 
 #[tokio::test]
 async fn test_find_person_by_id() {
-    let service = create_test_service();
+    let services = create_test_services();
     let person = create_test_person();
-    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
-    let found_person = service.find_person_by_id(person.id).await.unwrap().unwrap();
+    services
+        .person_service
+        .create_person(person.clone(), create_test_audit_log())
+        .await
+        .unwrap();
+    let found_person = services
+        .person_service
+        .find_person_by_id(person.id)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(person.id, found_person.id);
 }
 
 #[tokio::test]
 async fn test_get_person_by_external_identifier() {
-    let service = create_test_service();
+    let services = create_test_services();
     let person = create_test_person();
-    service.create_person(person.clone(), create_test_audit_log()).await.unwrap();
-    let found_person = service
+    services
+        .person_service
+        .create_person(person.clone(), create_test_audit_log())
+        .await
+        .unwrap();
+    let found_person = services
+        .person_service
         .get_persons_by_external_identifier(person.external_identifier.clone().unwrap())
         .await
         .unwrap();

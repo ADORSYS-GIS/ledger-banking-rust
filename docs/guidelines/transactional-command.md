@@ -133,8 +133,12 @@ impl ServiceFactory<Postgres, PostgresUnitOfWorkSession> for AppServiceFactory {
             person_repository: Arc::new(session.persons().clone()),
             // ... other repositories
         };
-        let person_service = Arc::new(PersonServiceImpl::new(repositories));
-        Services { person_service }
+        let person_service = Arc::new(PersonServiceImpl::new(repositories.clone()));
+        let person_location_service = Arc::new(PersonLocationServiceImpl::new(repositories));
+        Services {
+            person_service,
+            person_location_service,
+        }
     }
 }
 

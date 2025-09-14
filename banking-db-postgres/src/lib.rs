@@ -12,13 +12,13 @@ pub mod test_utils;
 pub mod utils;
 
 pub use repository::audit_repository_impl::AuditLogRepositoryImpl;
-pub use repository::person_country_repository_impl::CountryRepositoryImpl;
-pub use repository::person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
-pub use repository::person_entity_reference_repository_impl::EntityReferenceRepositoryImpl;
-pub use repository::person_locality_repository_impl::LocalityRepositoryImpl;
-pub use repository::person_location_repository_impl::LocationRepositoryImpl;
-pub use repository::person_messaging_repository_impl::MessagingRepositoryImpl;
-pub use repository::person_person_repository_impl::PersonRepositoryImpl;
+pub use repository::person::country_repository_impl::CountryRepositoryImpl;
+pub use repository::person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
+pub use repository::person::entity_reference_repository_impl::EntityReferenceRepositoryImpl;
+pub use repository::person::locality_repository_impl::LocalityRepositoryImpl;
+pub use repository::person::location_repository_impl::LocationRepositoryImpl;
+pub use repository::person::messaging_repository_impl::MessagingRepositoryImpl;
+pub use repository::person::person_repository_impl::PersonRepositoryImpl;
 pub use repository::unit_of_work_impl;
 
 pub struct PostgresRepositories {

@@ -8,8 +8,14 @@ pub type BankingResult<T> = Result<T, BankingError>;
 
 #[derive(Debug, Error, Serialize, Deserialize)]
 pub enum BankingError {
+    #[error("Location error: {0}")]
+    LocationError(String),
     #[error("Not found: {0}")]
     NotFound(String),
+    #[error("Person service error: {0}")]
+    PersonServiceError(#[from] crate::service::PersonServiceError),
+    #[error("Audit service error: {0}")]
+    AuditServiceError(#[from] crate::service::AuditServiceError),
     // Account-related errors
     #[error("Account not found: {0}")]
     AccountNotFound(Uuid),
@@ -212,8 +218,6 @@ pub enum BankingError {
     #[error("Feature not implemented: {0}")]
     NotImplemented(String),
 
-    #[error("Duplicate person: {0}")]
-    DuplicatePerson(String),
 }
 
 impl From<anyhow::Error> for BankingError {
@@ -246,6 +250,7 @@ impl From<Box<dyn std::error::Error + Send + Sync>> for BankingError {
         BankingError::Internal(err.to_string())
     }
 }
+
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

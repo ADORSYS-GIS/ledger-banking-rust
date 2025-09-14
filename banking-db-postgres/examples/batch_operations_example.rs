@@ -9,10 +9,6 @@
 /// 3. Leveraging transaction-aware caching
 /// 4. Validating constraints using cached indexes
 
-use banking_db::models::person::{PersonModel, PersonType};
-use banking_db::repository::BatchRepository;
-use heapless::String as HeaplessString;
-use uuid::Uuid;
 
 /// Example of how batch operations would be used
 fn demonstrate_batch_usage() {
@@ -155,13 +151,13 @@ fn main() {
     println!("╚══════════════════════════════════════════════════════════╝\n");
     
     demonstrate_batch_usage();
-    println!("\n" + &"=".repeat(60) + "\n");
+    println!("\n{}\n", "=".repeat(60));
     
     performance_comparison();
-    println!("\n" + &"=".repeat(60) + "\n");
+    println!("\n{}\n", "=".repeat(60));
     
     show_sql_examples();
-    println!("\n" + &"=".repeat(60) + "\n");
+    println!("\n{}\n", "=".repeat(60));
     
     cache_validation_example();
     

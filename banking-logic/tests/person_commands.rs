@@ -1,10 +1,12 @@
 use anyhow::Result;
-use banking_api::service::person_service::PersonService;
+use banking_api::service::{
+    CountryService, CountrySubdivisionService, LocalityService,
+};
 use banking_db_postgres::test_utils::commons::{cleanup_database, establish_connection};
 use uuid::Uuid;
 use std::fs;
 use std::sync::Arc;
-use banking_logic::services::person_service_impl::PersonServiceImpl;
+use banking_logic::services::{CountryServiceImpl, CountrySubdivisionServiceImpl, LocalityServiceImpl};
 use banking_db_postgres::{
     PostgresRepositories};
 use banking_api::domain::person::{Country, CountrySubdivision, Locality};
@@ -19,7 +21,10 @@ async fn test_populate_geo_data_directly() -> Result<()> {
     let country_repo = repos.country_repository.clone();
     let country_subdivision_repo = repos.country_subdivision_repository.clone();
     let locality_repo = repos.locality_repository.clone();
-    let person_service = Arc::new(PersonServiceImpl::new(repos));
+    let country_service = Arc::new(CountryServiceImpl::new(repos.clone()));
+    let country_subdivision_service =
+        Arc::new(CountrySubdivisionServiceImpl::new(repos.clone()));
+    let locality_service = Arc::new(LocalityServiceImpl::new(repos.clone()));
 
     let json_data = fs::read_to_string("tests/fixtures/geo_data.json")?;
     
@@ -33,15 +38,17 @@ async fn test_populate_geo_data_directly() -> Result<()> {
     let data: GeoData = serde_json::from_str(&json_data)?;
 
     for country in data.countries {
-        person_service.create_country(country).await?;
+        country_service.create_country(country).await?;
     }
 
     for subdivision in data.subdivisions {
-        person_service.create_country_subdivision(subdivision).await?;
+        country_subdivision_service
+            .create_country_subdivision(subdivision)
+            .await?;
     }
 
     for locality in data.localities {
-        person_service.create_locality(locality).await?;
+        locality_service.create_locality(locality).await?;
     }
 
     // Verify the data was inserted

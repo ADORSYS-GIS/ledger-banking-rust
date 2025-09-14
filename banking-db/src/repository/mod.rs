@@ -1,10 +1,8 @@
-pub mod person_repository;
 pub mod audit_repository;
-pub mod person_repos;
 pub mod unit_of_work;
 pub mod transaction_aware;
 pub mod batch_repository;
-pub mod errors;
+pub mod person;
 // pub mod customer_repository;
 // pub mod account_repository;
 // pub mod account_hold_repository;
@@ -20,15 +18,9 @@ pub mod errors;
 // pub mod channel_repository;
 // pub mod product_repository;
 
-pub use person_repository::*;
 pub use audit_repository::*;
-pub use person_repos::*;
 pub use batch_repository::*;
-pub use errors::{
-    PersonDomainError, PersonResult,
-    LocationDomainError, LocationResult,
-    AuditDomainError, AuditResult
-};
+pub use person::*;
 // pub use customer_repository::*;
 // pub use account_repository::*;
 // pub use account_hold_repository::*;

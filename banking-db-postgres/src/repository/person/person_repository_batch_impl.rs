@@ -1,7 +1,10 @@
 use async_trait::async_trait;
-use banking_db::models::person::{PersonModel, PersonIdxModel};
-use banking_db::repository::{BatchRepository, BatchResult, BatchOperationStats, PersonRepository};
-use crate::repository::person_person_repository_impl::PersonRepositoryImpl;
+use banking_db::models::person::{PersonIdxModel, PersonModel};
+use banking_db::repository::{
+    BatchOperationStats, BatchRepository, BatchResult, PersonDomainError, PersonRepository,
+    LocationRepository,
+};
+use crate::repository::person::person_repository_impl::PersonRepositoryImpl;
 use crate::utils::TryFromRow;
 use sqlx::Postgres;
 use std::error::Error;
@@ -73,7 +76,7 @@ impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
                 }
             }
 
-            if let Some(loc_id) = person.location_id {
+            if let Some(_loc_id) = person.location_id {
                 // For now, skip location validation in batch operations
                 // Location validation would be done at service layer
                 // This avoids private field access issues
@@ -515,8 +518,9 @@ impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
                     updated_items.push(p);
                     stats.successful_items += 1;
                 }
-                Err(_) => {
+                Err(_e) => {
                     stats.failed_items += 1;
+                    // Optionally log the error e
                 }
             }
         }
@@ -623,7 +627,7 @@ impl PersonRepositoryImpl {
     pub async fn validate_batch(
         &self,
         items: &[PersonModel],
-    ) -> Result<Vec<bool>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Vec<bool>, PersonDomainError> {
         let mut validations = Vec::with_capacity(items.len());
 
         for person in items {
@@ -631,16 +635,22 @@ impl PersonRepositoryImpl {
 
             // Check organization exists if specified
             if let Some(org_id) = person.organization_person_id {
-                is_valid = is_valid && PersonRepository::<Postgres>::exists_by_id(self, org_id).await?;
+                is_valid = is_valid && self.exists_by_id(org_id).await?;
             }
 
             // Check location exists if specified
-            // Skip location validation in batch operations to avoid private field access
-            // Location validation should be done at service layer
-            
+            if let Some(loc_id) = person.location_id {
+                is_valid = is_valid
+                    && self
+                        .location_repository
+                        .exists_by_id(loc_id)
+                        .await
+                        .map_err(|e| PersonDomainError::RepositoryError(e.into()))?;
+            }
+
             // Check duplicate person exists if specified
             if let Some(dup_id) = person.duplicate_of_person_id {
-                is_valid = is_valid && PersonRepository::<Postgres>::exists_by_id(self, dup_id).await?;
+                is_valid = is_valid && self.exists_by_id(dup_id).await?;
             }
 
             validations.push(is_valid);

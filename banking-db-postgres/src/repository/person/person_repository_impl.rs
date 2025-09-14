@@ -3,9 +3,11 @@ use banking_api::BankingResult;
 use banking_db::models::person::{
     PersonAuditModel, PersonIdxModel, PersonIdxModelCache, PersonModel,
 };
-use banking_db::repository::{LocationRepository, PersonRepository, TransactionAware};
+use banking_db::repository::{
+    LocationRepository, PersonDomainError, PersonRepository, PersonResult, TransactionAware,
+};
 use crate::repository::executor::Executor;
-use crate::repository::person_location_repository_impl::LocationRepositoryImpl;
+use crate::repository::person::location_repository_impl::LocationRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;
@@ -61,14 +63,10 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         &self,
         person: PersonModel,
         audit_log_id: Uuid,
-    ) -> Result<PersonModel, sqlx::Error> {
+    ) -> PersonResult<PersonModel> {
         if let Some(org_id) = person.organization_person_id {
-            if !self
-                .exists_by_id(org_id)
-                .await
-                .map_err(sqlx::Error::Configuration)?
-            {
-                return Err(sqlx::Error::RowNotFound);
+            if !self.exists_by_id(org_id).await? {
+                return Err(PersonDomainError::OrganizationNotFound(org_id));
             }
         }
         if let Some(loc_id) = person.location_id {
@@ -76,18 +74,14 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 .location_repository
                 .exists_by_id(loc_id)
                 .await
-                .map_err(sqlx::Error::Configuration)?
+                .map_err(|e| PersonDomainError::RepositoryError(e.into()))?
             {
-                return Err(sqlx::Error::RowNotFound);
+                return Err(PersonDomainError::LocationNotFound(loc_id));
             }
         }
         if let Some(dup_id) = person.duplicate_of_person_id {
-            if !self
-                .exists_by_id(dup_id)
-                .await
-                .map_err(sqlx::Error::Configuration)?
-            {
-                return Err(sqlx::Error::RowNotFound);
+            if !self.exists_by_id(dup_id).await? {
+                return Err(PersonDomainError::DuplicatePersonNotFound(dup_id));
             }
         }
 
@@ -367,7 +361,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         Ok(person)
     }
 
-    async fn load(&self, id: Uuid) -> Result<PersonModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> PersonResult<PersonModel> {
         let query = sqlx::query(
             r#"
             SELECT * FROM person WHERE id = $1
@@ -383,20 +377,14 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             }
         };
 
-        PersonModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+        PersonModel::try_from_row(&row).map_err(|e| PersonDomainError::RepositoryError(e))
     }
 
-    async fn find_by_id(
-        &self,
-        id: Uuid,
-    ) -> Result<Option<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_id(&self, id: Uuid) -> PersonResult<Option<PersonIdxModel>> {
         Ok(self.person_idx_cache.read().await.get_by_primary(&id))
     }
 
-    async fn find_by_ids(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> PersonResult<Vec<PersonIdxModel>> {
         let cache = self.person_idx_cache.read().await;
         let results = ids
             .iter()
@@ -405,14 +393,11 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         Ok(results)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> PersonResult<bool> {
         Ok(self.person_idx_cache.read().await.contains_primary(&id))
     }
 
-    async fn get_ids_by_external_identifier(
-        &self,
-        identifier: &str,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    async fn get_ids_by_external_identifier(&self, identifier: &str) -> PersonResult<Vec<Uuid>> {
         let mut hasher = XxHash64::with_seed(0);
         hasher.write(identifier.as_bytes());
         let hash = hasher.finish() as i64;
@@ -426,7 +411,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
     async fn get_by_external_identifier(
         &self,
         identifier: &str,
-    ) -> Result<Vec<PersonIdxModel>, Box<dyn Error + Send + Sync>> {
+    ) -> PersonResult<Vec<PersonIdxModel>> {
         let mut hasher = XxHash64::with_seed(0);
         hasher.write(identifier.as_bytes());
         let hash = hasher.finish() as i64;

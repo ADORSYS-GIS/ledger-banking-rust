@@ -7,7 +7,7 @@ use banking_db::models::person::{
 };
 use banking_db::repository::{EntityReferenceRepository, PersonRepository, TransactionAware};
 use crate::repository::executor::Executor;
-use crate::repository::person_person_repository_impl::PersonRepositoryImpl;
+use crate::repository::person::person_repository_impl::PersonRepositoryImpl;
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -65,7 +65,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             .person_repository
             .exists_by_id(entity_ref.person_id)
             .await
-            .map_err(sqlx::Error::Configuration)?
+            .map_err(|e| sqlx::Error::Configuration(e.into()))?
         {
             return Err(sqlx::Error::RowNotFound);
         }

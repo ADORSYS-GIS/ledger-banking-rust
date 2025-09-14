@@ -119,7 +119,7 @@ Upon approval, perform changes as indicated in the files `target/modules/{file_n
 banking-api/src/domain/person.rs
 ```
 /// # Service Trait
-/// - FQN: banking-api/src/service/person_service.rs/PersonService
+/// - FQN: banking-api/src/service/person_person_service.rs/PersonService
 /// ...
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Country {
@@ -150,7 +150,7 @@ pub struct Country {
     **Example from `banking-db/src/models/person.rs`:**
     ```rust
     /// # Repository Trait
-    /// - FQN: banking-db/src/repository/person_repository.rs/CountryRepository
+    /// - FQN: banking-db/src/repository/person_country_repository.rs/CountryRepository
     #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
     pub struct CountryModel {
         /// # Trait method

@@ -3,7 +3,7 @@ use banking_api::BankingResult;
 use banking_db::models::person::{LocalityIdxModel, LocalityIdxModelCache, LocalityModel};
 use banking_db::repository::{CountrySubdivisionRepository, LocalityRepository, TransactionAware};
 use crate::repository::executor::Executor;
-use crate::repository::person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
+use crate::repository::person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::HashMap;

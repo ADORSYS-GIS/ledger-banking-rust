@@ -28,7 +28,7 @@ To maintain a clean separation of concerns and ensure that business logic is dec
 
     #[async_trait]
     impl Command for PopulateGeoDataCommand {
-        type Context = Arc<dyn PersonService>;
+        type Context = Arc<dyn PersonLocationService>;
         type Result = ();
 
         async fn execute(&self, context: &Self::Context) -> Result<Self::Result, BankingError> {
@@ -58,7 +58,7 @@ To maintain a clean separation of concerns and ensure that business logic is dec
 
     // Implementation in banking-logic
     pub struct CommandExecutorImpl {
-        person_service: Arc<dyn PersonService>,
+        person_location_service: Arc<dyn PersonLocationService>,
         // ... other services
     }
 
@@ -67,7 +67,7 @@ To maintain a clean separation of concerns and ensure that business logic is dec
         async fn execute(&self, command: AppCommand) -> Result<CommandResult, BankingError> {
             match command {
                 AppCommand::PopulateGeoData(cmd) => {
-                    let result = cmd.execute(&self.person_service).await?;
+                    let result = cmd.execute(&self.person_location_service).await?;
                     Ok(Box::new(result) as Box<dyn Any + Send>)
                 }
                 // ... other command handlers

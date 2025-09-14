@@ -3,9 +3,11 @@ use banking_api::BankingResult;
 use banking_db::models::person::{
     LocationAuditModel, LocationIdxModel, LocationIdxModelCache, LocationModel,
 };
-use banking_db::repository::{LocalityRepository, LocationRepository, TransactionAware};
+use banking_db::repository::{
+    LocalityRepository, LocationDomainError, LocationRepository, LocationResult, TransactionAware,
+};
 use crate::repository::executor::Executor;
-use crate::repository::person_locality_repository_impl::LocalityRepositoryImpl;
+use crate::repository::person::locality_repository_impl::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::{HashMap, HashSet};
@@ -58,14 +60,14 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         &self,
         location: LocationModel,
         audit_log_id: Uuid,
-    ) -> Result<LocationModel, sqlx::Error> {
+    ) -> LocationResult<LocationModel> {
         if !self
             .locality_repository
             .exists_by_id(location.locality_id)
             .await
-            .map_err(sqlx::Error::Configuration)?
+            .map_err(|e| LocationDomainError::RepositoryError(e.into()))?
         {
-            return Err(sqlx::Error::RowNotFound);
+            return Err(LocationDomainError::LocalityNotFound(location.locality_id));
         }
 
         let mut hasher = XxHash64::with_seed(0);
@@ -160,15 +162,15 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
 
             match &self.executor {
                 Executor::Pool(pool) => {
-                    query1.execute(&**pool).await?;
-                    query2.execute(&**pool).await?;
-                    query3.execute(&**pool).await?;
+                    query1.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query2.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query3.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
                 }
                 Executor::Tx(tx) => {
                     let mut tx = tx.lock().await;
-                    query1.execute(&mut **tx).await?;
-                    query2.execute(&mut **tx).await?;
-                    query3.execute(&mut **tx).await?;
+                    query1.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query2.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query3.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
                 }
             }
 
@@ -251,15 +253,15 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
 
             match &self.executor {
                 Executor::Pool(pool) => {
-                    query1.execute(&**pool).await?;
-                    query2.execute(&**pool).await?;
-                    query3.execute(&**pool).await?;
+                    query1.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query2.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query3.execute(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
                 }
                 Executor::Tx(tx) => {
                     let mut tx = tx.lock().await;
-                    query1.execute(&mut **tx).await?;
-                    query2.execute(&mut **tx).await?;
-                    query3.execute(&mut **tx).await?;
+                    query1.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query2.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
+                    query3.execute(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?;
                 }
             }
 
@@ -275,7 +277,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         Ok(location)
     }
 
-    async fn load(&self, id: Uuid) -> Result<LocationModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> LocationResult<LocationModel> {
         let query = sqlx::query(
             r#"
             SELECT * FROM location WHERE id = $1
@@ -284,21 +286,21 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         .bind(id);
 
         let row = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Pool(pool) => query.fetch_one(&**pool).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?,
             Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await?
+                query.fetch_one(&mut **tx).await.map_err(|e| LocationDomainError::RepositoryError(e.into()))?
             }
         };
 
-        LocationModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+        LocationModel::try_from_row(&row).map_err(|e| LocationDomainError::RepositoryError(e.into()))
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocationIdxModel>, sqlx::Error> {
+    async fn find_by_id(&self, id: Uuid) -> LocationResult<Option<LocationIdxModel>> {
         Ok(self.location_idx_cache.read().await.get_by_primary(&id))
     }
 
-    async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> LocationResult<Vec<LocationIdxModel>> {
         let cache = self.location_idx_cache.read().await;
         let mut locations = Vec::with_capacity(ids.len());
         for id in ids {
@@ -314,19 +316,21 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         locality_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<LocationIdxModel>, sqlx::Error> {
+    ) -> LocationResult<Vec<LocationIdxModel>> {
         let cache = self.location_idx_cache.read().await;
         Ok(cache.get_by_locality_id(&locality_id))
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
-        Ok(self.location_idx_cache.read().await.get_by_primary(&id).is_some())
+    async fn exists_by_id(&self, id: Uuid) -> LocationResult<bool> {
+        Ok(self
+            .location_idx_cache
+            .read()
+            .await
+            .get_by_primary(&id)
+            .is_some())
     }
 
-    async fn find_ids_by_locality_id(
-        &self,
-        locality_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    async fn find_ids_by_locality_id(&self, locality_id: Uuid) -> LocationResult<Vec<Uuid>> {
         let cache = self.location_idx_cache.read().await;
         let locations = cache.get_by_locality_id(&locality_id);
         let ids = locations.into_iter().map(|loc| loc.location_id).collect();

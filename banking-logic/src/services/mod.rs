@@ -15,9 +15,9 @@
 // pub mod fee_service_impl;
 // pub mod eod_service_impl;
 // pub mod product_service_impl;
-pub mod person_service_impl;
 pub mod audit_service_impl;
 pub mod repositories;
+pub mod person;
 
 // pub use customer_service_impl::*;
 // pub use account_service_impl::*;
@@ -35,5 +35,5 @@ pub mod repositories;
 // pub use eod_service_impl::*;
 // pub use daily_collection_service_impl::*;
 // pub use product_service_impl::*;
-pub use person_service_impl::*;
 pub use audit_service_impl::*;
+pub use person::*;

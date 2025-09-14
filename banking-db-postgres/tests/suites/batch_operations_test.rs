@@ -1,9 +1,17 @@
 #[cfg(test)]
 mod batch_tests {
-    use banking_db::models::person::{PersonModel, PersonType, PersonIdxModel, PersonIdxModelCache};
+    use banking_db::models::person::{
+        CountryIdxModelCache, CountrySubdivisionIdxModelCache, LocalityIdxModelCache,
+        LocationIdxModelCache, PersonIdxModelCache, PersonModel, PersonType,
+    };
     use banking_db::repository::{BatchRepository, PersonRepository};
-    use banking_db_postgres::repository::person_person_repository_impl::PersonRepositoryImpl;
-    use banking_db_postgres::repository::person_location_repository_impl::LocationRepositoryImpl;
+    use banking_db_postgres::repository::person::{
+        country_repository_impl::CountryRepositoryImpl,
+        country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
+        locality_repository_impl::LocalityRepositoryImpl,
+        location_repository_impl::LocationRepositoryImpl,
+        person_repository_impl::PersonRepositoryImpl,
+    };
     use banking_db_postgres::repository::executor::Executor;
     use heapless::String as HeaplessString;
     use parking_lot::RwLock;
@@ -38,7 +46,7 @@ mod batch_tests {
     async fn setup_test_repository() -> Result<PersonRepositoryImpl, Box<dyn std::error::Error>> {
         // Create test database connection
         let database_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:password@localhost/test_db".to_string());
+            .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/mydb".to_string());
         
         let pool = PgPoolOptions::new()
             .max_connections(5)
@@ -53,7 +61,24 @@ mod batch_tests {
             .map_err(|e| format!("Failed to create person cache: {}", e))?;
         
         // Create location repository (assuming it has similar setup)
-        let location_repository = Arc::new(LocationRepositoryImpl::new(executor.clone()));
+        let location_repository = Arc::new(LocationRepositoryImpl::new(
+            executor.clone(),
+            Arc::new(LocalityRepositoryImpl::new(
+                executor.clone(),
+                Arc::new(CountrySubdivisionRepositoryImpl::new(
+                    executor.clone(),
+                    Arc::new(CountryRepositoryImpl::new(
+                        executor.clone(),
+                        Arc::new(RwLock::new(CountryIdxModelCache::new(vec![]).unwrap())),
+                    )),
+                    Arc::new(RwLock::new(
+                        CountrySubdivisionIdxModelCache::new(vec![]).unwrap(),
+                    )),
+                )),
+                Arc::new(RwLock::new(LocalityIdxModelCache::new(vec![]).unwrap())),
+            )),
+            Arc::new(RwLock::new(LocationIdxModelCache::new(vec![]).unwrap())),
+        ));
         
         // Create person repository with all required parameters
         let person_repo = PersonRepositoryImpl::new(
@@ -73,8 +98,8 @@ mod batch_tests {
         let mut persons = Vec::new();
         for i in 0..5 {
             let mut person = setup_test_person().await;
-            person.display_name = HeaplessString::try_from(format!("Test Person {}", i)).unwrap();
-            person.external_identifier = Some(HeaplessString::try_from(format!("EXT{:03}", i)).unwrap());
+            person.display_name = HeaplessString::try_from(format!("Test Person {}", i).as_str()).unwrap();
+            person.external_identifier = Some(HeaplessString::try_from(format!("EXT{:03}", i).as_str()).unwrap());
             persons.push(person);
         }
         
@@ -83,7 +108,8 @@ mod batch_tests {
         // Save batch
         let saved_persons = person_repo
             .save_batch(persons.clone(), audit_log_id)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         assert_eq!(saved_persons.len(), 5);
         
@@ -105,7 +131,7 @@ mod batch_tests {
         
         for i in 0..3 {
             let mut person = setup_test_person().await;
-            person.display_name = HeaplessString::try_from(format!("Load Test {}", i)).unwrap();
+            person.display_name = HeaplessString::try_from(format!("Load Test {}", i).as_str()).unwrap();
             persons.push(person.clone());
             test_ids.push(person.id);
         }
@@ -113,14 +139,21 @@ mod batch_tests {
         let audit_log_id = Uuid::new_v4();
         person_repo
             .save_batch(persons, audit_log_id)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         // Load batch
-        let loaded_persons = person_repo.load_batch(&test_ids).await?;
+        let loaded_persons = person_repo
+            .load_batch(&test_ids)
+            .await
+            .map_err(|e| e.to_string())?;
         
         assert_eq!(loaded_persons.len(), 3);
         for (i, person) in loaded_persons.iter().enumerate() {
-            assert_eq!(person.display_name.as_str(), format!("Load Test {}", i));
+            assert_eq!(
+                person.as_ref().unwrap().display_name.as_str(),
+                format!("Load Test {}", i)
+            );
         }
         
         Ok(())
@@ -134,31 +167,39 @@ mod batch_tests {
         let mut persons = Vec::new();
         for i in 0..3 {
             let mut person = setup_test_person().await;
-            person.display_name = HeaplessString::try_from(format!("Original {}", i)).unwrap();
+            person.display_name = HeaplessString::try_from(format!("Original {}", i).as_str()).unwrap();
             persons.push(person);
         }
         
         let audit_log_id = Uuid::new_v4();
         let saved_persons = person_repo
             .save_batch(persons.clone(), audit_log_id)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         // Update display names
         let mut updated_persons = saved_persons.clone();
         for (i, person) in updated_persons.iter_mut().enumerate() {
-            person.display_name = HeaplessString::try_from(format!("Updated {}", i)).unwrap();
+            person.display_name = HeaplessString::try_from(format!("Updated {}", i).as_str()).unwrap();
         }
         
         person_repo
             .update_batch(updated_persons.clone(), audit_log_id)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         // Verify updates
         let test_ids: Vec<Uuid> = updated_persons.iter().map(|p| p.id).collect();
-        let loaded_persons = person_repo.load_batch(&test_ids).await?;
+        let loaded_persons = person_repo
+            .load_batch(&test_ids)
+            .await
+            .map_err(|e| e.to_string())?;
         
         for (i, person) in loaded_persons.iter().enumerate() {
-            assert_eq!(person.display_name.as_str(), format!("Updated {}", i));
+            assert_eq!(
+                person.as_ref().unwrap().display_name.as_str(),
+                format!("Updated {}", i)
+            );
         }
         
         Ok(())
@@ -174,7 +215,7 @@ mod batch_tests {
         
         for i in 0..3 {
             let mut person = setup_test_person().await;
-            person.display_name = HeaplessString::try_from(format!("Exists Test {}", i)).unwrap();
+            person.display_name = HeaplessString::try_from(format!("Exists Test {}", i).as_str()).unwrap();
             persons.push(person.clone());
             test_ids.push(person.id);
         }
@@ -182,13 +223,17 @@ mod batch_tests {
         let audit_log_id = Uuid::new_v4();
         person_repo
             .save_batch(persons, audit_log_id)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         // Add a non-existent ID
         test_ids.push(Uuid::new_v4());
         
         // Check existence
-        let exists_results = person_repo.exists_batch(&test_ids).await?;
+        let exists_results = person_repo
+            .exists_batch(&test_ids)
+            .await
+            .map_err(|e| e.to_string())?;
         
         assert_eq!(exists_results.len(), 4);
         assert_eq!(exists_results[0], true);
@@ -207,27 +252,30 @@ mod batch_tests {
         let mut persons = Vec::new();
         for i in 0..3 {
             let mut person = setup_test_person().await;
-            person.display_name = HeaplessString::try_from(format!("Delete Test {}", i)).unwrap();
+            person.display_name = HeaplessString::try_from(format!("Delete Test {}", i).as_str()).unwrap();
             persons.push(person);
         }
         
         let audit_log_id = Uuid::new_v4();
         let saved_persons = person_repo
             .save_batch(persons, audit_log_id)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         // Delete first two persons
         let ids_to_delete: Vec<Uuid> = saved_persons.iter().take(2).map(|p| p.id).collect();
         
         person_repo
             .delete_batch(&ids_to_delete)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         // Verify deletions
         let all_ids: Vec<Uuid> = saved_persons.iter().map(|p| p.id).collect();
         let exists_results = person_repo
             .exists_batch(&all_ids)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         assert_eq!(exists_results[0], false); // Deleted
         assert_eq!(exists_results[1], false); // Deleted
@@ -244,8 +292,8 @@ mod batch_tests {
         let mut persons = Vec::new();
         for i in 0..25 {
             let mut person = setup_test_person().await;
-            person.display_name = HeaplessString::try_from(format!("Chunked {}", i)).unwrap();
-            person.external_identifier = Some(HeaplessString::try_from(format!("CHK{:03}", i)).unwrap());
+            person.display_name = HeaplessString::try_from(format!("Chunked {}", i).as_str()).unwrap();
+            person.external_identifier = Some(HeaplessString::try_from(format!("CHK{:03}", i).as_str()).unwrap());
             persons.push(person);
         }
         
@@ -254,12 +302,13 @@ mod batch_tests {
         // Save with chunk size of 10
         let saved_persons = person_repo
             .save_batch_chunked(persons, audit_log_id, 10)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
-        assert_eq!(saved_persons.len(), 25);
+        assert_eq!(saved_persons.items.len(), 25);
         
         // Verify all persons exist
-        for person in &saved_persons {
+        for person in &saved_persons.items {
             assert!(person_repo.exists_by_id(person.id).await?);
         }
         
@@ -274,7 +323,7 @@ mod batch_tests {
         let mut persons = Vec::new();
         for i in 0..3 {
             let mut person = setup_test_person().await;
-            person.display_name = HeaplessString::try_from(format!("Valid {}", i)).unwrap();
+            person.display_name = HeaplessString::try_from(format!("Valid {}", i).as_str()).unwrap();
             persons.push(person);
         }
         
@@ -286,13 +335,14 @@ mod batch_tests {
         // Validate batch
         let validation_results = person_repo
             .validate_batch(&persons)
-            .await?;
+            .await
+            .map_err(|e| e.to_string())?;
         
         assert_eq!(validation_results.len(), 4);
-        assert!(validation_results[0].is_none()); // Valid
-        assert!(validation_results[1].is_none()); // Valid
-        assert!(validation_results[2].is_none()); // Valid
-        assert!(validation_results[3].is_some()); // Invalid - org not found
+        assert!(validation_results[0]); // Valid
+        assert!(validation_results[1]); // Valid
+        assert!(validation_results[2]); // Valid
+        assert!(!validation_results[3]); // Invalid - org not found
         
         Ok(())
     }

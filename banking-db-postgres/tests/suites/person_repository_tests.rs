@@ -9,12 +9,12 @@ use banking_db::repository::{
     CountrySubdivisionRepository,
 };
 use banking_db_postgres::repository::{
-    person_country_repository_impl::CountryRepositoryImpl,
-    person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
-    person_locality_repository_impl::LocalityRepositoryImpl,
-    person_location_repository_impl::LocationRepositoryImpl,
-    person_messaging_repository_impl::MessagingRepositoryImpl,
-    person_person_repository_impl::PersonRepositoryImpl,
+    person::country_repository_impl::CountryRepositoryImpl,
+    person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
+    person::locality_repository_impl::LocalityRepositoryImpl,
+    person::location_repository_impl::LocationRepositoryImpl,
+    person::messaging_repository_impl::MessagingRepositoryImpl,
+    person::person_repository_impl::PersonRepositoryImpl,
 };
 use banking_db_postgres::repository::executor::Executor;
 use heapless::String as HeaplessString;

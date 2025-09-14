@@ -77,7 +77,7 @@ When a repository (`Repo A`) needs to validate a constraint against an entity ma
 **Example: `CountrySubdivisionRepository` depending on `CountryRepository`**
 
 ```rust
-// In banking-db-postgres/src/repository/person_country_subdivision_repository_impl.rs
+// In banking-db-postgres/src/repository/person/country_subdivision_repository_impl.rs
 
 pub struct CountrySubdivisionRepositoryImpl {
     pool: Arc<PgPool>,

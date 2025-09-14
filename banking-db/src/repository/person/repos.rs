@@ -1,7 +1,4 @@
-use crate::repository::{
-    CountryRepository, CountrySubdivisionRepository, EntityReferenceRepository, LocationRepository,
-    LocalityRepository, MessagingRepository, PersonRepository,
-};
+use crate::repository::{country_repository::CountryRepository, country_subdivision_repository::CountrySubdivisionRepository, entity_reference_repository::EntityReferenceRepository, location_repository::LocationRepository, locality_repository::LocalityRepository, messaging_repository::MessagingRepository, person_repository::PersonRepository};
 use sqlx::Database;
 
 pub trait PersonRepos<DB: Database>: Send + Sync {
