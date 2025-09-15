@@ -109,3 +109,20 @@ pub fn create_test_messaging_model(email: &str) -> MessagingModel {
         other_type: None,
     }
 }
+use banking_db::models::person::{EntityReferenceModel, RelationshipRole};
+
+pub fn create_test_entity_reference_model(
+    person_id: Uuid,
+    entity_role: RelationshipRole,
+    reference_external_id: &str,
+) -> EntityReferenceModel {
+    EntityReferenceModel {
+        id: Uuid::new_v4(),
+        person_id,
+        entity_role,
+        reference_external_id: HeaplessString::try_from(reference_external_id).unwrap(),
+        reference_details_l1: None,
+        reference_details_l2: None,
+        reference_details_l3: None,
+    }
+}
