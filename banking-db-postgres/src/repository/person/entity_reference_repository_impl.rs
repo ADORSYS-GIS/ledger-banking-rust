@@ -6,6 +6,7 @@ use banking_db::models::person::{
     EntityReferenceModel,
 };
 use banking_db::repository::{EntityReferenceRepository, PersonRepository, TransactionAware};
+use banking_db::repository::person::entity_reference_repository::{EntityReferenceRepositoryError, EntityReferenceResult};
 use crate::repository::executor::Executor;
 use crate::repository::person::person_repository_impl::PersonRepositoryImpl;
 use sqlx::{postgres::PgRow, Postgres, Row};
@@ -60,14 +61,14 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         &self,
         entity_ref: EntityReferenceModel,
         audit_log_id: Uuid,
-    ) -> Result<EntityReferenceModel, sqlx::Error> {
+    ) -> EntityReferenceResult<EntityReferenceModel> {
         if !self
             .person_repository
             .exists_by_id(entity_ref.person_id)
             .await
-            .map_err(|e| sqlx::Error::Configuration(e.into()))?
+            .map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?
         {
-            return Err(sqlx::Error::RowNotFound);
+            return Err(EntityReferenceRepositoryError::PersonNotFound(entity_ref.person_id));
         }
 
         let mut hasher = XxHash64::with_seed(0);
@@ -183,15 +184,15 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
 
             match &self.executor {
                 Executor::Pool(pool) => {
-                    query1.execute(&**pool).await?;
-                    query2.execute(&**pool).await?;
-                    query3.execute(&**pool).await?;
+                    query1.execute(&**pool).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
+                    query2.execute(&**pool).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
+                    query3.execute(&**pool).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
                 }
                 Executor::Tx(tx) => {
                     let mut tx = tx.lock().await;
-                    query1.execute(&mut **tx).await?;
-                    query2.execute(&mut **tx).await?;
-                    query3.execute(&mut **tx).await?;
+                    query1.execute(&mut **tx).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
+                    query2.execute(&mut **tx).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
+                    query3.execute(&mut **tx).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
                 }
             }
 
@@ -296,15 +297,15 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
 
             match &self.executor {
                 Executor::Pool(pool) => {
-                    query1.execute(&**pool).await?;
-                    query2.execute(&**pool).await?;
-                    query3.execute(&**pool).await?;
+                    query1.execute(&**pool).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
+                    query2.execute(&**pool).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
+                    query3.execute(&**pool).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
                 }
                 Executor::Tx(tx) => {
                     let mut tx = tx.lock().await;
-                    query1.execute(&mut **tx).await?;
-                    query2.execute(&mut **tx).await?;
-                    query3.execute(&mut **tx).await?;
+                    query1.execute(&mut **tx).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
+                    query2.execute(&mut **tx).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
+                    query3.execute(&mut **tx).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?;
                 }
             }
 
@@ -321,7 +322,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         Ok(entity_ref)
     }
 
-    async fn load(&self, id: Uuid) -> Result<EntityReferenceModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> EntityReferenceResult<EntityReferenceModel> {
         let query = sqlx::query(
             r#"
             SELECT * FROM entity_reference WHERE id = $1
@@ -330,20 +331,20 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         .bind(id);
 
         let row = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Pool(pool) => query.fetch_one(&**pool).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?,
             Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await?
+                query.fetch_one(&mut **tx).await.map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))?
             }
         };
 
-        EntityReferenceModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+        EntityReferenceModel::try_from_row(&row).map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
+    ) -> EntityReferenceResult<Option<EntityReferenceIdxModel>> {
         Ok(self
             .entity_reference_idx_cache
             .read()
@@ -356,7 +357,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         person_id: Uuid,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
+    ) -> EntityReferenceResult<Vec<EntityReferenceIdxModel>> {
         let cache = self.entity_reference_idx_cache.read().await;
         if let Some(ids) = cache.get_by_person_id(&person_id) {
             let start = ((page - 1) * page_size) as usize;
@@ -381,7 +382,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         reference_external_id: &str,
         page: i32,
         page_size: i32,
-    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
+    ) -> EntityReferenceResult<Vec<EntityReferenceIdxModel>> {
         let mut hasher = XxHash64::with_seed(0);
         hasher.write(reference_external_id.as_bytes());
         let hash = hasher.finish() as i64;
@@ -408,7 +409,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
+    ) -> EntityReferenceResult<Vec<EntityReferenceIdxModel>> {
         let cache = self.entity_reference_idx_cache.read().await;
         let mut refs = Vec::with_capacity(ids.len());
         for id in ids {
@@ -419,7 +420,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         Ok(refs)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> EntityReferenceResult<bool> {
         Ok(self
             .entity_reference_idx_cache
             .read()
@@ -431,7 +432,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
     async fn find_ids_by_person_id(
         &self,
         person_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    ) -> EntityReferenceResult<Vec<Uuid>> {
         let cache = self.entity_reference_idx_cache.read().await;
         if let Some(ids) = cache.get_by_person_id(&person_id) {
             Ok(ids.clone())

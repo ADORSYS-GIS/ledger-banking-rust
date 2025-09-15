@@ -53,17 +53,18 @@ impl AuditLogRepository<Postgres> for MockAuditLogRepository {
 }
 
 pub fn create_test_services() -> TestServices {
+    let mock_person_repository = Arc::new(MockPersonRepository::default());
     let mock_country_subdivision_repository =
         Arc::new(MockCountrySubdivisionRepository::default());
     let repositories = Repositories {
-        person_repository: Arc::new(MockPersonRepository::default()),
+        person_repository: mock_person_repository.clone(),
         audit_log_repository: Arc::new(MockAuditLogRepository::default()),
         country_repository: Arc::new(MockCountryRepository::default()),
         country_subdivision_repository: mock_country_subdivision_repository.clone(),
         locality_repository: Arc::new(MockLocalityRepository::default()),
         location_repository: Arc::new(MockLocationRepository::default()),
         messaging_repository: Arc::new(MockMessagingRepository::default()),
-        entity_reference_repository: Arc::new(MockEntityReferenceRepository::default()),
+        entity_reference_repository: Arc::new(MockEntityReferenceRepository::new(mock_person_repository)),
     };
     TestServices {
         country_service: CountryServiceImpl::new(repositories.clone()),

@@ -3,18 +3,31 @@ use banking_api::domain::person::{EntityReference, RelationshipRole};
 use banking_db::models::person::{
     EntityReferenceAuditModel, EntityReferenceIdxModel, EntityReferenceModel,
 };
-use banking_db::repository::EntityReferenceRepository;
+use banking_db::repository::person::entity_reference_repository::{EntityReferenceRepository, EntityReferenceRepositoryError, EntityReferenceResult};
+use banking_db::repository::PersonRepository;
 use heapless::String as HeaplessString;
-use std::error::Error;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 use sqlx::Postgres;
+use crate::person::mock_person_repository::MockPersonRepository;
 
 #[derive(Default)]
 pub struct MockEntityReferenceRepository {
     entities: Mutex<Vec<EntityReferenceModel>>,
     entity_ixes: Mutex<Vec<EntityReferenceIdxModel>>,
     entity_audits: Mutex<Vec<EntityReferenceAuditModel>>,
+    person_repository: Arc<MockPersonRepository>,
+}
+
+impl MockEntityReferenceRepository {
+    pub fn new(person_repository: Arc<MockPersonRepository>) -> Self {
+        Self {
+            entities: Mutex::new(Vec::new()),
+            entity_ixes: Mutex::new(Vec::new()),
+            entity_audits: Mutex::new(Vec::new()),
+            person_repository,
+        }
+    }
 }
 
 #[async_trait]
@@ -23,7 +36,11 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
         &self,
         entity_ref: EntityReferenceModel,
         audit_log_id: Uuid,
-    ) -> Result<EntityReferenceModel, sqlx::Error> {
+    ) -> EntityReferenceResult<EntityReferenceModel> {
+        if !self.person_repository.exists_by_id(entity_ref.person_id).await.unwrap() {
+            return Err(EntityReferenceRepositoryError::PersonNotFound(entity_ref.person_id));
+        }
+
         self.entities.lock().unwrap().push(entity_ref.clone());
         let entity_idx = EntityReferenceIdxModel {
             entity_reference_id: entity_ref.id,
@@ -51,14 +68,17 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
         Ok(entity_ref)
     }
 
-    async fn load(&self, id: Uuid) -> Result<EntityReferenceModel, sqlx::Error> {
-        Ok(self.entities.lock().unwrap().iter().find(|p| p.id == id).cloned().unwrap())
+    async fn load(&self, id: Uuid) -> EntityReferenceResult<EntityReferenceModel> {
+        match self.entities.lock().unwrap().iter().find(|p| p.id == id).cloned() {
+            Some(e) => Ok(e),
+            None => Err(EntityReferenceRepositoryError::RepositoryError("Not found".into()))
+        }
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
+    ) -> EntityReferenceResult<Option<EntityReferenceIdxModel>> {
         Ok(self
             .entity_ixes
             .lock()
@@ -71,7 +91,7 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<EntityReferenceIdxModel>, Box<dyn Error + Send + Sync>> {
+    ) -> EntityReferenceResult<Vec<EntityReferenceIdxModel>> {
         let entities = self
             .entity_ixes
             .lock()
@@ -83,14 +103,14 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
         Ok(entities)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> EntityReferenceResult<bool> {
         Ok(self.entities.lock().unwrap().iter().any(|e| e.id == id))
     }
 
     async fn find_ids_by_person_id(
         &self,
         person_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    ) -> EntityReferenceResult<Vec<Uuid>> {
         let ids = self
             .entities
             .lock()
@@ -107,7 +127,7 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
         person_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
+    ) -> EntityReferenceResult<Vec<EntityReferenceIdxModel>> {
         let entities = self
             .entity_ixes
             .lock()
@@ -124,7 +144,7 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
         reference_external_id: &str,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<EntityReferenceIdxModel>, sqlx::Error> {
+    ) -> EntityReferenceResult<Vec<EntityReferenceIdxModel>> {
         let entities = self.entities.lock().unwrap();
         let entity_ixes = self.entity_ixes.lock().unwrap();
         let ids: Vec<Uuid> = entities
