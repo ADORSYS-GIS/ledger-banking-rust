@@ -1,18 +1,18 @@
 use crate::domain::person::CountrySubdivision;
 use async_trait::async_trait;
 use heapless::String as HeaplessString;
-use std::error::Error;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize, Deserialize)]
 pub enum CountrySubdivisionServiceError {
     #[error("Country not found: {0}")]
     CountryNotFound(Uuid),
     #[error("Duplicate subdivision code '{code}' for country {country_id}")]
     DuplicateCode { country_id: Uuid, code: String },
     #[error("Repository error: {0}")]
-    RepositoryError(Box<dyn Error + Send + Sync>),
+    RepositoryError(String),
     #[error("Validation error: {0}")]
     ValidationError(String),
 }

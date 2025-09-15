@@ -13,6 +13,12 @@ async fn test_create_locality() {
         .create_country(country.clone())
         .await
         .unwrap();
+    services
+        .mock_country_subdivision_repository
+        .valid_country_ids
+        .lock()
+        .unwrap()
+        .insert(country.id);
     let country_subdivision = create_test_country_subdivision(country.id);
     services
         .country_subdivision_service
@@ -37,6 +43,12 @@ async fn test_find_locality_by_id() {
         .create_country(country.clone())
         .await
         .unwrap();
+    services
+        .mock_country_subdivision_repository
+        .valid_country_ids
+        .lock()
+        .unwrap()
+        .insert(country.id);
     let country_subdivision = create_test_country_subdivision(country.id);
     services
         .country_subdivision_service
@@ -67,6 +79,12 @@ async fn test_find_localities_by_country_subdivision_id() {
         .create_country(country.clone())
         .await
         .unwrap();
+    services
+        .mock_country_subdivision_repository
+        .valid_country_ids
+        .lock()
+        .unwrap()
+        .insert(country.id);
     let country_subdivision = create_test_country_subdivision(country.id);
     services
         .country_subdivision_service
@@ -96,6 +114,12 @@ async fn test_find_locality_by_code() {
         .create_country(country.clone())
         .await
         .unwrap();
+    services
+        .mock_country_subdivision_repository
+        .valid_country_ids
+        .lock()
+        .unwrap()
+        .insert(country.id);
     let country_subdivision = create_test_country_subdivision(country.id);
     services
         .country_subdivision_service

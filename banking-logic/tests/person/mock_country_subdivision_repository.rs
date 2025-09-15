@@ -1,9 +1,11 @@
 use async_trait::async_trait;
 use banking_api::domain::person::CountrySubdivision;
 use banking_db::models::person::{CountrySubdivisionIdxModel, CountrySubdivisionModel};
-use banking_db::repository::CountrySubdivisionRepository;
+use banking_db::repository::{
+    CountrySubdivisionRepository, CountrySubdivisionRepositoryError, CountrySubdivisionResult,
+};
 use heapless::String as HeaplessString;
-use std::error::Error;
+use std::collections::HashSet;
 use std::sync::Mutex;
 use uuid::Uuid;
 use sqlx::Postgres;
@@ -12,6 +14,7 @@ use sqlx::Postgres;
 pub struct MockCountrySubdivisionRepository {
     country_subdivisions: Mutex<Vec<CountrySubdivisionModel>>,
     country_subdivision_ixes: Mutex<Vec<CountrySubdivisionIdxModel>>,
+    pub valid_country_ids: Mutex<HashSet<Uuid>>,
 }
 
 #[async_trait]
@@ -19,8 +22,22 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
     async fn save(
         &self,
         country_subdivision: CountrySubdivisionModel,
-    ) -> Result<CountrySubdivisionModel, sqlx::Error> {
-        self.country_subdivisions.lock().unwrap().push(country_subdivision.clone());
+    ) -> CountrySubdivisionResult<CountrySubdivisionModel> {
+        if !self
+            .valid_country_ids
+            .lock()
+            .unwrap()
+            .contains(&country_subdivision.country_id)
+        {
+            return Err(CountrySubdivisionRepositoryError::CountryNotFound(
+                country_subdivision.country_id,
+            ));
+        }
+
+        self.country_subdivisions
+            .lock()
+            .unwrap()
+            .push(country_subdivision.clone());
         let country_subdivision_idx = CountrySubdivisionIdxModel {
             country_subdivision_id: country_subdivision.id,
             country_id: country_subdivision.country_id,
@@ -33,7 +50,7 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
         Ok(country_subdivision)
     }
 
-    async fn load(&self, id: Uuid) -> Result<CountrySubdivisionModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> CountrySubdivisionResult<CountrySubdivisionModel> {
         Ok(self
             .country_subdivisions
             .lock()
@@ -47,7 +64,7 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
+    ) -> CountrySubdivisionResult<Option<CountrySubdivisionIdxModel>> {
         Ok(self
             .country_subdivision_ixes
             .lock()
@@ -60,7 +77,7 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<CountrySubdivisionIdxModel>, Box<dyn Error + Send + Sync>> {
+    ) -> CountrySubdivisionResult<Vec<CountrySubdivisionIdxModel>> {
         let subdivisions = self
             .country_subdivision_ixes
             .lock()
@@ -72,7 +89,7 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
         Ok(subdivisions)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> CountrySubdivisionResult<bool> {
         Ok(self
             .country_subdivision_ixes
             .lock()
@@ -81,10 +98,7 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
             .any(|s| s.country_subdivision_id == id))
     }
 
-    async fn find_ids_by_country_id(
-        &self,
-        country_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    async fn find_ids_by_country_id(&self, country_id: Uuid) -> CountrySubdivisionResult<Vec<Uuid>> {
         let ids = self
             .country_subdivisions
             .lock()
@@ -101,7 +115,7 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
         country_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
+    ) -> CountrySubdivisionResult<Vec<CountrySubdivisionIdxModel>> {
         let country_subdivisions = self
             .country_subdivision_ixes
             .lock()
@@ -117,7 +131,7 @@ impl CountrySubdivisionRepository<Postgres> for MockCountrySubdivisionRepository
         &self,
         country_id: Uuid,
         code: &str,
-    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
+    ) -> CountrySubdivisionResult<Option<CountrySubdivisionIdxModel>> {
         let subdivision = self
             .country_subdivisions
             .lock()

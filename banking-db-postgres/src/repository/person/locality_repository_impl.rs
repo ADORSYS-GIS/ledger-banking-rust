@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use banking_api::BankingResult;
 use banking_db::models::person::{LocalityIdxModel, LocalityIdxModelCache, LocalityModel};
-use banking_db::repository::{CountrySubdivisionRepository, LocalityRepository, TransactionAware};
+use banking_db::repository::{
+    CountrySubdivisionRepository, LocalityRepository, LocalityRepositoryError, LocalityResult,
+    TransactionAware,
+};
 use crate::repository::executor::Executor;
 use crate::repository::person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
@@ -57,14 +60,16 @@ impl LocalityRepositoryImpl {
 
 #[async_trait]
 impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
-    async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, sqlx::Error> {
+    async fn save(&self, locality: LocalityModel) -> LocalityResult<LocalityModel> {
         if !self
             .country_subdivision_repository
             .exists_by_id(locality.country_subdivision_id)
             .await
-            .map_err(sqlx::Error::Configuration)?
+            .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))?
         {
-            return Err(sqlx::Error::RowNotFound);
+            return Err(LocalityRepositoryError::CountrySubdivisionNotFound(
+                locality.country_subdivision_id,
+            ));
         }
 
         let query1 = sqlx::query(
@@ -96,13 +101,25 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
 
         match &self.executor {
             Executor::Pool(pool) => {
-                query1.execute(&**pool).await?;
-                query2.execute(&**pool).await?;
+                query1
+                    .execute(&**pool)
+                    .await
+                    .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))?;
+                query2
+                    .execute(&**pool)
+                    .await
+                    .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))?;
             }
             Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
-                query1.execute(&mut **tx).await?;
-                query2.execute(&mut **tx).await?;
+                query1
+                    .execute(&mut **tx)
+                    .await
+                    .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))?;
+                query2
+                    .execute(&mut **tx)
+                    .await
+                    .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))?;
             }
         }
 
@@ -116,7 +133,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         Ok(locality)
     }
 
-    async fn load(&self, id: Uuid) -> Result<LocalityModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> LocalityResult<LocalityModel> {
         let query = sqlx::query(
             r#"
             SELECT * FROM locality WHERE id = $1
@@ -125,17 +142,24 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         .bind(id);
 
         let row = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Pool(pool) => query
+                .fetch_one(&**pool)
+                .await
+                .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))?,
             Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await?
+                query
+                    .fetch_one(&mut **tx)
+                    .await
+                    .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))?
             }
         };
 
-        LocalityModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+        LocalityModel::try_from_row(&row)
+            .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
+    async fn find_by_id(&self, id: Uuid) -> LocalityResult<Option<LocalityIdxModel>> {
         Ok(self.locality_idx_cache.read().await.get_by_primary(&id))
     }
 
@@ -144,7 +168,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         country_subdivision_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
+    ) -> LocalityResult<Vec<LocalityIdxModel>> {
         let cache = self.locality_idx_cache.read().await;
         let mut result = Vec::new();
         if let Some(ids) = cache.get_by_country_subdivision_id(&country_subdivision_id) {
@@ -161,7 +185,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         &self,
         _country_id: Uuid,
         code: &str,
-    ) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
+    ) -> LocalityResult<Option<LocalityIdxModel>> {
         let mut hasher = XxHash64::with_seed(0);
         hasher.write(code.as_bytes());
         let code_hash = hasher.finish() as i64;
@@ -174,10 +198,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         }
     }
 
-    async fn find_by_ids(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<LocalityIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<LocalityIdxModel>> {
         let cache = self.locality_idx_cache.read().await;
         let mut result = Vec::new();
         for id in ids {
@@ -188,14 +209,14 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         Ok(result)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> LocalityResult<bool> {
         Ok(self.locality_idx_cache.read().await.contains_primary(&id))
     }
 
     async fn find_ids_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    ) -> LocalityResult<Vec<Uuid>> {
         let cache = self.locality_idx_cache.read().await;
         Ok(cache
             .get_by_country_subdivision_id(&country_subdivision_id)

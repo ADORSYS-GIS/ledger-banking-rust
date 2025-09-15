@@ -3,7 +3,10 @@ use banking_api::BankingResult;
 use banking_db::models::person::{
     CountrySubdivisionIdxModel, CountrySubdivisionIdxModelCache, CountrySubdivisionModel,
 };
-use banking_db::repository::{CountryRepository, CountrySubdivisionRepository, TransactionAware};
+use banking_db::repository::{
+    CountryRepository, CountrySubdivisionRepository, CountrySubdivisionRepositoryError,
+    CountrySubdivisionResult, TransactionAware,
+};
 use crate::repository::executor::Executor;
 use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
@@ -63,14 +66,16 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
     async fn save(
         &self,
         country_subdivision: CountrySubdivisionModel,
-    ) -> Result<CountrySubdivisionModel, sqlx::Error> {
+    ) -> CountrySubdivisionResult<CountrySubdivisionModel> {
         if !self
             .country_repository
             .exists_by_id(country_subdivision.country_id)
             .await
-            .map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?
+            .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?
         {
-            return Err(sqlx::Error::RowNotFound);
+            return Err(CountrySubdivisionRepositoryError::CountryNotFound(
+                country_subdivision.country_id,
+            ));
         }
 
         let query1 = sqlx::query(
@@ -112,13 +117,25 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
 
         match &self.executor {
             Executor::Pool(pool) => {
-                query1.execute(&**pool).await?;
-                query2.execute(&**pool).await?;
+                query1
+                    .execute(&**pool)
+                    .await
+                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?;
+                query2
+                    .execute(&**pool)
+                    .await
+                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?;
             }
             Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
-                query1.execute(&mut **tx).await?;
-                query2.execute(&mut **tx).await?;
+                query1
+                    .execute(&mut **tx)
+                    .await
+                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?;
+                query2
+                    .execute(&mut **tx)
+                    .await
+                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?;
             }
         }
 
@@ -135,7 +152,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         Ok(country_subdivision)
     }
 
-    async fn load(&self, id: Uuid) -> Result<CountrySubdivisionModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> CountrySubdivisionResult<CountrySubdivisionModel> {
         let query = sqlx::query(
             r#"
             SELECT * FROM country_subdivision WHERE id = $1
@@ -144,20 +161,27 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         .bind(id);
 
         let row = match &self.executor {
-            Executor::Pool(pool) => query.fetch_one(&**pool).await?,
+            Executor::Pool(pool) => query
+                .fetch_one(&**pool)
+                .await
+                .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?,
             Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
-                query.fetch_one(&mut **tx).await?
+                query
+                    .fetch_one(&mut **tx)
+                    .await
+                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?
             }
         };
 
-        CountrySubdivisionModel::try_from_row(&row).map_err(sqlx::Error::Decode)
+        CountrySubdivisionModel::try_from_row(&row)
+            .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
-    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
+    ) -> CountrySubdivisionResult<Option<CountrySubdivisionIdxModel>> {
         Ok(self
             .country_subdivision_idx_cache
             .read()
@@ -170,7 +194,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         country_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<CountrySubdivisionIdxModel>, sqlx::Error> {
+    ) -> CountrySubdivisionResult<Vec<CountrySubdivisionIdxModel>> {
         let mut result = Vec::new();
         let cache = self.country_subdivision_idx_cache.read().await;
         if let Some(ids) = cache.get_by_country_id(&country_id) {
@@ -187,7 +211,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         &self,
         _country_id: Uuid,
         code: &str,
-    ) -> Result<Option<CountrySubdivisionIdxModel>, sqlx::Error> {
+    ) -> CountrySubdivisionResult<Option<CountrySubdivisionIdxModel>> {
         let mut hasher = XxHash64::with_seed(0);
         hasher.write(code.as_bytes());
         let code_hash = hasher.finish() as i64;
@@ -203,7 +227,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<CountrySubdivisionIdxModel>, Box<dyn Error + Send + Sync>> {
+    ) -> CountrySubdivisionResult<Vec<CountrySubdivisionIdxModel>> {
         let mut result = Vec::new();
         let cache = self.country_subdivision_idx_cache.read().await;
         for id in ids {
@@ -214,7 +238,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         Ok(result)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> CountrySubdivisionResult<bool> {
         Ok(self
             .country_subdivision_idx_cache
             .read()
@@ -225,7 +249,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
     async fn find_ids_by_country_id(
         &self,
         country_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    ) -> CountrySubdivisionResult<Vec<Uuid>> {
         Ok(self
             .country_subdivision_idx_cache
             .read()

@@ -1,9 +1,8 @@
 use async_trait::async_trait;
 use banking_api::domain::person::Locality;
 use banking_db::models::person::{LocalityIdxModel, LocalityModel};
-use banking_db::repository::LocalityRepository;
+use banking_db::repository::{LocalityRepository, LocalityResult};
 use heapless::String as HeaplessString;
-use std::error::Error;
 use std::sync::Mutex;
 use uuid::Uuid;
 use sqlx::Postgres;
@@ -16,7 +15,7 @@ pub struct MockLocalityRepository {
 
 #[async_trait]
 impl LocalityRepository<Postgres> for MockLocalityRepository {
-    async fn save(&self, locality: LocalityModel) -> Result<LocalityModel, sqlx::Error> {
+    async fn save(&self, locality: LocalityModel) -> LocalityResult<LocalityModel> {
         self.localities.lock().unwrap().push(locality.clone());
         let locality_idx = LocalityIdxModel {
             locality_id: locality.id,
@@ -27,7 +26,7 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
         Ok(locality)
     }
 
-    async fn load(&self, id: Uuid) -> Result<LocalityModel, sqlx::Error> {
+    async fn load(&self, id: Uuid) -> LocalityResult<LocalityModel> {
         Ok(self
             .localities
             .lock()
@@ -38,7 +37,7 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
             .unwrap())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
+    async fn find_by_id(&self, id: Uuid) -> LocalityResult<Option<LocalityIdxModel>> {
         Ok(self
             .locality_ixes
             .lock()
@@ -48,10 +47,7 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
             .cloned())
     }
 
-    async fn find_by_ids(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<LocalityIdxModel>, Box<dyn Error + Send + Sync>> {
+    async fn find_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<LocalityIdxModel>> {
         let localities = self
             .locality_ixes
             .lock()
@@ -63,7 +59,7 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
         Ok(localities)
     }
 
-    async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>> {
+    async fn exists_by_id(&self, id: Uuid) -> LocalityResult<bool> {
         Ok(self
             .locality_ixes
             .lock()
@@ -75,7 +71,7 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
     async fn find_ids_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,
-    ) -> Result<Vec<Uuid>, Box<dyn Error + Send + Sync>> {
+    ) -> LocalityResult<Vec<Uuid>> {
         let ids = self
             .localities
             .lock()
@@ -92,7 +88,7 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
         country_subdivision_id: Uuid,
         _page: i32,
         _page_size: i32,
-    ) -> Result<Vec<LocalityIdxModel>, sqlx::Error> {
+    ) -> LocalityResult<Vec<LocalityIdxModel>> {
         let localities = self
             .locality_ixes
             .lock()
@@ -108,7 +104,7 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
         &self,
         country_subdivision_id: Uuid,
         code: &str,
-    ) -> Result<Option<LocalityIdxModel>, sqlx::Error> {
+    ) -> LocalityResult<Option<LocalityIdxModel>> {
         let locality = self
             .localities
             .lock()

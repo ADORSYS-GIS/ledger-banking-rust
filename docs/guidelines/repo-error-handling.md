@@ -125,7 +125,9 @@ async fn save(&self, person: PersonModel, audit_log_id: Uuid) -> PersonResult<Pe
 ## Integration with Service Layer
 
 ### Service Error Mapping
-Services must map repository errors to their own service-specific error types. This mapping should be implemented within the service implementation file (e.g., in the `banking-logic` crate), not in the service trait definition (in the `banking-api` crate). This approach decouples the service layer from the data layer's error details and avoids creating cyclic dependencies between crates.
+Services must map repository errors to their own service-specific error types. This mapping **must** be implemented within the service implementation file (e.g., in the `banking-logic` crate), not in the service trait definition (in the `banking-api` crate). This approach decouples the service layer from the data layer's error details and avoids creating cyclic dependencies between crates.
+
+The conversion can be implemented using a `From` trait implementation or a dedicated `map_domain_error_to_service_error` function. The choice depends on the complexity of the mapping.
 
 ```rust
 // Example from banking-logic/src/services/person/location_service_impl.rs

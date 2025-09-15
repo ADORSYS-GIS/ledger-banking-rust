@@ -32,7 +32,7 @@ fn map_domain_error_to_service_error(
             CountrySubdivisionServiceError::DuplicateCode { country_id, code }
         }
         CountrySubdivisionRepositoryError::RepositoryError(err) => {
-            CountrySubdivisionServiceError::RepositoryError(err)
+            CountrySubdivisionServiceError::RepositoryError(err.to_string())
         }
     }
 }

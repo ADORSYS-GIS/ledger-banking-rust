@@ -26,6 +26,7 @@ pub struct TestServices {
     pub messaging_service: MessagingServiceImpl<Postgres>,
     pub entity_reference_service: EntityReferenceServiceImpl<Postgres>,
     pub person_service: PersonServiceImpl<Postgres>,
+    pub mock_country_subdivision_repository: Arc<MockCountrySubdivisionRepository>,
 }
 
 #[derive(Default)]
@@ -52,11 +53,13 @@ impl AuditLogRepository<Postgres> for MockAuditLogRepository {
 }
 
 pub fn create_test_services() -> TestServices {
+    let mock_country_subdivision_repository =
+        Arc::new(MockCountrySubdivisionRepository::default());
     let repositories = Repositories {
         person_repository: Arc::new(MockPersonRepository::default()),
         audit_log_repository: Arc::new(MockAuditLogRepository::default()),
         country_repository: Arc::new(MockCountryRepository::default()),
-        country_subdivision_repository: Arc::new(MockCountrySubdivisionRepository::default()),
+        country_subdivision_repository: mock_country_subdivision_repository.clone(),
         locality_repository: Arc::new(MockLocalityRepository::default()),
         location_repository: Arc::new(MockLocationRepository::default()),
         messaging_repository: Arc::new(MockMessagingRepository::default()),
@@ -70,6 +73,7 @@ pub fn create_test_services() -> TestServices {
         messaging_service: MessagingServiceImpl::new(repositories.clone()),
         entity_reference_service: EntityReferenceServiceImpl::new(repositories.clone()),
         person_service: PersonServiceImpl::new(repositories),
+        mock_country_subdivision_repository,
     }
 }
 

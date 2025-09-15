@@ -16,6 +16,10 @@ pub enum BankingError {
     PersonServiceError(#[from] crate::service::PersonServiceError),
     #[error("Country service error: {0}")]
     CountryServiceError(#[from] crate::service::CountryServiceError),
+    #[error("Country subdivision service error: {0}")]
+    CountrySubdivisionServiceError(#[from] crate::service::CountrySubdivisionServiceError),
+    #[error("Locality service error: {0}")]
+    LocalityServiceError(#[from] crate::service::LocalityServiceError),
     #[error("Audit service error: {0}")]
     AuditServiceError(#[from] crate::service::AuditServiceError),
     // Account-related errors
