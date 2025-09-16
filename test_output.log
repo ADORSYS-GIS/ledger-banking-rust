@@ -1,0 +1,142 @@
+   Compiling banking-db-postgres v0.1.0 (/home/francis/dev/ledger-rust/ledger-banking-rust/banking-db-postgres)
+   Compiling banking-logic v0.1.0 (/home/francis/dev/ledger-rust/ledger-banking-rust/banking-logic)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.95s
+     Running unittests src/lib.rs (target/debug/deps/banking_api-3be13a3f550ba18f)
+
+running 18 tests
+test domain::account::tests::test_currency_memory_efficiency ... ok
+test domain::account::tests::test_currency_validation_and_conversion ... ok
+test domain::account::tests::test_disbursement_instruction_management ... ok
+test domain::account::tests::test_enum_memory_efficiency ... ok
+test domain::account::tests::test_product_id_efficiency ... ok
+test domain::calendar::tests::test_bank_holiday_builder_pattern ... ok
+test domain::calendar::tests::test_bank_holiday_builder_validation ... ok
+test domain::collateral::tests::test_available_value_calculation ... ok
+test domain::collateral::tests::test_ltv_calculation ... ok
+test domain::collateral::tests::test_valuation_due_check ... ok
+test domain::customer::tests::test_customer_builder_pattern ... ok
+test domain::customer::tests::test_customer_builder_validation ... ok
+test domain::customer::tests::test_customer_validation ... ok
+test domain::customer::tests::test_heapless_string_memory_efficiency ... ok
+test domain::customer::tests::test_heapless_string_overflow_protection ... ok
+test domain::transaction::tests::test_fixed_array_codes_efficiency ... ok
+test domain::transaction::tests::test_transaction_enum_memory_efficiency ... ok
+test domain::transaction::tests::test_transaction_enum_type_safety ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/stack_optimization_test.rs (target/debug/deps/stack_optimization_test-b2833ccd040994ed)
+
+running 7 tests
+test stack_optimization_tests::test_customer_serialization_with_bounded_strings ... ok
+test stack_optimization_tests::test_enum_serialization_compatibility ... ok
+test stack_optimization_tests::test_blake3_hash_serialization ... ok
+test stack_optimization_tests::test_memory_efficiency_comparisons ... ok
+test stack_optimization_tests::test_account_serialization_with_fixed_arrays ... ok
+test stack_optimization_tests::test_transaction_serialization_with_heapless_strings ... ok
+test stack_optimization_tests::test_validation_with_stack_types ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/banking_db-34e1cfada55b1521)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/memory_test.rs (target/debug/deps/memory_test-8a338bb1eb06a21d)
+
+running 8 tests
+test test_person_idx_model_memory_size_and_alignment ... ok
+test test_person_index_size_with_100000_entries ... ok
+test test_person_index_size_with_10000_entries ... ok
+test test_person_index_size_with_20000_entries ... ok
+test test_person_index_size_with_50000_entries ... ok
+test test_person_index_size_with_one_entry ... ok
+test test_person_index_size_with_three_entries ... ok
+test test_person_index_size_with_two_entries ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/memory_test_city_cache.rs (target/debug/deps/memory_test_city_cache-95f7c2ee182b8a24)
+
+running 2 tests
+test test_locality_cache_size_for_cameroon_with_villages ... ok
+test test_locality_idx_model_size ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/memory_test_country_cache.rs (target/debug/deps/memory_test_country_cache-e6a3069e77ca84b3)
+
+running 2 tests
+test test_country_cache_size_for_all_countries ... ok
+test test_country_idx_model_size ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/memory_test_moka.rs (target/debug/deps/memory_test_moka-fb69bd5885d9a0d5)
+
+running 1 test
+test test_moka_cache_with_100000_entries ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/memory_test_state_province_cache.rs (target/debug/deps/memory_test_state_province_cache-b7542c0d6eea4107)
+
+running 2 tests
+test test_country_subdivision_cache_size ... ok
+test test_country_subdivision_idx_model_size ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/banking_db_postgres-b1c5a24ffed5997d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/integration.rs (target/debug/deps/integration-d54e7d9b70a3d9c4)
+
+running 16 tests
+test suites::person::person_batch_operations_test::test_validate_batch ... ok
+test suites::person::country_repository_tests::test_country_repository ... ok
+test suites::person::messaging_repository_tests::test_messaging_repository ... ok
+test suites::person::person_batch_operations_test::test_update_batch ... ok
+test suites::commons::commons::tests::test_database_connection ... ok
+test suites::person::person_batch_operations_test::test_save_batch_chunked ... ok
+test suites::person::country_subdivision_repository_tests::test_country_subdivision_repository ... ok
+test suites::person::person_batch_operations_test::test_exists_batch ... ok
+test suites::person::locality_repository_tests::test_locality_repository ... ok
+test suites::person::person_batch_operations_test::test_save_batch ... ok
+test suites::person::entity_reference_repository_tests::test_entity_reference_repository ... ok
+test suites::person::person_batch_operations_test::test_load_batch ... ok
+test suites::person::location_repository_tests::test_location_repository ... ok
+test suites::person::person_batch_operations_test::test_delete_batch ... ok
+test suites::person::person_repository_tests::test_person_repository ... ok
+test suites::test_helper::tests::test_transaction_rollback ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running unittests src/lib.rs (target/debug/deps/banking_logic-b1159e76190634e1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/person_commands.rs (target/debug/deps/person_commands-f8366127204a7834)
+
+running 1 test
+test test_populate_geo_data_directly ... FAILED
+
+failures:
+
+---- test_populate_geo_data_directly stdout ----
+Error: Duplicate country ISO2: CM
+
+
+failures:
+    test_populate_geo_data_directly
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p banking-logic --test person_commands`

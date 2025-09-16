@@ -1,7 +1,7 @@
 use crate::repository::person::person_repository_impl::PersonRepositoryImpl;
 use crate::utils::TryFromRow;
 use async_trait::async_trait;
-use banking_db::models::person::{PersonIdxModel, PersonModel};
+use banking_db::models::person::{MessagingType, PersonIdxModel, PersonModel, PersonType};
 use banking_db::repository::{
     BatchOperationStats, BatchRepository, BatchResult, LocationRepository, PersonRepository,
     PersonRepositoryError,
@@ -13,6 +13,52 @@ use std::time::Instant;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
+type PersonTuple = (
+    Uuid,
+    PersonType,
+    String,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+    i32,
+);
+
+type PersonAuditTuple = (
+    Uuid,
+    i32,
+    i64,
+    PersonType,
+    String,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<Uuid>,
+    Option<MessagingType>,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+    i32,
+    Uuid,
+);
 /// Batch operations implementation for PersonRepository
 #[async_trait]
 impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
@@ -187,285 +233,10 @@ impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
 
         // Perform bulk inserts using UNNEST for maximum efficiency
         if !person_values.is_empty() {
-            // Insert into person table
-            let query = r#"
-                INSERT INTO person (
-                    id, person_type, display_name, external_identifier,
-                    organization_person_id, messaging1_id, messaging1_type,
-                    messaging2_id, messaging2_type, messaging3_id, messaging3_type,
-                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                    department, location_id, duplicate_of_person_id, entity_reference_count
-                )
-                SELECT * FROM UNNEST(
-                    $1::uuid[], $2::person_type[], $3::text[], $4::text[],
-                    $5::uuid[], $6::uuid[], $7::messaging_type[],
-                    $8::uuid[], $9::messaging_type[], $10::uuid[], $11::messaging_type[],
-                    $12::uuid[], $13::messaging_type[], $14::uuid[], $15::messaging_type[],
-                    $16::text[], $17::uuid[], $18::uuid[], $19::int[]
-                )
-            "#;
-
-            // Extract values manually instead of using unzip with large tuples
-            let mut ids = Vec::new();
-            let mut types = Vec::new();
-            let mut names = Vec::new();
-            let mut ext_ids = Vec::new();
-            let mut org_ids = Vec::new();
-            let mut msg1_ids = Vec::new();
-            let mut msg1_types = Vec::new();
-            let mut msg2_ids = Vec::new();
-            let mut msg2_types = Vec::new();
-            let mut msg3_ids = Vec::new();
-            let mut msg3_types = Vec::new();
-            let mut msg4_ids = Vec::new();
-            let mut msg4_types = Vec::new();
-            let mut msg5_ids = Vec::new();
-            let mut msg5_types = Vec::new();
-            let mut depts = Vec::new();
-            let mut loc_ids = Vec::new();
-            let mut dup_ids = Vec::new();
-            let mut ref_counts = Vec::new();
-
-            for v in person_values.into_iter() {
-                ids.push(v.0);
-                types.push(v.1);
-                names.push(v.2);
-                ext_ids.push(v.3);
-                org_ids.push(v.4);
-                msg1_ids.push(v.5);
-                msg1_types.push(v.6);
-                msg2_ids.push(v.7);
-                msg2_types.push(v.8);
-                msg3_ids.push(v.9);
-                msg3_types.push(v.10);
-                msg4_ids.push(v.11);
-                msg4_types.push(v.12);
-                msg5_ids.push(v.13);
-                msg5_types.push(v.14);
-                depts.push(v.15);
-                loc_ids.push(v.16);
-                dup_ids.push(v.17);
-                ref_counts.push(v.18);
-            }
-
-            // Use the executor (which handles both Pool and Transaction)
-            match &self.executor {
-                crate::repository::executor::Executor::Pool(pool) => {
-                    sqlx::query(query)
-                        .bind(&ids)
-                        .bind(&types)
-                        .bind(&names)
-                        .bind(&ext_ids)
-                        .bind(&org_ids)
-                        .bind(&msg1_ids)
-                        .bind(&msg1_types)
-                        .bind(&msg2_ids)
-                        .bind(&msg2_types)
-                        .bind(&msg3_ids)
-                        .bind(&msg3_types)
-                        .bind(&msg4_ids)
-                        .bind(&msg4_types)
-                        .bind(&msg5_ids)
-                        .bind(&msg5_types)
-                        .bind(&depts)
-                        .bind(&loc_ids)
-                        .bind(&dup_ids)
-                        .bind(&ref_counts)
-                        .execute(&**pool)
-                        .await?;
-                }
-                crate::repository::executor::Executor::Tx(tx) => {
-                    let mut tx = tx.lock().await;
-                    sqlx::query(query)
-                        .bind(&ids)
-                        .bind(&types)
-                        .bind(&names)
-                        .bind(&ext_ids)
-                        .bind(&org_ids)
-                        .bind(&msg1_ids)
-                        .bind(&msg1_types)
-                        .bind(&msg2_ids)
-                        .bind(&msg2_types)
-                        .bind(&msg3_ids)
-                        .bind(&msg3_types)
-                        .bind(&msg4_ids)
-                        .bind(&msg4_types)
-                        .bind(&msg5_ids)
-                        .bind(&msg5_types)
-                        .bind(&depts)
-                        .bind(&loc_ids)
-                        .bind(&dup_ids)
-                        .bind(&ref_counts)
-                        .execute(&mut **tx)
-                        .await?;
-                }
-            }
-
-            // Insert into person_idx table
-            let idx_query = r#"
-                INSERT INTO person_idx (person_id, external_identifier_hash, version, hash)
-                SELECT * FROM UNNEST($1::uuid[], $2::bigint[], $3::int[], $4::bigint[])
-            "#;
-
-            // Extract values for person_idx
-            let mut idx_ids = Vec::new();
-            let mut ext_hashes = Vec::new();
-            let mut versions = Vec::new();
-            let mut hashes = Vec::new();
-
-            for v in person_idx_values.iter() {
-                idx_ids.push(v.0);
-                ext_hashes.push(v.1);
-                versions.push(v.2);
-                hashes.push(v.3);
-            }
-
-            match &self.executor {
-                crate::repository::executor::Executor::Pool(pool) => {
-                    sqlx::query(idx_query)
-                        .bind(&idx_ids)
-                        .bind(&ext_hashes)
-                        .bind(&versions)
-                        .bind(&hashes)
-                        .execute(&**pool)
-                        .await?;
-                }
-                crate::repository::executor::Executor::Tx(tx) => {
-                    let mut tx = tx.lock().await;
-                    sqlx::query(idx_query)
-                        .bind(&idx_ids)
-                        .bind(&ext_hashes)
-                        .bind(&versions)
-                        .bind(&hashes)
-                        .execute(&mut **tx)
-                        .await?;
-                }
-            }
-
-            // Insert into person_audit table
-            let audit_query = r#"
-                INSERT INTO person_audit (
-                    person_id, version, hash, person_type, display_name, external_identifier,
-                    organization_person_id, messaging1_id, messaging1_type,
-                    messaging2_id, messaging2_type, messaging3_id, messaging3_type,
-                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                    department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id
-                )
-                SELECT * FROM UNNEST(
-                    $1::uuid[], $2::int[], $3::bigint[], $4::person_type[], $5::text[], $6::text[],
-                    $7::uuid[], $8::uuid[], $9::messaging_type[],
-                    $10::uuid[], $11::messaging_type[], $12::uuid[], $13::messaging_type[],
-                    $14::uuid[], $15::messaging_type[], $16::uuid[], $17::messaging_type[],
-                    $18::text[], $19::uuid[], $20::uuid[], $21::int[], $22::uuid[]
-                )
-            "#;
-
-            // Extract values for person_audit
-            let mut audit_ids = Vec::new();
-            let mut audit_versions = Vec::new();
-            let mut audit_hashes = Vec::new();
-            let mut audit_types = Vec::new();
-            let mut audit_names = Vec::new();
-            let mut audit_ext_ids = Vec::new();
-            let mut audit_org_ids = Vec::new();
-            let mut audit_msg1_ids = Vec::new();
-            let mut audit_msg1_types = Vec::new();
-            let mut audit_msg2_ids = Vec::new();
-            let mut audit_msg2_types = Vec::new();
-            let mut audit_msg3_ids = Vec::new();
-            let mut audit_msg3_types = Vec::new();
-            let mut audit_msg4_ids = Vec::new();
-            let mut audit_msg4_types = Vec::new();
-            let mut audit_msg5_ids = Vec::new();
-            let mut audit_msg5_types = Vec::new();
-            let mut audit_depts = Vec::new();
-            let mut audit_loc_ids = Vec::new();
-            let mut audit_dup_ids = Vec::new();
-            let mut audit_ref_counts = Vec::new();
-            let mut audit_log_ids = Vec::new();
-
-            for v in person_audit_values.into_iter() {
-                audit_ids.push(v.0);
-                audit_versions.push(v.1);
-                audit_hashes.push(v.2);
-                audit_types.push(v.3);
-                audit_names.push(v.4);
-                audit_ext_ids.push(v.5);
-                audit_org_ids.push(v.6);
-                audit_msg1_ids.push(v.7);
-                audit_msg1_types.push(v.8);
-                audit_msg2_ids.push(v.9);
-                audit_msg2_types.push(v.10);
-                audit_msg3_ids.push(v.11);
-                audit_msg3_types.push(v.12);
-                audit_msg4_ids.push(v.13);
-                audit_msg4_types.push(v.14);
-                audit_msg5_ids.push(v.15);
-                audit_msg5_types.push(v.16);
-                audit_depts.push(v.17);
-                audit_loc_ids.push(v.18);
-                audit_dup_ids.push(v.19);
-                audit_ref_counts.push(v.20);
-                audit_log_ids.push(v.21);
-            }
-
-            match &self.executor {
-                crate::repository::executor::Executor::Pool(pool) => {
-                    sqlx::query(audit_query)
-                        .bind(&audit_ids)
-                        .bind(&audit_versions)
-                        .bind(&audit_hashes)
-                        .bind(&audit_types)
-                        .bind(&audit_names)
-                        .bind(&audit_ext_ids)
-                        .bind(&audit_org_ids)
-                        .bind(&audit_msg1_ids)
-                        .bind(&audit_msg1_types)
-                        .bind(&audit_msg2_ids)
-                        .bind(&audit_msg2_types)
-                        .bind(&audit_msg3_ids)
-                        .bind(&audit_msg3_types)
-                        .bind(&audit_msg4_ids)
-                        .bind(&audit_msg4_types)
-                        .bind(&audit_msg5_ids)
-                        .bind(&audit_msg5_types)
-                        .bind(&audit_depts)
-                        .bind(&audit_loc_ids)
-                        .bind(&audit_dup_ids)
-                        .bind(&audit_ref_counts)
-                        .bind(&audit_log_ids)
-                        .execute(&**pool)
-                        .await?;
-                }
-                crate::repository::executor::Executor::Tx(tx) => {
-                    let mut tx = tx.lock().await;
-                    sqlx::query(audit_query)
-                        .bind(&audit_ids)
-                        .bind(&audit_versions)
-                        .bind(&audit_hashes)
-                        .bind(&audit_types)
-                        .bind(&audit_names)
-                        .bind(&audit_ext_ids)
-                        .bind(&audit_org_ids)
-                        .bind(&audit_msg1_ids)
-                        .bind(&audit_msg1_types)
-                        .bind(&audit_msg2_ids)
-                        .bind(&audit_msg2_types)
-                        .bind(&audit_msg3_ids)
-                        .bind(&audit_msg3_types)
-                        .bind(&audit_msg4_ids)
-                        .bind(&audit_msg4_types)
-                        .bind(&audit_msg5_ids)
-                        .bind(&audit_msg5_types)
-                        .bind(&audit_depts)
-                        .bind(&audit_loc_ids)
-                        .bind(&audit_dup_ids)
-                        .bind(&audit_ref_counts)
-                        .bind(&audit_log_ids)
-                        .execute(&mut **tx)
-                        .await?;
-                }
-            }
+            self.execute_person_insert(person_values).await?;
+            self.execute_person_idx_insert(person_idx_values).await?;
+            self.execute_person_audit_insert(person_audit_values)
+                .await?;
         }
 
         stats.duration_ms = start.elapsed().as_millis() as u64;
@@ -676,344 +447,10 @@ impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
        }
 
         if !person_values.is_empty() {
-            let update_query = r#"
-                UPDATE person SET
-                    person_type = u.person_type, display_name = u.display_name,
-                    external_identifier = u.external_identifier, organization_person_id = u.organization_person_id,
-                    messaging1_id = u.messaging1_id, messaging1_type = u.messaging1_type,
-                    messaging2_id = u.messaging2_id, messaging2_type = u.messaging2_type,
-                    messaging3_id = u.messaging3_id, messaging3_type = u.messaging3_type,
-                    messaging4_id = u.messaging4_id, messaging4_type = u.messaging4_type,
-                    messaging5_id = u.messaging5_id, messaging5_type = u.messaging5_type,
-                    department = u.department, location_id = u.location_id,
-                    duplicate_of_person_id = u.duplicate_of_person_id,
-                    entity_reference_count = u.entity_reference_count
-                FROM (SELECT * FROM UNNEST(
-                    $1::uuid[], $2::person_type[], $3::text[], $4::text[],
-                    $5::uuid[], $6::uuid[], $7::messaging_type[],
-                    $8::uuid[], $9::messaging_type[], $10::uuid[], $11::messaging_type[],
-                    $12::uuid[], $13::messaging_type[], $14::uuid[], $15::messaging_type[],
-                    $16::text[], $17::uuid[], $18::uuid[], $19::int[]
-                )) AS u(
-                    id, person_type, display_name, external_identifier,
-                    organization_person_id, messaging1_id, messaging1_type,
-                    messaging2_id, messaging2_type, messaging3_id, messaging3_type,
-                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                    department, location_id, duplicate_of_person_id, entity_reference_count
-                )
-                WHERE person.id = u.id
-            "#;
-
-            let (
-                ids,
-                person_types,
-                display_names,
-                external_identifiers,
-                organization_person_ids,
-                messaging1_ids,
-                messaging1_types,
-                messaging2_ids,
-                messaging2_types,
-                messaging3_ids,
-                messaging3_types,
-                messaging4_ids,
-                messaging4_types,
-                messaging5_ids,
-                messaging5_types,
-                departments,
-                location_ids,
-                duplicate_of_person_ids,
-                entity_reference_counts,
-            ) = person_values.into_iter().fold(
-                (
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                ),
-                |mut acc, val| {
-                    acc.0.push(val.0);
-                    acc.1.push(val.1);
-                    acc.2.push(val.2);
-                    acc.3.push(val.3);
-                    acc.4.push(val.4);
-                    acc.5.push(val.5);
-                    acc.6.push(val.6);
-                    acc.7.push(val.7);
-                    acc.8.push(val.8);
-                    acc.9.push(val.9);
-                    acc.10.push(val.10);
-                    acc.11.push(val.11);
-                    acc.12.push(val.12);
-                    acc.13.push(val.13);
-                    acc.14.push(val.14);
-                    acc.15.push(val.15);
-                    acc.16.push(val.16);
-                    acc.17.push(val.17);
-                    acc.18.push(val.18);
-                    acc
-                },
-            );
-
-            match &self.executor {
-                crate::repository::executor::Executor::Pool(pool) => {
-                    sqlx::query(update_query)
-                        .bind(&ids)
-                        .bind(&person_types)
-                        .bind(&display_names)
-                        .bind(&external_identifiers)
-                        .bind(&organization_person_ids)
-                        .bind(&messaging1_ids)
-                        .bind(&messaging1_types)
-                        .bind(&messaging2_ids)
-                        .bind(&messaging2_types)
-                        .bind(&messaging3_ids)
-                        .bind(&messaging3_types)
-                        .bind(&messaging4_ids)
-                        .bind(&messaging4_types)
-                        .bind(&messaging5_ids)
-                        .bind(&messaging5_types)
-                        .bind(&departments)
-                        .bind(&location_ids)
-                        .bind(&duplicate_of_person_ids)
-                        .bind(&entity_reference_counts)
-                        .execute(&**pool)
-                        .await?;
-                }
-                crate::repository::executor::Executor::Tx(tx) => {
-                    let mut tx = tx.lock().await;
-                    sqlx::query(update_query)
-                        .bind(&ids)
-                        .bind(&person_types)
-                        .bind(&display_names)
-                        .bind(&external_identifiers)
-                        .bind(&organization_person_ids)
-                        .bind(&messaging1_ids)
-                        .bind(&messaging1_types)
-                        .bind(&messaging2_ids)
-                        .bind(&messaging2_types)
-                        .bind(&messaging3_ids)
-                        .bind(&messaging3_types)
-                        .bind(&messaging4_ids)
-                        .bind(&messaging4_types)
-                        .bind(&messaging5_ids)
-                        .bind(&messaging5_types)
-                        .bind(&departments)
-                        .bind(&location_ids)
-                        .bind(&duplicate_of_person_ids)
-                        .bind(&entity_reference_counts)
-                        .execute(&mut **tx)
-                        .await?;
-                }
-            }
-
-            let update_idx_query = r#"
-                UPDATE person_idx SET
-                    external_identifier_hash = u.external_identifier_hash,
-                    version = u.version,
-                    hash = u.hash
-                FROM (SELECT * FROM UNNEST($1::uuid[], $2::bigint[], $3::int[], $4::bigint[]))
-                AS u(person_id, external_identifier_hash, version, hash)
-                WHERE person_idx.person_id = u.person_id
-            "#;
-
-            let (idx_ids, ext_hashes, versions, hashes) = person_idx_values.into_iter().fold(
-                (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
-                |mut acc, val| {
-                    acc.0.push(val.0);
-                    acc.1.push(val.1);
-                    acc.2.push(val.2);
-                    acc.3.push(val.3);
-                    acc
-                },
-            );
-
-            match &self.executor {
-                crate::repository::executor::Executor::Pool(pool) => {
-                    sqlx::query(update_idx_query)
-                        .bind(&idx_ids)
-                        .bind(&ext_hashes)
-                        .bind(&versions)
-                        .bind(&hashes)
-                        .execute(&**pool)
-                        .await?;
-                }
-                crate::repository::executor::Executor::Tx(tx) => {
-                    let mut tx = tx.lock().await;
-                    sqlx::query(update_idx_query)
-                        .bind(&idx_ids)
-                        .bind(&ext_hashes)
-                        .bind(&versions)
-                        .bind(&hashes)
-                        .execute(&mut **tx)
-                        .await?;
-                }
-            }
-
-            let audit_query = r#"
-                INSERT INTO person_audit (
-                    person_id, version, hash, person_type, display_name, external_identifier,
-                    organization_person_id, messaging1_id, messaging1_type,
-                    messaging2_id, messaging2_type, messaging3_id, messaging3_type,
-                    messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                    department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id
-                )
-                SELECT * FROM UNNEST(
-                    $1::uuid[], $2::int[], $3::bigint[], $4::person_type[], $5::text[], $6::text[],
-                    $7::uuid[], $8::uuid[], $9::messaging_type[],
-                    $10::uuid[], $11::messaging_type[], $12::uuid[], $13::messaging_type[],
-                    $14::uuid[], $15::messaging_type[], $16::uuid[], $17::messaging_type[],
-                    $18::text[], $19::uuid[], $20::uuid[], $21::int[], $22::uuid[]
-                )
-            "#;
-
-            let (
-                audit_ids,
-                audit_versions,
-                audit_hashes,
-                audit_types,
-                audit_names,
-                audit_ext_ids,
-                audit_org_ids,
-                audit_msg1_ids,
-                audit_msg1_types,
-                audit_msg2_ids,
-                audit_msg2_types,
-                audit_msg3_ids,
-                audit_msg3_types,
-                audit_msg4_ids,
-                audit_msg4_types,
-                audit_msg5_ids,
-                audit_msg5_types,
-                audit_depts,
-                audit_loc_ids,
-                audit_dup_ids,
-                audit_ref_counts,
-                audit_log_ids,
-            ) = person_audit_values.into_iter().fold(
-                (
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                    Vec::new(),
-                ),
-                |mut acc, val| {
-                    acc.0.push(val.0);
-                    acc.1.push(val.1);
-                    acc.2.push(val.2);
-                    acc.3.push(val.3);
-                    acc.4.push(val.4);
-                    acc.5.push(val.5);
-                    acc.6.push(val.6);
-                    acc.7.push(val.7);
-                    acc.8.push(val.8);
-                    acc.9.push(val.9);
-                    acc.10.push(val.10);
-                    acc.11.push(val.11);
-                    acc.12.push(val.12);
-                    acc.13.push(val.13);
-                    acc.14.push(val.14);
-                    acc.15.push(val.15);
-                    acc.16.push(val.16);
-                    acc.17.push(val.17);
-                    acc.18.push(val.18);
-                    acc.19.push(val.19);
-                    acc.20.push(val.20);
-                    acc.21.push(val.21);
-                    acc
-                },
-            );
-
-            match &self.executor {
-                crate::repository::executor::Executor::Pool(pool) => {
-                    sqlx::query(audit_query)
-                        .bind(&audit_ids)
-                        .bind(&audit_versions)
-                        .bind(&audit_hashes)
-                        .bind(&audit_types)
-                        .bind(&audit_names)
-                        .bind(&audit_ext_ids)
-                        .bind(&audit_org_ids)
-                        .bind(&audit_msg1_ids)
-                        .bind(&audit_msg1_types)
-                        .bind(&audit_msg2_ids)
-                        .bind(&audit_msg2_types)
-                        .bind(&audit_msg3_ids)
-                        .bind(&audit_msg3_types)
-                        .bind(&audit_msg4_ids)
-                        .bind(&audit_msg4_types)
-                        .bind(&audit_msg5_ids)
-                        .bind(&audit_msg5_types)
-                        .bind(&audit_depts)
-                        .bind(&audit_loc_ids)
-                        .bind(&audit_dup_ids)
-                        .bind(&audit_ref_counts)
-                        .bind(&audit_log_ids)
-                        .execute(&**pool)
-                        .await?;
-                }
-                crate::repository::executor::Executor::Tx(tx) => {
-                    let mut tx = tx.lock().await;
-                    sqlx::query(audit_query)
-                        .bind(&audit_ids)
-                        .bind(&audit_versions)
-                        .bind(&audit_hashes)
-                        .bind(&audit_types)
-                        .bind(&audit_names)
-                        .bind(&audit_ext_ids)
-                        .bind(&audit_org_ids)
-                        .bind(&audit_msg1_ids)
-                        .bind(&audit_msg1_types)
-                        .bind(&audit_msg2_ids)
-                        .bind(&audit_msg2_types)
-                        .bind(&audit_msg3_ids)
-                        .bind(&audit_msg3_types)
-                        .bind(&audit_msg4_ids)
-                        .bind(&audit_msg4_types)
-                        .bind(&audit_msg5_ids)
-                        .bind(&audit_msg5_types)
-                        .bind(&audit_depts)
-                        .bind(&audit_loc_ids)
-                        .bind(&audit_dup_ids)
-                        .bind(&audit_ref_counts)
-                        .bind(&audit_log_ids)
-                        .execute(&mut **tx)
-                        .await?;
-                }
-            }
+            self.execute_person_update(person_values).await?;
+            self.execute_person_idx_update(person_idx_values).await?;
+            self.execute_person_audit_insert(person_audit_values)
+                .await?;
         }
 
         stats.duration_ms = start.elapsed().as_millis() as u64;
@@ -1117,30 +554,58 @@ impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
             }
         }
         
-        let audit_query = r#"
-            INSERT INTO person_audit (
-                person_id, version, hash, person_type, display_name, external_identifier,
+        self.execute_person_audit_insert(person_audit_values)
+            .await?;
+
+        Ok(existing_ids.len())
+    }
+
+}
+
+/// Helper functions for batch operations
+impl PersonRepositoryImpl {
+    async fn execute_person_insert(
+        &self,
+        person_values: Vec<PersonTuple>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let query = r#"
+            INSERT INTO person (
+                id, person_type, display_name, external_identifier,
                 organization_person_id, messaging1_id, messaging1_type,
                 messaging2_id, messaging2_type, messaging3_id, messaging3_type,
                 messaging4_id, messaging4_type, messaging5_id, messaging5_type,
-                department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id
+                department, location_id, duplicate_of_person_id, entity_reference_count
             )
             SELECT * FROM UNNEST(
-                $1::uuid[], $2::int[], $3::bigint[], $4::person_type[], $5::text[], $6::text[],
-                $7::uuid[], $8::uuid[], $9::messaging_type[],
-                $10::uuid[], $11::messaging_type[], $12::uuid[], $13::messaging_type[],
-                $14::uuid[], $15::messaging_type[], $16::uuid[], $17::messaging_type[],
-                $18::text[], $19::uuid[], $20::uuid[], $21::int[], $22::uuid[]
+                $1::uuid[], $2::person_type[], $3::text[], $4::text[],
+                $5::uuid[], $6::uuid[], $7::messaging_type[],
+                $8::uuid[], $9::messaging_type[], $10::uuid[], $11::messaging_type[],
+                $12::uuid[], $13::messaging_type[], $14::uuid[], $15::messaging_type[],
+                $16::text[], $17::uuid[], $18::uuid[], $19::int[]
             )
         "#;
 
         let (
-            audit_ids, audit_versions, audit_hashes, audit_types, audit_names, audit_ext_ids,
-            audit_org_ids, audit_msg1_ids, audit_msg1_types, audit_msg2_ids, audit_msg2_types,
-            audit_msg3_ids, audit_msg3_types, audit_msg4_ids, audit_msg4_types, audit_msg5_ids,
-            audit_msg5_types, audit_depts, audit_loc_ids, audit_dup_ids, audit_ref_counts,
-            audit_log_ids,
-        ) = person_audit_values.into_iter().fold(
+            ids,
+            types,
+            names,
+            ext_ids,
+            org_ids,
+            msg1_ids,
+            msg1_types,
+            msg2_ids,
+            msg2_types,
+            msg3_ids,
+            msg3_types,
+            msg4_ids,
+            msg4_types,
+            msg5_ids,
+            msg5_types,
+            depts,
+            loc_ids,
+            dup_ids,
+            ref_counts,
+        ) = person_values.into_iter().fold(
             (
                 Vec::new(),
                 Vec::new(),
@@ -1161,16 +626,382 @@ impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
                 Vec::new(),
                 Vec::new(),
                 Vec::new(),
+            ),
+            |mut acc, val| {
+                acc.0.push(val.0);
+                acc.1.push(val.1);
+                acc.2.push(val.2);
+                acc.3.push(val.3);
+                acc.4.push(val.4);
+                acc.5.push(val.5);
+                acc.6.push(val.6);
+                acc.7.push(val.7);
+                acc.8.push(val.8);
+                acc.9.push(val.9);
+                acc.10.push(val.10);
+                acc.11.push(val.11);
+                acc.12.push(val.12);
+                acc.13.push(val.13);
+                acc.14.push(val.14);
+                acc.15.push(val.15);
+                acc.16.push(val.16);
+                acc.17.push(val.17);
+                acc.18.push(val.18);
+                acc
+            },
+        );
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(query)
+                    .bind(&ids)
+                    .bind(&types)
+                    .bind(&names)
+                    .bind(&ext_ids)
+                    .bind(&org_ids)
+                    .bind(&msg1_ids)
+                    .bind(&msg1_types)
+                    .bind(&msg2_ids)
+                    .bind(&msg2_types)
+                    .bind(&msg3_ids)
+                    .bind(&msg3_types)
+                    .bind(&msg4_ids)
+                    .bind(&msg4_types)
+                    .bind(&msg5_ids)
+                    .bind(&msg5_types)
+                    .bind(&depts)
+                    .bind(&loc_ids)
+                    .bind(&dup_ids)
+                    .bind(&ref_counts)
+                    .execute(&**pool)
+                    .await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(query)
+                    .bind(&ids)
+                    .bind(&types)
+                    .bind(&names)
+                    .bind(&ext_ids)
+                    .bind(&org_ids)
+                    .bind(&msg1_ids)
+                    .bind(&msg1_types)
+                    .bind(&msg2_ids)
+                    .bind(&msg2_types)
+                    .bind(&msg3_ids)
+                    .bind(&msg3_types)
+                    .bind(&msg4_ids)
+                    .bind(&msg4_types)
+                    .bind(&msg5_ids)
+                    .bind(&msg5_types)
+                    .bind(&depts)
+                    .bind(&loc_ids)
+                    .bind(&dup_ids)
+                    .bind(&ref_counts)
+                    .execute(&mut **tx)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn execute_person_idx_insert(
+        &self,
+        person_idx_values: Vec<(Uuid, Option<i64>, i32, i64)>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let idx_query = r#"
+            INSERT INTO person_idx (person_id, external_identifier_hash, version, hash)
+            SELECT * FROM UNNEST($1::uuid[], $2::bigint[], $3::int[], $4::bigint[])
+        "#;
+
+        let (idx_ids, ext_hashes, versions, hashes) = person_idx_values.into_iter().fold(
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
+            |mut acc, val| {
+                acc.0.push(val.0);
+                acc.1.push(val.1);
+                acc.2.push(val.2);
+                acc.3.push(val.3);
+                acc
+            },
+        );
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(idx_query)
+                    .bind(&idx_ids)
+                    .bind(&ext_hashes)
+                    .bind(&versions)
+                    .bind(&hashes)
+                    .execute(&**pool)
+                    .await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(idx_query)
+                    .bind(&idx_ids)
+                    .bind(&ext_hashes)
+                    .bind(&versions)
+                    .bind(&hashes)
+                    .execute(&mut **tx)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn execute_person_update(
+        &self,
+        person_values: Vec<PersonTuple>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let update_query = r#"
+            UPDATE person SET
+                person_type = u.person_type, display_name = u.display_name,
+                external_identifier = u.external_identifier, organization_person_id = u.organization_person_id,
+                messaging1_id = u.messaging1_id, messaging1_type = u.messaging1_type,
+                messaging2_id = u.messaging2_id, messaging2_type = u.messaging2_type,
+                messaging3_id = u.messaging3_id, messaging3_type = u.messaging3_type,
+                messaging4_id = u.messaging4_id, messaging4_type = u.messaging4_type,
+                messaging5_id = u.messaging5_id, messaging5_type = u.messaging5_type,
+                department = u.department, location_id = u.location_id,
+                duplicate_of_person_id = u.duplicate_of_person_id,
+                entity_reference_count = u.entity_reference_count
+            FROM (SELECT * FROM UNNEST(
+                $1::uuid[], $2::person_type[], $3::text[], $4::text[],
+                $5::uuid[], $6::uuid[], $7::messaging_type[],
+                $8::uuid[], $9::messaging_type[], $10::uuid[], $11::messaging_type[],
+                $12::uuid[], $13::messaging_type[], $14::uuid[], $15::messaging_type[],
+                $16::text[], $17::uuid[], $18::uuid[], $19::int[]
+            )) AS u(
+                id, person_type, display_name, external_identifier,
+                organization_person_id, messaging1_id, messaging1_type,
+                messaging2_id, messaging2_type, messaging3_id, messaging3_type,
+                messaging4_id, messaging4_type, messaging5_id, messaging5_type,
+                department, location_id, duplicate_of_person_id, entity_reference_count
+            )
+            WHERE person.id = u.id
+        "#;
+
+        let (
+            ids,
+            person_types,
+            display_names,
+            external_identifiers,
+            organization_person_ids,
+            messaging1_ids,
+            messaging1_types,
+            messaging2_ids,
+            messaging2_types,
+            messaging3_ids,
+            messaging3_types,
+            messaging4_ids,
+            messaging4_types,
+            messaging5_ids,
+            messaging5_types,
+            departments,
+            location_ids,
+            duplicate_of_person_ids,
+            entity_reference_counts,
+        ) = person_values.into_iter().fold(
+            (
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
                 Vec::new(),
                 Vec::new(),
                 Vec::new(),
             ),
-            |mut acc: (
-                Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>,
-                Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>, Vec<_>,
-                Vec<_>, Vec<_>,
+            |mut acc, val| {
+                acc.0.push(val.0);
+                acc.1.push(val.1);
+                acc.2.push(val.2);
+                acc.3.push(val.3);
+                acc.4.push(val.4);
+                acc.5.push(val.5);
+                acc.6.push(val.6);
+                acc.7.push(val.7);
+                acc.8.push(val.8);
+                acc.9.push(val.9);
+                acc.10.push(val.10);
+                acc.11.push(val.11);
+                acc.12.push(val.12);
+                acc.13.push(val.13);
+                acc.14.push(val.14);
+                acc.15.push(val.15);
+                acc.16.push(val.16);
+                acc.17.push(val.17);
+                acc.18.push(val.18);
+                acc
+            },
+        );
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(update_query)
+                    .bind(&ids)
+                    .bind(&person_types)
+                    .bind(&display_names)
+                    .bind(&external_identifiers)
+                    .bind(&organization_person_ids)
+                    .bind(&messaging1_ids)
+                    .bind(&messaging1_types)
+                    .bind(&messaging2_ids)
+                    .bind(&messaging2_types)
+                    .bind(&messaging3_ids)
+                    .bind(&messaging3_types)
+                    .bind(&messaging4_ids)
+                    .bind(&messaging4_types)
+                    .bind(&messaging5_ids)
+                    .bind(&messaging5_types)
+                    .bind(&departments)
+                    .bind(&location_ids)
+                    .bind(&duplicate_of_person_ids)
+                    .bind(&entity_reference_counts)
+                    .execute(&**pool)
+                    .await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(update_query)
+                    .bind(&ids)
+                    .bind(&person_types)
+                    .bind(&display_names)
+                    .bind(&external_identifiers)
+                    .bind(&organization_person_ids)
+                    .bind(&messaging1_ids)
+                    .bind(&messaging1_types)
+                    .bind(&messaging2_ids)
+                    .bind(&messaging2_types)
+                    .bind(&messaging3_ids)
+                    .bind(&messaging3_types)
+                    .bind(&messaging4_ids)
+                    .bind(&messaging4_types)
+                    .bind(&messaging5_ids)
+                    .bind(&messaging5_types)
+                    .bind(&departments)
+                    .bind(&location_ids)
+                    .bind(&duplicate_of_person_ids)
+                    .bind(&entity_reference_counts)
+                    .execute(&mut **tx)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn execute_person_idx_update(
+        &self,
+        person_idx_values: Vec<(Uuid, Option<i64>, i32, i64)>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let update_idx_query = r#"
+            UPDATE person_idx SET
+                external_identifier_hash = u.external_identifier_hash,
+                version = u.version,
+                hash = u.hash
+            FROM (SELECT * FROM UNNEST($1::uuid[], $2::bigint[], $3::int[], $4::bigint[]))
+            AS u(person_id, external_identifier_hash, version, hash)
+            WHERE person_idx.person_id = u.person_id
+        "#;
+
+        let (idx_ids, ext_hashes, versions, hashes) = person_idx_values.into_iter().fold(
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
+            |mut acc, val| {
+                acc.0.push(val.0);
+                acc.1.push(val.1);
+                acc.2.push(val.2);
+                acc.3.push(val.3);
+                acc
+            },
+        );
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(update_idx_query)
+                    .bind(&idx_ids)
+                    .bind(&ext_hashes)
+                    .bind(&versions)
+                    .bind(&hashes)
+                    .execute(&**pool)
+                    .await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(update_idx_query)
+                    .bind(&idx_ids)
+                    .bind(&ext_hashes)
+                    .bind(&versions)
+                    .bind(&hashes)
+                    .execute(&mut **tx)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn execute_person_audit_insert(
+        &self,
+        person_audit_values: Vec<PersonAuditTuple>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let audit_query = r#"
+            INSERT INTO person_audit (
+                person_id, version, hash, person_type, display_name, external_identifier,
+                organization_person_id, messaging1_id, messaging1_type,
+                messaging2_id, messaging2_type, messaging3_id, messaging3_type,
+                messaging4_id, messaging4_type, messaging5_id, messaging5_type,
+                department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id
+            )
+            SELECT * FROM UNNEST(
+                $1::uuid[], $2::int[], $3::bigint[], $4::person_type[], $5::text[], $6::text[],
+                $7::uuid[], $8::uuid[], $9::messaging_type[],
+                $10::uuid[], $11::messaging_type[], $12::uuid[], $13::messaging_type[],
+                $14::uuid[], $15::messaging_type[], $16::uuid[], $17::messaging_type[],
+                $18::text[], $19::uuid[], $20::uuid[], $21::int[], $22::uuid[]
+            )
+        "#;
+
+        let (
+            audit_ids,
+            audit_versions,
+            audit_hashes,
+            audit_types,
+            audit_names,
+            audit_ext_ids,
+            audit_org_ids,
+            audit_msg1_ids,
+            audit_msg1_types,
+            audit_msg2_ids,
+            audit_msg2_types,
+            audit_msg3_ids,
+            audit_msg3_types,
+            audit_msg4_ids,
+            audit_msg4_types,
+            audit_msg5_ids,
+            audit_msg5_types,
+            audit_depts,
+            audit_loc_ids,
+            audit_dup_ids,
+            audit_ref_counts,
+            audit_log_ids,
+        ) = person_audit_values.into_iter().fold(
+            (
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(),
             ),
-             val| {
+            |mut acc, val| {
                 acc.0.push(val.0);
                 acc.1.push(val.1);
                 acc.2.push(val.2);
@@ -1200,32 +1031,63 @@ impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
         match &self.executor {
             crate::repository::executor::Executor::Pool(pool) => {
                 sqlx::query(audit_query)
-                    .bind(&audit_ids).bind(&audit_versions).bind(&audit_hashes).bind(&audit_types).bind(&audit_names).bind(&audit_ext_ids)
-                    .bind(&audit_org_ids).bind(&audit_msg1_ids).bind(&audit_msg1_types).bind(&audit_msg2_ids).bind(&audit_msg2_types)
-                    .bind(&audit_msg3_ids).bind(&audit_msg3_types).bind(&audit_msg4_ids).bind(&audit_msg4_types).bind(&audit_msg5_ids)
-                    .bind(&audit_msg5_types).bind(&audit_depts).bind(&audit_loc_ids).bind(&audit_dup_ids).bind(&audit_ref_counts)
+                    .bind(&audit_ids)
+                    .bind(&audit_versions)
+                    .bind(&audit_hashes)
+                    .bind(&audit_types)
+                    .bind(&audit_names)
+                    .bind(&audit_ext_ids)
+                    .bind(&audit_org_ids)
+                    .bind(&audit_msg1_ids)
+                    .bind(&audit_msg1_types)
+                    .bind(&audit_msg2_ids)
+                    .bind(&audit_msg2_types)
+                    .bind(&audit_msg3_ids)
+                    .bind(&audit_msg3_types)
+                    .bind(&audit_msg4_ids)
+                    .bind(&audit_msg4_types)
+                    .bind(&audit_msg5_ids)
+                    .bind(&audit_msg5_types)
+                    .bind(&audit_depts)
+                    .bind(&audit_loc_ids)
+                    .bind(&audit_dup_ids)
+                    .bind(&audit_ref_counts)
                     .bind(&audit_log_ids)
-                    .execute(&**pool).await?;
+                    .execute(&**pool)
+                    .await?;
             }
             crate::repository::executor::Executor::Tx(tx) => {
                 let mut tx = tx.lock().await;
                 sqlx::query(audit_query)
-                    .bind(&audit_ids).bind(&audit_versions).bind(&audit_hashes).bind(&audit_types).bind(&audit_names).bind(&audit_ext_ids)
-                    .bind(&audit_org_ids).bind(&audit_msg1_ids).bind(&audit_msg1_types).bind(&audit_msg2_ids).bind(&audit_msg2_types)
-                    .bind(&audit_msg3_ids).bind(&audit_msg3_types).bind(&audit_msg4_ids).bind(&audit_msg4_types).bind(&audit_msg5_ids)
-                    .bind(&audit_msg5_types).bind(&audit_depts).bind(&audit_loc_ids).bind(&audit_dup_ids).bind(&audit_ref_counts)
+                    .bind(&audit_ids)
+                    .bind(&audit_versions)
+                    .bind(&audit_hashes)
+                    .bind(&audit_types)
+                    .bind(&audit_names)
+                    .bind(&audit_ext_ids)
+                    .bind(&audit_org_ids)
+                    .bind(&audit_msg1_ids)
+                    .bind(&audit_msg1_types)
+                    .bind(&audit_msg2_ids)
+                    .bind(&audit_msg2_types)
+                    .bind(&audit_msg3_ids)
+                    .bind(&audit_msg3_types)
+                    .bind(&audit_msg4_ids)
+                    .bind(&audit_msg4_types)
+                    .bind(&audit_msg5_ids)
+                    .bind(&audit_msg5_types)
+                    .bind(&audit_depts)
+                    .bind(&audit_loc_ids)
+                    .bind(&audit_dup_ids)
+                    .bind(&audit_ref_counts)
                     .bind(&audit_log_ids)
-                    .execute(&mut **tx).await?;
+                    .execute(&mut **tx)
+                    .await?;
             }
         }
-
-        Ok(existing_ids.len())
+        Ok(())
     }
 
-}
-
-/// Helper functions for batch operations
-impl PersonRepositoryImpl {
     /// Process persons in chunks for very large batches
     pub async fn save_batch_chunked(
         &self,

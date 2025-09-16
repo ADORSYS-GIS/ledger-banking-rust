@@ -1,29 +1,18 @@
-use banking_db::models::person::CountryIdxModelCache;
-use banking_db::repository::CountryRepository;
-use banking_db_postgres::repository::executor::Executor;
-use banking_db_postgres::repository::person::country_repository_impl::CountryRepositoryImpl;
-use parking_lot::RwLock;
-use std::sync::Arc;
+use banking_db::repository::{CountryRepository, PersonRepos};
 use uuid::Uuid;
 
-use crate::suites::commons::commons;
-
+use crate::suites::test_helper::setup_test_context;
 use crate::suites::person::helpers::create_test_country_model;
 
 #[tokio::test]
 async fn test_country_repository() {
-    let db_pool = commons::establish_connection().await;
-    commons::cleanup_database(&db_pool).await;
-    let executor = Executor::Pool(Arc::new(db_pool));
-    let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
-        .await
-        .unwrap();
-    let country_idx_cache =
-        Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
-    let repo = CountryRepositoryImpl::new(executor, country_idx_cache);
+    let ctx = setup_test_context().await.unwrap();
+    let repo = ctx.person_repos().countries();
 
     // Test save and find_by_id
-    let new_country = create_test_country_model("CM", "Cameroon");
+    // Use unique ISO2 codes for each test to avoid conflicts
+    let unique_iso2 = format!("T{}", &Uuid::new_v4().to_string()[0..1].to_uppercase());
+    let new_country = create_test_country_model(&unique_iso2, "Test Country 1");
     let saved_country = repo.save(new_country.clone()).await.unwrap();
     assert_eq!(new_country.id, saved_country.id);
 
@@ -35,7 +24,8 @@ async fn test_country_repository() {
     assert_eq!(found_countries.len(), 1);
 
     // Test find_by_ids
-    let new_country2 = create_test_country_model("GA", "Gabon");
+    let unique_iso2_2 = format!("U{}", &Uuid::new_v4().to_string()[0..1].to_uppercase());
+    let new_country2 = create_test_country_model(&unique_iso2_2, "Test Country 2");
     repo.save(new_country2.clone()).await.unwrap();
     let ids = vec![new_country.id, new_country2.id];
     let found_countries = repo.find_by_ids(&ids).await.unwrap();
@@ -46,6 +36,6 @@ async fn test_country_repository() {
     assert!(!repo.exists_by_id(Uuid::new_v4()).await.unwrap());
 
     // Test find_by_iso2
-    let found_by_iso2 = repo.find_by_iso2("GA", 1, 10).await.unwrap();
+    let found_by_iso2 = repo.find_by_iso2(&unique_iso2_2, 1, 10).await.unwrap();
     assert!(!found_by_iso2.is_empty());
 }

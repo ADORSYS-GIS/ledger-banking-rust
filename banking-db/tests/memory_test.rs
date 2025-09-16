@@ -8,7 +8,7 @@ fn test_person_idx_model_memory_size_and_alignment() {
     const EXPECTED_TOTAL_SIZE: usize = 80;
     let total_size = mem::size_of::<PersonIdxModel>();
     println!("--- PersonIdxModel Memory Layout ---");
-    println!("Total struct size: {} bytes", total_size);
+    println!("Total struct size: {total_size} bytes");
     assert_eq!(total_size, EXPECTED_TOTAL_SIZE, "Total size of PersonIdxModel has changed!");
 }
 
@@ -28,11 +28,11 @@ fn analyze_person_index_size(num_entries: usize, expected_min_total_size: usize)
     let total_heap_data_size = HEAP_SIZE_PER_ENTRY * num_entries;
     let min_total_size = stack_size + total_heap_data_size;
 
-    println!("\n--- PersonIndex Memory Analysis ({} Entries) ---", num_entries);
+    println!("\n--- PersonIndex Memory Analysis ({num_entries} Entries) ---");
     println!("Minimum Total: {} bytes ({:.2} MB)", min_total_size, min_total_size as f64 / (1024.0 * 1024.0));
     
     assert_eq!(stack_size, STACK_SIZE, "Stack size of PersonIndex has changed!");
-    assert_eq!(min_total_size, expected_min_total_size, "Minimum total size for {} entries has changed!", num_entries);
+    assert_eq!(min_total_size, expected_min_total_size, "Minimum total size for {num_entries} entries has changed!");
 }
 
 #[test]

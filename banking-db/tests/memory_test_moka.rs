@@ -15,16 +15,16 @@ pub struct PersonCache {
 fn analyze_moka_cache_size(num_entries: usize) {
     const HEAP_SIZE_PER_ENTRY: usize = mem::size_of::<Arc<PersonIdxModel>>() + mem::size_of::<Uuid>() + mem::size_of::<i64>();
 
-    println!("\n--- Moka PersonCache Memory Analysis ({} Entries) ---", num_entries);
+    println!("\n--- Moka PersonCache Memory Analysis ({num_entries} Entries) ---");
 
     // 1. Stack Size
     let stack_size = mem::size_of::<PersonCache>();
-    println!("Stack Size of PersonCache struct: {} bytes", stack_size);
+    println!("Stack Size of PersonCache struct: {stack_size} bytes");
 
     // 2. Heap Allocation for the data itself
     let total_heap_data_size = HEAP_SIZE_PER_ENTRY * num_entries;
     println!("Heap Allocation (Data Only):");
-    println!("  - Size per entry (on heap): {} bytes", HEAP_SIZE_PER_ENTRY);
+    println!("  - Size per entry (on heap): {HEAP_SIZE_PER_ENTRY} bytes");
     println!("  - Total Heap Data for {} entries: {} bytes ({:.2} MB)",
         num_entries,
         total_heap_data_size,
@@ -33,8 +33,8 @@ fn analyze_moka_cache_size(num_entries: usize) {
     
     // 3. Total Footprint
     let min_total_size = stack_size + total_heap_data_size;
-    println!("\nMinimum Total Memory Footprint ({} Entries):", num_entries);
-    println!("  - {} bytes (Stack) + {} bytes (Heap Data) + Moka's Internal Overhead", stack_size, total_heap_data_size);
+    println!("\nMinimum Total Memory Footprint ({num_entries} Entries):");
+    println!("  - {stack_size} bytes (Stack) + {total_heap_data_size} bytes (Heap Data) + Moka's Internal Overhead");
     println!("  - Minimum Total: {} bytes ({:.2} MB) + overhead",
         min_total_size,
         min_total_size as f64 / (1024.0 * 1024.0)

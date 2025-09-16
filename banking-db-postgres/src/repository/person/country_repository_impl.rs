@@ -57,17 +57,14 @@ impl CountryRepositoryImpl {
 #[async_trait]
 impl CountryRepository<Postgres> for CountryRepositoryImpl {
     async fn save(&self, country: CountryModel) -> CountryResult<CountryModel> {
-        let id_to_load = {
+        // Check if a country with this ISO2 already exists
+        {
             let cache = self.country_idx_cache.read().await;
-            if cache.contains_primary(&country.id) {
-                Some(country.id)
-            } else {
-                cache.get_by_iso2(&country.iso2)
+            if cache.get_by_iso2(&country.iso2).is_some() {
+                return Err(CountryRepositoryError::DuplicateCountryISO2(
+                    country.iso2.to_string(),
+                ));
             }
-        };
-
-        if let Some(id) = id_to_load {
-            return self.load(id).await;
         }
 
         let query1 = sqlx::query(

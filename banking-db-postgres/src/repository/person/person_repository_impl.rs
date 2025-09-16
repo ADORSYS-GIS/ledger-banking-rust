@@ -54,9 +54,6 @@ impl PersonRepositoryImpl {
     }
 }
 
-/// # Refactoring Instruction
-/// ## add a method load(id) returning PersonModel. also add to PersonRepository,
-///    It is the only methode that returns a PersonModel. All other finders return a PersonIdxModel.
 #[async_trait]
 impl PersonRepository<Postgres> for PersonRepositoryImpl {
     async fn save(
@@ -102,45 +99,46 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             hasher.finish() as i64
         });
 
-        if let Some(existing_idx) = maybe_existing_idx {
-            // UPDATE
+        let (version, is_update) = if let Some(existing_idx) = maybe_existing_idx {
             if existing_idx.hash == new_hash {
                 return Ok(person); // No changes
             }
+            (existing_idx.version + 1, true)
+        } else {
+            (0, false)
+        };
 
-            let new_version = existing_idx.version + 1;
+        let audit_model = PersonAuditModel {
+            person_id: person.id,
+            version,
+            hash: new_hash,
+            person_type: person.person_type,
+            display_name: person.display_name.clone(),
+            external_identifier: person.external_identifier.clone(),
+            entity_reference_count: person.entity_reference_count,
+            organization_person_id: person.organization_person_id,
+            messaging1_id: person.messaging1_id,
+            messaging1_type: person.messaging1_type,
+            messaging2_id: person.messaging2_id,
+            messaging2_type: person.messaging2_type,
+            messaging3_id: person.messaging3_id,
+            messaging3_type: person.messaging3_type,
+            messaging4_id: person.messaging4_id,
+            messaging4_type: person.messaging4_type,
+            messaging5_id: person.messaging5_id,
+            messaging5_type: person.messaging5_type,
+            department: person.department.clone(),
+            location_id: person.location_id,
+            duplicate_of_person_id: person.duplicate_of_person_id,
+            audit_log_id,
+        };
 
-            let audit_model = PersonAuditModel {
-                person_id: person.id,
-                version: new_version,
-                hash: new_hash,
-                person_type: person.person_type,
-                display_name: person.display_name.clone(),
-                external_identifier: person.external_identifier.clone(),
-                entity_reference_count: person.entity_reference_count,
-                organization_person_id: person.organization_person_id,
-                messaging1_id: person.messaging1_id,
-                messaging1_type: person.messaging1_type,
-                messaging2_id: person.messaging2_id,
-                messaging2_type: person.messaging2_type,
-                messaging3_id: person.messaging3_id,
-                messaging3_type: person.messaging3_type,
-                messaging4_id: person.messaging4_id,
-                messaging4_type: person.messaging4_type,
-                messaging5_id: person.messaging5_id,
-                messaging5_type: person.messaging5_type,
-                department: person.department.clone(),
-                location_id: person.location_id,
-                duplicate_of_person_id: person.duplicate_of_person_id,
-                audit_log_id,
-            };
-
-            let query1 = sqlx::query(
-                r#"
+        let query1 = sqlx::query(
+            r#"
                 INSERT INTO person_audit (person_id, version, hash, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
                 "#,
-            )
+        )
             .bind(audit_model.person_id)
             .bind(audit_model.version)
             .bind(audit_model.hash)
@@ -169,7 +167,8 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(audit_model.entity_reference_count)
             .bind(audit_model.audit_log_id);
 
-            let query2 = sqlx::query(
+        let (query2_sql, query3_sql) = if is_update {
+            (
                 r#"
                 UPDATE person SET
                     person_type = $2::person_type, display_name = $3, external_identifier = $4,
@@ -180,28 +179,6 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                     location_id = $17, duplicate_of_person_id = $18, entity_reference_count = $19
                 WHERE id = $1
                 "#,
-            )
-            .bind(person.id)
-            .bind(person.person_type)
-            .bind(person.display_name.as_str())
-            .bind(person.external_identifier.as_ref().map(|s| s.as_str()))
-            .bind(person.organization_person_id)
-            .bind(person.messaging1_id)
-            .bind(person.messaging1_type)
-            .bind(person.messaging2_id)
-            .bind(person.messaging2_type)
-            .bind(person.messaging3_id)
-            .bind(person.messaging3_type)
-            .bind(person.messaging4_id)
-            .bind(person.messaging4_type)
-            .bind(person.messaging5_id)
-            .bind(person.messaging5_type)
-            .bind(person.department.as_ref().map(|s| s.as_str()))
-            .bind(person.location_id)
-            .bind(person.duplicate_of_person_id)
-            .bind(person.entity_reference_count);
-
-            let query3 = sqlx::query(
                 r#"
                 UPDATE person_idx SET
                     external_identifier_hash = $2,
@@ -212,104 +189,20 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 WHERE person_id = $1
                 "#,
             )
-            .bind(person.id)
-            .bind(new_external_hash)
-            .bind(person.organization_person_id)
-            .bind(person.duplicate_of_person_id)
-            .bind(new_version)
-            .bind(new_hash);
-
-            match &self.executor {
-                Executor::Pool(pool) => {
-                    query1.execute(&**pool).await?;
-                    query2.execute(&**pool).await?;
-                    query3.execute(&**pool).await?;
-                }
-                Executor::Tx(tx) => {
-                    let mut tx = tx.lock().await;
-                    query1.execute(&mut **tx).await?;
-                    query2.execute(&mut **tx).await?;
-                    query3.execute(&mut **tx).await?;
-                }
-            }
-
-            let new_idx = PersonIdxModel {
-                person_id: person.id,
-                external_identifier_hash: new_external_hash,
-                organization_person_id: person.organization_person_id,
-                duplicate_of_person_id: person.duplicate_of_person_id,
-                version: new_version,
-                hash: new_hash,
-            };
-            self.person_idx_cache.read().await.update(new_idx);
         } else {
-            // INSERT
-            let version = 0;
-            let audit_model = PersonAuditModel {
-                person_id: person.id,
-                version,
-                hash: new_hash,
-                person_type: person.person_type,
-                display_name: person.display_name.clone(),
-                external_identifier: person.external_identifier.clone(),
-                entity_reference_count: person.entity_reference_count,
-                organization_person_id: person.organization_person_id,
-                messaging1_id: person.messaging1_id,
-                messaging1_type: person.messaging1_type,
-                messaging2_id: person.messaging2_id,
-                messaging2_type: person.messaging2_type,
-                messaging3_id: person.messaging3_id,
-                messaging3_type: person.messaging3_type,
-                messaging4_id: person.messaging4_id,
-                messaging4_type: person.messaging4_type,
-                messaging5_id: person.messaging5_id,
-                messaging5_type: person.messaging5_type,
-                department: person.department.clone(),
-                location_id: person.location_id,
-                duplicate_of_person_id: person.duplicate_of_person_id,
-                audit_log_id,
-            };
-
-            let query1 = sqlx::query(
-                r#"
-                INSERT INTO person_audit (person_id, version, hash, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count, audit_log_id)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-                "#,
-            )
-            .bind(audit_model.person_id)
-            .bind(audit_model.version)
-            .bind(audit_model.hash)
-            .bind(audit_model.person_type)
-            .bind(audit_model.display_name.as_str())
-            .bind(
-                audit_model
-                    .external_identifier
-                    .as_ref()
-                    .map(|s| s.as_str()),
-            )
-            .bind(audit_model.organization_person_id)
-            .bind(audit_model.messaging1_id)
-            .bind(audit_model.messaging1_type)
-            .bind(audit_model.messaging2_id)
-            .bind(audit_model.messaging2_type)
-            .bind(audit_model.messaging3_id)
-            .bind(audit_model.messaging3_type)
-            .bind(audit_model.messaging4_id)
-            .bind(audit_model.messaging4_type)
-            .bind(audit_model.messaging5_id)
-            .bind(audit_model.messaging5_type)
-            .bind(audit_model.department.as_ref().map(|s| s.as_str()))
-            .bind(audit_model.location_id)
-            .bind(audit_model.duplicate_of_person_id)
-            .bind(audit_model.entity_reference_count)
-            .bind(audit_model.audit_log_id);
-
-            let query2 = sqlx::query(
+            (
                 r#"
                 INSERT INTO person (id, person_type, display_name, external_identifier, organization_person_id, messaging1_id, messaging1_type, messaging2_id, messaging2_type, messaging3_id, messaging3_type, messaging4_id, messaging4_type, messaging5_id, messaging5_type, department, location_id, duplicate_of_person_id, entity_reference_count)
                 VALUES ($1, $2::person_type, $3, $4, $5, $6, $7::messaging_type, $8, $9::messaging_type, $10, $11::messaging_type, $12, $13::messaging_type, $14, $15, $16, $17, $18, $19)
                 "#,
+                r#"
+                INSERT INTO person_idx (person_id, external_identifier_hash, organization_person_id, duplicate_of_person_id, version, hash)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#,
             )
+        };
+
+        let query2 = sqlx::query(query2_sql)
             .bind(person.id)
             .bind(person.person_type)
             .bind(person.display_name.as_str())
@@ -330,12 +223,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(person.duplicate_of_person_id)
             .bind(person.entity_reference_count);
 
-            let query3 = sqlx::query(
-                r#"
-                INSERT INTO person_idx (person_id, external_identifier_hash, organization_person_id, duplicate_of_person_id, version, hash)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                "#,
-            )
+        let query3 = sqlx::query(query3_sql)
             .bind(person.id)
             .bind(new_external_hash)
             .bind(person.organization_person_id)
@@ -343,28 +231,32 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             .bind(version)
             .bind(new_hash);
 
-            match &self.executor {
-                Executor::Pool(pool) => {
-                    query1.execute(&**pool).await?;
-                    query2.execute(&**pool).await?;
-                    query3.execute(&**pool).await?;
-                }
-                Executor::Tx(tx) => {
-                    let mut tx = tx.lock().await;
-                    query1.execute(&mut **tx).await?;
-                    query2.execute(&mut **tx).await?;
-                    query3.execute(&mut **tx).await?;
-                }
+        match &self.executor {
+            Executor::Pool(pool) => {
+                query1.execute(&**pool).await?;
+                query2.execute(&**pool).await?;
+                query3.execute(&**pool).await?;
             }
+            Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                query1.execute(&mut **tx).await?;
+                query2.execute(&mut **tx).await?;
+                query3.execute(&mut **tx).await?;
+            }
+        }
 
-            let new_idx = PersonIdxModel {
-                person_id: person.id,
-                external_identifier_hash: new_external_hash,
-                organization_person_id: person.organization_person_id,
-                duplicate_of_person_id: person.duplicate_of_person_id,
-                version,
-                hash: new_hash,
-            };
+        let new_idx = PersonIdxModel {
+            person_id: person.id,
+            external_identifier_hash: new_external_hash,
+            organization_person_id: person.organization_person_id,
+            duplicate_of_person_id: person.duplicate_of_person_id,
+            version,
+            hash: new_hash,
+        };
+
+        if is_update {
+            self.person_idx_cache.read().await.update(new_idx);
+        } else {
             self.person_idx_cache.read().await.add(new_idx);
         }
 

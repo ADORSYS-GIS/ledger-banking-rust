@@ -1,4 +1,3 @@
-use serde_json;
 use banking_api::domain::{Account, AccountType, AccountStatus, SigningCondition, Transaction, TransactionType, TransactionStatus, Customer, CustomerType, IdentityType, RiskRating, CustomerStatus};
 use banking_api::domain::compliance::{KycCheck, CheckResult};
 use banking_api::domain::workflow::DocumentReference;
@@ -81,7 +80,7 @@ mod stack_optimization_tests {
 
         // Test serialization
         let json = serde_json::to_string(&account).expect("Serialization should succeed");
-        println!("Account JSON: {}", json);
+        println!("Account JSON: {json}");
 
         // Verify key optimized fields are serialized correctly
         assert!(json.contains("\"product_id\""));
@@ -129,7 +128,7 @@ mod stack_optimization_tests {
 
         // Test serialization
         let json = serde_json::to_string(&transaction).expect("Transaction serialization should succeed");
-        println!("Transaction JSON: {}", json);
+        println!("Transaction JSON: {json}");
 
         // Verify HeaplessString fields are serialized correctly
         assert!(json.contains("\"description\":\"Atm withdrawal at Main Branch\""));
@@ -163,7 +162,7 @@ mod stack_optimization_tests {
 
         // Test serialization
         let json = serde_json::to_string(&customer).expect("Customer serialization should succeed");
-        println!("Customer JSON: {}", json);
+        println!("Customer JSON: {json}");
 
         // Verify bounded string fields
         assert!(json.contains("\"full_name\":\"Jane Smith-Johnson\""));
@@ -193,7 +192,7 @@ mod stack_optimization_tests {
         );
 
         let json = serde_json::to_string(&kyc_check).expect("KycCheck serialization should succeed");
-        println!("KycCheck JSON: {}", json);
+        println!("KycCheck JSON: {json}");
 
         let deserialized: KycCheck = serde_json::from_str(&json).expect("KycCheck deserialization should succeed");
         assert!(matches!(deserialized.result, CheckResult::Pass));
@@ -206,7 +205,7 @@ mod stack_optimization_tests {
         ).expect("DocumentReference creation should succeed");
 
         let doc_json = serde_json::to_string(&doc_ref).expect("DocumentReference serialization should succeed");
-        println!("DocumentReference JSON: {}", doc_json);
+        println!("DocumentReference JSON: {doc_json}");
 
         let doc_deserialized: DocumentReference = serde_json::from_str(&doc_json).expect("DocumentReference deserialization should succeed");
         assert_eq!(doc_deserialized.document_type, "passport");
@@ -226,7 +225,7 @@ mod stack_optimization_tests {
         );
 
         let audit_json = serde_json::to_string(&audit).expect("TransactionAudit serialization should succeed");
-        println!("TransactionAudit JSON: {}", audit_json);
+        println!("TransactionAudit JSON: {audit_json}");
 
         let audit_deserialized: TransactionAudit = serde_json::from_str(&audit_json).expect("TransactionAudit deserialization should succeed");
         assert_eq!(audit_deserialized.action_type, TransactionAuditAction::StatusChanged);

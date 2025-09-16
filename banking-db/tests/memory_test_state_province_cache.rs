@@ -23,8 +23,8 @@ fn test_country_subdivision_idx_model_size() {
     println!("{:<25} | {:<12} | {:<14}", "country_id (Uuid)", mem::size_of::<Uuid>(), mem::align_of::<Uuid>());
     println!("{:<25} | {:<12} | {:<14}", "code", mem::size_of_val(""), mem::align_of_val(""));
     println!("-----------------------------------------------------");
-    println!("Actual size: {} bytes", actual_size);
-    println!("Expected size: {} bytes", EXPECTED_SIZE);
+    println!("Actual size: {actual_size} bytes");
+    println!("Expected size: {EXPECTED_SIZE} bytes");
     assert_eq!(actual_size, EXPECTED_SIZE, "Size of CountrySubdivisionIdxModel has changed!");
 }
 
@@ -33,11 +33,11 @@ fn test_country_subdivision_cache_size() {
     const NUM_ENTRIES: usize = 3750; // 250 countries * 15 provinces avg
     const MODEL_SIZE: usize = 64; // Corrected size
 
-    println!("\n--- Moka CountrySubdivisionCache Memory Analysis ({} Entries) ---", NUM_ENTRIES);
+    println!("\n--- Moka CountrySubdivisionCache Memory Analysis ({NUM_ENTRIES} Entries) ---");
 
     // 1. Stack Size
     let stack_size = mem::size_of::<CountrySubdivisionCache>();
-    println!("Stack Size of CountrySubdivisionCache struct: {} bytes", stack_size);
+    println!("Stack Size of CountrySubdivisionCache struct: {stack_size} bytes");
 
     // 2. Heap Allocation
     let by_id_entry_size = mem::size_of::<Uuid>() + mem::size_of::<Arc<CountrySubdivisionIdxModel>>();
@@ -50,9 +50,9 @@ fn test_country_subdivision_cache_size() {
     let total_heap_data_size = total_model_heap_size + total_by_id_heap_size + total_by_country_id_heap_size;
 
     println!("Heap Allocation (Data Only):");
-    println!("  - Total for {} models: {} bytes", NUM_ENTRIES, total_model_heap_size);
-    println!("  - Total for by_id index: {} bytes", total_by_id_heap_size);
-    println!("  - Total for by_country_id index: {} bytes", total_by_country_id_heap_size);
+    println!("  - Total for {NUM_ENTRIES} models: {total_model_heap_size} bytes");
+    println!("  - Total for by_id index: {total_by_id_heap_size} bytes");
+    println!("  - Total for by_country_id index: {total_by_country_id_heap_size} bytes");
     println!("  - Total Heap Data: {} bytes ({:.2} KB)",
         total_heap_data_size,
         total_heap_data_size as f64 / 1024.0
@@ -60,7 +60,7 @@ fn test_country_subdivision_cache_size() {
     
     // 3. Total Footprint
     let min_total_size = stack_size + total_heap_data_size;
-    println!("\nMinimum Total Memory Footprint ({} Entries):", NUM_ENTRIES);
+    println!("\nMinimum Total Memory Footprint ({NUM_ENTRIES} Entries):");
     println!("  - Minimum Total: {} bytes ({:.2} KB) + Moka's Internal Overhead",
         min_total_size,
         min_total_size as f64 / 1024.0

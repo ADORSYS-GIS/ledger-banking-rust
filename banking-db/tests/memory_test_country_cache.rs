@@ -24,8 +24,8 @@ fn test_country_idx_model_size() {
     println!("{:<25} | {:<12} | {:<14}", "country_id (Uuid)", mem::size_of::<Uuid>(), mem::align_of::<Uuid>());
     println!("{:<25} | {:<12} | {:<14}", "iso2 (HeaplessString<2>)", mem::size_of::<HeaplessString<2>>(), mem::align_of::<HeaplessString<2>>());
     println!("-----------------------------------------------------");
-    println!("Actual size: {} bytes", actual_size);
-    println!("Expected size: {} bytes", EXPECTED_SIZE);
+    println!("Actual size: {actual_size} bytes");
+    println!("Expected size: {EXPECTED_SIZE} bytes");
     
     assert_eq!(actual_size, EXPECTED_SIZE, "Size of CountryIdxModel has changed!");
 }
@@ -35,11 +35,11 @@ fn test_country_cache_size_for_all_countries() {
     const NUM_COUNTRIES: usize = 250;
     const MODEL_SIZE: usize = 40; // Corrected size
 
-    println!("\n--- Moka CountryCache Memory Analysis ({} Entries) ---", NUM_COUNTRIES);
+    println!("\n--- Moka CountryCache Memory Analysis ({NUM_COUNTRIES} Entries) ---");
 
     // 1. Stack Size
     let stack_size = mem::size_of::<CountryCache>();
-    println!("Stack Size of CountryCache struct: {} bytes", stack_size);
+    println!("Stack Size of CountryCache struct: {stack_size} bytes");
 
     // 2. Heap Allocation per entry
     let by_id_entry_size = mem::size_of::<Uuid>() + mem::size_of::<Arc<CountryIdxModel>>();
@@ -49,8 +49,7 @@ fn test_country_cache_size_for_all_countries() {
     let total_heap_data_size = total_heap_per_entry * NUM_COUNTRIES;
 
     println!("Heap Allocation (Data Only):");
-    println!("  - Size per entry (on heap): {} bytes ({} model + {} by_id + {} by_iso2)", 
-        total_heap_per_entry, MODEL_SIZE, by_id_entry_size, by_iso2_entry_size);
+    println!("  - Size per entry (on heap): {total_heap_per_entry} bytes ({MODEL_SIZE} model + {by_id_entry_size} by_id + {by_iso2_entry_size} by_iso2)");
     println!("  - Total Heap Data for {} countries: {} bytes ({:.2} KB)",
         NUM_COUNTRIES,
         total_heap_data_size,
@@ -59,7 +58,7 @@ fn test_country_cache_size_for_all_countries() {
     
     // 3. Total Footprint
     let min_total_size = stack_size + total_heap_data_size;
-    println!("\nMinimum Total Memory Footprint ({} Countries):", NUM_COUNTRIES);
+    println!("\nMinimum Total Memory Footprint ({NUM_COUNTRIES} Countries):");
     println!("  - Minimum Total: {} bytes ({:.2} KB) + Moka's Internal Overhead",
         min_total_size,
         min_total_size as f64 / 1024.0

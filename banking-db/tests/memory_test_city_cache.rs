@@ -26,8 +26,8 @@ fn test_locality_idx_model_size() {
     const EXPECTED_SIZE: usize = 72;
     let actual_size = mem::size_of::<LocalityIdxModel>();
     println!("--- Optimized LocalityIdxModel Memory Layout ---");
-    println!("Actual size: {} bytes", actual_size);
-    println!("Expected size: {} bytes", EXPECTED_SIZE);
+    println!("Actual size: {actual_size} bytes");
+    println!("Expected size: {EXPECTED_SIZE} bytes");
     assert_eq!(actual_size, EXPECTED_SIZE, "Size of LocalityIdxModel has changed!");
 }
 
@@ -37,11 +37,11 @@ fn test_locality_cache_size_for_cameroon_with_villages() {
     const NUM_STATES: usize = 10; // Cameroon has 10 regions
     const MODEL_SIZE: usize = 72;
 
-    println!("\n--- Moka LocalityCache Memory Analysis ({} Entries) ---", NUM_LOCALITIES);
+    println!("\n--- Moka LocalityCache Memory Analysis ({NUM_LOCALITIES} Entries) ---");
 
     // 1. Stack Size
     let stack_size = mem::size_of::<LocalityCache>();
-    println!("Stack Size of LocalityCache struct: {} bytes", stack_size);
+    println!("Stack Size of LocalityCache struct: {stack_size} bytes");
 
     // 2. Heap Allocation
     let by_id_entry_size = mem::size_of::<Uuid>() + mem::size_of::<Arc<LocalityIdxModel>>();
@@ -54,9 +54,9 @@ fn test_locality_cache_size_for_cameroon_with_villages() {
     let total_heap_data_size = total_model_heap_size + total_by_id_heap_size + total_by_country_subdivision_id_heap_size;
 
     println!("Heap Allocation (Data Only):");
-    println!("  - Total for {} models: {} bytes", NUM_LOCALITIES, total_model_heap_size);
-    println!("  - Total for by_id index: {} bytes", total_by_id_heap_size);
-    println!("  - Total for by_country_subdivision_id index: {} bytes", total_by_country_subdivision_id_heap_size);
+    println!("  - Total for {NUM_LOCALITIES} models: {total_model_heap_size} bytes");
+    println!("  - Total for by_id index: {total_by_id_heap_size} bytes");
+    println!("  - Total for by_country_subdivision_id index: {total_by_country_subdivision_id_heap_size} bytes");
     println!("  - Total Heap Data: {} bytes ({:.2} MB)",
         total_heap_data_size,
         total_heap_data_size as f64 / (1024.0 * 1024.0)
@@ -64,7 +64,7 @@ fn test_locality_cache_size_for_cameroon_with_villages() {
     
     // 3. Total Footprint
     let min_total_size = stack_size + total_heap_data_size;
-    println!("\nMinimum Total Memory Footprint ({} Entries):", NUM_LOCALITIES);
+    println!("\nMinimum Total Memory Footprint ({NUM_LOCALITIES} Entries):");
     println!("  - Minimum Total: {} bytes ({:.2} MB) + Moka's Internal Overhead",
         min_total_size,
         min_total_size as f64 / (1024.0 * 1024.0)
