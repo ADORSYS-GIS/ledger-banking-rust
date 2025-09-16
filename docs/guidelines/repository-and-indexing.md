@@ -77,7 +77,7 @@ When a repository (`Repo A`) needs to validate a constraint against an entity ma
 **Example: `CountrySubdivisionRepository` depending on `CountryRepository`**
 
 ```rust
-// In banking-db-postgres/src/repository/person_country_subdivision_repository_impl.rs
+// In banking-db-postgres/src/repository/person/country_subdivision_repository_impl.rs
 
 pub struct CountrySubdivisionRepositoryImpl {
     pool: Arc<PgPool>,
@@ -145,6 +145,12 @@ pub trait ProductRepository: Send + Sync {
     async fn exists_by_id(&self, id: Uuid) -> Result<bool, Box<dyn Error + Send + Sync>>;
 }
 ```
+
+#### Batch Operations
+
+For repositories that need to support bulk data processing, such as data migrations or large-scale updates, a separate `BatchRepository` trait should be implemented. This pattern is designed to optimize performance by reducing network round-trips and leveraging database-specific features for bulk operations.
+
+For a detailed explanation of the batch operations pattern, its benefits, and implementation guidelines, please refer to the [Batch Operations Implementation Summary](./batch_operations.md).
 
 #### Finder Methods and Index-Based Lookups
 

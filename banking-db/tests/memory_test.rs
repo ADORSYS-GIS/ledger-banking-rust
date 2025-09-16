@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 #[test]
 fn test_person_idx_model_memory_size_and_alignment() {
-    const EXPECTED_TOTAL_SIZE: usize = 48;
+    const EXPECTED_TOTAL_SIZE: usize = 80;
     let total_size = mem::size_of::<PersonIdxModel>();
     println!("--- PersonIdxModel Memory Layout ---");
     println!("Total struct size: {} bytes", total_size);

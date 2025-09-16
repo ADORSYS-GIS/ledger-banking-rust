@@ -12,4 +12,6 @@ This document provides a high-level overview of the development guidelines for t
 
 *   **[Repository and Indexing Strategy](./repository-and-indexing.md)**: Describes the strategy for the data access layer, including repository design, application-managed indexes, and referential integrity.
 
+*   **[Repository Error Handling](./repo-error-handling.md)**: Provides guidelines for implementing domain-specific error handling in the repository layer, including error mapping, validation patterns, and testing strategies.
+
 *   **[Transactional Command Execution](./transactional-command.md)**: Outlines the pattern for executing business logic commands within atomic database transactions.

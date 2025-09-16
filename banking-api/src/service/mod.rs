@@ -17,8 +17,9 @@
 // pub mod collateral_service;
 // pub mod daily_collection_service;
 // pub mod product_service;
-pub mod person_service;
 pub mod audit_service;
+pub mod person;
+
 
 // pub use customer_service::*;
 // pub use account_service::*;
@@ -38,5 +39,5 @@ pub mod audit_service;
 // pub use collateral_service::*;
 // pub use product_service::*;
 // pub use daily_collection_service::*;
-pub use person_service::*;
 pub use audit_service::*;
+pub use person::*;

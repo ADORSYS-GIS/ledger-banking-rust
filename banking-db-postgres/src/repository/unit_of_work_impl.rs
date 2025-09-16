@@ -15,13 +15,13 @@ use std::sync::Arc;
 use crate::repository::{
     audit_repository_impl::AuditLogRepositoryImpl,
     executor::Executor,
-    person_country_repository_impl::CountryRepositoryImpl,
-    person_country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
-    person_entity_reference_repository_impl::EntityReferenceRepositoryImpl,
-    person_locality_repository_impl::LocalityRepositoryImpl,
-    person_location_repository_impl::LocationRepositoryImpl,
-    person_messaging_repository_impl::MessagingRepositoryImpl,
-    person_person_repository_impl::PersonRepositoryImpl,
+    person::country_repository_impl::CountryRepositoryImpl,
+    person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
+    person::entity_reference_repository_impl::EntityReferenceRepositoryImpl,
+    person::locality_repository_impl::LocalityRepositoryImpl,
+    person::location_repository_impl::LocationRepositoryImpl,
+    person::messaging_repository_impl::MessagingRepositoryImpl,
+    person::person_repository_impl::PersonRepositoryImpl,
 };
 
 #[derive(Clone)]

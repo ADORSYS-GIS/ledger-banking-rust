@@ -15,7 +15,7 @@ Apply the rules defined in 'docs/guidelines/development.md' to generate the nece
 
 ### Step 1: Generate Index Model from Comment Instructions
 
-**File:** `banking-db/src/models/<file_name>.rs`
+**File:** `banking-db/src/models/person/<file_name>.rs`
 
 For each main model (e.g., `CountryModel`), generate the corresponding `<ModelName>IdxModel` struct based on structured comments within the main model's definition. The generation is triggered by a top-level `/// # Index: <ModelName>IdxModel` comment.
 
@@ -69,7 +69,7 @@ pub struct CountryIdxModel {
 
 ### Step 2: Generate Repository Methods
 
-**File:** `banking-db/src/repository/<file_name>_repository.rs`
+**File:** `banking-db/src/repository/person/<file_name>_repository.rs`
 
 Update the repository trait for the module to include methods for referential integrity checks and index-based finders, as per the "Application-Layer Referential Integrity" and "Repository Trait Design" sections of the guidelines.
 
@@ -78,7 +78,7 @@ Update the repository trait for the module to include methods for referential in
 banking-db/src/models/person.rs:1023-1040
 ```
 /// # Repository Trait
-/// - FQN: banking-db/src/repository/person_repository.rs/PersonModelRepository
+/// - FQN: banking-db/src/repository/person/person_repository.rs/PersonModelRepository
 /// # Cache
 /// ...
 /// # Trait method
@@ -110,7 +110,7 @@ add postgress PostgreSQL users: LISTEN/NOTIFY functionality, for the listed data
 
 ### Step 3: Generate Database Migration Script
 
-**File:** `banking-db-postgres/migrations/<init_order>_initial_schema_<file_name>.sql`
+**File:** `banking-db-postgres/migrations/<init_order>_initial_schema_person.sql`
 
 Create a new SQL migration file to define the schema for the main table and its corresponding index table.
 

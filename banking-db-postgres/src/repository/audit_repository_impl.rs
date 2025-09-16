@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use banking_db::{models::audit::AuditLogModel, repository::audit_repository::AuditLogRepository};
+use banking_db::{
+    models::audit::AuditLogModel,
+    repository::audit_repository::{AuditLogRepository, AuditResult},
+};
 use sqlx::{Postgres, Row};
 use uuid::Uuid;
 
@@ -20,7 +23,7 @@ impl AuditLogRepositoryImpl {
 
 #[async_trait]
 impl AuditLogRepository<Postgres> for AuditLogRepositoryImpl {
-    async fn create(&self, audit_log: &AuditLogModel) -> Result<AuditLogModel, sqlx::Error> {
+    async fn create(&self, audit_log: &AuditLogModel) -> AuditResult<AuditLogModel> {
         let query = sqlx::query(
             r#"
             INSERT INTO audit_log (id, updated_at, updated_by_person_id)
@@ -45,7 +48,7 @@ impl AuditLogRepository<Postgres> for AuditLogRepositoryImpl {
         Ok(audit_log.clone())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<AuditLogModel>, sqlx::Error> {
+    async fn find_by_id(&self, id: Uuid) -> AuditResult<Option<AuditLogModel>> {
         let query = sqlx::query(
             r#"
             SELECT * FROM audit_log WHERE id = $1

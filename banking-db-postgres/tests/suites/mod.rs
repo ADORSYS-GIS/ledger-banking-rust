@@ -6,7 +6,8 @@
 // pub mod example_with_cleanup;
 // pub mod fee_repository_tests;
 pub mod commons;
-pub mod person_repository_tests;
+#[path = "person/mod.rs"]
+pub mod person;
 // pub mod reason_and_purpose_repository_tests;
 // pub mod transaction_repository_tests;
 // pub mod unit_tests;
