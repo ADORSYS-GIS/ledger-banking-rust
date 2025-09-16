@@ -205,13 +205,17 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
                 r#"
                 UPDATE person_idx SET
                     external_identifier_hash = $2,
-                    version = $3,
-                    hash = $4
+                    organization_person_id = $3,
+                    duplicate_of_person_id = $4,
+                    version = $5,
+                    hash = $6
                 WHERE person_id = $1
                 "#,
             )
             .bind(person.id)
             .bind(new_external_hash)
+            .bind(person.organization_person_id)
+            .bind(person.duplicate_of_person_id)
             .bind(new_version)
             .bind(new_hash);
 
@@ -232,6 +236,8 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             let new_idx = PersonIdxModel {
                 person_id: person.id,
                 external_identifier_hash: new_external_hash,
+                organization_person_id: person.organization_person_id,
+                duplicate_of_person_id: person.duplicate_of_person_id,
                 version: new_version,
                 hash: new_hash,
             };
@@ -326,12 +332,14 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
 
             let query3 = sqlx::query(
                 r#"
-                INSERT INTO person_idx (person_id, external_identifier_hash, version, hash)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO person_idx (person_id, external_identifier_hash, organization_person_id, duplicate_of_person_id, version, hash)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
             )
             .bind(person.id)
             .bind(new_external_hash)
+            .bind(person.organization_person_id)
+            .bind(person.duplicate_of_person_id)
             .bind(version)
             .bind(new_hash);
 
@@ -352,6 +360,8 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             let new_idx = PersonIdxModel {
                 person_id: person.id,
                 external_identifier_hash: new_external_hash,
+                organization_person_id: person.organization_person_id,
+                duplicate_of_person_id: person.duplicate_of_person_id,
                 version,
                 hash: new_hash,
             };
@@ -377,7 +387,7 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
             }
         };
 
-        PersonModel::try_from_row(&row).map_err(|e| PersonRepositoryError::RepositoryError(e))
+        PersonModel::try_from_row(&row).map_err(PersonRepositoryError::RepositoryError)
     }
 
     async fn find_by_id(&self, id: Uuid) -> PersonResult<Option<PersonIdxModel>> {
@@ -395,6 +405,18 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
 
     async fn exists_by_id(&self, id: Uuid) -> PersonResult<bool> {
         Ok(self.person_idx_cache.read().await.contains_primary(&id))
+    }
+
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> PersonResult<Vec<(Uuid, bool)>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let cache = self.person_idx_cache.read().await;
+        let result = ids
+            .iter()
+            .map(|id| (*id, cache.contains_primary(id)))
+            .collect();
+        Ok(result)
     }
 
     async fn get_ids_by_external_identifier(&self, identifier: &str) -> PersonResult<Vec<Uuid>> {
@@ -423,6 +445,34 @@ impl PersonRepository<Postgres> for PersonRepositoryImpl {
         let results = ids
             .iter()
             .filter_map(|id| cache.get_by_primary(id))
+            .collect();
+        Ok(results)
+    }
+
+    async fn find_by_duplicate_of_person_id(
+        &self,
+        person_id: Uuid,
+    ) -> PersonResult<Vec<PersonIdxModel>> {
+        let cache = self.person_idx_cache.read().await;
+        let results = cache
+            .iter()
+            .iter()
+            .filter(|item| item.duplicate_of_person_id == Some(person_id))
+            .cloned()
+            .collect();
+        Ok(results)
+    }
+
+    async fn find_by_organization_person_id(
+        &self,
+        person_id: Uuid,
+    ) -> PersonResult<Vec<PersonIdxModel>> {
+        let cache = self.person_idx_cache.read().await;
+        let results = cache
+            .iter()
+            .iter()
+            .filter(|item| item.organization_person_id == Some(person_id))
+            .cloned()
             .collect();
         Ok(results)
     }
@@ -538,6 +588,24 @@ impl TransactionAwarePersonIdxModelCache {
         } else {
             Some(result.into_iter().collect())
         }
+    }
+    pub fn iter(&self) -> Vec<PersonIdxModel> {
+        let shared_cache = self.shared_cache.read();
+        let local_additions = self.local_additions.read();
+        let local_updates = self.local_updates.read();
+        let local_deletions = self.local_deletions.read();
+
+        shared_cache
+            .iter()
+            .filter(move |item| !local_deletions.contains(&item.person_id))
+            .map(move |item| {
+                local_updates
+                    .get(&item.person_id)
+                    .cloned()
+                    .unwrap_or_else(|| item.clone())
+            })
+            .chain(local_additions.values().cloned())
+            .collect()
     }
 }
 

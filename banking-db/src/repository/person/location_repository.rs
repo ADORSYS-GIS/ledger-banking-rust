@@ -32,16 +32,16 @@ impl fmt::Display for LocationRepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::LocalityNotFound(id) => {
-                write!(f, "Locality not found: {}", id)
+                write!(f, "Locality not found: {id}")
             }
             Self::InvalidLocationType(loc_type) => {
-                write!(f, "Invalid location type: {}", loc_type)
+                write!(f, "Invalid location type: {loc_type}")
             }
             Self::InvalidCoordinates {
                 latitude,
                 longitude,
             } => {
-                write!(f, "Invalid coordinates: ({}, {})", latitude, longitude)
+                write!(f, "Invalid coordinates: ({latitude}, {longitude})")
             }
             Self::DuplicateLocation {
                 street,
@@ -49,12 +49,11 @@ impl fmt::Display for LocationRepositoryError {
             } => {
                 write!(
                     f,
-                    "Duplicate location: {} in locality {}",
-                    street, locality_id
+                    "Duplicate location: {street} in locality {locality_id}"
                 )
             }
             Self::RepositoryError(err) => {
-                write!(f, "Repository error: {}", err)
+                write!(f, "Repository error: {err}")
             }
         }
     }

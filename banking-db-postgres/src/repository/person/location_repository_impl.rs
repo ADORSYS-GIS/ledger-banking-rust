@@ -296,7 +296,7 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
             }
         };
 
-        LocationModel::try_from_row(&row).map_err(|e| LocationRepositoryError::RepositoryError(e.into()))
+        LocationModel::try_from_row(&row).map_err(LocationRepositoryError::RepositoryError)
     }
 
     async fn find_by_id(&self, id: Uuid) -> LocationResult<Option<LocationIdxModel>> {

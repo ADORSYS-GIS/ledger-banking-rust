@@ -5,6 +5,7 @@ pub mod entity_reference;
 pub mod locality;
 pub mod location;
 pub mod messaging;
+#[allow(clippy::module_inception)]
 pub mod person;
 
 pub use self::common_enums::*;

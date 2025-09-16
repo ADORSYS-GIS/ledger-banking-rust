@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use banking_api::domain::person::Person;
-use banking_api::service::{PersonService, PersonServiceError, PersonServiceResult};
-use banking_db::repository::PersonRepositoryError;
+use banking_api::service::person::person_service::{PersonService, PersonServiceError, PersonServiceResult};
+use banking_db::repository::person::person_repository::PersonRepositoryError;
 use heapless::String as HeaplessString;
 use sqlx::Database;
 use uuid::Uuid;
@@ -34,6 +34,9 @@ impl<DB: Database> PersonServiceImpl<DB> {
             PersonRepositoryError::DuplicatePersonNotFound(id) => {
                 PersonServiceError::DuplicatePersonNotFound(id)
             }
+            PersonRepositoryError::InvalidLocations(ids) => {
+                PersonServiceError::InvalidLocations(ids.len())
+            }
             PersonRepositoryError::InvalidPersonTypeChange { from, to } => {
                 PersonServiceError::InvalidPersonTypeChange { from, to }
             }
@@ -47,6 +50,22 @@ impl<DB: Database> PersonServiceImpl<DB> {
             PersonRepositoryError::RepositoryError(err) => {
                 PersonServiceError::RepositoryError(err.to_string())
             }
+            PersonRepositoryError::AlreadyExists(id) => PersonServiceError::AlreadyExists(id),
+            PersonRepositoryError::ManyPersonsNotFound(ids) => {
+                PersonServiceError::ManyPersonsNotFound(ids)
+            }
+           PersonRepositoryError::ManyPersonsExists(ids) => {
+               PersonServiceError::ManyPersonsExists(ids)
+           }
+           PersonRepositoryError::ManyOrganizationsNotFound(ids) => {
+               PersonServiceError::ManyOrganizationsNotFound(ids)
+           }
+           PersonRepositoryError::IsDuplicatePersonFor(ids) => {
+               PersonServiceError::IsDuplicatePersonFor(ids)
+           }
+           PersonRepositoryError::IsOrganizationPersonFor(ids) => {
+               PersonServiceError::IsOrganizationFor(ids)
+           }
         }
     }
 }

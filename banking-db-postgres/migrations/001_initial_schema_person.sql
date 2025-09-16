@@ -184,6 +184,8 @@ CREATE TABLE person (
 CREATE TABLE person_idx (
     person_id UUID PRIMARY KEY,
     external_identifier_hash BIGINT,
+    organization_person_id UUID,
+    duplicate_of_person_id UUID,
     version INTEGER NOT NULL,
     hash BIGINT NOT NULL
 );

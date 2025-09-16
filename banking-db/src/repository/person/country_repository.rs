@@ -16,10 +16,10 @@ pub enum CountryRepositoryError {
 impl std::fmt::Display for CountryRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::CountryNotFound(id) => write!(f, "Country not found: {}", id),
-            Self::DuplicateCountryISO2(iso2) => write!(f, "Duplicate country ISO2: {}", iso2),
-            Self::InvalidCountryISO2(iso2) => write!(f, "Invalid country ISO2: {}", iso2),
-            Self::RepositoryError(e) => write!(f, "Repository error: {}", e),
+            Self::CountryNotFound(id) => write!(f, "Country not found: {id}"),
+            Self::DuplicateCountryISO2(iso2) => write!(f, "Duplicate country ISO2: {iso2}"),
+            Self::InvalidCountryISO2(iso2) => write!(f, "Invalid country ISO2: {iso2}"),
+            Self::RepositoryError(e) => write!(f, "Repository error: {e}"),
         }
     }
 }

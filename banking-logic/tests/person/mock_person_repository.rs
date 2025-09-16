@@ -22,6 +22,8 @@ impl PersonRepository<Postgres> for MockPersonRepository {
         let person_idx = PersonIdxModel {
             person_id: person.id,
             external_identifier_hash: None,
+            organization_person_id: person.organization_person_id,
+            duplicate_of_person_id: person.duplicate_of_person_id,
             version: 0,
             hash: 0,
         };
@@ -101,6 +103,20 @@ impl PersonRepository<Postgres> for MockPersonRepository {
             .any(|p| p.person_id == id))
     }
 
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> PersonResult<Vec<(Uuid, bool)>> {
+        let person_ixes = self.person_ixes.lock().unwrap();
+        let result = ids
+            .iter()
+            .map(|id| {
+                (
+                    *id,
+                    person_ixes.iter().any(|p_idx| &p_idx.person_id == id),
+                )
+            })
+            .collect();
+        Ok(result)
+    }
+
     async fn get_ids_by_external_identifier(&self, identifier: &str) -> PersonResult<Vec<Uuid>> {
         let persons = self.persons.lock().unwrap();
         let ids = persons
@@ -125,6 +141,32 @@ impl PersonRepository<Postgres> for MockPersonRepository {
         let result = person_ixes
             .iter()
             .filter(|p| ids.contains(&p.person_id))
+            .cloned()
+            .collect();
+        Ok(result)
+    }
+
+    async fn find_by_duplicate_of_person_id(
+        &self,
+        person_id: Uuid,
+    ) -> PersonResult<Vec<PersonIdxModel>> {
+        let person_ixes = self.person_ixes.lock().unwrap();
+        let result = person_ixes
+            .iter()
+            .filter(|p| p.duplicate_of_person_id == Some(person_id))
+            .cloned()
+            .collect();
+        Ok(result)
+    }
+
+    async fn find_by_organization_person_id(
+        &self,
+        person_id: Uuid,
+    ) -> PersonResult<Vec<PersonIdxModel>> {
+        let person_ixes = self.person_ixes.lock().unwrap();
+        let result = person_ixes
+            .iter()
+            .filter(|p| p.organization_person_id == Some(person_id))
             .cloned()
             .collect();
         Ok(result)

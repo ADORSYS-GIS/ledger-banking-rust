@@ -19,17 +19,16 @@ pub enum EntityReferenceRepositoryError {
 impl fmt::Display for EntityReferenceRepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::PersonNotFound(id) => write!(f, "Person not found with id: {}", id),
+            Self::PersonNotFound(id) => write!(f, "Person not found with id: {id}"),
             Self::DuplicateReference {
                 person_id,
                 reference_type,
                 reference_external_id,
             } => write!(
                 f,
-                "Duplicate reference for person_id: {}, reference_type: {}, reference_external_id: {}",
-                person_id, reference_type, reference_external_id
+                "Duplicate reference for person_id: {person_id}, reference_type: {reference_type}, reference_external_id: {reference_external_id}"
             ),
-            Self::RepositoryError(e) => write!(f, "Repository error: {}", e),
+            Self::RepositoryError(e) => write!(f, "Repository error: {e}"),
         }
     }
 }

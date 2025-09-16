@@ -16,9 +16,9 @@ pub enum MessagingRepositoryError {
 impl fmt::Display for MessagingRepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotFound(id) => write!(f, "Messaging with id {} not found", id),
-            Self::DuplicateEntry(value) => write!(f, "Duplicate messaging entry: {}", value),
-            Self::DatabaseError(err) => write!(f, "Database error: {}", err),
+            Self::NotFound(id) => write!(f, "Messaging with id {id} not found"),
+            Self::DuplicateEntry(value) => write!(f, "Duplicate messaging entry: {value}"),
+            Self::DatabaseError(err) => write!(f, "Database error: {err}"),
         }
     }
 }

@@ -156,7 +156,7 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         };
 
         LocalityModel::try_from_row(&row)
-            .map_err(|e| LocalityRepositoryError::RepositoryError(e.into()))
+            .map_err(LocalityRepositoryError::RepositoryError)
     }
 
     async fn find_by_id(&self, id: Uuid) -> LocalityResult<Option<LocalityIdxModel>> {

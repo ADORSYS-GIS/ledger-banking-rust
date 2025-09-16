@@ -338,7 +338,7 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
             }
         };
 
-        EntityReferenceModel::try_from_row(&row).map_err(|e| EntityReferenceRepositoryError::RepositoryError(e.into()))
+        EntityReferenceModel::try_from_row(&row).map_err(EntityReferenceRepositoryError::RepositoryError)
     }
 
     async fn find_by_id(

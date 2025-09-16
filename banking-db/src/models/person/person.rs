@@ -108,6 +108,9 @@ pub struct PersonModel {
     /// References PersonModel.id for organizational hierarchy
     /// ## Constraint
     /// - exists(PersonModel.id)
+    /// # Index: organization_person_id: Option<Uuid>
+    /// ## Nature
+    /// - secondary
     pub organization_person_id: Option<Uuid>,
     
     /// # Documentation
@@ -140,6 +143,9 @@ pub struct PersonModel {
     
     /// ## Constraint
     /// - exists(PersonModel.id)
+    /// # Index: organization_person_id: Option<Uuid>
+    /// ## Nature
+    /// - secondary
     pub duplicate_of_person_id: Option<Uuid>,
 }
 
@@ -251,6 +257,12 @@ pub struct PersonIdxModel {
     /// # Nature
     /// - secondary
     pub external_identifier_hash: Option<i64>,
+    /// # Nature
+    /// - secondary
+    pub organization_person_id: Option<Uuid>,
+    /// # Nature
+    /// - secondary
+    pub duplicate_of_person_id: Option<Uuid>,
     pub version: i32,
     pub hash: i64,
 }
@@ -258,12 +270,16 @@ pub struct PersonIdxModel {
 pub struct PersonIdxModelCache {
     by_id: HashMap<Uuid, PersonIdxModel>,
     by_external_identifier_hash: HashMap<i64, Vec<Uuid>>,
+    by_organization_person_id: HashMap<Uuid, Vec<Uuid>>,
+    by_duplicate_of_person_id: HashMap<Uuid, Vec<Uuid>>,
 }
 
 impl PersonIdxModelCache {
     pub fn new(items: Vec<PersonIdxModel>) -> Result<Self, &'static str> {
         let mut by_id = HashMap::new();
         let mut by_external_identifier_hash = HashMap::new();
+        let mut by_organization_person_id = HashMap::new();
+        let mut by_duplicate_of_person_id = HashMap::new();
 
         for item in items {
             let primary_key = item.person_id;
@@ -277,6 +293,18 @@ impl PersonIdxModelCache {
                     .or_insert_with(Vec::new)
                     .push(primary_key);
             }
+            if let Some(org_id) = item.organization_person_id {
+                by_organization_person_id
+                    .entry(org_id)
+                    .or_insert_with(Vec::new)
+                    .push(primary_key);
+            }
+            if let Some(dup_id) = item.duplicate_of_person_id {
+                by_duplicate_of_person_id
+                    .entry(dup_id)
+                    .or_insert_with(Vec::new)
+                    .push(primary_key);
+            }
 
             by_id.insert(primary_key, item);
         }
@@ -284,6 +312,8 @@ impl PersonIdxModelCache {
         Ok(PersonIdxModelCache {
             by_id,
             by_external_identifier_hash,
+            by_organization_person_id,
+            by_duplicate_of_person_id,
         })
     }
 
@@ -300,6 +330,18 @@ impl PersonIdxModelCache {
                 .or_default()
                 .push(primary_key);
         }
+        if let Some(org_id) = item.organization_person_id {
+            self.by_organization_person_id
+                .entry(org_id)
+                .or_default()
+                .push(primary_key);
+        }
+        if let Some(dup_id) = item.duplicate_of_person_id {
+            self.by_duplicate_of_person_id
+                .entry(dup_id)
+                .or_default()
+                .push(primary_key);
+        }
         self.by_id.insert(primary_key, item);
     }
 
@@ -310,6 +352,22 @@ impl PersonIdxModelCache {
                     ids.retain(|&id| id != *person_id);
                     if ids.is_empty() {
                         self.by_external_identifier_hash.remove(&hash);
+                    }
+                }
+            }
+            if let Some(org_id) = item.organization_person_id {
+                if let Some(ids) = self.by_organization_person_id.get_mut(&org_id) {
+                    ids.retain(|&id| id != *person_id);
+                    if ids.is_empty() {
+                        self.by_organization_person_id.remove(&org_id);
+                    }
+                }
+            }
+            if let Some(dup_id) = item.duplicate_of_person_id {
+                if let Some(ids) = self.by_duplicate_of_person_id.get_mut(&dup_id) {
+                    ids.retain(|&id| id != *person_id);
+                    if ids.is_empty() {
+                        self.by_duplicate_of_person_id.remove(&dup_id);
                     }
                 }
             }
@@ -333,5 +391,17 @@ impl PersonIdxModelCache {
 
     pub fn get_by_external_identifier_hash(&self, key: &i64) -> Option<&Vec<Uuid>> {
         self.by_external_identifier_hash.get(key)
+    }
+
+    pub fn get_by_organization_person_id(&self, key: &Uuid) -> Option<&Vec<Uuid>> {
+        self.by_organization_person_id.get(key)
+    }
+
+    pub fn get_by_duplicate_of_person_id(&self, key: &Uuid) -> Option<&Vec<Uuid>> {
+        self.by_duplicate_of_person_id.get(key)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &PersonIdxModel> {
+        self.by_id.values()
     }
 }

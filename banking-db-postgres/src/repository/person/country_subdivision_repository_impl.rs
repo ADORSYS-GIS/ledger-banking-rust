@@ -175,7 +175,7 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         };
 
         CountrySubdivisionModel::try_from_row(&row)
-            .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))
+            .map_err(CountrySubdivisionRepositoryError::RepositoryError)
     }
 
     async fn find_by_id(

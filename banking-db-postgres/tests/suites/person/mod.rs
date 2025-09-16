@@ -5,4 +5,5 @@ pub mod locality_repository_tests;
 pub mod country_subdivision_repository_tests;
 pub mod country_repository_tests;
 pub mod person_repository_tests;
+pub mod batch_operations_test;
 pub mod helpers;

@@ -28,31 +28,28 @@ impl fmt::Display for AuditDomainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidAuditType(audit_type) => {
-                write!(f, "Invalid audit type: {}", audit_type)
+                write!(f, "Invalid audit type: {audit_type}")
             }
             Self::DuplicateAuditRecord { entity_id, version } => {
                 write!(
                     f,
-                    "Duplicate audit record for entity {} version {}",
-                    entity_id, version
+                    "Duplicate audit record for entity {entity_id} version {version}"
                 )
             }
             Self::InvalidVersionSequence { expected, actual } => {
                 write!(
                     f,
-                    "Invalid version sequence: expected {}, got {}",
-                    expected, actual
+                    "Invalid version sequence: expected {expected}, got {actual}"
                 )
             }
             Self::HashMismatch { entity_id, version } => {
                 write!(
                     f,
-                    "Hash mismatch for entity {} version {} - potential tampering detected",
-                    entity_id, version
+                    "Hash mismatch for entity {entity_id} version {version} - potential tampering detected"
                 )
             }
             Self::RepositoryError(err) => {
-                write!(f, "Repository error: {}", err)
+                write!(f, "Repository error: {err}")
             }
         }
     }

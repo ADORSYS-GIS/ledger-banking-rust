@@ -144,7 +144,7 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
 
         match row {
             Ok(row) => CountryModel::try_from_row(&row)
-                .map_err(|e| CountryRepositoryError::RepositoryError(e.into())),
+                .map_err(CountryRepositoryError::RepositoryError),
             Err(sqlx::Error::RowNotFound) => Err(CountryRepositoryError::CountryNotFound(id)),
             Err(e) => Err(CountryRepositoryError::RepositoryError(e.into())),
         }

@@ -13,14 +13,27 @@ pub enum PersonRepositoryError {
     InvalidHierarchy(String),
     /// Duplicate external identifier constraint violation
     DuplicateExternalId(String),
+    /// Person already exists
+    AlreadyExists(String),
+    /// A list of persons that already exist
+    ManyPersonsExists(Vec<Uuid>),
     /// Cannot delete due to dependent records
     CascadeDeleteBlocked(Vec<Uuid>),
     /// Organization not found for person
     OrganizationNotFound(Uuid),
+    /// A list of organizations that were not found
+    ManyOrganizationsNotFound(Vec<Uuid>),
     /// Location not found for person
     LocationNotFound(Uuid),
     /// Referenced person not found (for duplicate_of)
     DuplicatePersonNotFound(Uuid),
+    InvalidLocations(Vec<Uuid>),
+    /// A list of persons that were not found
+    ManyPersonsNotFound(Vec<Uuid>),
+    /// Person is a duplicate for other persons
+    IsDuplicatePersonFor(Vec<Uuid>),
+    /// Person is an organization for other persons
+    IsOrganizationPersonFor(Vec<Uuid>),
     /// Invalid person type transition
     InvalidPersonTypeChange { from: String, to: String },
     /// Messaging reference not found
@@ -37,27 +50,78 @@ pub enum PersonRepositoryError {
 impl fmt::Display for PersonRepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidHierarchy(msg) => write!(f, "Invalid organizational hierarchy: {}", msg),
-            Self::DuplicateExternalId(id) => write!(f, "Duplicate external identifier: {}", id),
+            Self::InvalidHierarchy(msg) => write!(f, "Invalid organizational hierarchy: {msg}"),
+            Self::DuplicateExternalId(id) => write!(f, "Duplicate external identifier: {id}"),
+            Self::AlreadyExists(msg) => write!(f, "{msg}"),
+            Self::ManyPersonsExists(ids) => write!(
+                f,
+                "Persons already exist: {}",
+                ids.iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             Self::CascadeDeleteBlocked(ids) => {
                 write!(f, "Cannot delete: {} dependent records exist", ids.len())
             }
-            Self::OrganizationNotFound(id) => write!(f, "Organization not found: {}", id),
-            Self::LocationNotFound(id) => write!(f, "Location not found: {}", id),
+            Self::OrganizationNotFound(id) => write!(f, "Organization not found: {id}"),
+            Self::ManyOrganizationsNotFound(ids) => write!(
+                f,
+                "Organizations not found: {}",
+                ids.iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Self::LocationNotFound(id) => write!(f, "Location not found: {id}"),
             Self::DuplicatePersonNotFound(id) => {
-                write!(f, "Referenced duplicate person not found: {}", id)
+                write!(f, "Referenced duplicate person not found: {id}")
             }
+            Self::InvalidLocations(ids) => {
+                write!(
+                    f,
+                    "Invalid locations: {}",
+                    ids.iter()
+                        .map(|id| id.to_string())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+            Self::IsDuplicatePersonFor(ids) => write!(
+                f,
+                "Person is a duplicate for others: {}",
+                ids.iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Self::IsOrganizationPersonFor(ids) => write!(
+                f,
+                "Person is an organization for others: {}",
+                ids.iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Self::ManyPersonsNotFound(ids) => write!(
+                f,
+                "Persons not found: {}",
+                ids.iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             Self::InvalidPersonTypeChange { from, to } => {
-                write!(f, "Invalid person type change from {} to {}", from, to)
+                write!(f, "Invalid person type change from {from} to {to}")
             }
-            Self::MessagingNotFound(id) => write!(f, "Messaging reference not found: {}", id),
+            Self::MessagingNotFound(id) => write!(f, "Messaging reference not found: {id}"),
             Self::BatchValidationFailed { failed_ids, errors } => write!(
                 f,
                 "Batch validation failed for {} records: {}",
                 failed_ids.len(),
                 errors.join(", ")
             ),
-            Self::RepositoryError(err) => write!(f, "Repository error: {}", err),
+            Self::RepositoryError(err) => write!(f, "Repository error: {err}"),
         }
     }
 }
@@ -147,6 +211,9 @@ pub trait PersonRepository<DB: Database>: Send + Sync {
     async fn find_by_id(&self, id: Uuid) -> PersonResult<Option<PersonIdxModel>>;
     async fn find_by_ids(&self, ids: &[Uuid]) -> PersonResult<Vec<PersonIdxModel>>;
     async fn exists_by_id(&self, id: Uuid) -> PersonResult<bool>;
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> PersonResult<Vec<(Uuid, bool)>>;
     async fn get_ids_by_external_identifier(&self, identifier: &str) -> PersonResult<Vec<Uuid>>;
     async fn get_by_external_identifier(&self, identifier: &str) -> PersonResult<Vec<PersonIdxModel>>;
+    async fn find_by_duplicate_of_person_id(&self, person_id: Uuid) -> PersonResult<Vec<PersonIdxModel>>;
+    async fn find_by_organization_person_id(&self, person_id: Uuid) -> PersonResult<Vec<PersonIdxModel>>;
 }

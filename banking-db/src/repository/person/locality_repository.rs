@@ -20,7 +20,7 @@ impl std::fmt::Display for LocalityRepositoryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LocalityRepositoryError::CountrySubdivisionNotFound(id) => {
-                write!(f, "Country subdivision not found with id: {}", id)
+                write!(f, "Country subdivision not found with id: {id}")
             }
             LocalityRepositoryError::DuplicateCode {
                 country_subdivision_id,
@@ -28,15 +28,14 @@ impl std::fmt::Display for LocalityRepositoryError {
             } => {
                 write!(
                     f,
-                    "Duplicate locality code '{}' for country subdivision '{}'",
-                    code, country_subdivision_id
+                    "Duplicate locality code '{code}' for country subdivision '{country_subdivision_id}'"
                 )
             }
             LocalityRepositoryError::LocalityNotFound(id) => {
-                write!(f, "Locality not found with id: {}", id)
+                write!(f, "Locality not found with id: {id}")
             }
             LocalityRepositoryError::RepositoryError(err) => {
-                write!(f, "Repository error: {}", err)
+                write!(f, "Repository error: {err}")
             }
         }
     }

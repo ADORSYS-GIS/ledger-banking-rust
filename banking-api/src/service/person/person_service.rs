@@ -18,8 +18,14 @@ pub enum PersonServiceError {
     CascadeDeleteBlocked(usize),
     #[error("Organization not found: {0}")]
     OrganizationNotFound(Uuid),
+    #[error("Organizations not found: {0:?}")]
+    ManyOrganizationsNotFound(Vec<Uuid>),
     #[error("Location not found: {0}")]
     LocationNotFound(Uuid),
+    #[error("Invalid locations found for {0} persons")]
+    InvalidLocations(usize),
+    #[error("Persons not found: {0:?}")]
+    ManyPersonsNotFound(Vec<Uuid>),
     #[error("Referenced person for duplicate not found: {0}")]
     DuplicatePersonNotFound(Uuid),
     #[error("Invalid person type change from {from} to {to}")]
@@ -37,6 +43,14 @@ pub enum PersonServiceError {
     RepositoryError(String),
     #[error("Unexpected error: {0}")]
     Unexpected(String),
+    #[error("Person already exists: {0}")]
+    AlreadyExists(String),
+    #[error("Persons already exist: {0:?}")]
+    ManyPersonsExists(Vec<Uuid>),
+    #[error("Person is a duplicate for others: {0:?}")]
+    IsDuplicatePersonFor(Vec<Uuid>),
+    #[error("Person is an organization for others: {0:?}")]
+    IsOrganizationFor(Vec<Uuid>),
 }
 
 #[async_trait]

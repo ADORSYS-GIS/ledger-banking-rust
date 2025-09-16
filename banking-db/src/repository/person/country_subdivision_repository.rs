@@ -16,15 +16,14 @@ pub enum CountrySubdivisionRepositoryError {
 impl fmt::Display for CountrySubdivisionRepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::CountryNotFound(id) => write!(f, "Country not found: {}", id),
+            Self::CountryNotFound(id) => write!(f, "Country not found: {id}"),
             Self::DuplicateCode { country_id, code } => {
                 write!(
                     f,
-                    "Duplicate subdivision code '{}' for country {}",
-                    code, country_id
+                    "Duplicate subdivision code '{code}' for country {country_id}"
                 )
             }
-            Self::RepositoryError(err) => write!(f, "Repository error: {}", err),
+            Self::RepositoryError(err) => write!(f, "Repository error: {err}"),
         }
     }
 }

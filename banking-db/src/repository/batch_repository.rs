@@ -38,12 +38,6 @@ pub trait BatchRepository<DB: Database, T>: Send + Sync {
         ids: &[Uuid],
     ) -> Result<usize, Box<dyn Error + Send + Sync>>;
 
-    /// Check existence of multiple items
-    /// Returns a vector of booleans in the same order as the provided IDs
-    async fn exists_batch(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<bool>, Box<dyn Error + Send + Sync>>;
 }
 
 /// Statistics for batch operations
