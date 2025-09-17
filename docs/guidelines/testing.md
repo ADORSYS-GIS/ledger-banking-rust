@@ -261,18 +261,34 @@ async fn test_my_repository() -> Result<(), Box<dyn std::error::Error + Send + S
 
 ### 3. Test Data Generation
 
-Helper functions for creating test models are centralized in `person/helpers.rs`.
+To promote reusability and maintainability, test data generation follows a modular, co-located pattern. This approach is preferred over a single, monolithic `helpers.rs` file, as it keeps test data generation logic close to the tests that use it.
+
+-   **Co-location**: For each primary entity, a public `setup_test_<entity>` function is defined within its corresponding test file (e.g., `country_repository_tests.rs` or `country_batch_operations_test.rs`). This function is responsible for creating a valid model instance.
+-   **Reusability**: By marking the setup function as `pub`, it can be imported and reused by other tests that have a dependency on that entity. For example, `locality_batch_operations_test.rs` can import and use `setup_test_country` and `setup_test_country_subdivision`.
+-   **Dependencies**: If an entity depends on another (e.g., a `Locality` needs a `CountrySubdivision`), the setup function should accept the parent's ID as a parameter.
 
 ```rust
-// In banking-db-postgres/tests/suites/person/helpers.rs
-use banking_db::models::person::{CountryModel, ...};
+// In banking-db-postgres/tests/suites/person/country_batch_operations_test.rs
+use banking_db::models::person::CountryModel;
 // ... other imports
 
-pub fn create_test_country_model(iso2: &str, name_l1: &str) -> CountryModel {
+pub async fn setup_test_country() -> CountryModel {
     // ... implementation
 }
 
-// ... other helper functions
+// In banking-db-postgres/tests/suites/person/locality_batch_operations_test.rs
+use crate::suites::person::country_batch_operations_test::setup_test_country;
+use crate::suites::person::country_subdivision_batch_operations_test::setup_test_country_subdivision;
+
+// Inside a test function:
+let country = setup_test_country().await;
+country_repo.save(country.clone()).await?;
+
+let subdivision = setup_test_country_subdivision(country.id).await;
+country_subdivision_repo.save(subdivision.clone()).await?;
+
+let locality = setup_test_locality(subdivision.id).await;
+// ...
 ```
 
 ### 4. Writing Repository Tests

@@ -1,6 +1,6 @@
 // FILE: banking-db-postgres/tests/suites/person/locality_batch_operations_test.rs
 
-use banking_db::models::person::{CountryModel, CountrySubdivisionModel, LocalityModel};
+use banking_db::models::person::{LocalityModel};
 use banking_db::repository::{
     BatchRepository, CountryRepository, CountrySubdivisionRepository, LocalityRepository, PersonRepos,
 };
@@ -8,29 +8,10 @@ use heapless::String as HeaplessString;
 use uuid::Uuid;
 
 use crate::suites::test_helper::setup_test_context;
+use crate::suites::person::country_batch_operations_test::setup_test_country;
+use crate::suites::person::country_subdivision_batch_operations_test::setup_test_country_subdivision;
 
-async fn setup_test_country() -> CountryModel {
-    CountryModel {
-        id: Uuid::new_v4(),
-        iso2: HeaplessString::try_from("TS").unwrap(),
-        name_l1: HeaplessString::try_from("Test Country").unwrap(),
-        name_l2: None,
-        name_l3: None,
-    }
-}
-
-async fn setup_test_country_subdivision(country_id: Uuid) -> CountrySubdivisionModel {
-    CountrySubdivisionModel {
-        id: Uuid::new_v4(),
-        country_id,
-        code: HeaplessString::try_from("TEST").unwrap(),
-        name_l1: HeaplessString::try_from("Test Subdivision").unwrap(),
-        name_l2: None,
-        name_l3: None,
-    }
-}
-
-async fn setup_test_locality(country_subdivision_id: Uuid) -> LocalityModel {
+pub async fn setup_test_locality(country_subdivision_id: Uuid) -> LocalityModel {
     LocalityModel {
         id: Uuid::new_v4(),
         country_subdivision_id,

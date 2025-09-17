@@ -396,6 +396,14 @@ impl <Entity>RepositoryImpl {
 
 Create the file `banking-db-postgres/tests/suites/<module>/<entity>_batch_operations_test.rs` with the following content.
 
+#### Test Data Setup
+
+To ensure tests are DRY (Don't Repeat Yourself) and maintainable, test data setup should be modular and reusable.
+
+-   **Co-location**: Each batch operations test file (e.g., `country_batch_operations_test.rs`) should contain a `pub async fn setup_test_<entity>()` function that creates a valid `EntityModel`.
+-   **Reusability**: By marking the setup function as `pub`, it can be imported and reused by other tests that depend on that entity. For example, `locality_batch_operations_test.rs` reuses the setup functions from `country_batch_operations_test.rs` and `country_subdivision_batch_operations_test.rs`.
+-   **Dependencies**: If an entity requires a foreign key from another entity, the setup function should accept the parent ID as an argument (e.g., `setup_test_locality(country_subdivision_id: Uuid)`).
+
 ```rust
 // FILE: banking-db-postgres/tests/suites/<module>/<entity>_batch_operations_test.rs
 
@@ -405,11 +413,16 @@ use heapless::String as HeaplessString;
 use uuid::Uuid;
 
 use crate::suites::test_helper::setup_test_context;
+// TODO: If this entity has dependencies, import their setup functions.
+// Example:
+// use crate::suites::person::country_batch_operations_test::setup_test_country;
 
-// TODO: Implement a test data setup function for <Entity>Model
-async fn setup_test_<entity>() -> <Entity>Model {
+// A public setup function allows this entity to be easily created as a dependency in other tests.
+// TODO: Add parameters for any foreign key IDs this entity depends on.
+pub async fn setup_test_<entity>(/* dependency_id: Uuid */) -> <Entity>Model {
     <Entity>Model {
         id: Uuid::new_v4(),
+        // dependency_id,
         display_name: HeaplessString::try_from("Test <Entity>").unwrap(),
         external_identifier: Some(HeaplessString::try_from("EXT001").unwrap()),
         // ... other fields with default values
@@ -420,10 +433,18 @@ async fn setup_test_<entity>() -> <Entity>Model {
 async fn test_create_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let ctx = setup_test_context().await?;
     let <entity>_repo = ctx.<module>_repos().<entities>();
+    // TODO: If this entity has dependencies, get their repositories.
+    // let <dependency>_repo = ctx.<module>_repos().<dependencies>();
+
+    // TODO: Create and save any required dependency records first.
+    // let dependency = setup_test_<dependency>().await;
+    // <dependency>_repo.save(dependency.clone()).await?;
 
     let mut <entities> = Vec::new();
     for i in 0..5 {
-        let mut <entity> = setup_test_<entity>().await;
+        // Pass the dependency ID to the setup function.
+        // let mut <entity> = setup_test_<entity>(dependency.id).await;
+        let mut <entity> = setup_test_<entity>().await; // Use this if no dependency
         <entity>.display_name =
             HeaplessString::try_from(format!("Test <Entity> {i}").as_str()).unwrap();
         <entity>.external_identifier =

@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::suites::test_helper::setup_test_context;
 use crate::suites::person::country_batch_operations_test::setup_test_country;
 
-async fn setup_test_country_subdivision(country_id: Uuid) -> CountrySubdivisionModel {
+pub async fn setup_test_country_subdivision(country_id: Uuid) -> CountrySubdivisionModel {
     CountrySubdivisionModel {
         id: Uuid::new_v4(),
         country_id,
