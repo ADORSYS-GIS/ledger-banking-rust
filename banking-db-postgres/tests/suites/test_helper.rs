@@ -45,7 +45,7 @@ impl<S: UnitOfWorkSession<sqlx::Postgres>> TestContext<S> {
 ///     Ok(())
 /// }
 /// ```
-pub async fn setup_test_context() -> Result<TestContext<banking_db_postgres::repository::unit_of_work_impl::PostgresUnitOfWorkSession>, Box<dyn std::error::Error>> {
+pub async fn setup_test_context() -> Result<TestContext<banking_db_postgres::repository::unit_of_work_impl::PostgresUnitOfWorkSession>, Box<dyn std::error::Error + Send + Sync>> {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/mydb".to_string());
 
@@ -67,7 +67,7 @@ pub async fn setup_test_context() -> Result<TestContext<banking_db_postgres::rep
 /// and then start a new transaction for the actual test. The returned UnitOfWork
 /// can be used to begin multiple sessions.
 #[allow(dead_code)]
-pub async fn setup_shared_uow() -> Result<PostgresUnitOfWork, Box<dyn std::error::Error>> {
+pub async fn setup_shared_uow() -> Result<PostgresUnitOfWork, Box<dyn std::error::Error + Send + Sync>> {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/mydb".to_string());
 
@@ -89,7 +89,7 @@ mod tests {
     use banking_db::repository::PersonRepository;
 
     #[tokio::test]
-    async fn test_transaction_rollback() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_transaction_rollback() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // First, create a person in a transaction that will be rolled back
         let test_id = Uuid::new_v4();
         {

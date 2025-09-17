@@ -6,21 +6,22 @@ The core of this pattern is the `setup_test_context` helper function, which prov
 
 ```rust
 #[tokio::test]
-async fn test_with_transactional_isolation() {
+async fn test_with_transactional_isolation() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // 1. Arrange: Set up the test context. This begins a transaction.
-    let ctx = setup_test_context().await.unwrap();
+    let ctx = setup_test_context().await?;
     
     // Get a repository that operates within the transaction
     let person_repo = ctx.person_repos().persons();
 
     // 2. Act: Perform database operations
     let new_person = create_test_person_model("John Doe");
-    let saved_person = person_repo.save(new_person.clone(), Uuid::new_v4()).await.unwrap();
+    let saved_person = person_repo.save(new_person.clone(), Uuid::new_v4()).await?;
 
     // 3. Assert: Verify the results
-    let found_person = person_repo.find_by_id(saved_person.id).await.unwrap();
+    let found_person = person_repo.find_by_id(saved_person.id).await?;
     assert!(found_person.is_some());
 
+    Ok(())
 } // <- The transaction is automatically rolled back here when `ctx` is dropped
 ```
 
@@ -238,21 +239,23 @@ pub mod country_repository_tests;
 
 All repository tests are isolated using the **Unit of Work** pattern. The `setup_test_context` helper function, located in `banking-db-postgres/tests/suites/test_helper.rs`, provides a transactional session for each test.
 
--   **Transactional Context**: Call `setup_test_context().await` at the beginning of each test to get a `TestContext`.
+-   **Transactional Context**: Call `setup_test_context().await?` at the beginning of each test to get a `TestContext`.
+-   **Error Handling**: Test functions should return `Result<(), Box<dyn std::error::Error + Send + Sync>>` and use the `?` operator for concise error propagation. This avoids using `.unwrap()` and provides consistent error handling across the test suite.
 -   **Automatic Rollback**: The transaction is automatically rolled back when the `TestContext` goes out of scope, ensuring a clean database state for subsequent tests.
 
 ```rust
 use crate::suites::test_helper::setup_test_context;
 
 #[tokio::test]
-async fn test_my_repository() {
+async fn test_my_repository() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // 1. Arrange: Set up the transactional context
-    let ctx = setup_test_context().await.unwrap();
+    let ctx = setup_test_context().await?;
     
     // Get a repository from the context
     let repo = ctx.person_repos().persons();
     
     // ... rest of the test
+    Ok(())
 }
 ```
 
@@ -283,24 +286,25 @@ use banking_db::repository::PersonRepository;
 use uuid::Uuid;
 
 #[tokio::test]
-async fn test_person_repository() {
+async fn test_person_repository() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // 1. Arrange: Set up the transactional context and repository
-    let ctx = setup_test_context().await.unwrap();
+    let ctx = setup_test_context().await?;
     let repo = ctx.person_repos().persons();
 
     // 2. Act & 3. Assert for the 'save' and 'find_by_id' methods
     let new_person = create_test_person_model("John Doe");
-    let saved_person = repo.save(new_person.clone(), Uuid::new_v4()).await.unwrap();
-    assert_eq!(new_person.id, saved_person.id);
+    let saved_person = repo.save(new_person.clone(), Uuid::new_v4()).await?;
+    assert_eq!(new_person.id, saved_.id);
 
-    let found_person = repo.find_by_id(new_person.id).await.unwrap().unwrap();
+    let found_person = repo.find_by_id(new_person.id).await?.unwrap();
     assert_eq!(new_person.id, found_person.person_id);
 
     // Act & Assert for the 'exists_by_id' method
-    assert!(repo.exists_by_id(new_person.id).await.unwrap());
-    assert!(!repo.exists_by_id(Uuid::new_v4()).await.unwrap());
+    assert!(repo.exists_by_id(new_person.id).await?);
+    assert!(!repo.exists_by_id(Uuid::new_v4()).await?);
 
     // ... continue testing other repository methods
+    Ok(())
 }
 ```
 

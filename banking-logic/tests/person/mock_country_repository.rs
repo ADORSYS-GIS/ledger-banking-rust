@@ -100,6 +100,15 @@ impl CountryRepository<Postgres> for MockCountryRepository {
             .collect();
         Ok(countries)
     }
+
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> CountryResult<Vec<(Uuid, bool)>> {
+        let countries = self.country_ixes.lock().unwrap();
+        let result = ids
+            .iter()
+            .map(|id| (*id, countries.iter().any(|c| c.country_id == *id)))
+            .collect();
+        Ok(result)
+    }
 }
 
 // Helper functions for creating test data
