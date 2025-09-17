@@ -14,6 +14,8 @@ pub enum LocalityRepositoryError {
     },
     DuplicateLocation(String),
     LocalityNotFound(Uuid),
+    ManyLocalitiesNotFound(Vec<Uuid>),
+    HasDependentLocations(Vec<Uuid>),
     RepositoryError(Box<dyn Error + Send + Sync>),
 }
 
@@ -37,6 +39,12 @@ impl std::fmt::Display for LocalityRepositoryError {
             }
             LocalityRepositoryError::LocalityNotFound(id) => {
                 write!(f, "Locality not found with id: {id}")
+            }
+            LocalityRepositoryError::ManyLocalitiesNotFound(ids) => {
+                write!(f, "Localities not found with ids: {ids:?}")
+            }
+            LocalityRepositoryError::HasDependentLocations(ids) => {
+                write!(f, "Localities with dependent locations: {ids:?}")
             }
             LocalityRepositoryError::RepositoryError(err) => {
                 write!(f, "Repository error: {err}")

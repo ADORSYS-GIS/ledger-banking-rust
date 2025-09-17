@@ -123,5 +123,13 @@ fn map_domain_error_to_service_error(error: LocalityRepositoryError) -> Locality
         LocalityRepositoryError::RepositoryError(err) => {
             LocalityServiceError::RepositoryError(err.to_string())
         }
+        LocalityRepositoryError::ManyLocalitiesNotFound(ids) => {
+            LocalityServiceError::RepositoryError(format!("Many localities not found: {ids:?}"))
+        }
+        LocalityRepositoryError::HasDependentLocations(ids) => {
+            LocalityServiceError::RepositoryError(format!(
+                "Cannot delete localities with dependent locations: {ids:?}"
+            ))
+        }
     }
 }

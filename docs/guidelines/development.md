@@ -25,3 +25,8 @@ This document provides a high-level overview of the development guidelines for t
 ## 4. Testing
 
 *   **[Testing Guidelines](./testing.md)**: Covers testing strategies, including database test isolation with transactional rollback, service-level testing with mocks, and repository integration testing.
+
+
+## 5. String Formatting
+
+When formatting strings, use the new f-string like syntax. For example, instead of `format!("Hello, {}!", name)`, use `format!("Hello, {name}!")`. For debug formatting, instead of `format!("Value: {:?}", value)`, use `format!("Value: {value:?}")`. This is enforced by clippy.

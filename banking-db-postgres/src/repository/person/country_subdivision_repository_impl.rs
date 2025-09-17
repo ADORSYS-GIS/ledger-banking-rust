@@ -9,7 +9,9 @@ use banking_db::repository::{
 };
 use crate::repository::executor::Executor;
 use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
+use crate::repository::person::locality_repository_impl::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
+use once_cell::sync::OnceCell;
 use parking_lot::RwLock as ParkingRwLock;
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::{HashMap, HashSet};
@@ -23,6 +25,7 @@ use uuid::Uuid;
 pub struct CountrySubdivisionRepositoryImpl {
     pub executor: Executor,
     pub country_subdivision_idx_cache: Arc<RwLock<TransactionAwareCountrySubdivisionIdxModelCache>>,
+    pub(crate) locality_repository: OnceCell<Arc<LocalityRepositoryImpl>>,
     country_repository: Arc<CountryRepositoryImpl>,
 }
 
@@ -38,6 +41,7 @@ impl CountrySubdivisionRepositoryImpl {
                 TransactionAwareCountrySubdivisionIdxModelCache::new(country_subdivision_idx_cache),
             )),
             country_repository,
+            locality_repository: OnceCell::new(),
         }
     }
 
@@ -304,6 +308,7 @@ impl TryFromRow<PgRow> for CountrySubdivisionIdxModel {
 pub struct TransactionAwareCountrySubdivisionIdxModelCache {
     shared_cache: Arc<ParkingRwLock<CountrySubdivisionIdxModelCache>>,
     local_additions: ParkingRwLock<HashMap<Uuid, CountrySubdivisionIdxModel>>,
+    local_removals: ParkingRwLock<HashSet<Uuid>>,
 }
 
 impl TransactionAwareCountrySubdivisionIdxModelCache {
@@ -311,6 +316,7 @@ impl TransactionAwareCountrySubdivisionIdxModelCache {
         Self {
             shared_cache,
             local_additions: ParkingRwLock::new(HashMap::new()),
+            local_removals: ParkingRwLock::new(HashSet::new()),
         }
     }
 
@@ -319,7 +325,14 @@ impl TransactionAwareCountrySubdivisionIdxModelCache {
         self.local_additions.write().insert(primary_key, item);
     }
 
+    pub fn remove(&self, primary_key: &Uuid) {
+        self.local_removals.write().insert(*primary_key);
+    }
+
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        if self.local_removals.read().contains(primary_key) {
+            return false;
+        }
         if self.local_additions.read().contains_key(primary_key) {
             return true;
         }
@@ -378,13 +391,18 @@ impl TransactionAware for TransactionAwareCountrySubdivisionIdxModelCache {
         for item in local_additions.values() {
             shared_cache.add(item.clone());
         }
+        for key in self.local_removals.read().iter() {
+            shared_cache.remove(key);
+        }
 
         local_additions.clear();
+        self.local_removals.write().clear();
         Ok(())
     }
 
     async fn on_rollback(&self) -> BankingResult<()> {
         self.local_additions.write().clear();
+        self.local_removals.write().clear();
         Ok(())
     }
 }

@@ -46,51 +46,59 @@ impl PostgresUnitOfWork {
 
         let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
             .await
-            .unwrap();
-        let country_idx_cache =
-            Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+            .expect("Failed to load country index");
+        let country_idx_cache = Arc::new(RwLock::new(
+            CountryIdxModelCache::new(country_idx_models)
+                .expect("Failed to create country index cache"),
+        ));
 
         let country_subdivision_idx_models =
             CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
                 .await
-                .unwrap();
+                .expect("Failed to load country subdivision index");
         let country_subdivision_idx_cache = Arc::new(RwLock::new(
-            CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
+            CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models)
+                .expect("Failed to create country subdivision index cache"),
         ));
 
         let locality_idx_models = LocalityRepositoryImpl::load_all_locality_idx(&executor)
             .await
-            .unwrap();
+            .expect("Failed to load locality index");
         let locality_idx_cache = Arc::new(RwLock::new(
-            LocalityIdxModelCache::new(locality_idx_models).unwrap(),
+            LocalityIdxModelCache::new(locality_idx_models)
+                .expect("Failed to create locality index cache"),
         ));
 
         let location_idx_models = LocationRepositoryImpl::load_all_location_idx(&executor)
             .await
-            .unwrap();
+            .expect("Failed to load location index");
         let location_idx_cache = Arc::new(RwLock::new(
-            LocationIdxModelCache::new(location_idx_models).unwrap(),
+            LocationIdxModelCache::new(location_idx_models)
+                .expect("Failed to create location index cache"),
         ));
 
         let person_idx_models = PersonRepositoryImpl::load_all_person_idx(&executor)
             .await
-            .unwrap();
-        let person_idx_cache =
-            Arc::new(RwLock::new(PersonIdxModelCache::new(person_idx_models).unwrap()));
+            .expect("Failed to load person index");
+        let person_idx_cache = Arc::new(RwLock::new(
+            PersonIdxModelCache::new(person_idx_models).expect("Failed to create person index cache"),
+        ));
 
         let messaging_idx_models = MessagingRepositoryImpl::load_all_messaging_idx(&executor)
             .await
-            .unwrap();
+            .expect("Failed to load messaging index");
         let messaging_idx_cache = Arc::new(RwLock::new(
-            MessagingIdxModelCache::new(messaging_idx_models).unwrap(),
+            MessagingIdxModelCache::new(messaging_idx_models)
+                .expect("Failed to create messaging index cache"),
         ));
 
         let entity_reference_idx_models =
             EntityReferenceRepositoryImpl::load_all_entity_reference_idx(&executor)
                 .await
-                .unwrap();
+                .expect("Failed to load entity reference index");
         let entity_reference_idx_cache = Arc::new(RwLock::new(
-            EntityReferenceIdxModelCache::new(entity_reference_idx_models).unwrap(),
+            EntityReferenceIdxModelCache::new(entity_reference_idx_models)
+                .expect("Failed to create entity reference index cache"),
         ));
 
         let caches = PersonCaches {
@@ -159,7 +167,10 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
                 self.executor.clone(),
                 {
                     self.locations();
-                    self.locations.get().unwrap().clone()
+                    self.locations
+                        .get()
+                        .expect("Location repository not initialized")
+                        .clone()
                 },
                 self.caches.person_idx_cache.clone(),
             ))
@@ -181,7 +192,10 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
                 self.executor.clone(),
                 {
                     self.countries();
-                    self.countries.get().unwrap().clone()
+                    self.countries
+                        .get()
+                        .expect("Country repository not initialized")
+                        .clone()
                 },
                 self.caches.country_subdivision_idx_cache.clone(),
             ))
@@ -194,7 +208,10 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
                 self.executor.clone(),
                 {
                     self.country_subdivisions();
-                    self.country_subdivisions.get().unwrap().clone()
+                    self.country_subdivisions
+                        .get()
+                        .expect("Country subdivision repository not initialized")
+                        .clone()
                 },
                 self.caches.locality_idx_cache.clone(),
             ))
@@ -202,16 +219,30 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
     }
 
     fn locations(&self) -> &Self::LocationRepo {
-        self.locations.get_or_init(|| {
+        let location_repo = self.locations.get_or_init(|| {
             Arc::new(LocationRepositoryImpl::new(
                 self.executor.clone(),
                 {
                     self.localities();
-                    self.localities.get().unwrap().clone()
+                    self.localities
+                        .get()
+                        .expect("Locality repository not initialized")
+                        .clone()
                 },
                 self.caches.location_idx_cache.clone(),
             ))
-        })
+        });
+        let locality_repo = self
+            .localities
+            .get()
+            .expect("Locality repository not initialized");
+        if locality_repo.location_repository.get().is_none() {
+            locality_repo
+                .location_repository
+                .set(location_repo.clone())
+                .ok();
+        }
+        location_repo
     }
 
     fn messagings(&self) -> &Self::MessagingRepo {
@@ -229,7 +260,10 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
                 self.executor.clone(),
                 {
                     self.persons();
-                    self.persons.get().unwrap().clone()
+                    self.persons
+                        .get()
+                        .expect("Person repository not initialized")
+                        .clone()
                 },
                 self.caches.entity_reference_idx_cache.clone(),
             ))
@@ -337,6 +371,23 @@ impl UnitOfWorkSession<Postgres> for PostgresUnitOfWorkSession {
                 self.caches.clone(),
             ))
         });
+
+        // Initialize all repositories by calling a leaf in the dependency graph.
+        // entity_references -> persons -> locations -> localities -> country_subdivisions -> countries
+        person_repos.entity_references();
+        person_repos.messagings(); // No dependencies
+
+        // Wire the circular dependency between CountrySubdivision and Locality.
+        let cs_repo = person_repos
+            .country_subdivisions
+            .get()
+            .expect("Country subdivision repository not initialized");
+        let l_repo = person_repos
+            .localities
+            .get()
+            .expect("Locality repository not initialized");
+        cs_repo.locality_repository.set(l_repo.clone()).ok();
+
         self.register_transaction_aware(person_repos.clone());
         person_repos
     }
