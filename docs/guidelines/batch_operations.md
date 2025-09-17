@@ -193,26 +193,37 @@ use std::time::Instant;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
-// TODO: Define the tuple for the main entity based on its fields in the database table.
-// Example for a simple entity with id, name, and external_identifier.
+// Example from LocationRepository:
 type <Entity>Tuple = (
     Uuid,
     String,
     Option<String>,
-    // ... other fields
+    Option<String>,
+    Option<String>,
+    Uuid,
+    Option<String>,
+    Option<Decimal>,
+    Option<Decimal>,
+    Option<f32>,
+    <Entity>Type,
 );
 
-// TODO: Define the tuple for the audit log entry if the entity has an audit table.
-// If not, this type and all related logic can be removed.
-// It should mirror the main entity tuple, plus version, hash, and audit_log_id.
+// Example from LocationRepository:
 type <Entity>AuditTuple = (
     Uuid,
-    i32, // version
-    i64, // hash
+    i32,
+    i64,
     String,
     Option<String>,
-    // ... other fields
-    Uuid, // audit_log_id
+    Option<String>,
+    Option<String>,
+    Uuid,
+    Option<String>,
+    Option<Decimal>,
+    Option<Decimal>,
+    Option<f32>,
+    <Entity>Type,
+    Uuid,
 );
 
 /// Batch operations implementation for <Entity>Repository
@@ -222,7 +233,7 @@ impl BatchRepository<Postgres, <Entity>Model> for <Entity>RepositoryImpl {
     async fn create_batch(
         &self,
         items: Vec<<Entity>Model>,
-        audit_log_id: Uuid, // Note: This is required by the trait, but may be ignored if the entity is not audited.
+        audit_log_id: Uuid,
     ) -> Result<Vec<<Entity>Model>, Box<dyn Error + Send + Sync>> {
         if items.is_empty() {
             return Ok(Vec::new());
@@ -249,67 +260,67 @@ impl BatchRepository<Postgres, <Entity>Model> for <Entity>RepositoryImpl {
             hasher.write(&cbor);
             let hash = hasher.finish() as i64;
 
-            let external_hash = item.external_identifier.as_ref().map(|s| {
-                let mut hasher = XxHash64::with_seed(0);
-                hasher.write(s.as_bytes());
-                hasher.finish() as i64
-            });
-
             let idx_model = <Entity>IdxModel {
                 <entity>_id: item.id,
-                // TODO: Map all fields from the entity's IdxModel.
-                // Note: Not all IdxModels have versioning or hashing.
-                // Refer to the struct definition in `banking-db/src/models/<module>.rs`.
-                external_identifier_hash: external_hash, // Example field
-                // version: 0, // May not exist
-                // hash, // May not exist
+                locality_id: item.locality_id,
+                version: 0,
+                hash,
             };
             cache.add(idx_model);
         }
 
         let mut <entity>_values = Vec::new();
         let mut <entity>_idx_values = Vec::new();
-        // --- Audit Logic (optional) ---
-        // let mut <entity>_audit_values = Vec::new();
+        let mut <entity>_audit_values = Vec::new();
+        let mut saved_items = Vec::new();
 
         for item in items {
             let idx_model = cache.get_by_primary(&item.id).unwrap();
 
-            // TODO: Map the item fields to the <Entity>Tuple
             <entity>_values.push((
                 item.id,
-                item.display_name.to_string(),
-                item.external_identifier.as_ref().map(|s| s.to_string()),
+                item.street_line1.to_string(),
+                item.street_line2.as_ref().map(|s| s.to_string()),
+                item.street_line3.as_ref().map(|s| s.to_string()),
+                item.street_line4.as_ref().map(|s| s.to_string()),
+                item.locality_id,
+                item.postal_code.as_ref().map(|s| s.to_string()),
+                item.latitude,
+                item.longitude,
+                item.accuracy_meters,
+                item.<entity>_type,
             ));
 
-            // TODO: Map the item fields to the Idx tuple. The fields depend on the IdxModel definition.
-            <entity>_idx_values.push((
+            <entity>_idx_values.push((item.id, item.locality_id, 0i32, idx_model.hash));
+
+            <entity>_audit_values.push((
                 item.id,
-                idx_model.external_identifier_hash,
-                0i32, // version (if exists)
-                idx_model.hash, // (if exists)
+                0i32,
+                idx_model.hash,
+                item.street_line1.to_string(),
+                item.street_line2.as_ref().map(|s| s.to_string()),
+                item.street_line3.as_ref().map(|s| s.to_string()),
+                item.street_line4.as_ref().map(|s| s.to_string()),
+                item.locality_id,
+                item.postal_code.as_ref().map(|s| s.to_string()),
+                item.latitude,
+                item.longitude,
+                item.accuracy_meters,
+                item.<entity>_type,
+                audit_log_id,
             ));
-
-            // TODO: If auditing is implemented, map the item fields to the <Entity>AuditTuple
-            // <entity>_audit_values.push((
-            //     item.id,
-            //     0i32, // version
-            //     idx_model.hash,
-            //     item.display_name.to_string(),
-            //     item.external_identifier.as_ref().map(|s| s.to_string()),
-            //     audit_log_id,
-            // ));
-            // saved_items.push(item); // This was missing in the original thought process
+            saved_items.push(item);
         }
 
         if !<entity>_values.is_empty() {
             self.execute_<entity>_insert(<entity>_values).await?;
-            self.execute_<entity>_idx_insert(<entity>_idx_values).await?;
-            // self.execute_<entity>_audit_insert(<entity>_audit_values).await?; // If auditing is used
+            self.execute_<entity>_idx_insert(<entity>_idx_values)
+                .await?;
+            self.execute_<entity>_audit_insert(<entity>_audit_values)
+                .await?;
         }
 
-        // Ok(saved_items)
-        todo!()
+        Ok(saved_items)
     }
 
     async fn load_batch(
@@ -344,15 +355,186 @@ impl BatchRepository<Postgres, <Entity>Model> for <Entity>RepositoryImpl {
     async fn update_batch(
         &self,
         items: Vec<<Entity>Model>,
-        audit_log_id: Uuid, // Note: This is required by the trait, but may be ignored if the entity is not audited.
+        audit_log_id: Uuid,
     ) -> Result<Vec<<Entity>Model>, Box<dyn Error + Send + Sync>> {
-        // TODO: Implement update_batch based on person_repository_batch_impl.rs
-        todo!()
+        if items.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let ids: Vec<Uuid> = items.iter().map(|p| p.id).collect();
+        let existing_check = self.exist_by_ids(&ids).await?;
+        let non_existing_ids: Vec<Uuid> = existing_check
+            .into_iter()
+            .filter_map(|(id, exists)| if !exists { Some(id) } else { None })
+            .collect();
+
+        if !non_existing_ids.is_empty() {
+            return Err(Box::new(
+                <Entity>RepositoryError::Many<Entities>NotFound(non_existing_ids),
+            ));
+        }
+
+        let mut to_update = Vec::new();
+        let cache = self.<entity>_idx_cache.read().await;
+        for item in items {
+            let mut hasher = XxHash64::with_seed(0);
+            let mut cbor = Vec::new();
+            ciborium::ser::into_writer(&item, &mut cbor).unwrap();
+            hasher.write(&cbor);
+            let new_hash = hasher.finish() as i64;
+
+            if let Some(idx) = cache.get_by_primary(&item.id) {
+                if idx.hash != new_hash {
+                    to_update.push((item, new_hash));
+                }
+            } else {
+                return Err(Box::new(<Entity>RepositoryError::<Entity>NotFound(item.id)));
+            }
+        }
+
+        if to_update.is_empty() {
+            let all_items = self.load_batch(&ids).await?.into_iter().flatten().collect();
+            return Ok(all_items);
+        }
+
+        let mut <entity>_values = Vec::new();
+        let mut <entity>_idx_values = Vec::new();
+        let mut <entity>_audit_values = Vec::new();
+        let mut saved_items = Vec::new();
+
+        for (item, new_hash) in to_update {
+            let old_idx = cache.get_by_primary(&item.id).unwrap();
+            let new_version = old_idx.version + 1;
+
+            let new_idx = <Entity>IdxModel {
+                <entity>_id: item.id,
+                locality_id: item.locality_id,
+                version: new_version,
+                hash: new_hash,
+            };
+            cache.add(new_idx);
+
+            <entity>_values.push((
+                item.id,
+                item.street_line1.to_string(),
+                item.street_line2.as_ref().map(|s| s.to_string()),
+                item.street_line3.as_ref().map(|s| s.to_string()),
+                item.street_line4.as_ref().map(|s| s.to_string()),
+                item.locality_id,
+                item.postal_code.as_ref().map(|s| s.to_string()),
+                item.latitude,
+                item.longitude,
+                item.accuracy_meters,
+                item.<entity>_type,
+            ));
+
+            <entity>_idx_values.push((item.id, item.locality_id, new_version, new_hash));
+
+            <entity>_audit_values.push((
+                item.id,
+                new_version,
+                new_hash,
+                item.street_line1.to_string(),
+                item.street_line2.as_ref().map(|s| s.to_string()),
+                item.street_line3.as_ref().map(|s| s.to_string()),
+                item.street_line4.as_ref().map(|s| s.to_string()),
+                item.locality_id,
+                item.postal_code.as_ref().map(|s| s.to_string()),
+                item.latitude,
+                item.longitude,
+                item.accuracy_meters,
+                item.<entity>_type,
+                audit_log_id,
+            ));
+            saved_items.push(item);
+        }
+
+        if !<entity>_values.is_empty() {
+            self.execute_<entity>_update(<entity>_values).await?;
+            self.execute_<entity>_idx_update(<entity>_idx_values).await?;
+            self.execute_<entity>_audit_insert(<entity>_audit_values)
+                .await?;
+        }
+
+        Ok(saved_items)
     }
 
     async fn delete_batch(&self, ids: &[Uuid]) -> Result<usize, Box<dyn Error + Send + Sync>> {
-        // TODO: Implement delete_batch based on person_repository_batch_impl.rs
-        todo!()
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let items_to_delete = self.load_batch(ids).await?;
+        let items_to_delete: Vec<<Entity>Model> = items_to_delete.into_iter().flatten().collect();
+
+        if items_to_delete.len() != ids.len() {
+            let found_ids: std::collections::HashSet<Uuid> =
+                items_to_delete.iter().map(|i| i.id).collect();
+            let not_found_ids: Vec<Uuid> = ids
+                .iter()
+                .filter(|id| !found_ids.contains(id))
+                .cloned()
+                .collect();
+            return Err(Box::new(<Entity>RepositoryError::Many<Entities>NotFound(
+                not_found_ids,
+            )));
+        }
+
+        let cache = self.<entity>_idx_cache.write().await;
+        for id in ids {
+            cache.remove(id);
+        }
+
+        let audit_log_id = Uuid::new_v4();
+        let mut <entity>_audit_values = Vec::new();
+        for item in &items_to_delete {
+            if let Some(idx_model) = self.get_idx_by_id(item.id).await? {
+                <entity>_audit_values.push((
+                    item.id,
+                    idx_model.version,
+                    0, // Hash is 0 for deleted record
+                    item.street_line1.to_string(),
+                    item.street_line2.as_ref().map(|s| s.to_string()),
+                    item.street_line3.as_ref().map(|s| s.to_string()),
+                    item.street_line4.as_ref().map(|s| s.to_string()),
+                    item.locality_id,
+                    item.postal_code.as_ref().map(|s| s.to_string()),
+                    item.latitude,
+                    item.longitude,
+                    item.accuracy_meters,
+                    item.<entity>_type,
+                    audit_log_id,
+                ));
+            }
+        }
+        if !<entity>_audit_values.is_empty() {
+            self.execute_<entity>_audit_insert(<entity>_audit_values)
+                .await?;
+        }
+
+        let query_idx = "DELETE FROM <entity>_idx WHERE <entity>_id = ANY($1)";
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(query_idx).bind(ids).execute(&**pool).await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(query_idx).bind(ids).execute(&mut **tx).await?;
+            }
+        };
+
+        let query_main = "DELETE FROM <entity> WHERE id = ANY($1)";
+        let result = match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(query_main).bind(ids).execute(&**pool).await?
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(query_main).bind(ids).execute(&mut **tx).await?
+            }
+        };
+
+        Ok(result.rows_affected() as usize)
     }
 }
 
@@ -362,33 +544,232 @@ impl <Entity>RepositoryImpl {
         &self,
         values: Vec<<Entity>Tuple>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        // TODO: Write the UNNEST INSERT query for the <entity> table
-        // Example:
-        // let query = r#"
-        //     INSERT INTO <entity> (id, display_name, external_identifier)
-        //     SELECT * FROM UNNEST($1::uuid[], $2::text[], $3::text[])
-        // "#;
-        todo!()
+        let (
+            ids,
+            street_line1s,
+            street_line2s,
+            street_line3s,
+            street_line4s,
+            locality_ids,
+            postal_codes,
+            latitudes,
+            longitudes,
+            accuracy_meters,
+            <entity>_types,
+        ) = values.into_iter().fold(
+            (
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+            ),
+            |mut acc, val| {
+                acc.0.push(val.0); acc.1.push(val.1); acc.2.push(val.2);
+                acc.3.push(val.3); acc.4.push(val.4); acc.5.push(val.5);
+                acc.6.push(val.6); acc.7.push(val.7); acc.8.push(val.8);
+                acc.9.push(val.9); acc.10.push(val.10);
+                acc
+            },
+        );
+
+        let query = r#"
+            INSERT INTO <entity> (id, street_line1, street_line2, street_line3, street_line4, locality_id, postal_code, latitude, longitude, accuracy_meters, <entity>_type)
+            SELECT * FROM UNNEST($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[], $6::uuid[], $7::text[], $8::numeric[], $9::numeric[], $10::real[], $11::<entity>_type[])
+        "#;
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(query)
+                    .bind(ids).bind(street_line1s).bind(street_line2s).bind(street_line3s)
+                    .bind(street_line4s).bind(locality_ids).bind(postal_codes).bind(latitudes)
+                    .bind(longitudes).bind(accuracy_meters).bind(<entity>_types)
+                    .execute(&**pool).await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(query)
+                    .bind(ids).bind(street_line1s).bind(street_line2s).bind(street_line3s)
+                    .bind(street_line4s).bind(locality_ids).bind(postal_codes).bind(latitudes)
+                    .bind(longitudes).bind(accuracy_meters).bind(<entity>_types)
+                    .execute(&mut **tx).await?;
+            }
+        }
+        Ok(())
     }
 
     async fn execute_<entity>_idx_insert(
         &self,
-        values: Vec<(Uuid, Option<i64>, i32, i64)>,
+        values: Vec<(Uuid, Uuid, i32, i64)>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        // TODO: Write the UNNEST INSERT query for the <entity>_idx table
-        todo!()
+        let (<entity>_ids, locality_ids, versions, hashes) =
+            values.into_iter().fold((Vec::new(), Vec::new(), Vec::new(), Vec::new()), |mut acc, val| {
+                acc.0.push(val.0); acc.1.push(val.1); acc.2.push(val.2); acc.3.push(val.3);
+                acc
+            });
+
+        let query = r#"
+            INSERT INTO <entity>_idx (<entity>_id, locality_id, version, hash)
+            SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::int[], $4::bigint[])
+        "#;
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(query)
+                    .bind(<entity>_ids).bind(locality_ids).bind(versions).bind(hashes)
+                    .execute(&**pool).await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(query)
+                    .bind(<entity>_ids).bind(locality_ids).bind(versions).bind(hashes)
+                    .execute(&mut **tx).await?;
+            }
+        }
+        Ok(())
     }
 
-    // TODO: Implement this function only if the entity has an audit table.
     async fn execute_<entity>_audit_insert(
         &self,
         values: Vec<<Entity>AuditTuple>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        // TODO: Write the UNNEST INSERT query for the <entity>_audit table
-        todo!()
+        let (
+            <entity>_ids, versions, hashes, street_line1s, street_line2s, street_line3s,
+            street_line4s, locality_ids, postal_codes, latitudes, longitudes,
+            accuracy_meters, <entity>_types, audit_log_ids,
+        ) = values.into_iter().fold(
+            (
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(),
+            ),
+            |mut acc, val| {
+                acc.0.push(val.0); acc.1.push(val.1); acc.2.push(val.2); acc.3.push(val.3);
+                acc.4.push(val.4); acc.5.push(val.5); acc.6.push(val.6); acc.7.push(val.7);
+                acc.8.push(val.8); acc.9.push(val.9); acc.10.push(val.10); acc.11.push(val.11);
+                acc.12.push(val.12); acc.13.push(val.13);
+                acc
+            },
+        );
+
+        let query = r#"
+            INSERT INTO <entity>_audit (<entity>_id, version, hash, street_line1, street_line2, street_line3, street_line4, locality_id, postal_code, latitude, longitude, accuracy_meters, <entity>_type, audit_log_id)
+            SELECT * FROM UNNEST($1::uuid[], $2::int[], $3::bigint[], $4::text[], $5::text[], $6::text[], $7::text[], $8::uuid[], $9::text[], $10::numeric[], $11::numeric[], $12::real[], $13::<entity>_type[], $14::uuid[])
+        "#;
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(query)
+                    .bind(<entity>_ids).bind(versions).bind(hashes).bind(street_line1s)
+                    .bind(street_line2s).bind(street_line3s).bind(street_line4s).bind(locality_ids)
+                    .bind(postal_codes).bind(latitudes).bind(longitudes).bind(accuracy_meters)
+                    .bind(<entity>_types).bind(audit_log_ids)
+                    .execute(&**pool).await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(query)
+                    .bind(<entity>_ids).bind(versions).bind(hashes).bind(street_line1s)
+                    .bind(street_line2s).bind(street_line3s).bind(street_line4s).bind(locality_ids)
+                    .bind(postal_codes).bind(latitudes).bind(longitudes).bind(accuracy_meters)
+                    .bind(<entity>_types).bind(audit_log_ids)
+                    .execute(&mut **tx).await?;
+            }
+        }
+        Ok(())
     }
 
-    // TODO: Implement execute_<entity>_update and execute_<entity>_idx_update
+    async fn execute_<entity>_update(
+        &self,
+        values: Vec<<Entity>Tuple>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let (
+            ids, street_line1s, street_line2s, street_line3s, street_line4s,
+            locality_ids, postal_codes, latitudes, longitudes, accuracy_meters,
+            <entity>_types,
+        ) = values.into_iter().fold(
+            (
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+                Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
+            ),
+            |mut acc, val| {
+                acc.0.push(val.0); acc.1.push(val.1); acc.2.push(val.2);
+                acc.3.push(val.3); acc.4.push(val.4); acc.5.push(val.5);
+                acc.6.push(val.6); acc.7.push(val.7); acc.8.push(val.8);
+                acc.9.push(val.9); acc.10.push(val.10);
+                acc
+            },
+        );
+
+        let query = r#"
+            UPDATE <entity> SET
+                street_line1 = u.street_line1, street_line2 = u.street_line2,
+                street_line3 = u.street_line3, street_line4 = u.street_line4,
+                locality_id = u.locality_id, postal_code = u.postal_code,
+                latitude = u.latitude, longitude = u.longitude,
+                accuracy_meters = u.accuracy_meters, <entity>_type = u.<entity>_type
+            FROM (
+                SELECT * FROM UNNEST(
+                    $1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[], $6::uuid[],
+                    $7::text[], $8::numeric[], $9::numeric[], $10::real[], $11::<entity>_type[]
+                )
+            ) AS u(id, street_line1, street_line2, street_line3, street_line4, locality_id, postal_code, latitude, longitude, accuracy_meters, <entity>_type)
+            WHERE <entity>.id = u.id
+        "#;
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(query)
+                    .bind(ids).bind(street_line1s).bind(street_line2s).bind(street_line3s)
+                    .bind(street_line4s).bind(locality_ids).bind(postal_codes).bind(latitudes)
+                    .bind(longitudes).bind(accuracy_meters).bind(<entity>_types)
+                    .execute(&**pool).await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(query)
+                    .bind(ids).bind(street_line1s).bind(street_line2s).bind(street_line3s)
+                    .bind(street_line4s).bind(locality_ids).bind(postal_codes).bind(latitudes)
+                    .bind(longitudes).bind(accuracy_meters).bind(<entity>_types)
+                    .execute(&mut **tx).await?;
+            }
+        }
+        Ok(())
+    }
+
+    async fn execute_<entity>_idx_update(
+        &self,
+        values: Vec<(Uuid, Uuid, i32, i64)>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let (<entity>_ids, locality_ids, versions, hashes) =
+            values.into_iter().fold((Vec::new(), Vec::new(), Vec::new(), Vec::new()), |mut acc, val| {
+                acc.0.push(val.0); acc.1.push(val.1); acc.2.push(val.2); acc.3.push(val.3);
+                acc
+            });
+
+        let query = r#"
+            UPDATE <entity>_idx SET
+                locality_id = u.locality_id,
+                version = u.version,
+                hash = u.hash
+            FROM (
+                SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::int[], $4::bigint[])
+            ) AS u(<entity>_id, locality_id, version, hash)
+            WHERE <entity>_idx.<entity>_id = u.<entity>_id
+        "#;
+
+        match &self.executor {
+            crate::repository::executor::Executor::Pool(pool) => {
+                sqlx::query(query)
+                    .bind(<entity>_ids).bind(locality_ids).bind(versions).bind(hashes)
+                    .execute(&**pool).await?;
+            }
+            crate::repository::executor::Executor::Tx(tx) => {
+                let mut tx = tx.lock().await;
+                sqlx::query(query)
+                    .bind(<entity>_ids).bind(locality_ids).bind(versions).bind(hashes)
+                    .execute(&mut **tx).await?;
+            }
+        }
+        Ok(())
+    }
 }
 ```
 
@@ -470,19 +851,61 @@ async fn test_create_batch() -> Result<(), Box<dyn std::error::Error + Send + Sy
 
 #[tokio::test]
 async fn test_load_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // TODO: Implement test for load_batch
+    let ctx = setup_test_context().await?;
+    let <entity>_repo = ctx.<module>_repos().<entities>();
+    let mut <entities> = Vec::new();
+    for i in 0..3 {
+        let mut <entity> = setup_test_<entity>().await;
+        <entity>.display_name = HeaplessString::try_from(format!("Test <Entity> {i}")).unwrap();
+        <entities>.push(<entity>);
+    }
+    <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
+    let ids: Vec<Uuid> = <entities>.iter().map(|e| e.id).collect();
+    let loaded = <entity>_repo.load_batch(&ids).await?;
+    assert_eq!(loaded.len(), 3);
+    assert!(loaded.iter().all(|item| item.is_some()));
     Ok(())
 }
 
 #[tokio::test]
 async fn test_update_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // TODO: Implement test for update_batch
+    let ctx = setup_test_context().await?;
+    let <entity>_repo = ctx.<module>_repos().<entities>();
+    let mut <entities> = Vec::new();
+    for i in 0..3 {
+        let mut <entity> = setup_test_<entity>().await;
+        <entity>.display_name = HeaplessString::try_from(format!("Original {i}")).unwrap();
+        <entities>.push(<entity>);
+    }
+    let saved = <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
+    let mut to_update = saved.clone();
+    for (i, item) in to_update.iter_mut().enumerate() {
+        item.display_name = HeaplessString::try_from(format!("Updated {i}")).unwrap();
+    }
+    let updated = <entity>_repo.update_batch(to_update, Uuid::new_v4()).await?;
+    assert_eq!(updated.len(), 3);
+    for item in updated {
+        assert!(item.display_name.starts_with("Updated"));
+    }
     Ok(())
 }
 
 #[tokio::test]
 async fn test_delete_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // TODO: Implement test for delete_batch
+    let ctx = setup_test_context().await?;
+    let <entity>_repo = ctx.<module>_repos().<entities>();
+    let mut <entities> = Vec::new();
+    for i in 0..4 {
+        let <entity> = setup_test_<entity>().await;
+        <entities>.push(<entity>);
+    }
+    let saved = <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
+    let ids: Vec<Uuid> = saved.iter().map(|e| e.id).collect();
+    let deleted_count = <entity>_repo.delete_batch(&ids).await?;
+    assert_eq!(deleted_count, 4);
+    let loaded = <entity>_repo.load_batch(&ids).await?;
+    assert_eq!(loaded.len(), 4);
+    assert!(loaded.iter().all(|item| item.is_none()));
     Ok(())
 }
 ```
