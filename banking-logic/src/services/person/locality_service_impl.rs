@@ -117,6 +117,9 @@ fn map_domain_error_to_service_error(error: LocalityRepositoryError) -> Locality
             code,
         },
         LocalityRepositoryError::LocalityNotFound(id) => LocalityServiceError::LocalityNotFound(id),
+        LocalityRepositoryError::DuplicateLocation(msg) => {
+            LocalityServiceError::RepositoryError(msg)
+        }
         LocalityRepositoryError::RepositoryError(err) => {
             LocalityServiceError::RepositoryError(err.to_string())
         }

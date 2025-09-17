@@ -12,6 +12,7 @@ pub enum LocalityRepositoryError {
         country_subdivision_id: Uuid,
         code: String,
     },
+    DuplicateLocation(String),
     LocalityNotFound(Uuid),
     RepositoryError(Box<dyn Error + Send + Sync>),
 }
@@ -30,6 +31,9 @@ impl std::fmt::Display for LocalityRepositoryError {
                     f,
                     "Duplicate locality code '{code}' for country subdivision '{country_subdivision_id}'"
                 )
+            }
+            LocalityRepositoryError::DuplicateLocation(msg) => {
+                write!(f, "Duplicate locality: {msg}")
             }
             LocalityRepositoryError::LocalityNotFound(id) => {
                 write!(f, "Locality not found with id: {id}")
@@ -63,6 +67,7 @@ pub trait LocalityRepository<DB: Database>: Send + Sync {
     ) -> LocalityResult<Option<LocalityIdxModel>>;
     async fn find_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<LocalityIdxModel>>;
     async fn exists_by_id(&self, id: Uuid) -> LocalityResult<bool>;
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<bool>>;
     async fn find_ids_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,

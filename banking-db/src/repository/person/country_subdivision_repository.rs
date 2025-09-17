@@ -25,7 +25,7 @@ impl fmt::Display for CountrySubdivisionRepositoryError {
                 )
             }
             Self::ManyCountrySubdivisionsExist(ids) => {
-                write!(f, "Country subdivisions with the following IDs already exist: {:?}", ids)
+                write!(f, "Country subdivisions with the following IDs already exist: {ids:?}")
             }
             Self::RepositoryError(err) => write!(f, "Repository error: {err}"),
         }

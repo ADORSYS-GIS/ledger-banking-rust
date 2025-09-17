@@ -19,9 +19,9 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocalityRepositoryImpl {
-    executor: Executor,
-    locality_idx_cache: Arc<TokioRwLock<TransactionAwareLocalityIdxModelCache>>,
-    country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
+    pub(crate) executor: Executor,
+    pub(crate) locality_idx_cache: Arc<TokioRwLock<TransactionAwareLocalityIdxModelCache>>,
+    pub(crate) country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
 }
 
 impl LocalityRepositoryImpl {
@@ -221,6 +221,15 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
         Ok(cache
             .get_by_country_subdivision_id(&country_subdivision_id)
             .unwrap_or_default())
+    }
+
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<bool>> {
+        let cache = self.locality_idx_cache.read().await;
+        let mut result = Vec::with_capacity(ids.len());
+        for id in ids {
+            result.push(cache.contains_primary(id));
+        }
+        Ok(result)
     }
 }
 

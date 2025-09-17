@@ -36,9 +36,7 @@ fn map_domain_error_to_service_error(
         }
         CountrySubdivisionRepositoryError::ManyCountrySubdivisionsExist(ids) => {
             CountrySubdivisionServiceError::RepositoryError(format!(
-                "Country subdivisions with the following IDs already exist: {:?}",
-                ids
-            ))
+                "Country subdivisions with the following IDs already exist: {ids:?}"))
         }
     }
 }
