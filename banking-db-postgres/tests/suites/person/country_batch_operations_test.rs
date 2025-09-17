@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::suites::test_helper::setup_test_context;
 
-async fn setup_test_country() -> CountryModel {
+pub async fn setup_test_country() -> CountryModel {
     CountryModel {
         id: Uuid::new_v4(),
         iso2: HeaplessString::try_from("CM").unwrap(),

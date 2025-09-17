@@ -3,6 +3,7 @@ pub mod messaging_repository_tests;
 pub mod location_repository_tests;
 pub mod locality_repository_tests;
 pub mod country_subdivision_repository_tests;
+pub mod country_subdivision_batch_operations_test;
 pub mod country_repository_tests;
 pub mod person_repository_tests;
 pub mod person_batch_operations_test;

@@ -34,6 +34,12 @@ fn map_domain_error_to_service_error(
         CountrySubdivisionRepositoryError::RepositoryError(err) => {
             CountrySubdivisionServiceError::RepositoryError(err.to_string())
         }
+        CountrySubdivisionRepositoryError::ManyCountrySubdivisionsExist(ids) => {
+            CountrySubdivisionServiceError::RepositoryError(format!(
+                "Country subdivisions with the following IDs already exist: {:?}",
+                ids
+            ))
+        }
     }
 }
 

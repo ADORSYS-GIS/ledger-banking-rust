@@ -21,8 +21,8 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct CountrySubdivisionRepositoryImpl {
-    executor: Executor,
-    country_subdivision_idx_cache: Arc<RwLock<TransactionAwareCountrySubdivisionIdxModelCache>>,
+    pub executor: Executor,
+    pub country_subdivision_idx_cache: Arc<RwLock<TransactionAwareCountrySubdivisionIdxModelCache>>,
     country_repository: Arc<CountryRepositoryImpl>,
 }
 
