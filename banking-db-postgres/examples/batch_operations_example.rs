@@ -8,9 +8,7 @@
 /// 2. Using PostgreSQL's UNNEST for bulk operations
 /// 3. Leveraging transaction-aware caching
 /// 4. Validating constraints using cached indexes
-
-
-/// Example of how batch operations would be used
+///    Example of how batch operations would be used
 fn demonstrate_batch_usage() {
     println!("=== Batch Operations Example ===\n");
     

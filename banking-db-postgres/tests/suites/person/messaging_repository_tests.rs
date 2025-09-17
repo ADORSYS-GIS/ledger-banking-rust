@@ -1,27 +1,13 @@
-use banking_db::models::person::MessagingIdxModelCache;
-use banking_db::repository::MessagingRepository;
-use banking_db_postgres::repository::executor::Executor;
-use banking_db_postgres::repository::person::messaging_repository_impl::MessagingRepositoryImpl;
-use parking_lot::RwLock;
-use std::sync::Arc;
+use banking_db::repository::{MessagingRepository, PersonRepos};
 use uuid::Uuid;
 
-use crate::suites::commons::commons;
-
+use crate::suites::test_helper::setup_test_context;
 use crate::suites::person::helpers::create_test_messaging_model;
 
 #[tokio::test]
 async fn test_messaging_repository() {
-    let db_pool = commons::establish_connection().await;
-    commons::cleanup_database(&db_pool).await;
-    let executor = Executor::Pool(Arc::new(db_pool));
-    let messaging_idx_models = MessagingRepositoryImpl::load_all_messaging_idx(&executor)
-        .await
-        .unwrap();
-    let messaging_idx_cache = Arc::new(RwLock::new(
-        MessagingIdxModelCache::new(messaging_idx_models).unwrap(),
-    ));
-    let repo = MessagingRepositoryImpl::new(executor, messaging_idx_cache);
+    let ctx = setup_test_context().await.unwrap();
+    let repo = ctx.person_repos().messagings();
 
     // Test save and find_by_id
     let new_messaging = create_test_messaging_model("francis@ledgers-rust.com");

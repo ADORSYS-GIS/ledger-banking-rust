@@ -445,7 +445,7 @@ mod tests {
         // HeaplessString should be fixed size (100 + small overhead for length/alignment)
         // Allow for reasonable alignment overhead (typically 12 bytes or less)
         let heapless_size = mem::size_of_val(&heapless_name);
-        assert!(heapless_size >= 101 && heapless_size <= 116, "HeaplessString size {} should be between 101-116 bytes", heapless_size);
+        assert!((101..=116).contains(&heapless_size), "HeaplessString size {heapless_size} should be between 101-116 bytes");
         
         // String has heap allocation overhead
         assert!(mem::size_of_val(&string_name) < mem::size_of_val(&heapless_name));

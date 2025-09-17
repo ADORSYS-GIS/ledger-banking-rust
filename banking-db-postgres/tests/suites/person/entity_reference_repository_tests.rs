@@ -1,106 +1,24 @@
-use banking_db::models::person::{
-    CountryIdxModelCache, CountrySubdivisionIdxModelCache, EntityReferenceIdxModelCache,
-    LocalityIdxModelCache, LocationIdxModelCache, PersonIdxModelCache, RelationshipRole,
-};
-use banking_db::repository::{EntityReferenceRepository, PersonRepository};
-use banking_db_postgres::repository::executor::Executor;
-use banking_db_postgres::repository::person::country_repository_impl::CountryRepositoryImpl;
-use banking_db_postgres::repository::person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
-use banking_db_postgres::repository::person::entity_reference_repository_impl::EntityReferenceRepositoryImpl;
-use banking_db_postgres::repository::person::locality_repository_impl::LocalityRepositoryImpl;
-use banking_db_postgres::repository::person::location_repository_impl::LocationRepositoryImpl;
-use banking_db_postgres::repository::person::person_repository_impl::PersonRepositoryImpl;
-use parking_lot::RwLock;
-use std::sync::Arc;
+use banking_db::models::person::RelationshipRole;
+use banking_db::repository::{EntityReferenceRepository, PersonRepository, PersonRepos};
 use uuid::Uuid;
 
-use crate::suites::commons::commons;
+use crate::suites::test_helper::setup_test_context;
 use crate::suites::person::helpers::{
     create_test_entity_reference_model, create_test_person_model,
 };
 
 #[tokio::test]
 async fn test_entity_reference_repository() {
-    let db_pool = commons::establish_connection().await;
-    commons::cleanup_database(&db_pool).await;
-    let executor = Executor::Pool(Arc::new(db_pool));
-
-    let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
-        .await
-        .unwrap();
-    let country_idx_cache =
-        Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
-    let country_repo = Arc::new(CountryRepositoryImpl::new(
-        executor.clone(),
-        country_idx_cache,
-    ));
-
-    let country_subdivision_idx_models =
-        CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
-            .await
-            .unwrap();
-    let country_subdivision_idx_cache = Arc::new(RwLock::new(
-        CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
-    ));
-    let country_subdivision_repo = Arc::new(CountrySubdivisionRepositoryImpl::new(
-        executor.clone(),
-        country_repo.clone(),
-        country_subdivision_idx_cache,
-    ));
-
-    let locality_idx_models = LocalityRepositoryImpl::load_all_locality_idx(&executor)
-        .await
-        .unwrap();
-    let locality_idx_cache =
-        Arc::new(RwLock::new(LocalityIdxModelCache::new(locality_idx_models).unwrap()));
-    let locality_repo = Arc::new(LocalityRepositoryImpl::new(
-        executor.clone(),
-        country_subdivision_repo.clone(),
-        locality_idx_cache,
-    ));
-
-    let location_idx_models = LocationRepositoryImpl::load_all_location_idx(&executor)
-        .await
-        .unwrap();
-    let location_idx_cache =
-        Arc::new(RwLock::new(LocationIdxModelCache::new(location_idx_models).unwrap()));
-    let location_repo = Arc::new(LocationRepositoryImpl::new(
-        executor.clone(),
-        locality_repo.clone(),
-        location_idx_cache,
-    ));
-
-    let person_idx_models = PersonRepositoryImpl::load_all_person_idx(&executor)
-        .await
-        .unwrap();
-    let person_idx_cache = Arc::new(RwLock::new(
-        PersonIdxModelCache::new(person_idx_models).unwrap(),
-    ));
-    let person_repo = Arc::new(PersonRepositoryImpl::new(
-        executor.clone(),
-        location_repo.clone(),
-        person_idx_cache,
-    ));
-
+    let ctx = setup_test_context().await.unwrap();
+    let person_repo = ctx.person_repos().persons();
+    let repo = ctx.person_repos().entity_references();
+    
     let new_person = create_test_person_model("John Doe");
     let audit_log_id = Uuid::new_v4();
     person_repo
         .save(new_person.clone(), audit_log_id)
         .await
         .unwrap();
-
-    let entity_reference_idx_models =
-        EntityReferenceRepositoryImpl::load_all_entity_reference_idx(&executor)
-            .await
-            .unwrap();
-    let entity_reference_idx_cache = Arc::new(RwLock::new(
-        EntityReferenceIdxModelCache::new(entity_reference_idx_models).unwrap(),
-    ));
-    let repo = EntityReferenceRepositoryImpl::new(
-        executor,
-        person_repo.clone(),
-        entity_reference_idx_cache,
-    );
 
     // Test save and find_by_id
     let new_entity_ref = create_test_entity_reference_model(

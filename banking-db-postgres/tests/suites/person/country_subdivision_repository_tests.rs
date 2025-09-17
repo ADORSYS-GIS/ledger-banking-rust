@@ -1,52 +1,25 @@
-use banking_db::models::person::{
-    CountryIdxModelCache, CountrySubdivisionIdxModelCache,
-};
-use banking_db::repository::{CountryRepository, CountrySubdivisionRepository};
-use banking_db_postgres::repository::{
-    person::country_repository_impl::CountryRepositoryImpl,
-    person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
-};
-use banking_db_postgres::repository::executor::Executor;
-use parking_lot::RwLock;
-use std::sync::Arc;
+use banking_db::repository::{CountryRepository, CountrySubdivisionRepository, PersonRepos};
+use uuid::Uuid;
 
-use crate::suites::commons::commons;
+use crate::suites::test_helper::setup_test_context;
 use crate::suites::person::helpers::{
     create_test_country_model, create_test_country_subdivision_model,
 };
 
 #[tokio::test]
 async fn test_country_subdivision_repository() {
-    let db_pool = commons::establish_connection().await;
-    commons::cleanup_database(&db_pool).await;
-    let executor = Executor::Pool(Arc::new(db_pool));
-    let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
-        .await
-        .unwrap();
-    let country_idx_cache =
-        Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
-    let country_repo = Arc::new(CountryRepositoryImpl::new(
-        executor.clone(),
-        country_idx_cache,
-    ));
-    let country = create_test_country_model("CM", "Cameroon");
+    let ctx = setup_test_context().await.unwrap();
+    let country_repo = ctx.person_repos().countries();
+    let repo = ctx.person_repos().country_subdivisions();
+    
+    // Use unique ISO2 codes for test isolation
+    let unique_iso2 = format!("C{}", &Uuid::new_v4().to_string()[0..1].to_uppercase());
+    let country = create_test_country_model(&unique_iso2, "Test Country");
     country_repo.save(country.clone()).await.unwrap();
 
-    let country_subdivision_idx_models =
-        CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
-            .await
-            .unwrap();
-    let country_subdivision_idx_cache = Arc::new(RwLock::new(
-        CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
-    ));
-    let repo = CountrySubdivisionRepositoryImpl::new(
-        executor,
-        country_repo.clone(),
-        country_subdivision_idx_cache,
-    );
-
     // Test save and find_by_id
-    let new_country_subdivision = create_test_country_subdivision_model(country.id, "OU", "Ouest");
+    let unique_code = format!("S{}", &Uuid::new_v4().to_string()[0..1].to_uppercase());
+    let new_country_subdivision = create_test_country_subdivision_model(country.id, &unique_code, "Test Subdivision");
     let saved_country_subdivision = repo.save(new_country_subdivision.clone()).await.unwrap();
     assert_eq!(new_country_subdivision.id, saved_country_subdivision.id);
 

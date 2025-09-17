@@ -8,7 +8,6 @@ use sqlx::{PgPool, Postgres};
 use std::sync::Arc;
 
 pub mod repository;
-pub mod test_utils;
 pub mod utils;
 
 pub use repository::audit_repository_impl::AuditLogRepositoryImpl;

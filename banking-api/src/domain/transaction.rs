@@ -761,13 +761,13 @@ mod tests {
                                mem::size_of_val(&string_gl_code) +
                                mem::size_of_val(&String::from("USD"));
         
-        println!("Total fixed arrays size: {} bytes", total_fixed_size);
-        println!("Total String fields size: {} bytes", total_string_size);
+        println!("Total fixed arrays size: {total_fixed_size} bytes");
+        println!("Total String fields size: {total_string_size} bytes");
         
         // Should see significant memory reduction (50%+ savings)
         assert!(total_fixed_size < total_string_size);
         let savings_percent = ((total_string_size - total_fixed_size) as f64 / total_string_size as f64) * 100.0;
-        println!("Memory savings: {:.1}%", savings_percent);
+        println!("Memory savings: {savings_percent:.1}%");
         assert!(savings_percent > 50.0);
     }
 

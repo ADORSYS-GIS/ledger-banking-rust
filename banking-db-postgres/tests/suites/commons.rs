@@ -1,4 +1,3 @@
-pub mod commons {
     // tests/commons.rs
     //! Common test utilities for database testing with SQLx and PostgreSQL
     //!
@@ -35,7 +34,7 @@ pub mod commons {
             .acquire_timeout(Duration::from_secs(30))
             .connect(&database_url)
             .await
-            .expect(&format!("Error connecting to {}", database_url));
+            .unwrap_or_else(|_| panic!("Error connecting to {database_url}"));
 
         // Run migrations to ensure schema is up to date
         sqlx::migrate!("../banking-db-postgres/migrations/")
@@ -47,14 +46,14 @@ pub mod commons {
     }
 
 /// Seed the database with fixture data from the specified SQL file
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `pool` - A reference to the PostgreSQL connection pool
 /// * `fixture_file` - The path to the SQL file to execute (relative to test directory)
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// seed_database(&pool, "tests/fixtures/banking_test_data.sql").await;
 /// ```
@@ -62,7 +61,7 @@ pub mod commons {
 pub async fn seed_database(pool: &PgPool, fixture_file: &str) {
     let fixture_path = Path::new(fixture_file);
     let sql = fs::read_to_string(fixture_path)
-        .expect(&format!("Failed to read fixture file: {}", fixture_file));
+        .unwrap_or_else(|_| panic!("Failed to read fixture file: {fixture_file}"));
     
     // Execute the SQL file as a batch
     sqlx::raw_sql(&sql)
@@ -71,20 +70,8 @@ pub async fn seed_database(pool: &PgPool, fixture_file: &str) {
         .expect("Failed to seed the database");
 }
 
-/// Clean up the database by executing the cleanup SQL file
-/// 
-/// This function truncates all tables and resets the database to a clean state
-/// for the next test. It reads and executes the cleanup.sql file.
-pub async fn cleanup_database(pool: &PgPool) {
-    let cleanup_path = Path::new("tests/fixtures/cleanup.sql");
-    let sql = fs::read_to_string(cleanup_path)
-        .expect("Failed to read cleanup file: tests/fixtures/cleanup.sql");
-    
-    sqlx::raw_sql(&sql)
-        .execute(pool)
-        .await
-        .expect("Failed to clean up the database");
-}
+// Note: cleanup_database function has been removed in favor of
+// transaction-based testing which provides automatic rollback
 
 /// RAII guard for automatic database cleanup
 /// 
@@ -110,6 +97,7 @@ pub struct TestDatabaseGuard {
 }
 
 impl TestDatabaseGuard {
+    #[allow(dead_code)]
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -147,7 +135,7 @@ async fn ensure_docker_database_running() {
             println!("Database not reachable; attempting to start Docker Compose...");
             
             let output = Command::new("docker")
-                .args(&["compose", "up", "-d", "postgres"])
+                .args(["compose", "up", "-d", "postgres"])
                 .output();
             
             match output {
@@ -164,7 +152,7 @@ async fn ensure_docker_database_running() {
                     }
                 },
                 Err(e) => {
-                    eprintln!("Failed to execute docker compose command: {}", e);
+                    eprintln!("Failed to execute docker compose command: {e}");
                 }
             }
         }
@@ -211,13 +199,5 @@ mod tests {
         assert_eq!(result.0, 1);
     }
     
-    #[tokio::test]
-    async fn test_cleanup_database() {
-        let pool = establish_connection().await;
-        let _guard = TestDatabaseGuard::new(pool.clone());
-        
-        // Test that cleanup works without errors
-        cleanup_database(&pool).await;
-    }
-}
+    // Removed test_cleanup_database since we no longer use explicit cleanup
 }

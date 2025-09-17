@@ -1,0 +1,31 @@
+   Compiling banking-db-postgres v0.1.0 (/home/francis/dev/ledger-rust/ledger-banking-rust/banking-db-postgres)
+warning: function `setup_shared_uow` is never used
+  --> banking-db-postgres/tests/suites/test_helper.rs:69:14
+   |
+69 | pub async fn setup_shared_uow() -> Result<PostgresUnitOfWork, Box<dyn std::error::Error>> {
+   |              ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `banking-db-postgres` (test "integration") generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.83s
+     Running tests/integration.rs (/home/francis/dev/ledger-rust/ledger-banking-rust/target/debug/deps/integration-58651fd3097aabaa)
+
+running 14 tests
+test suites::person::country_subdivision_repository_tests::test_country_subdivision_repository ... ok
+test suites::person::person_batch_operations_test::test_validate_batch ... ok
+test suites::person::country_repository_tests::test_country_repository ... ok
+test suites::person::person_batch_operations_test::test_load_batch ... ok
+test suites::person::messaging_repository_tests::test_messaging_repository ... ok
+test suites::person::person_batch_operations_test::test_save_batch ... ok
+test suites::person::locality_repository_tests::test_locality_repository ... ok
+test suites::person::person_batch_operations_test::test_exists_batch ... ok
+test suites::person::entity_reference_repository_tests::test_entity_reference_repository ... ok
+test suites::person::person_batch_operations_test::test_delete_batch ... ok
+test suites::person::location_repository_tests::test_location_repository ... ok
+test suites::person::person_repository_tests::test_person_repository ... ok
+test suites::person::person_batch_operations_test::test_save_batch_chunked ... ok
+test suites::person::person_batch_operations_test::test_update_batch ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.20s
+
