@@ -10,3 +10,4 @@ pub mod person_repository_tests;
 pub mod person_batch_operations_test;
 pub mod helpers;
 pub mod country_batch_operations_test;
+pub mod location_batch_operations_test;

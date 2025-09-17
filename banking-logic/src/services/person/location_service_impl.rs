@@ -39,6 +39,13 @@ fn map_domain_error_to_service_error(error: LocationRepositoryError) -> Location
             locality_id,
         },
         LocationRepositoryError::RepositoryError(err) => LocationServiceError::RepositoryError(err),
+        LocationRepositoryError::ManyLocationsExist(ids) => {
+            LocationServiceError::ManyLocationsExist(ids)
+        }
+        LocationRepositoryError::ManyLocationsNotFound(ids) => {
+            LocationServiceError::ManyLocationsNotFound(ids)
+        }
+        LocationRepositoryError::LocationNotFound(id) => LocationServiceError::LocationNotFound(id),
     }
 }
 

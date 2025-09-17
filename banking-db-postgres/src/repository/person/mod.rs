@@ -4,6 +4,7 @@ pub mod country_subdivision_repository_batch_impl;
 pub mod entity_reference_repository_impl;
 pub mod locality_repository_impl;
 pub mod locality_repository_batch_impl;
+pub mod location_repository_batch_impl;
 pub mod location_repository_impl;
 pub mod messaging_repository_impl;
 pub mod person_repository_batch_impl;

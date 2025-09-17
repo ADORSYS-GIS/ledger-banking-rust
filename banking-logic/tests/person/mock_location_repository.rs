@@ -104,6 +104,21 @@ impl LocationRepository<Postgres> for MockLocationRepository {
             .any(|l| l.location_id == id))
     }
 
+    async fn exist_by_ids(
+        &self,
+        ids: &[Uuid],
+    ) -> Result<Vec<(Uuid, bool)>, LocationRepositoryError> {
+        let location_ixes = self.location_ixes.lock().unwrap();
+        let results = ids
+            .iter()
+            .map(|id| {
+                let exists = location_ixes.iter().any(|l| l.location_id == *id);
+                (*id, exists)
+            })
+            .collect();
+        Ok(results)
+    }
+
     async fn find_ids_by_locality_id(
         &self,
         locality_id: Uuid,

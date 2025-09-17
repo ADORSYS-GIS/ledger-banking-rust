@@ -21,9 +21,9 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocationRepositoryImpl {
-    executor: Executor,
-    location_idx_cache: Arc<TokioRwLock<TransactionAwareLocationIdxModelCache>>,
-    locality_repository: Arc<LocalityRepositoryImpl>,
+    pub(crate) executor: Executor,
+    pub(crate) location_idx_cache: Arc<TokioRwLock<TransactionAwareLocationIdxModelCache>>,
+    pub(crate) locality_repository: Arc<LocalityRepositoryImpl>,
 }
 
 impl LocationRepositoryImpl {
@@ -52,6 +52,14 @@ impl LocationRepositoryImpl {
                 query.fetch_all(&mut **tx).await
             }
         }
+    }
+
+    pub(crate) async fn get_idx_by_id(
+        &self,
+        id: Uuid,
+    ) -> LocationResult<Option<LocationIdxModel>> {
+        let cache = self.location_idx_cache.read().await;
+        Ok(cache.get_by_primary(&id))
     }
 }
 
@@ -339,6 +347,15 @@ impl LocationRepository<Postgres> for LocationRepositoryImpl {
         let ids = locations.into_iter().map(|loc| loc.location_id).collect();
         Ok(ids)
     }
+
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> LocationResult<Vec<(Uuid, bool)>> {
+        let mut results = Vec::with_capacity(ids.len());
+        let cache = self.location_idx_cache.read().await;
+        for &id in ids {
+            results.push((id, cache.get_by_primary(&id).is_some()));
+        }
+        Ok(results)
+    }
 }
 
 #[async_trait]
@@ -383,6 +400,12 @@ impl TransactionAwareLocationIdxModelCache {
             return;
         }
         self.local_updates.write().insert(primary_key, item);
+    }
+
+    pub fn remove(&self, primary_key: &Uuid) {
+        self.local_additions.write().remove(primary_key);
+        self.local_updates.write().remove(primary_key);
+        self.local_deletions.write().insert(*primary_key);
     }
 
     pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<LocationIdxModel> {
