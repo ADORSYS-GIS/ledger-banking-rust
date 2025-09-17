@@ -64,7 +64,7 @@ type PersonAuditTuple = (
 impl BatchRepository<Postgres, PersonModel> for PersonRepositoryImpl {
     /// Save multiple persons in a single transaction
     /// This method performs bulk inserts with audit logging
-    async fn save_batch(
+    async fn create_batch(
         &self,
         items: Vec<PersonModel>,
         audit_log_id: Uuid,
@@ -1089,7 +1089,7 @@ impl PersonRepositoryImpl {
     }
 
     /// Process persons in chunks for very large batches
-    pub async fn save_batch_chunked(
+    pub async fn create_batch_chunked(
         &self,
         items: Vec<PersonModel>,
         audit_log_id: Uuid,
@@ -1105,7 +1105,7 @@ impl PersonRepositoryImpl {
         };
 
         for (chunk_idx, chunk) in items.chunks(chunk_size).enumerate() {
-            match self.save_batch(chunk.to_vec(), audit_log_id).await {
+            match self.create_batch(chunk.to_vec(), audit_log_id).await {
                 Ok(saved) => {
                     stats.successful_items += saved.len();
                     all_saved.extend(saved);
@@ -1124,8 +1124,8 @@ impl PersonRepositoryImpl {
             .with_errors(errors))
     }
 
-    /// Validate all persons before batch save
-    pub async fn validate_batch(
+    /// Validate all persons before batch create
+    pub async fn validate_create_batch(
         &self,
         items: &[PersonModel],
     ) -> Result<Vec<bool>, PersonRepositoryError> {

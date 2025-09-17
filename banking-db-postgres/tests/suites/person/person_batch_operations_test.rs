@@ -30,7 +30,7 @@ async fn setup_test_person() -> PersonModel {
 }
 
 #[tokio::test]
-async fn test_save_batch() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_create_batch() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = setup_test_context().await?;
     let person_repo = ctx.person_repos().persons();
 
@@ -47,7 +47,7 @@ async fn test_save_batch() -> Result<(), Box<dyn std::error::Error>> {
     let audit_log_id = Uuid::new_v4();
 
     let saved_persons = person_repo
-        .save_batch(persons.clone(), audit_log_id)
+        .create_batch(persons.clone(), audit_log_id)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -80,7 +80,7 @@ async fn test_load_batch() -> Result<(), Box<dyn std::error::Error>> {
 
     let audit_log_id = Uuid::new_v4();
     person_repo
-        .save_batch(persons, audit_log_id)
+        .create_batch(persons, audit_log_id)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -121,7 +121,7 @@ async fn test_update_batch() -> Result<(), Box<dyn std::error::Error>> {
 
     let audit_log_id = Uuid::new_v4();
     let saved_persons = person_repo
-        .save_batch(persons.clone(), audit_log_id)
+        .create_batch(persons.clone(), audit_log_id)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -177,7 +177,7 @@ async fn test_exists_batch() -> Result<(), Box<dyn std::error::Error>> {
 
     let audit_log_id = Uuid::new_v4();
     person_repo
-        .save_batch(persons, audit_log_id)
+        .create_batch(persons, audit_log_id)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -214,7 +214,7 @@ async fn test_delete_batch() -> Result<(), Box<dyn std::error::Error>> {
 
     let audit_log_id = Uuid::new_v4();
     let saved_persons = person_repo
-        .save_batch(persons, audit_log_id)
+        .create_batch(persons, audit_log_id)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -241,7 +241,7 @@ async fn test_delete_batch() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
-async fn test_save_batch_chunked() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_create_batch_chunked() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = setup_test_context().await?;
     let person_repo = ctx.person_repos().persons();
 
@@ -258,7 +258,7 @@ async fn test_save_batch_chunked() -> Result<(), Box<dyn std::error::Error>> {
 
     // Save with chunk size of 10
     let saved_persons = person_repo
-        .save_batch_chunked(persons, audit_log_id, 10)
+        .create_batch_chunked(persons, audit_log_id, 10)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -273,7 +273,7 @@ async fn test_save_batch_chunked() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
-async fn test_validate_batch() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_validate_create_batch() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = setup_test_context().await?;
     let person_repo = ctx.person_repos().persons();
 
@@ -291,7 +291,7 @@ async fn test_validate_batch() -> Result<(), Box<dyn std::error::Error>> {
 
     // Validate batch
     let validation_results = person_repo
-        .validate_batch(&persons)
+        .validate_create_batch(&persons)
         .await
         .map_err(|e| e.to_string())?;
 
