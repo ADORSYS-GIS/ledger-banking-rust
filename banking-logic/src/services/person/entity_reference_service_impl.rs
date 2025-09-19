@@ -18,6 +18,21 @@ fn map_domain_error_to_service_error(
         EntityReferenceRepositoryError::PersonNotFound(id) => {
             EntityReferenceServiceError::PersonNotFound(id)
         }
+        EntityReferenceRepositoryError::EntityReferenceNotFound(id) => {
+            EntityReferenceServiceError::RepositoryError(Box::new(
+                EntityReferenceRepositoryError::EntityReferenceNotFound(id),
+            ))
+        }
+        EntityReferenceRepositoryError::ManyEntityReferencesExist(ids) => {
+            EntityReferenceServiceError::RepositoryError(Box::new(
+                EntityReferenceRepositoryError::ManyEntityReferencesExist(ids),
+            ))
+        }
+        EntityReferenceRepositoryError::ManyEntityReferencesNotFound(ids) => {
+            EntityReferenceServiceError::RepositoryError(Box::new(
+                EntityReferenceRepositoryError::ManyEntityReferencesNotFound(ids),
+            ))
+        }
         EntityReferenceRepositoryError::DuplicateReference {
             person_id,
             reference_type,

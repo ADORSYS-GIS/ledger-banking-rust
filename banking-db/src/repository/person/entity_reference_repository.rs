@@ -8,6 +8,9 @@ use std::fmt;
 #[derive(Debug)]
 pub enum EntityReferenceRepositoryError {
     PersonNotFound(Uuid),
+    EntityReferenceNotFound(Uuid),
+    ManyEntityReferencesExist(Vec<Uuid>),
+    ManyEntityReferencesNotFound(Vec<Uuid>),
     DuplicateReference {
         person_id: Uuid,
         reference_type: String,
@@ -20,6 +23,15 @@ impl fmt::Display for EntityReferenceRepositoryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::PersonNotFound(id) => write!(f, "Person not found with id: {id}"),
+            Self::EntityReferenceNotFound(id) => {
+                write!(f, "Entity reference not found with id: {id}")
+            }
+            Self::ManyEntityReferencesExist(ids) => {
+                write!(f, "Entity references already exist with ids: {ids:?}")
+            }
+            Self::ManyEntityReferencesNotFound(ids) => {
+                write!(f, "Entity references not found with ids: {ids:?}")
+            }
             Self::DuplicateReference {
                 person_id,
                 reference_type,
@@ -77,4 +89,5 @@ pub trait EntityReferenceRepository<DB: Database>: Send + Sync {
         &self,
         person_id: Uuid,
     ) -> EntityReferenceResult<Vec<Uuid>>;
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> EntityReferenceResult<Vec<(Uuid, bool)>>;
 }
