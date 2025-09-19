@@ -1,0 +1,36 @@
+name: Code Agent
+
+
+on:
+  issues:
+    types: [opened, assigned]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request:
+    types: [opened, synchronize]
+#  workflow_dispatch:
+#    inputs:
+#      direct-prompt:
+#        description: 'One-shot prompt for automated workflows'
+#        required: true
+  repository_dispatch:
+    types: [codex]
+
+
+jobs:
+  codez:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: yiweishen/codez@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          openai-base-url: ${{ secrets.OPENAI_BASE_URL }}
+#          direct-prompt: ${{ inputs.direct-prompt }}
+          openai-model: "gemini-2.5-flash"
