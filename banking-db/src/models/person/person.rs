@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 use std::collections::HashMap;
-use super::common_enums::{MessagingType, serialize_messaging_type_option, deserialize_messaging_type_option};
 
 /// Database model for person type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
@@ -114,22 +113,12 @@ pub struct PersonModel {
     pub organization_person_id: Option<Uuid>,
     
     /// # Documentation
-    /// References to MessagingModel.messaging_id (up to 5 messaging methods)
-    pub messaging1_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging1_type: Option<MessagingType>,
-    pub messaging2_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging2_type: Option<MessagingType>,
-    pub messaging3_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging3_type: Option<MessagingType>,
-    pub messaging4_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging4_type: Option<MessagingType>,
-    pub messaging5_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging5_type: Option<MessagingType>,
+    /// Encoded type and value of up to 5 messaging methods (`type:value`)
+    pub messaging_info1: Option<HeaplessString<50>>,
+    pub messaging_info2: Option<HeaplessString<50>>,
+    pub messaging_info3: Option<HeaplessString<50>>,
+    pub messaging_info4: Option<HeaplessString<50>>,
+    pub messaging_info5: Option<HeaplessString<50>>,
     
     /// # Documentation
     /// Department within organization
@@ -182,21 +171,11 @@ pub struct PersonAuditModel {
     
     pub organization_person_id: Option<Uuid>,
     
-    pub messaging1_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging1_type: Option<MessagingType>,
-    pub messaging2_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging2_type: Option<MessagingType>,
-    pub messaging3_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging3_type: Option<MessagingType>,
-    pub messaging4_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging4_type: Option<MessagingType>,
-    pub messaging5_id: Option<Uuid>,
-    #[serde(serialize_with = "serialize_messaging_type_option", deserialize_with = "deserialize_messaging_type_option")]
-    pub messaging5_type: Option<MessagingType>,
+    pub messaging_info1: Option<HeaplessString<50>>,
+    pub messaging_info2: Option<HeaplessString<50>>,
+    pub messaging_info3: Option<HeaplessString<50>>,
+    pub messaging_info4: Option<HeaplessString<50>>,
+    pub messaging_info5: Option<HeaplessString<50>>,
     
     pub department: Option<HeaplessString<50>>,
 

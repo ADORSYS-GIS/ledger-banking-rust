@@ -7,9 +7,11 @@ use banking_db::repository::{
 };
 use crate::repository::executor::Executor;
 use crate::repository::person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl;
+use crate::repository::person::location_repository_impl::LocationRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
+use once_cell::sync::OnceCell;
 use sqlx::{postgres::PgRow, Postgres, Row};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::hash::Hasher;
 use parking_lot::RwLock;
@@ -19,9 +21,10 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocalityRepositoryImpl {
-    executor: Executor,
-    locality_idx_cache: Arc<TokioRwLock<TransactionAwareLocalityIdxModelCache>>,
-    country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
+    pub(crate) executor: Executor,
+    pub(crate) locality_idx_cache: Arc<TokioRwLock<TransactionAwareLocalityIdxModelCache>>,
+    pub(crate) country_subdivision_repository: Arc<CountrySubdivisionRepositoryImpl>,
+    pub(crate) location_repository: OnceCell<Arc<LocationRepositoryImpl>>,
 }
 
 impl LocalityRepositoryImpl {
@@ -36,6 +39,7 @@ impl LocalityRepositoryImpl {
                 TransactionAwareLocalityIdxModelCache::new(locality_idx_cache),
             )),
             country_subdivision_repository,
+            location_repository: OnceCell::new(),
         }
     }
 
@@ -222,6 +226,15 @@ impl LocalityRepository<Postgres> for LocalityRepositoryImpl {
             .get_by_country_subdivision_id(&country_subdivision_id)
             .unwrap_or_default())
     }
+
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<bool>> {
+        let cache = self.locality_idx_cache.read().await;
+        let mut result = Vec::with_capacity(ids.len());
+        for id in ids {
+            result.push(cache.contains_primary(id));
+        }
+        Ok(result)
+    }
 }
 
 #[async_trait]
@@ -238,6 +251,7 @@ impl TransactionAware for LocalityRepositoryImpl {
 pub struct TransactionAwareLocalityIdxModelCache {
     shared_cache: Arc<RwLock<LocalityIdxModelCache>>,
     local_additions: RwLock<HashMap<Uuid, LocalityIdxModel>>,
+    local_deletions: RwLock<HashSet<Uuid>>,
 }
 
 impl TransactionAwareLocalityIdxModelCache {
@@ -245,16 +259,25 @@ impl TransactionAwareLocalityIdxModelCache {
         Self {
             shared_cache,
             local_additions: RwLock::new(HashMap::new()),
+            local_deletions: RwLock::new(HashSet::new()),
         }
     }
 
     pub fn add(&self, item: LocalityIdxModel) {
-        self.local_additions
-            .write()
-            .insert(item.locality_id, item);
+        let primary_key = item.locality_id;
+        self.local_deletions.write().remove(&primary_key);
+        self.local_additions.write().insert(primary_key, item);
+    }
+
+    pub fn remove(&self, primary_key: &Uuid) {
+        self.local_additions.write().remove(primary_key);
+        self.local_deletions.write().insert(*primary_key);
     }
 
     pub fn get_by_primary(&self, primary_key: &Uuid) -> Option<LocalityIdxModel> {
+        if self.local_deletions.read().contains(primary_key) {
+            return None;
+        }
         if let Some(item) = self.local_additions.read().get(primary_key) {
             return Some(item.clone());
         }
@@ -262,25 +285,31 @@ impl TransactionAwareLocalityIdxModelCache {
     }
 
     pub fn get_by_country_subdivision_id(&self, country_subdivision_id: &Uuid) -> Option<Vec<Uuid>> {
-        let mut shared_ids = self
-            .shared_cache
-            .read()
+        let shared_cache = self.shared_cache.read();
+        let local_additions = self.local_additions.read();
+        let local_deletions = self.local_deletions.read();
+
+        let mut results: HashSet<Uuid> = shared_cache
             .get_by_country_subdivision_id(country_subdivision_id)
             .cloned()
-            .unwrap_or_default();
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
 
-        for item in self.local_additions.read().values() {
+        for item in local_additions.values() {
             if item.country_subdivision_id == *country_subdivision_id {
-                shared_ids.push(item.locality_id);
+                results.insert(item.locality_id);
             }
         }
 
-        if shared_ids.is_empty() {
+        for key in local_deletions.iter() {
+            results.remove(key);
+        }
+
+        if results.is_empty() {
             None
         } else {
-            shared_ids.sort();
-            shared_ids.dedup();
-            Some(shared_ids)
+            Some(results.into_iter().collect())
         }
     }
 
@@ -290,10 +319,19 @@ impl TransactionAwareLocalityIdxModelCache {
                 return Some(item.locality_id);
             }
         }
-        self.shared_cache.read().get_by_code_hash(code_hash)
+        if let Some(shared_id) = self.shared_cache.read().get_by_code_hash(code_hash) {
+            if self.local_deletions.read().contains(&shared_id) {
+                return None;
+            }
+            return Some(shared_id);
+        }
+        None
     }
 
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
+        if self.local_deletions.read().contains(primary_key) {
+            return false;
+        }
         self.local_additions.read().contains_key(primary_key)
             || self.shared_cache.read().contains_primary(primary_key)
     }
@@ -304,17 +342,23 @@ impl TransactionAware for TransactionAwareLocalityIdxModelCache {
     async fn on_commit(&self) -> BankingResult<()> {
         let mut shared_cache = self.shared_cache.write();
         let mut local_additions = self.local_additions.write();
+        let mut local_deletions = self.local_deletions.write();
 
         for item in local_additions.values() {
             shared_cache.add(item.clone());
         }
+        for key in local_deletions.iter() {
+            shared_cache.remove(key);
+        }
 
         local_additions.clear();
+        local_deletions.clear();
         Ok(())
     }
 
     async fn on_rollback(&self) -> BankingResult<()> {
         self.local_additions.write().clear();
+        self.local_deletions.write().clear();
         Ok(())
     }
 }

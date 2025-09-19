@@ -50,13 +50,7 @@ banking-db-postgres/   # PostgreSQL implementation (✅ 100% complete)
 
 ## Development Guidelines
 
-process file docs/guidelines/development.md whenever you want to 
-- define new struct
-- fix or modify existing structs 
-- define new fields 
-- fix or modify existing fields
-- define new enums
-- fix or modify existing enums
+process file docs/guidelines/development.md whenever you want to code
 
 ## Implementation Status
 

@@ -1,6 +1,5 @@
 -- Create ENUM types
 CREATE TYPE location_type AS ENUM ('Residential', 'Business', 'Mailing', 'Temporary', 'Branch', 'Community', 'Other');
-CREATE TYPE messaging_type AS ENUM ('Email', 'Phone', 'Sms', 'WhatsApp', 'Telegram', 'Skype', 'Teams', 'Signal', 'WeChat', 'Viber', 'Messenger', 'LinkedIn', 'Slack', 'Discord', 'Other');
 CREATE TYPE person_type AS ENUM ('Natural', 'Legal', 'System', 'Integration', 'Unknown');
 CREATE TYPE person_entity_type AS ENUM ('Customer', 'Employee', 'Shareholder', 'Director', 'BeneficialOwner', 'Agent', 'Vendor', 'Partner', 'RegulatoryContact', 'EmergencyContact', 'SystemAdmin', 'Other');
 
@@ -95,33 +94,8 @@ CREATE TABLE location_idx (
     hash BIGINT NOT NULL
 );
 
--- Main table for model MessagingModel
-CREATE TABLE messaging (
-    id UUID PRIMARY KEY,
-    messaging_type messaging_type NOT NULL,
-    value VARCHAR(100) NOT NULL,
-    other_type VARCHAR(20)
-);
 
--- Audit table for MessagingModel
-CREATE TABLE messaging_audit (
-    messaging_id UUID NOT NULL,
-    version INTEGER NOT NULL,
-    hash BIGINT NOT NULL,
-    messaging_type messaging_type NOT NULL,
-    value VARCHAR(100) NOT NULL,
-    other_type VARCHAR(20),
-    audit_log_id UUID NOT NULL,
-    PRIMARY KEY (messaging_id, version)
-);
 
--- Index table for Messaging
-CREATE TABLE messaging_idx (
-    messaging_id UUID PRIMARY KEY,
-    value_hash BIGINT NOT NULL,
-    version INTEGER NOT NULL,
-    hash BIGINT NOT NULL
-);
 
 -- Main table for model EntityReferenceModel
 CREATE TABLE entity_reference (
@@ -164,16 +138,11 @@ CREATE TABLE person (
     display_name VARCHAR(100) NOT NULL,
     external_identifier VARCHAR(50),
     organization_person_id UUID,
-    messaging1_id UUID,
-    messaging1_type messaging_type,
-    messaging2_id UUID,
-    messaging2_type messaging_type,
-    messaging3_id UUID,
-    messaging3_type messaging_type,
-    messaging4_id UUID,
-    messaging4_type messaging_type,
-    messaging5_id UUID,
-    messaging5_type messaging_type,
+    messaging_info1 VARCHAR(50),
+    messaging_info2 VARCHAR(50),
+    messaging_info3 VARCHAR(50),
+    messaging_info4 VARCHAR(50),
+    messaging_info5 VARCHAR(50),
     department VARCHAR(50),
     location_id UUID,
     duplicate_of_person_id UUID,
@@ -199,16 +168,11 @@ CREATE TABLE person_audit (
     display_name VARCHAR(100) NOT NULL,
     external_identifier VARCHAR(50),
     organization_person_id UUID,
-    messaging1_id UUID,
-    messaging1_type messaging_type,
-    messaging2_id UUID,
-    messaging2_type messaging_type,
-    messaging3_id UUID,
-    messaging3_type messaging_type,
-    messaging4_id UUID,
-    messaging4_type messaging_type,
-    messaging5_id UUID,
-    messaging5_type messaging_type,
+    messaging_info1 VARCHAR(50),
+    messaging_info2 VARCHAR(50),
+    messaging_info3 VARCHAR(50),
+    messaging_info4 VARCHAR(50),
+    messaging_info5 VARCHAR(50),
     department VARCHAR(50),
     location_id UUID,
     duplicate_of_person_id UUID,

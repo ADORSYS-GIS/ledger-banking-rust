@@ -136,6 +136,18 @@ impl CountrySubdivisionIdxModelCache {
         self.by_id.insert(primary_key, item);
     }
 
+    pub fn remove(&mut self, primary_key: &Uuid) -> Option<CountrySubdivisionIdxModel> {
+        if let Some(item) = self.by_id.remove(primary_key) {
+            self.by_code_hash.remove(&item.code_hash);
+            if let Some(ids) = self.by_country_id.get_mut(&item.country_id) {
+                ids.retain(|&id| id != *primary_key);
+            }
+            Some(item)
+        } else {
+            None
+        }
+    }
+
     pub fn contains_primary(&self, primary_key: &Uuid) -> bool {
         self.by_id.contains_key(primary_key)
     }

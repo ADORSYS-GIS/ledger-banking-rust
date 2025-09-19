@@ -1,6 +1,6 @@
 use banking_db::models::person::{
     CountryIdxModelCache, CountrySubdivisionIdxModelCache, EntityReferenceIdxModelCache,
-    LocalityIdxModelCache, LocationIdxModelCache, MessagingIdxModelCache, PersonIdxModelCache,
+    LocalityIdxModelCache, LocationIdxModelCache, PersonIdxModelCache,
 };
 use banking_logic::services::repositories::Repositories;
 use parking_lot::RwLock;
@@ -16,7 +16,6 @@ pub use repository::person::country_subdivision_repository_impl::CountrySubdivis
 pub use repository::person::entity_reference_repository_impl::EntityReferenceRepositoryImpl;
 pub use repository::person::locality_repository_impl::LocalityRepositoryImpl;
 pub use repository::person::location_repository_impl::LocationRepositoryImpl;
-pub use repository::person::messaging_repository_impl::MessagingRepositoryImpl;
 pub use repository::person::person_repository_impl::PersonRepositoryImpl;
 pub use repository::unit_of_work_impl;
 
@@ -34,37 +33,42 @@ impl PostgresRepositories {
 
         let country_idx_models = CountryRepositoryImpl::load_all_country_idx(&executor)
             .await
-            .unwrap();
-        let country_idx_cache =
-            Arc::new(RwLock::new(CountryIdxModelCache::new(country_idx_models).unwrap()));
+            .expect("Failed to load country index");
+        let country_idx_cache = Arc::new(RwLock::new(
+            CountryIdxModelCache::new(country_idx_models)
+                .expect("Failed to create country index cache"),
+        ));
 
         let country_subdivision_idx_models =
             CountrySubdivisionRepositoryImpl::load_all_country_subdivision_idx(&executor)
                 .await
-                .unwrap();
+                .expect("Failed to load country subdivision index");
         let country_subdivision_idx_cache = Arc::new(RwLock::new(
-            CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models).unwrap(),
+            CountrySubdivisionIdxModelCache::new(country_subdivision_idx_models)
+                .expect("Failed to create country subdivision index cache"),
         ));
 
         let locality_idx_models = LocalityRepositoryImpl::load_all_locality_idx(&executor)
             .await
-            .unwrap();
+            .expect("Failed to load locality index");
         let locality_idx_cache = Arc::new(RwLock::new(
-            LocalityIdxModelCache::new(locality_idx_models).unwrap(),
+            LocalityIdxModelCache::new(locality_idx_models)
+                .expect("Failed to create locality index cache"),
         ));
 
         let location_idx_models = LocationRepositoryImpl::load_all_location_idx(&executor)
             .await
-            .unwrap();
+            .expect("Failed to load location index");
         let location_idx_cache = Arc::new(RwLock::new(
-            LocationIdxModelCache::new(location_idx_models).unwrap(),
+            LocationIdxModelCache::new(location_idx_models)
+                .expect("Failed to create location index cache"),
         ));
 
         let person_idx_models = PersonRepositoryImpl::load_all_person_idx(&executor)
             .await
-            .unwrap();
+            .expect("Failed to load person index");
         let person_idx_cache = Arc::new(RwLock::new(
-            PersonIdxModelCache::new(person_idx_models).unwrap(),
+            PersonIdxModelCache::new(person_idx_models).expect("Failed to create person index cache"),
         ));
 
         let country_repository = Arc::new(CountryRepositoryImpl::new(
@@ -86,34 +90,33 @@ impl PostgresRepositories {
             locality_repository.clone(),
             location_idx_cache,
         ));
+        if locality_repository
+            .location_repository
+            .set(location_repository.clone())
+            .is_err()
+        {
+            // This should not happen in this setup, as it's initialized only once.
+            panic!("Attempted to set location_repository more than once.");
+        }
         let person_repository = Arc::new(PersonRepositoryImpl::new(
             executor.clone(),
             location_repository.clone(),
             person_idx_cache,
         ));
-        let messaging_idx_models = MessagingRepositoryImpl::load_all_messaging_idx(&executor)
-            .await
-            .unwrap();
-        let messaging_idx_cache = Arc::new(RwLock::new(
-            MessagingIdxModelCache::new(messaging_idx_models).unwrap(),
-        ));
 
         let entity_reference_idx_models =
             EntityReferenceRepositoryImpl::load_all_entity_reference_idx(&executor)
                 .await
-                .unwrap();
+                .expect("Failed to load entity reference index");
         let entity_reference_idx_cache = Arc::new(RwLock::new(
-            EntityReferenceIdxModelCache::new(entity_reference_idx_models).unwrap(),
+            EntityReferenceIdxModelCache::new(entity_reference_idx_models)
+                .expect("Failed to create entity reference index cache"),
         ));
 
         let entity_reference_repository = Arc::new(EntityReferenceRepositoryImpl::new(
             executor.clone(),
             person_repository.clone(),
             entity_reference_idx_cache,
-        ));
-        let messaging_repository = Arc::new(MessagingRepositoryImpl::new(
-            executor.clone(),
-            messaging_idx_cache,
         ));
         Repositories {
             person_repository,
@@ -122,7 +125,6 @@ impl PostgresRepositories {
             country_subdivision_repository,
             locality_repository,
             location_repository,
-            messaging_repository,
             entity_reference_repository,
         }
     }

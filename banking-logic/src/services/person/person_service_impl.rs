@@ -40,7 +40,6 @@ impl<DB: Database> PersonServiceImpl<DB> {
             PersonRepositoryError::InvalidPersonTypeChange { from, to } => {
                 PersonServiceError::InvalidPersonTypeChange { from, to }
             }
-            PersonRepositoryError::MessagingNotFound(id) => PersonServiceError::MessagingNotFound(id),
             PersonRepositoryError::BatchValidationFailed { failed_ids, errors } => {
                 PersonServiceError::BatchValidationFailed {
                     failed_ids_count: failed_ids.len(),
@@ -65,7 +64,8 @@ impl<DB: Database> PersonServiceImpl<DB> {
            }
            PersonRepositoryError::IsOrganizationPersonFor(ids) => {
                PersonServiceError::IsOrganizationFor(ids)
-           }
+           },
+           _ => PersonServiceError::Unexpected(err.to_string()),
         }
     }
 }

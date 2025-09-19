@@ -17,6 +17,15 @@ pub enum LocationServiceError {
     /// Invalid coordinates
     InvalidCoordinates { latitude: f64, longitude: f64 },
 
+    /// Many locations exist
+    ManyLocationsExist(Vec<Uuid>),
+
+    /// Many locations not found
+    ManyLocationsNotFound(Vec<Uuid>),
+
+    /// Location not found
+    LocationNotFound(Uuid),
+
     /// Duplicate location for same address
     DuplicateLocation {
         street: String,
@@ -50,6 +59,15 @@ impl fmt::Display for LocationServiceError {
             ),
             Self::RepositoryError(err) => write!(f, "Repository error: {err}"),
             Self::ServiceError(err) => write!(f, "Service error: {err}"),
+            Self::ManyLocationsExist(ids) => {
+                write!(f, "Locations with these IDs already exist: {ids:?}")
+            }
+            Self::ManyLocationsNotFound(ids) => {
+                write!(f, "Locations with these IDs not found: {ids:?}")
+            }
+            Self::LocationNotFound(id) => {
+                write!(f, "Location with this ID not found: {id}")
+            }
         }
     }
 }

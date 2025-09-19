@@ -1,6 +1,6 @@
 use banking_db::models::person::{
     CountryModel, CountrySubdivisionModel, LocalityModel, LocationModel, LocationType,
-    MessagingModel, MessagingType, PersonModel, PersonType,
+    PersonModel, PersonType,
 };
 use heapless::String as HeaplessString;
 use uuid::Uuid;
@@ -16,16 +16,11 @@ pub fn create_test_person_model(name: &str) -> PersonModel {
         ),
         entity_reference_count: 0,
         organization_person_id: None,
-        messaging1_id: None,
-        messaging1_type: None,
-        messaging2_id: None,
-        messaging2_type: None,
-        messaging3_id: None,
-        messaging3_type: None,
-        messaging4_id: None,
-        messaging4_type: None,
-        messaging5_id: None,
-        messaging5_type: None,
+        messaging_info1: None,
+        messaging_info2: None,
+        messaging_info3: None,
+        messaging_info4: None,
+        messaging_info5: None,
         department: None,
         location_id: None,
         duplicate_of_person_id: None,
@@ -100,15 +95,6 @@ pub fn create_test_location_model(
     }
 }
 
-pub fn create_test_messaging_model(email: &str) -> MessagingModel {
-    MessagingModel {
-        id: Uuid::new_v4(),
-        messaging_type: MessagingType::Email,
-        // format!("test_{}@example.com", Uuid::new_v4()).as_str()
-        value: HeaplessString::try_from(email).unwrap(),
-        other_type: None,
-    }
-}
 use banking_db::models::person::{EntityReferenceModel, RelationshipRole};
 
 pub fn create_test_entity_reference_model(

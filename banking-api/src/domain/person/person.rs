@@ -1,7 +1,7 @@
 use heapless::{String as HeaplessString};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::domain::person::common_enums::{MessagingType, PersonType};
+use crate::domain::person::common_enums::PersonType;
 
 /// # Service Trait
 /// - FQN: banking-api/src/service/person/person_service.rs/PersonService
@@ -38,17 +38,12 @@ pub struct Person {
     pub organization_person_id: Option<Uuid>,
     
     /// # Documentation
-    /// References to Messaging.messaging_id (up to 5 messaging methods)
-    pub messaging1_id: Option<Uuid>,
-    pub messaging1_type: Option<MessagingType>,
-    pub messaging2_id: Option<Uuid>,
-    pub messaging2_type: Option<MessagingType>,
-    pub messaging3_id: Option<Uuid>,
-    pub messaging3_type: Option<MessagingType>,
-    pub messaging4_id: Option<Uuid>,
-    pub messaging4_type: Option<MessagingType>,
-    pub messaging5_id: Option<Uuid>,
-    pub messaging5_type: Option<MessagingType>,
+    /// Encoded type and value of up to 5 messaging methods (`type:value`)
+    pub messaging_info1: Option<HeaplessString<50>>,
+    pub messaging_info2: Option<HeaplessString<50>>,
+    pub messaging_info3: Option<HeaplessString<50>>,
+    pub messaging_info4: Option<HeaplessString<50>>,
+    pub messaging_info5: Option<HeaplessString<50>>,
     
     /// # Documentation
     /// Department within organization

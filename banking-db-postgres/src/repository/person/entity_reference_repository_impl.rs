@@ -20,8 +20,9 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct EntityReferenceRepositoryImpl {
-    executor: Executor,
-    entity_reference_idx_cache: Arc<TokioRwLock<TransactionAwareEntityReferenceIdxModelCache>>,
+    pub(crate) executor: Executor,
+    pub(crate) entity_reference_idx_cache:
+        Arc<TokioRwLock<TransactionAwareEntityReferenceIdxModelCache>>,
     person_repository: Arc<PersonRepositoryImpl>,
 }
 
@@ -439,6 +440,21 @@ impl EntityReferenceRepository<Postgres> for EntityReferenceRepositoryImpl {
         } else {
             Ok(Vec::new())
         }
+    }
+
+    async fn exist_by_ids(
+        &self,
+        ids: &[Uuid],
+    ) -> EntityReferenceResult<Vec<(Uuid, bool)>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let cache = self.entity_reference_idx_cache.read().await;
+        let mut result = Vec::with_capacity(ids.len());
+        for &id in ids {
+            result.push((id, cache.get_by_primary(&id).is_some()));
+        }
+        Ok(result)
     }
 }
 

@@ -68,6 +68,20 @@ impl LocalityRepository<Postgres> for MockLocalityRepository {
             .any(|l| l.locality_id == id))
     }
 
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<bool>> {
+        let mut result = Vec::new();
+        for id in ids {
+            result.push(
+                self.locality_ixes
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .any(|l| l.locality_id == *id),
+            );
+        }
+        Ok(result)
+    }
+
     async fn find_ids_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,

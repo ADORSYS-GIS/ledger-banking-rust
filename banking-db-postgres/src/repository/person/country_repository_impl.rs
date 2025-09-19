@@ -18,8 +18,8 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 pub struct CountryRepositoryImpl {
-    executor: Executor,
-    country_idx_cache: Arc<RwLock<TransactionAwareCountryIdxModelCache>>,
+    pub executor: Executor,
+    pub country_idx_cache: Arc<RwLock<TransactionAwareCountryIdxModelCache>>,
 }
 
 impl CountryRepositoryImpl {
@@ -191,6 +191,15 @@ impl CountryRepository<Postgres> for CountryRepositoryImpl {
         let mut result = Vec::new();
         if let Some(country_id) = self.country_idx_cache.read().await.get_by_iso2(&iso2_heapless) {
             result.push(country_id);
+        }
+        Ok(result)
+    }
+
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> CountryResult<Vec<(Uuid, bool)>> {
+        let mut result = Vec::new();
+        let cache = self.country_idx_cache.read().await;
+        for &id in ids {
+            result.push((id, cache.contains_primary(&id)));
         }
         Ok(result)
     }

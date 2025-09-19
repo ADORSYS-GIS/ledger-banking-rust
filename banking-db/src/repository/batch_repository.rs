@@ -9,7 +9,7 @@ use uuid::Uuid;
 pub trait BatchRepository<DB: Database, T>: Send + Sync {
     /// Save multiple items in a single transaction
     /// Returns saved items with any generated fields populated
-    async fn save_batch(
+    async fn create_batch(
         &self,
         items: Vec<T>,
         audit_log_id: Uuid,

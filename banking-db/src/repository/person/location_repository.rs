@@ -15,6 +15,15 @@ pub enum LocationRepositoryError {
     /// Invalid location type
     InvalidLocationType(String),
 
+    /// Many locations exist
+    ManyLocationsExist(Vec<Uuid>),
+
+    /// Many locations not found
+    ManyLocationsNotFound(Vec<Uuid>),
+
+    /// Location not found
+    LocationNotFound(Uuid),
+
     /// Invalid coordinates
     InvalidCoordinates { latitude: f64, longitude: f64 },
 
@@ -36,6 +45,15 @@ impl fmt::Display for LocationRepositoryError {
             }
             Self::InvalidLocationType(loc_type) => {
                 write!(f, "Invalid location type: {loc_type}")
+            }
+            Self::ManyLocationsExist(ids) => {
+                write!(f, "Locations with these IDs already exist: {ids:?}")
+            }
+            Self::ManyLocationsNotFound(ids) => {
+                write!(f, "Locations with these IDs not found: {ids:?}")
+            }
+            Self::LocationNotFound(id) => {
+                write!(f, "Location with this ID not found: {id}")
             }
             Self::InvalidCoordinates {
                 latitude,
@@ -89,4 +107,5 @@ pub trait LocationRepository<DB: Database>: Send + Sync {
     ) -> LocationResult<Vec<LocationIdxModel>>;
     async fn exists_by_id(&self, id: Uuid) -> LocationResult<bool>;
     async fn find_ids_by_locality_id(&self, locality_id: Uuid) -> LocationResult<Vec<Uuid>>;
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> LocationResult<Vec<(Uuid, bool)>>;
 }

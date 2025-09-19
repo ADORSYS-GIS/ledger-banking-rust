@@ -22,6 +22,12 @@ impl<DB: Database> CountryServiceImpl<DB> {
 fn map_domain_error_to_service_error(error: CountryRepositoryError) -> CountryServiceError {
     match error {
         CountryRepositoryError::CountryNotFound(id) => CountryServiceError::CountryNotFound(id),
+        CountryRepositoryError::ManyCountriesNotFound(ids) => {
+            CountryServiceError::RepositoryError(format!("Countries not found: {ids:?}"))
+        }
+        CountryRepositoryError::ManyCountriesExist(ids) => {
+            CountryServiceError::RepositoryError(format!("Countries exist: {ids:?}"))
+        }
         CountryRepositoryError::DuplicateCountryISO2(iso2) => {
             CountryServiceError::DuplicateCountryISO2(iso2)
         }

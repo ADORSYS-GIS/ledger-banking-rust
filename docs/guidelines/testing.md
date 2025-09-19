@@ -1,40 +1,45 @@
-### Test Isolation
+### Test Isolation with Unit of Work
+
+Repository and service tests use a **Unit of Work** pattern to ensure complete test isolation. Each test runs within a database transaction that is **automatically rolled back** at the end of the test. This approach eliminates data pollution between tests and allows them to run in parallel without interference.
+
+The core of this pattern is the `setup_test_context` helper function, which provides a `TestContext` for each test.
+
 ```rust
 #[tokio::test]
-async fn test_with_isolation() {
-    // Each test establishes its own connection
-    let pool = commons::establish_connection().await;
+async fn test_with_transactional_isolation() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // 1. Arrange: Set up the test context. This begins a transaction.
+    let ctx = setup_test_context().await?;
     
-    // Module-specific setup is handled within the test file
-    // This avoids monolithic test helpers and ensures clarity
-    person_init::create_test_person(&pool).await;
+    // Get a repository that operates within the transaction
+    let person_repo = ctx.person_repos().persons();
 
-    // Test logic follows...
-    let new_person = PersonModel { /* ... */ };
-    let person_repo = PersonRepositoryImpl::new(Arc::new(pool));
-    let created_person = person_repo.save(new_person.clone()).await.unwrap();
-    assert_eq!(new_person.id, created_person.id);
-}
+    // 2. Act: Perform database operations
+    let new_person = create_test_person_model("John Doe");
+    let saved_person = person_repo.save(new_person.clone(), Uuid::new_v4()).await?;
+
+    // 3. Assert: Verify the results
+    let found_person = person_repo.find_by_id(saved_person.id).await?;
+    assert!(found_person.is_some());
+
+    Ok(())
+} // <- The transaction is automatically rolled back here when `ctx` is dropped
 ```
 
 ### Database Testing
-**⚠️ Critical**: Database tests **must run sequentially** to avoid data pollution:
+
+Database tests can now run in parallel, as each test is perfectly isolated within its own transaction.
 
 ```bash
 # Set the database URL (from project root)
 export DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
 
-# Run all tests for a specific package (sequentially)
-cargo test -p banking-db-postgres -- --test-threads=1
-
-# Run a specific test with its required features
-cargo test -p banking-db-postgres --test person_repository_tests --features person_repository -- --test-threads=1
+# Run all tests for a specific package (can run in parallel)
+cargo test -p banking-db-postgres
 
 # Schema changes (from project root)
 docker compose down -v && docker compose up -d postgres
 sqlx migrate run --source banking-db-postgres/migrations
 ```
-
 
 ## Service Implementation Testing
 
@@ -232,34 +237,58 @@ pub mod country_repository_tests;
 
 ### 2. Database Connection and Isolation
 
-**Crucially, all repository tests must run against a real database and be properly isolated to prevent data conflicts.**
+All repository tests are isolated using the **Unit of Work** pattern. The `setup_test_context` helper function, located in `banking-db-postgres/tests/suites/test_helper.rs`, provides a transactional session for each test.
 
--   **Connection**: Use the `commons::establish_connection().await` helper at the beginning of each test to get a database pool.
--   **Cleanup**: Call `commons::cleanup_database(&db_pool).await` immediately after establishing a connection in every test function. This truncates all relevant tables to ensure a clean state for each test.
+-   **Transactional Context**: Call `setup_test_context().await?` at the beginning of each test to get a `TestContext`.
+-   **Error Handling**: Test functions should return `Result<(), Box<dyn std::error::Error + Send + Sync>>` and use the `?` operator for concise error propagation. This avoids using `.unwrap()` and provides consistent error handling across the test suite.
+-   **Automatic Rollback**: The transaction is automatically rolled back when the `TestContext` goes out of scope, ensuring a clean database state for subsequent tests.
 
 ```rust
+use crate::suites::test_helper::setup_test_context;
+
 #[tokio::test]
-async fn test_my_repository() {
-    let db_pool = commons::establish_connection().await;
-    commons::cleanup_database(&db_pool).await;
+async fn test_my_repository() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // 1. Arrange: Set up the transactional context
+    let ctx = setup_test_context().await?;
+    
+    // Get a repository from the context
+    let repo = ctx.person_repos().persons();
+    
     // ... rest of the test
+    Ok(())
 }
 ```
 
 ### 3. Test Data Generation
 
-Helper functions for creating test models are centralized in `person/helpers.rs`.
+To promote reusability and maintainability, test data generation follows a modular, co-located pattern. This approach is preferred over a single, monolithic `helpers.rs` file, as it keeps test data generation logic close to the tests that use it.
+
+-   **Co-location**: For each primary entity, a public `setup_test_<entity>` function is defined within its corresponding test file (e.g., `country_repository_tests.rs` or `country_batch_operations_test.rs`). This function is responsible for creating a valid model instance.
+-   **Reusability**: By marking the setup function as `pub`, it can be imported and reused by other tests that have a dependency on that entity. For example, `locality_batch_operations_test.rs` can import and use `setup_test_country` and `setup_test_country_subdivision`.
+-   **Dependencies**: If an entity depends on another (e.g., a `Locality` needs a `CountrySubdivision`), the setup function should accept the parent's ID as a parameter.
 
 ```rust
-// In banking-db-postgres/tests/suites/person/helpers.rs
-use banking_db::models::person::{CountryModel, ...};
+// In banking-db-postgres/tests/suites/person/country_batch_operations_test.rs
+use banking_db::models::person::CountryModel;
 // ... other imports
 
-pub fn create_test_country_model(iso2: &str, name_l1: &str) -> CountryModel {
+pub async fn setup_test_country() -> CountryModel {
     // ... implementation
 }
 
-// ... other helper functions
+// In banking-db-postgres/tests/suites/person/locality_batch_operations_test.rs
+use crate::suites::person::country_batch_operations_test::setup_test_country;
+use crate::suites::person::country_subdivision_batch_operations_test::setup_test_country_subdivision;
+
+// Inside a test function:
+let country = setup_test_country().await;
+country_repo.save(country.clone()).await?;
+
+let subdivision = setup_test_country_subdivision(country.id).await;
+country_subdivision_repo.save(subdivision.clone()).await?;
+
+let locality = setup_test_locality(subdivision.id).await;
+// ...
 ```
 
 ### 4. Writing Repository Tests
@@ -267,42 +296,42 @@ pub fn create_test_country_model(iso2: &str, name_l1: &str) -> CountryModel {
 Structure tests using the **Arrange-Act-Assert** pattern. A single test function can validate multiple methods of the same repository for efficiency.
 
 ```rust
+use crate::suites::test_helper::setup_test_context;
+use crate::suites::person::helpers::create_test_person_model;
+use banking_db::repository::PersonRepository;
+use uuid::Uuid;
+
 #[tokio::test]
-async fn test_my_repository() {
-    // 1. Arrange: Set up DB, dependencies, and repository instance.
-    let db_pool = commons::establish_connection().await;
-    commons::cleanup_database(&db_pool).await;
-
-    // Create any prerequisite data (e.g., a user for the 'created_by' field)
-    let person_id = commons::create_test_person(&db_pool).await;
-
-    // Instantiate the repository implementation
-    let repo = MyRepositoryImpl::new(Arc::new(db_pool.clone()));
+async fn test_person_repository() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // 1. Arrange: Set up the transactional context and repository
+    let ctx = setup_test_context().await?;
+    let repo = ctx.person_repos().persons();
 
     // 2. Act & 3. Assert for the 'save' and 'find_by_id' methods
-    let new_item = create_test_item_model(person_id);
-    let saved_item = repo.save(new_item.clone()).await.unwrap();
-    assert_eq!(new_item.id, saved_item.id);
+    let new_person = create_test_person_model("John Doe");
+    let saved_person = repo.save(new_person.clone(), Uuid::new_v4()).await?;
+    assert_eq!(new_person.id, saved_.id);
 
-    let found_item = repo.find_by_id(new_item.id).await.unwrap().unwrap();
-    assert_eq!(new_item.id, found_item.id);
+    let found_person = repo.find_by_id(new_person.id).await?.unwrap();
+    assert_eq!(new_person.id, found_person.person_id);
 
     // Act & Assert for the 'exists_by_id' method
-    assert!(repo.exists_by_id(new_item.id).await.unwrap());
-    assert!(!repo.exists_by_id(Uuid::new_v4()).await.unwrap());
+    assert!(repo.exists_by_id(new_person.id).await?);
+    assert!(!repo.exists_by_id(Uuid::new_v4()).await?);
 
     // ... continue testing other repository methods
+    Ok(())
 }
 ```
 
 ### 5. Running Repository Tests
 
-Repository tests **must** be run sequentially.
+Repository tests can now be run in parallel, thanks to transaction-based isolation.
 
 ```bash
 # Set the database URL
 export DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
 
-# Run all integration tests sequentially
-cargo test -p banking-db-postgres --test integration -- --test-threads=1
+# Run all integration tests in parallel
+cargo test -p banking-db-postgres --test integration
 ```

@@ -12,7 +12,10 @@ pub enum LocalityRepositoryError {
         country_subdivision_id: Uuid,
         code: String,
     },
+    DuplicateLocation(String),
     LocalityNotFound(Uuid),
+    ManyLocalitiesNotFound(Vec<Uuid>),
+    HasDependentLocations(Vec<Uuid>),
     RepositoryError(Box<dyn Error + Send + Sync>),
 }
 
@@ -31,8 +34,17 @@ impl std::fmt::Display for LocalityRepositoryError {
                     "Duplicate locality code '{code}' for country subdivision '{country_subdivision_id}'"
                 )
             }
+            LocalityRepositoryError::DuplicateLocation(msg) => {
+                write!(f, "Duplicate locality: {msg}")
+            }
             LocalityRepositoryError::LocalityNotFound(id) => {
                 write!(f, "Locality not found with id: {id}")
+            }
+            LocalityRepositoryError::ManyLocalitiesNotFound(ids) => {
+                write!(f, "Localities not found with ids: {ids:?}")
+            }
+            LocalityRepositoryError::HasDependentLocations(ids) => {
+                write!(f, "Localities with dependent locations: {ids:?}")
             }
             LocalityRepositoryError::RepositoryError(err) => {
                 write!(f, "Repository error: {err}")
@@ -63,6 +75,7 @@ pub trait LocalityRepository<DB: Database>: Send + Sync {
     ) -> LocalityResult<Option<LocalityIdxModel>>;
     async fn find_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<LocalityIdxModel>>;
     async fn exists_by_id(&self, id: Uuid) -> LocalityResult<bool>;
+    async fn exist_by_ids(&self, ids: &[Uuid]) -> LocalityResult<Vec<bool>>;
     async fn find_ids_by_country_subdivision_id(
         &self,
         country_subdivision_id: Uuid,

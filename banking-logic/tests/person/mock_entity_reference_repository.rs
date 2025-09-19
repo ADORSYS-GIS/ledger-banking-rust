@@ -159,6 +159,18 @@ impl EntityReferenceRepository<Postgres> for MockEntityReferenceRepository {
             .collect();
         Ok(result)
     }
+
+    async fn exist_by_ids(
+        &self,
+        ids: &[Uuid],
+    ) -> EntityReferenceResult<Vec<(Uuid, bool)>> {
+        let entities = self.entities.lock().unwrap();
+        let result = ids
+            .iter()
+            .map(|id| (*id, entities.iter().any(|e| e.id == *id)))
+            .collect();
+        Ok(result)
+    }
 }
 
 pub fn create_test_entity_reference(person_id: Uuid) -> EntityReference {

@@ -10,6 +10,9 @@ use crate::models::person::{CountrySubdivisionIdxModel, CountrySubdivisionModel}
 pub enum CountrySubdivisionRepositoryError {
     CountryNotFound(Uuid),
     DuplicateCode { country_id: Uuid, code: String },
+    ManyCountrySubdivisionsExist(Vec<Uuid>),
+    ManyCountrySubdivisionsNotFound(Vec<Uuid>),
+    HasDependentLocalities(Vec<Uuid>),
     RepositoryError(Box<dyn Error + Send + Sync>),
 }
 
@@ -22,6 +25,15 @@ impl fmt::Display for CountrySubdivisionRepositoryError {
                     f,
                     "Duplicate subdivision code '{code}' for country {country_id}"
                 )
+            }
+            Self::ManyCountrySubdivisionsExist(ids) => {
+                write!(f, "Country subdivisions with the following IDs already exist: {ids:?}")
+            }
+            Self::ManyCountrySubdivisionsNotFound(ids) => {
+                write!(f, "Country subdivisions with the following IDs not found: {ids:?}")
+            }
+            Self::HasDependentLocalities(ids) => {
+                write!(f, "Country subdivisions with the following IDs have dependent localities: {ids:?}")
             }
             Self::RepositoryError(err) => write!(f, "Repository error: {err}"),
         }
