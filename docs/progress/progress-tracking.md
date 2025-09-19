@@ -102,7 +102,7 @@ This commit completes the `DailyCollectionRepository` implementation and normali
 
 ### 🎉 Person Repository Implementation and Testing
 This commit completes the implementation of all person-related repositories and adds a comprehensive test suite.
-- **Full Implementation**: `CountryRepository`, `CountrySubdivisionRepository`, `LocalityRepository`, `LocationRepository`, and `MessagingRepository` are now fully implemented.
+- **Full Implementation**: `CountryRepository`, `CountrySubdivisionRepository`, `LocalityRepository`, `LocationRepository` are now fully implemented.
 - **Comprehensive Testing**: A new test suite with 8 tests was added to ensure the correctness of all person-related repositories.
 - **Test Isolation**: Implemented database cleanup before each test to ensure test isolation and prevent data pollution.
 

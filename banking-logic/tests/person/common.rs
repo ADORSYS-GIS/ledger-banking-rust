@@ -1,7 +1,7 @@
 use banking_logic::services::repositories::Repositories;
 use banking_logic::services::{
     CountryServiceImpl, CountrySubdivisionServiceImpl, EntityReferenceServiceImpl,
-    LocalityServiceImpl, LocationServiceImpl, MessagingServiceImpl, PersonServiceImpl,
+    LocalityServiceImpl, LocationServiceImpl, PersonServiceImpl,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -9,7 +9,6 @@ use crate::person::mock_country_repository::MockCountryRepository;
 use crate::person::mock_country_subdivision_repository::MockCountrySubdivisionRepository;
 use crate::person::mock_locality_repository::MockLocalityRepository;
 use crate::person::mock_location_repository::MockLocationRepository;
-use crate::person::mock_messaging_repository::MockMessagingRepository;
 use crate::person::mock_entity_reference_repository::MockEntityReferenceRepository;
 use crate::person::mock_person_repository::MockPersonRepository;
 use banking_db::models::audit::AuditLogModel;
@@ -23,7 +22,6 @@ pub struct TestServices {
     pub country_subdivision_service: CountrySubdivisionServiceImpl<Postgres>,
     pub locality_service: LocalityServiceImpl<Postgres>,
     pub location_service: LocationServiceImpl<Postgres>,
-    pub messaging_service: MessagingServiceImpl<Postgres>,
     pub entity_reference_service: EntityReferenceServiceImpl<Postgres>,
     pub person_service: PersonServiceImpl<Postgres>,
     pub mock_country_subdivision_repository: Arc<MockCountrySubdivisionRepository>,
@@ -63,7 +61,6 @@ pub fn create_test_services() -> TestServices {
         country_subdivision_repository: mock_country_subdivision_repository.clone(),
         locality_repository: Arc::new(MockLocalityRepository::default()),
         location_repository: Arc::new(MockLocationRepository::default()),
-        messaging_repository: Arc::new(MockMessagingRepository::default()),
         entity_reference_repository: Arc::new(MockEntityReferenceRepository::new(mock_person_repository)),
     };
     TestServices {
@@ -71,7 +68,6 @@ pub fn create_test_services() -> TestServices {
         country_subdivision_service: CountrySubdivisionServiceImpl::new(repositories.clone()),
         locality_service: LocalityServiceImpl::new(repositories.clone()),
         location_service: LocationServiceImpl::new(repositories.clone()),
-        messaging_service: MessagingServiceImpl::new(repositories.clone()),
         entity_reference_service: EntityReferenceServiceImpl::new(repositories.clone()),
         person_service: PersonServiceImpl::new(repositories),
         mock_country_subdivision_repository,

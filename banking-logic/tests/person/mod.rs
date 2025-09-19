@@ -7,8 +7,6 @@ pub mod locality_tests;
 pub mod mock_locality_repository;
 pub mod location_tests;
 pub mod mock_location_repository;
-pub mod messaging_tests;
-pub mod mock_messaging_repository;
 pub mod entity_reference_tests;
 pub mod mock_entity_reference_repository;
 pub mod person_tests;

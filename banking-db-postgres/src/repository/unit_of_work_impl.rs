@@ -3,7 +3,7 @@ use banking_api::BankingResult;
 use banking_db::{
     models::person::{
         CountryIdxModelCache, CountrySubdivisionIdxModelCache, EntityReferenceIdxModelCache,
-        LocalityIdxModelCache, LocationIdxModelCache, MessagingIdxModelCache, PersonIdxModelCache,
+        LocalityIdxModelCache, LocationIdxModelCache, PersonIdxModelCache,
     },
     repository::{PersonRepos, TransactionAware, UnitOfWork, UnitOfWorkSession},
 };
@@ -20,7 +20,6 @@ use crate::repository::{
     person::entity_reference_repository_impl::EntityReferenceRepositoryImpl,
     person::locality_repository_impl::LocalityRepositoryImpl,
     person::location_repository_impl::LocationRepositoryImpl,
-    person::messaging_repository_impl::MessagingRepositoryImpl,
     person::person_repository_impl::PersonRepositoryImpl,
 };
 
@@ -31,7 +30,6 @@ pub struct PersonCaches {
     pub locality_idx_cache: Arc<RwLock<LocalityIdxModelCache>>,
     pub location_idx_cache: Arc<RwLock<LocationIdxModelCache>>,
     pub person_idx_cache: Arc<RwLock<PersonIdxModelCache>>,
-    pub messaging_idx_cache: Arc<RwLock<MessagingIdxModelCache>>,
     pub entity_reference_idx_cache: Arc<RwLock<EntityReferenceIdxModelCache>>,
 }
 
@@ -84,13 +82,6 @@ impl PostgresUnitOfWork {
             PersonIdxModelCache::new(person_idx_models).expect("Failed to create person index cache"),
         ));
 
-        let messaging_idx_models = MessagingRepositoryImpl::load_all_messaging_idx(&executor)
-            .await
-            .expect("Failed to load messaging index");
-        let messaging_idx_cache = Arc::new(RwLock::new(
-            MessagingIdxModelCache::new(messaging_idx_models)
-                .expect("Failed to create messaging index cache"),
-        ));
 
         let entity_reference_idx_models =
             EntityReferenceRepositoryImpl::load_all_entity_reference_idx(&executor)
@@ -107,7 +98,6 @@ impl PostgresUnitOfWork {
             locality_idx_cache,
             location_idx_cache,
             person_idx_cache,
-            messaging_idx_cache,
             entity_reference_idx_cache,
         };
 
@@ -132,7 +122,6 @@ pub struct PostgresPersonRepos {
     country_subdivisions: OnceCell<Arc<CountrySubdivisionRepositoryImpl>>,
     localities: OnceCell<Arc<LocalityRepositoryImpl>>,
     locations: OnceCell<Arc<LocationRepositoryImpl>>,
-    messagings: OnceCell<Arc<MessagingRepositoryImpl>>,
     entity_references: OnceCell<Arc<EntityReferenceRepositoryImpl>>,
 }
 
@@ -146,7 +135,6 @@ impl PostgresPersonRepos {
             country_subdivisions: OnceCell::new(),
             localities: OnceCell::new(),
             locations: OnceCell::new(),
-            messagings: OnceCell::new(),
             entity_references: OnceCell::new(),
         }
     }
@@ -158,7 +146,6 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
     type CountrySubdivisionRepo = CountrySubdivisionRepositoryImpl;
     type LocalityRepo = LocalityRepositoryImpl;
     type LocationRepo = LocationRepositoryImpl;
-    type MessagingRepo = MessagingRepositoryImpl;
     type EntityReferenceRepo = EntityReferenceRepositoryImpl;
 
     fn persons(&self) -> &Self::PersonRepo {
@@ -245,14 +232,6 @@ impl PersonRepos<Postgres> for PostgresPersonRepos {
         location_repo
     }
 
-    fn messagings(&self) -> &Self::MessagingRepo {
-        self.messagings.get_or_init(|| {
-            Arc::new(MessagingRepositoryImpl::new(
-                self.executor.clone(),
-                self.caches.messaging_idx_cache.clone(),
-            ))
-        })
-    }
 
     fn entity_references(&self) -> &Self::EntityReferenceRepo {
         self.entity_references.get_or_init(|| {
@@ -289,9 +268,6 @@ impl TransactionAware for PostgresPersonRepos {
         if let Some(locations) = self.locations.get() {
             locations.on_commit().await?;
         }
-        if let Some(messagings) = self.messagings.get() {
-            messagings.on_commit().await?;
-        }
         if let Some(entity_references) = self.entity_references.get() {
             entity_references.on_commit().await?;
         }
@@ -313,9 +289,6 @@ impl TransactionAware for PostgresPersonRepos {
         }
         if let Some(locations) = self.locations.get() {
             locations.on_rollback().await?;
-        }
-        if let Some(messagings) = self.messagings.get() {
-            messagings.on_rollback().await?;
         }
         if let Some(entity_references) = self.entity_references.get() {
             entity_references.on_rollback().await?;
@@ -375,7 +348,6 @@ impl UnitOfWorkSession<Postgres> for PostgresUnitOfWorkSession {
         // Initialize all repositories by calling a leaf in the dependency graph.
         // entity_references -> persons -> locations -> localities -> country_subdivisions -> countries
         person_repos.entity_references();
-        person_repos.messagings(); // No dependencies
 
         // Wire the circular dependency between CountrySubdivision and Locality.
         let cs_repo = person_repos

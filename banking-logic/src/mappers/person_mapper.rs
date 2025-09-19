@@ -1,9 +1,9 @@
 use banking_api::domain::person::{
-    Location, LocationType, Locality, Country, EntityReference, Messaging, MessagingType, Person,
+    Location, LocationType, Locality, Country, EntityReference, Person,
     PersonType, RelationshipRole, CountrySubdivision,
 };
 use banking_db::models::person::{
-    LocationModel, LocalityModel, CountryModel, EntityReferenceModel, MessagingModel, PersonModel,
+    LocationModel, LocalityModel, CountryModel, EntityReferenceModel, PersonModel,
     CountrySubdivisionModel,
 };
 
@@ -127,27 +127,6 @@ impl ToModel<LocationModel> for Location {
     }
 }
 
-impl ToDomain<Messaging> for MessagingModel {
-    fn to_domain(self) -> Messaging {
-        Messaging {
-            id: self.id,
-            messaging_type: self.messaging_type.to_domain(),
-            value: self.value,
-            other_type: self.other_type,
-        }
-    }
-}
-
-impl ToModel<MessagingModel> for Messaging {
-    fn to_model(self) -> MessagingModel {
-        MessagingModel {
-            id: self.id,
-            messaging_type: self.messaging_type.to_model(),
-            value: self.value,
-            other_type: self.other_type,
-        }
-    }
-}
 
 impl ToDomain<EntityReference> for EntityReferenceModel {
     fn to_domain(self) -> EntityReference {
@@ -186,16 +165,11 @@ impl ToDomain<Person> for PersonModel {
             external_identifier: self.external_identifier,
             organization_person_id: self.organization_person_id,
             entity_reference_count: self.entity_reference_count,
-            messaging1_id: self.messaging1_id,
-            messaging1_type: self.messaging1_type.map(|t| t.to_domain()),
-            messaging2_id: self.messaging2_id,
-            messaging2_type: self.messaging2_type.map(|t| t.to_domain()),
-            messaging3_id: self.messaging3_id,
-            messaging3_type: self.messaging3_type.map(|t| t.to_domain()),
-            messaging4_id: self.messaging4_id,
-            messaging4_type: self.messaging4_type.map(|t| t.to_domain()),
-            messaging5_id: self.messaging5_id,
-            messaging5_type: self.messaging5_type.map(|t| t.to_domain()),
+            messaging_info1: self.messaging_info1,
+            messaging_info2: self.messaging_info2,
+            messaging_info3: self.messaging_info3,
+            messaging_info4: self.messaging_info4,
+            messaging_info5: self.messaging_info5,
             department: self.department,
             location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
@@ -212,16 +186,11 @@ impl ToModel<PersonModel> for Person {
             external_identifier: self.external_identifier,
             organization_person_id: self.organization_person_id,
             entity_reference_count: self.entity_reference_count,
-            messaging1_id: self.messaging1_id,
-            messaging1_type: self.messaging1_type.map(|t| t.to_model()),
-            messaging2_id: self.messaging2_id,
-            messaging2_type: self.messaging2_type.map(|t| t.to_model()),
-            messaging3_id: self.messaging3_id,
-            messaging3_type: self.messaging3_type.map(|t| t.to_model()),
-            messaging4_id: self.messaging4_id,
-            messaging4_type: self.messaging4_type.map(|t| t.to_model()),
-            messaging5_id: self.messaging5_id,
-            messaging5_type: self.messaging5_type.map(|t| t.to_model()),
+            messaging_info1: self.messaging_info1,
+            messaging_info2: self.messaging_info2,
+            messaging_info3: self.messaging_info3,
+            messaging_info4: self.messaging_info4,
+            messaging_info5: self.messaging_info5,
             department: self.department,
             location_id: self.location_id,
             duplicate_of_person_id: self.duplicate_of_person_id,
@@ -258,49 +227,6 @@ impl ToModel<banking_db::models::person::LocationType> for LocationType {
     }
 }
 
-impl ToDomain<MessagingType> for banking_db::models::person::MessagingType {
-    fn to_domain(self) -> MessagingType {
-        match self {
-            banking_db::models::person::MessagingType::Email => MessagingType::Email,
-            banking_db::models::person::MessagingType::Phone => MessagingType::Phone,
-            banking_db::models::person::MessagingType::Sms => MessagingType::Sms,
-            banking_db::models::person::MessagingType::WhatsApp => MessagingType::WhatsApp,
-            banking_db::models::person::MessagingType::Telegram => MessagingType::Telegram,
-            banking_db::models::person::MessagingType::Skype => MessagingType::Skype,
-            banking_db::models::person::MessagingType::Teams => MessagingType::Teams,
-            banking_db::models::person::MessagingType::Signal => MessagingType::Signal,
-            banking_db::models::person::MessagingType::WeChat => MessagingType::WeChat,
-            banking_db::models::person::MessagingType::Viber => MessagingType::Viber,
-            banking_db::models::person::MessagingType::Messenger => MessagingType::Messenger,
-            banking_db::models::person::MessagingType::LinkedIn => MessagingType::LinkedIn,
-            banking_db::models::person::MessagingType::Slack => MessagingType::Slack,
-            banking_db::models::person::MessagingType::Discord => MessagingType::Discord,
-            banking_db::models::person::MessagingType::Other => MessagingType::Other,
-        }
-    }
-}
-
-impl ToModel<banking_db::models::person::MessagingType> for MessagingType {
-    fn to_model(self) -> banking_db::models::person::MessagingType {
-        match self {
-            MessagingType::Email => banking_db::models::person::MessagingType::Email,
-            MessagingType::Phone => banking_db::models::person::MessagingType::Phone,
-            MessagingType::Sms => banking_db::models::person::MessagingType::Sms,
-            MessagingType::WhatsApp => banking_db::models::person::MessagingType::WhatsApp,
-            MessagingType::Telegram => banking_db::models::person::MessagingType::Telegram,
-            MessagingType::Skype => banking_db::models::person::MessagingType::Skype,
-            MessagingType::Teams => banking_db::models::person::MessagingType::Teams,
-            MessagingType::Signal => banking_db::models::person::MessagingType::Signal,
-            MessagingType::WeChat => banking_db::models::person::MessagingType::WeChat,
-            MessagingType::Viber => banking_db::models::person::MessagingType::Viber,
-            MessagingType::Messenger => banking_db::models::person::MessagingType::Messenger,
-            MessagingType::LinkedIn => banking_db::models::person::MessagingType::LinkedIn,
-            MessagingType::Slack => banking_db::models::person::MessagingType::Slack,
-            MessagingType::Discord => banking_db::models::person::MessagingType::Discord,
-            MessagingType::Other => banking_db::models::person::MessagingType::Other,
-        }
-    }
-}
 
 impl ToDomain<PersonType> for banking_db::models::person::PersonType {
     fn to_domain(self) -> PersonType {

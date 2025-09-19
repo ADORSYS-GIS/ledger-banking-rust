@@ -1,6 +1,6 @@
 use banking_db::models::person::{
     CountryIdxModelCache, CountrySubdivisionIdxModelCache, EntityReferenceIdxModelCache,
-    LocalityIdxModelCache, LocationIdxModelCache, MessagingIdxModelCache, PersonIdxModelCache,
+    LocalityIdxModelCache, LocationIdxModelCache, PersonIdxModelCache,
 };
 use banking_logic::services::repositories::Repositories;
 use parking_lot::RwLock;
@@ -16,7 +16,6 @@ pub use repository::person::country_subdivision_repository_impl::CountrySubdivis
 pub use repository::person::entity_reference_repository_impl::EntityReferenceRepositoryImpl;
 pub use repository::person::locality_repository_impl::LocalityRepositoryImpl;
 pub use repository::person::location_repository_impl::LocationRepositoryImpl;
-pub use repository::person::messaging_repository_impl::MessagingRepositoryImpl;
 pub use repository::person::person_repository_impl::PersonRepositoryImpl;
 pub use repository::unit_of_work_impl;
 
@@ -104,13 +103,6 @@ impl PostgresRepositories {
             location_repository.clone(),
             person_idx_cache,
         ));
-        let messaging_idx_models = MessagingRepositoryImpl::load_all_messaging_idx(&executor)
-            .await
-            .expect("Failed to load messaging index");
-        let messaging_idx_cache = Arc::new(RwLock::new(
-            MessagingIdxModelCache::new(messaging_idx_models)
-                .expect("Failed to create messaging index cache"),
-        ));
 
         let entity_reference_idx_models =
             EntityReferenceRepositoryImpl::load_all_entity_reference_idx(&executor)
@@ -126,10 +118,6 @@ impl PostgresRepositories {
             person_repository.clone(),
             entity_reference_idx_cache,
         ));
-        let messaging_repository = Arc::new(MessagingRepositoryImpl::new(
-            executor.clone(),
-            messaging_idx_cache,
-        ));
         Repositories {
             person_repository,
             audit_log_repository: Arc::new(AuditLogRepositoryImpl::new(executor.clone())),
@@ -137,7 +125,6 @@ impl PostgresRepositories {
             country_subdivision_repository,
             locality_repository,
             location_repository,
-            messaging_repository,
             entity_reference_repository,
         }
     }

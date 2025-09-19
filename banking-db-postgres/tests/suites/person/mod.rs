@@ -1,5 +1,4 @@
 pub mod entity_reference_repository_tests;
-pub mod messaging_repository_tests;
 pub mod location_repository_tests;
 pub mod locality_repository_tests;
 pub mod locality_batch_operations_test;
