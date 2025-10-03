@@ -8,7 +8,7 @@ use heapless::String as HeaplessString;
 use uuid::Uuid;
 
 use crate::suites::test_helper::setup_test_context;
-use crate::suites::person::country_batch_operations_test::setup_test_country;
+use crate::suites::person::helpers::setup_test_country;
 use crate::suites::person::country_subdivision_batch_operations_test::setup_test_country_subdivision;
 
 pub async fn setup_test_locality(country_subdivision_id: Uuid) -> LocalityModel {

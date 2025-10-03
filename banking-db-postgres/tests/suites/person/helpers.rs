@@ -5,6 +5,10 @@ use banking_db::models::person::{
 use heapless::String as HeaplessString;
 use uuid::Uuid;
 
+pub async fn setup_test_country() -> CountryModel {
+    create_test_country_model("US", "United States")
+}
+
 pub fn create_test_person_model(name: &str) -> PersonModel {
     PersonModel {
         id: Uuid::new_v4(),

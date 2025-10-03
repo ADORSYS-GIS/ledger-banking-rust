@@ -64,6 +64,14 @@
 - **FeeServiceImpl** - 12 todo! fee waiver/automation methods
 - **DailyCollectionServiceImpl** - 50+ todo! collection operations
 
+## Key Achievements (October 2025)
+
+### 🎉 CountryRepository Batch Operations Refactoring
+This commit refactors the batch operations for the `CountryRepository` to improve code organization and reduce file size.
+- **Code Organization**: Batch operations (`create_batch`, `load_batch`, `update_batch`, `delete_batch`) were moved from a monolithic file into a dedicated directory structure (`repository/person/country_repository/`).
+- **Improved Maintainability**: Smaller, more focused files are easier to understand, test, and maintain.
+- **Test Co-location**: The corresponding batch operation tests were moved to be co-located with the implementation, improving clarity.
+
 ## Key Achievements (September 2025)
 
 ### 🎉 EntityReference Batch Operations
