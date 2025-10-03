@@ -78,6 +78,12 @@ This commit significantly refactors the `CountryRepositoryImpl` by decomposing i
 - **Test Co-location**: Co-located tests with their corresponding method implementations for improved clarity.
 - **Standardized Command**: Created a new, standardized `chunk-repo` command to streamline future refactoring work.
 
+### 🎉 CountrySubdivisionRepositoryImpl Update Batch Fix and Code Cleanup
+This commit addresses a bug in the `CountrySubdivisionRepositoryImpl::update_batch` function where updates to non-indexed fields were not being correctly processed. It also incorporates various code cleanups suggested by the Rust compiler.
+- **Bug Fix**: Ensured that all fields of `CountrySubdivisionModel` are updated during batch operations, not just those affecting the index.
+- **Code Cleanup**: Removed unused imports and made minor adjustments to variable mutability, improving code quality and reducing compiler warnings.
+- **Test Validation**: The `test_update_batch` test now passes, confirming the correctness of the fix.
+
 ## Key Achievements (September 2025)
 
 ### 🎉 EntityReference Batch Operations

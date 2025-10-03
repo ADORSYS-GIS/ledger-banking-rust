@@ -56,10 +56,6 @@ pub async fn update_batch(
         let new_code_hash = hasher.finish() as i64;
 
         if let Some(existing_idx) = cache.get_by_primary(&item.id) {
-            if existing_idx.code_hash == new_code_hash {
-                continue;
-            }
-
             country_subdivision_values.push((
                 item.id,
                 item.country_id,
@@ -69,21 +65,25 @@ pub async fn update_batch(
                 item.name_l3.as_ref().map(|s| s.to_string()),
             ));
 
-            country_subdivision_idx_values.push((
-                item.id,
-                item.country_id,
-                new_code_hash,
-            ));
+            if existing_idx.code_hash != new_code_hash {
+                country_subdivision_idx_values.push((
+                    item.id,
+                    item.country_id,
+                    new_code_hash,
+                ));
 
-            let mut updated_idx = existing_idx.clone();
-            updated_idx.code_hash = new_code_hash;
-            cache.add(updated_idx);
+                let mut updated_idx = existing_idx.clone();
+                updated_idx.code_hash = new_code_hash;
+                cache.add(updated_idx);
+            }
             updated_items.push(item);
         }
     }
 
     if !country_subdivision_values.is_empty() {
         crate::repository::person::country_subdivision_repository::batch_helper::execute_country_subdivision_update(repo, country_subdivision_values).await?;
+    }
+    if !country_subdivision_idx_values.is_empty() {
         crate::repository::person::country_subdivision_repository::batch_helper::execute_country_subdivision_idx_update(repo, country_subdivision_idx_values).await?;
     }
 
@@ -91,7 +91,7 @@ pub async fn update_batch(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     use crate::repository::person::test_helpers::create_test_country_model;
     use crate::test_helper::setup_test_context;
     use banking_db::repository::{BatchRepository, CountryRepository, CountrySubdivisionRepository, PersonRepos};

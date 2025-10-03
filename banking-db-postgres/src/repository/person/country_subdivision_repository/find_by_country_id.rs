@@ -24,7 +24,7 @@ pub async fn find_by_country_id(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     use crate::repository::person::test_helpers::{
         create_test_country_model, create_test_country_subdivision_model,
     };

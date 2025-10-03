@@ -4,7 +4,7 @@ use banking_db::models::person::{
     CountrySubdivisionIdxModel, CountrySubdivisionIdxModelCache, CountrySubdivisionModel,
 };
 use banking_db::repository::{
-    CountryRepository, CountrySubdivisionRepository, CountrySubdivisionRepositoryError,
+    CountrySubdivisionRepository,
     CountrySubdivisionResult, TransactionAware,
 };
 use crate::repository::executor::Executor;
@@ -19,7 +19,6 @@ use std::error::Error;
 use std::hash::Hasher;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct CountrySubdivisionRepositoryImpl {

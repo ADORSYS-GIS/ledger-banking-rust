@@ -34,11 +34,11 @@ pub async fn load_batch(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     use crate::repository::person::test_helpers::create_test_country_model;
     use crate::test_helper::setup_test_context;
     use banking_db::repository::{BatchRepository, CountryRepository, PersonRepos};
-    use heapless::String as HeaplessString;
+    
     use uuid::Uuid;
 
     #[tokio::test]

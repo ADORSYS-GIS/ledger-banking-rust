@@ -6,7 +6,7 @@ pub use postgres_repositories::PostgresRepositories;
 pub use repository::audit_repository_impl::AuditLogRepositoryImpl;
 pub use repository::person::country_repository::repo_impl::CountryRepositoryImpl;
 pub use repository::person::country_subdivision_repository::CountrySubdivisionRepositoryImpl;
-pub use repository::person::entity_reference_repository_impl::EntityReferenceRepositoryImpl;
+pub use repository::person::entity_reference_repository::EntityReferenceRepositoryImpl;
 pub use repository::person::locality_repository_impl::LocalityRepositoryImpl;
 pub use repository::person::location_repository_impl::LocationRepositoryImpl;
 pub use repository::person::person_repository_impl::PersonRepositoryImpl;

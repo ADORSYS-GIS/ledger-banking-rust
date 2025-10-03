@@ -94,7 +94,7 @@ mod tests {
     use crate::repository::person::test_helpers::create_test_country_model;
     use crate::test_helper::setup_test_context;
     use banking_db::repository::{BatchRepository, CountryRepository, PersonRepos};
-    use heapless::String as HeaplessString;
+    
 
     #[tokio::test]
     async fn test_create_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -107,7 +107,7 @@ mod tests {
 
         let mut country_subdivisions = Vec::new();
         for i in 0..5 {
-            let mut subdivision =
+            let subdivision =
                 crate::repository::person::test_helpers::create_test_country_subdivision_model(
                     country.id,
                     &format!("CD{i:03}"),
