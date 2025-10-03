@@ -1,6 +1,6 @@
 // FILE: banking-db-postgres/src/repository/person/country_repository/batch_impl.rs
 
-use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
+use crate::repository::person::country_repository::repo_impl::CountryRepositoryImpl;
 use async_trait::async_trait;
 use banking_db::models::person::CountryModel;
 use banking_db::repository::BatchRepository;

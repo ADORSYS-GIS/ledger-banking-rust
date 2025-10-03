@@ -8,7 +8,7 @@ use banking_db::repository::{
     CountrySubdivisionResult, TransactionAware,
 };
 use crate::repository::executor::Executor;
-use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
+use crate::repository::person::country_repository::repo_impl::CountryRepositoryImpl;
 use crate::repository::person::locality_repository_impl::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use once_cell::sync::OnceCell;

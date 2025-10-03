@@ -1,6 +1,6 @@
 // FILE: banking-db-postgres/src/repository/person/country_repository/create_batch.rs
 
-use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
+use crate::repository::person::country_repository::repo_impl::CountryRepositoryImpl;
 use banking_db::models::person::{CountryIdxModel, CountryModel};
 use banking_db::repository::{
     CountryRepository,

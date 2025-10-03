@@ -1,6 +1,6 @@
 // FILE: banking-db-postgres/src/repository/person/country_repository/batch_helper.rs
 
-use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
+use crate::repository::person::country_repository::repo_impl::CountryRepositoryImpl;
 use std::error::Error;
 use uuid::Uuid;
 

@@ -1,6 +1,6 @@
 // FILE: banking-db-postgres/src/repository/person/country_repository/load_batch.rs
 
-use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
+use crate::repository::person::country_repository::repo_impl::CountryRepositoryImpl;
 use crate::utils::TryFromRow;
 use banking_db::models::person::CountryModel;
 use std::error::Error;

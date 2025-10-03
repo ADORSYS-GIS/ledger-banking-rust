@@ -11,7 +11,7 @@ use crate::repository::{
     audit_repository_impl::AuditLogRepositoryImpl,
     executor::Executor,
     person::{
-        country_repository_impl::CountryRepositoryImpl,
+        country_repository::repo_impl::CountryRepositoryImpl,
         country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
         entity_reference_repository_impl::EntityReferenceRepositoryImpl,
         locality_repository_impl::LocalityRepositoryImpl,

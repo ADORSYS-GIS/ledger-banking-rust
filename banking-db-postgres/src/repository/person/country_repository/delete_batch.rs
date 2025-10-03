@@ -1,6 +1,6 @@
 // FILE: banking-db-postgres/src/repository/person/country_repository/delete_batch.rs
 
-use crate::repository::person::country_repository_impl::CountryRepositoryImpl;
+use crate::repository::person::country_repository::repo_impl::CountryRepositoryImpl;
 use banking_db::repository::CountryRepository;
 use std::error::Error;
 use uuid::Uuid;

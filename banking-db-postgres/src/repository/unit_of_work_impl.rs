@@ -15,7 +15,7 @@ use std::sync::Arc;
 use crate::repository::{
     audit_repository_impl::AuditLogRepositoryImpl,
     executor::Executor,
-    person::country_repository_impl::CountryRepositoryImpl,
+    person::country_repository::repo_impl::CountryRepositoryImpl,
     person::country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
     person::entity_reference_repository_impl::EntityReferenceRepositoryImpl,
     person::locality_repository_impl::LocalityRepositoryImpl,
