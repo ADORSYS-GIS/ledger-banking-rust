@@ -12,7 +12,6 @@ use crate::repository::person::person_repository_impl::PersonRepositoryImpl;
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::hash::Hasher;
 use std::sync::Arc;
 use parking_lot::RwLock;
 use tokio::sync::RwLock as TokioRwLock;

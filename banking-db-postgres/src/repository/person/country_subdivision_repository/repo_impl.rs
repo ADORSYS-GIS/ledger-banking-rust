@@ -9,14 +9,13 @@ use banking_db::repository::{
 };
 use crate::repository::executor::Executor;
 use crate::repository::person::country_repository::repo_impl::CountryRepositoryImpl;
-use crate::repository::person::locality_repository_impl::LocalityRepositoryImpl;
+use crate::repository::person::locality_repository::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock as ParkingRwLock;
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::hash::Hasher;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;

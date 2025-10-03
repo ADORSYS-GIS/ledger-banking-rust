@@ -8,7 +8,7 @@ use banking_db::repository::{
     TransactionAware,
 };
 use crate::repository::executor::Executor;
-use crate::repository::person::locality_repository_impl::LocalityRepositoryImpl;
+use crate::repository::person::locality_repository::LocalityRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::{HashMap, HashSet};
