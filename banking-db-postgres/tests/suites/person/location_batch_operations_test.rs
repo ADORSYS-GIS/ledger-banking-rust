@@ -8,9 +8,11 @@ use uuid::Uuid;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 
-use crate::suites::person::helpers::setup_test_country;
-use crate::suites::person::country_subdivision_batch_operations_test::setup_test_country_subdivision;
-use crate::suites::person::locality_batch_operations_test::setup_test_locality;
+use crate::suites::person::helpers::{
+    create_test_country_model as setup_test_country,
+    create_test_country_subdivision_model as setup_test_country_subdivision,
+    create_test_locality_model as setup_test_locality,
+};
 use crate::suites::test_helper::setup_test_context;
 
 pub async fn setup_test_location(locality_id: Uuid) -> LocationModel {

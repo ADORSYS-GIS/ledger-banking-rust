@@ -1,8 +1,8 @@
 use banking_db::repository::{PersonRepository, PersonRepos};
 use uuid::Uuid;
 
-use crate::suites::test_helper::setup_test_context;
 use crate::suites::person::helpers::create_test_person_model;
+use crate::suites::test_helper::setup_test_context;
 
 #[tokio::test]
 async fn test_person_repository() {

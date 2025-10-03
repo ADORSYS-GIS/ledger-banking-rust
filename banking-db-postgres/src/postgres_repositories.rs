@@ -12,7 +12,7 @@ use crate::repository::{
     executor::Executor,
     person::{
         country_repository::repo_impl::CountryRepositoryImpl,
-        country_subdivision_repository_impl::CountrySubdivisionRepositoryImpl,
+        country_subdivision_repository::CountrySubdivisionRepositoryImpl,
         entity_reference_repository_impl::EntityReferenceRepositoryImpl,
         locality_repository_impl::LocalityRepositoryImpl,
         location_repository_impl::LocationRepositoryImpl,

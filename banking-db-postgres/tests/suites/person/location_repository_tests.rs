@@ -3,8 +3,8 @@ use banking_db::repository::{
 };
 use uuid::Uuid;
 
-use crate::suites::test_helper::setup_test_context;
-use crate::suites::person::helpers::{
+use banking_db_postgres::test_helper::setup_test_context;
+use banking_db_postgres::repository::person::test_helpers::{
     create_test_country_model, create_test_country_subdivision_model, create_test_locality_model,
     create_test_location_model,
 };

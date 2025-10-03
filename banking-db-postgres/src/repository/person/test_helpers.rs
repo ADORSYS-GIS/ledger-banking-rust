@@ -1,6 +1,7 @@
+#![cfg(test)]
 use banking_db::models::person::{
-    CountryModel, CountrySubdivisionModel, EntityReferenceModel, LocalityModel, LocationModel,
-    LocationType, PersonModel, PersonType, RelationshipRole,
+    CountryModel, CountrySubdivisionModel, LocalityModel, LocationModel, LocationType,
+    PersonModel, PersonType,
 };
 use heapless::String as HeaplessString;
 use uuid::Uuid;
@@ -85,6 +86,8 @@ pub fn create_test_location_model(
         accuracy_meters: None,
     }
 }
+
+use banking_db::models::person::{EntityReferenceModel, RelationshipRole};
 
 pub fn create_test_entity_reference_model(
     person_id: Uuid,

@@ -1,10 +1,10 @@
 use banking_db::repository::{CountryRepository, CountrySubdivisionRepository, LocalityRepository, PersonRepos};
 use uuid::Uuid;
 
-use crate::suites::test_helper::setup_test_context;
-use crate::suites::person::helpers::{
+use banking_db_postgres::repository::person::test_helpers::{
     create_test_country_model, create_test_country_subdivision_model, create_test_locality_model,
 };
+use banking_db_postgres::test_helper::setup_test_context;
 
 #[tokio::test]
 async fn test_locality_repository() {

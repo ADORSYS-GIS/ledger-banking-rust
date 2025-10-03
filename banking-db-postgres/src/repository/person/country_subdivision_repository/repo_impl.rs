@@ -26,7 +26,7 @@ pub struct CountrySubdivisionRepositoryImpl {
     pub executor: Executor,
     pub country_subdivision_idx_cache: Arc<RwLock<TransactionAwareCountrySubdivisionIdxModelCache>>,
     pub(crate) locality_repository: OnceCell<Arc<LocalityRepositoryImpl>>,
-    country_repository: Arc<CountryRepositoryImpl>,
+    pub country_repository: Arc<CountryRepositoryImpl>,
 }
 
 impl CountrySubdivisionRepositoryImpl {
@@ -71,195 +71,53 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
         &self,
         country_subdivision: CountrySubdivisionModel,
     ) -> CountrySubdivisionResult<CountrySubdivisionModel> {
-        if !self
-            .country_repository
-            .exists_by_id(country_subdivision.country_id)
-            .await
-            .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?
-        {
-            return Err(CountrySubdivisionRepositoryError::CountryNotFound(
-                country_subdivision.country_id,
-            ));
-        }
-
-        let query1 = sqlx::query(
-            r#"
-            INSERT INTO country_subdivision (id, country_id, code, name_l1, name_l2, name_l3)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            "#,
-        )
-        .bind(country_subdivision.id)
-        .bind(country_subdivision.country_id)
-        .bind(country_subdivision.code.as_str())
-        .bind(country_subdivision.name_l1.as_str())
-        .bind(
-            country_subdivision
-                .name_l2
-                .as_ref()
-                .map(|s| s.as_str()),
-        )
-        .bind(
-            country_subdivision
-                .name_l3
-                .as_ref()
-                .map(|s| s.as_str()),
-        );
-
-        let mut hasher = twox_hash::XxHash64::with_seed(0);
-        hasher.write(country_subdivision.code.as_bytes());
-        let code_hash = hasher.finish() as i64;
-
-        let query2 = sqlx::query(
-            r#"
-            INSERT INTO country_subdivision_idx (country_subdivision_id, country_id, code_hash)
-            VALUES ($1, $2, $3)
-            "#,
-        )
-        .bind(country_subdivision.id)
-        .bind(country_subdivision.country_id)
-        .bind(code_hash);
-
-        match &self.executor {
-            Executor::Pool(pool) => {
-                query1
-                    .execute(&**pool)
-                    .await
-                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?;
-                query2
-                    .execute(&**pool)
-                    .await
-                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?;
-            }
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query1
-                    .execute(&mut **tx)
-                    .await
-                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?;
-                query2
-                    .execute(&mut **tx)
-                    .await
-                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?;
-            }
-        }
-
-        let idx_model = CountrySubdivisionIdxModel {
-            country_subdivision_id: country_subdivision.id,
-            country_id: country_subdivision.country_id,
-            code_hash,
-        };
-        self.country_subdivision_idx_cache
-            .read()
-            .await
-            .add(idx_model);
-
-        Ok(country_subdivision)
+        super::save::save(self, country_subdivision).await
     }
 
     async fn load(&self, id: Uuid) -> CountrySubdivisionResult<CountrySubdivisionModel> {
-        let query = sqlx::query(
-            r#"
-            SELECT * FROM country_subdivision WHERE id = $1
-            "#,
-        )
-        .bind(id);
-
-        let row = match &self.executor {
-            Executor::Pool(pool) => query
-                .fetch_one(&**pool)
-                .await
-                .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?,
-            Executor::Tx(tx) => {
-                let mut tx = tx.lock().await;
-                query
-                    .fetch_one(&mut **tx)
-                    .await
-                    .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?
-            }
-        };
-
-        CountrySubdivisionModel::try_from_row(&row)
-            .map_err(CountrySubdivisionRepositoryError::RepositoryError)
+        super::load::load(self, id).await
     }
 
     async fn find_by_id(
         &self,
         id: Uuid,
     ) -> CountrySubdivisionResult<Option<CountrySubdivisionIdxModel>> {
-        Ok(self
-            .country_subdivision_idx_cache
-            .read()
-            .await
-            .get_by_primary(&id))
+        super::find_by_id::find_by_id(self, id).await
     }
 
     async fn find_by_country_id(
         &self,
         country_id: Uuid,
-        _page: i32,
-        _page_size: i32,
+        page: i32,
+        page_size: i32,
     ) -> CountrySubdivisionResult<Vec<CountrySubdivisionIdxModel>> {
-        let mut result = Vec::new();
-        let cache = self.country_subdivision_idx_cache.read().await;
-        if let Some(ids) = cache.get_by_country_id(&country_id) {
-            for id in ids {
-                if let Some(idx) = cache.get_by_primary(&id) {
-                    result.push(idx);
-                }
-            }
-        }
-        Ok(result)
+        super::find_by_country_id::find_by_country_id(self, country_id, page, page_size).await
     }
 
     async fn find_by_code(
         &self,
-        _country_id: Uuid,
+        country_id: Uuid,
         code: &str,
     ) -> CountrySubdivisionResult<Option<CountrySubdivisionIdxModel>> {
-        let mut hasher = XxHash64::with_seed(0);
-        hasher.write(code.as_bytes());
-        let code_hash = hasher.finish() as i64;
-
-        let cache = self.country_subdivision_idx_cache.read().await;
-        if let Some(id) = cache.get_by_code_hash(&code_hash) {
-            Ok(cache.get_by_primary(&id))
-        } else {
-            Ok(None)
-        }
+        super::find_by_code::find_by_code(self, country_id, code).await
     }
 
     async fn find_by_ids(
         &self,
         ids: &[Uuid],
     ) -> CountrySubdivisionResult<Vec<CountrySubdivisionIdxModel>> {
-        let mut result = Vec::new();
-        let cache = self.country_subdivision_idx_cache.read().await;
-        for id in ids {
-            if let Some(idx) = cache.get_by_primary(id) {
-                result.push(idx);
-            }
-        }
-        Ok(result)
+        super::find_by_ids::find_by_ids(self, ids).await
     }
 
     async fn exists_by_id(&self, id: Uuid) -> CountrySubdivisionResult<bool> {
-        Ok(self
-            .country_subdivision_idx_cache
-            .read()
-            .await
-            .contains_primary(&id))
+        super::exists_by_id::exists_by_id(self, id).await
     }
 
     async fn find_ids_by_country_id(
         &self,
         country_id: Uuid,
     ) -> CountrySubdivisionResult<Vec<Uuid>> {
-        Ok(self
-            .country_subdivision_idx_cache
-            .read()
-            .await
-            .get_by_country_id(&country_id)
-            .unwrap_or_default())
+        super::find_ids_by_country_id::find_ids_by_country_id(self, country_id).await
     }
 }
 

@@ -1,11 +1,9 @@
 use banking_db::models::person::RelationshipRole;
 use banking_db::repository::{EntityReferenceRepository, PersonRepository, PersonRepos};
+use banking_db_postgres::repository::person::test_helpers::{create_test_entity_reference_model, create_test_person_model};
 use uuid::Uuid;
 
 use crate::suites::test_helper::setup_test_context;
-use crate::suites::person::helpers::{
-    create_test_entity_reference_model, create_test_person_model,
-};
 
 #[tokio::test]
 async fn test_entity_reference_repository() {
