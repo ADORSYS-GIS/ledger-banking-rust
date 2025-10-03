@@ -3,7 +3,7 @@ use banking_api::BankingResult;
 use banking_db::models::person::{PersonAuditModel, PersonIdxModel, PersonIdxModelCache, PersonModel};
 use banking_db::repository::{LocationRepository, PersonRepository, PersonRepositoryError, PersonResult, TransactionAware};
 use crate::repository::executor::Executor;
-use crate::repository::person::location_repository_impl::LocationRepositoryImpl;
+use crate::repository::person::location_repository::LocationRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::error::Error;

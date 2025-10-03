@@ -19,7 +19,7 @@ use crate::repository::{
     person::country_subdivision_repository::CountrySubdivisionRepositoryImpl,
     person::entity_reference_repository::EntityReferenceRepositoryImpl,
     person::locality_repository::LocalityRepositoryImpl,
-    person::location_repository_impl::LocationRepositoryImpl,
+    person::location_repository::LocationRepositoryImpl,
     person::person_repository_impl::PersonRepositoryImpl,
 };
 

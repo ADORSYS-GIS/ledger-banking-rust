@@ -7,7 +7,7 @@ use banking_db::repository::{
 };
 use crate::repository::executor::Executor;
 use crate::repository::person::country_subdivision_repository::CountrySubdivisionRepositoryImpl;
-use crate::repository::person::location_repository_impl::LocationRepositoryImpl;
+use crate::repository::person::location_repository::LocationRepositoryImpl;
 use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow};
 use once_cell::sync::OnceCell;
 use sqlx::{postgres::PgRow, Postgres, Row};
