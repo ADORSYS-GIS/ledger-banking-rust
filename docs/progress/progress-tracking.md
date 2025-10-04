@@ -22,7 +22,7 @@
 - **FeeRepositoryImpl** - Complete fee management system (17/17 tests)
 - **ReasonAndPurposeRepositoryImpl** - Regulatory compliance framework (18/18 tests)
 - **ChannelRepositoryImpl** - Banking channel management (15/15 tests)
-- **PersonRepositoryImpl** - Monolithic repository refactored into 7 specialized repositories for improved modularity and maintainability (31+ tests).
+- **PersonRepositoryImpl** - Monolithic repository refactored into 7 specialized repositories under `repository/person/person_repository/` for improved modularity and maintainability (31+ tests).
 - **ComplianceRepositoryImpl** - KYC/AML framework with enum handling
 - **CollateralRepositoryImpl** - Comprehensive collateral management
 - **TransactionRepositoryImpl** - Full transaction processing
@@ -99,12 +99,13 @@ This commit significantly refactors the `EntityReferenceRepositoryImpl` by decom
 - **Reduced File Size**: This refactoring drastically reduces the size of individual files, improving readability and LLM performance.
 - **Test Co-location**: Corresponding tests have been adjusted or co-located to align with the new modular structure.
 
-### 🎉 Person Domain Refactoring: Batch Operations and Caching
-This commit introduces a significant refactoring of the Person domain, focusing on optimizing batch operations and improving data consistency with transaction-aware caching.
-- **Batch Operations**: The `person_repository_batch_impl` has been heavily refactored for performance and clarity when handling bulk data operations.
+### 🎉 Person Domain Refactoring: Repository Decomposition and Cache Optimization
+This commit introduces a significant refactoring of the Person domain, decomposing monolithic repository implementations into modular files and enhancing performance with transaction-aware caching.
+- **Code Decomposition**: The monolithic `person_repository_impl.rs` and `person_repository_batch_impl.rs` files were broken into individual method implementations under `repository/person/person_repository/`.
+- **Batch Operations**: Batch methods (`create_batch`, `load_batch`, `update_batch`, `delete_batch`) are now in separate files, improving clarity and testability.
 - **Transactional Caching**: Implemented transaction-aware caching for `PersonIdxModel` to ensure data consistency between the cache and the database during transactions.
-- **Test Relocation**: The batch operations tests were moved to be co-located with the rest of the person-related tests for better organization.
-- **Code Quality**: These changes improve the maintainability, reliability, and performance of the Person domain.
+- **Test Co-location**: Corresponding tests were moved alongside their implementation files for better organization.
+- **Code Quality**: These changes improve maintainability, reliability, and performance of the Person domain.
 
 ## Key Achievements (August 2025)
 

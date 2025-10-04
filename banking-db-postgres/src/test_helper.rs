@@ -50,7 +50,7 @@ pub async fn setup_test_context() -> Result<TestContext<crate::repository::unit_
         .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/mydb".to_string());
 
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(1)
         .acquire_timeout(Duration::from_secs(30))
         .connect(&database_url)
         .await?;

@@ -20,7 +20,7 @@ use crate::repository::{
     person::entity_reference_repository::EntityReferenceRepositoryImpl,
     person::locality_repository::LocalityRepositoryImpl,
     person::location_repository::LocationRepositoryImpl,
-    person::person_repository_impl::PersonRepositoryImpl,
+    person::person_repository::PersonRepositoryImpl,
 };
 
 #[derive(Clone)]

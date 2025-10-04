@@ -7,8 +7,6 @@
 // pub mod fee_repository_tests;
 pub mod commons;
 pub mod test_helper;
-#[path = "person/mod.rs"]
-pub mod person;
 // pub mod reason_and_purpose_repository_tests;
 // pub mod transaction_repository_tests;
 // pub mod unit_tests;

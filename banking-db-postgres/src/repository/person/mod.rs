@@ -5,8 +5,6 @@ pub mod locality_repository;
 
 pub mod location_repository;
 
-pub mod person_repository_batch_impl;
-pub mod person_repository_impl;
-
+pub mod person_repository;
 #[cfg(test)]
 pub mod test_helpers;

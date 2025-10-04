@@ -8,7 +8,7 @@ use banking_db::models::person::{
 use banking_db::repository::{EntityReferenceRepository, PersonRepository, TransactionAware};
 use banking_db::repository::person::entity_reference_repository::{EntityReferenceRepositoryError, EntityReferenceResult};
 use crate::repository::executor::Executor;
-use crate::repository::person::person_repository_impl::PersonRepositoryImpl;
+use crate::repository::person::person_repository::PersonRepositoryImpl;
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
