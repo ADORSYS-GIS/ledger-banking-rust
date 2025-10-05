@@ -194,14 +194,15 @@ use twox_hash::XxHash64;
 use uuid::Uuid;
 
 // Example from LocationRepository:
+// NOTE: Use HeaplessString with appropriate sizes as per modeling guidelines.
 type <Entity>Tuple = (
     Uuid,
-    String,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Uuid,
-    Option<String>,
+    HeaplessString<100>, // street_line1
+    Option<HeaplessString<100>>, // street_line2
+    Option<HeaplessString<100>>, // street_line3
+    Option<HeaplessString<100>>, // street_line4
+    Uuid, // locality_id
+    Option<HeaplessString<20>>, // postal_code
     Option<Decimal>,
     Option<Decimal>,
     Option<f32>,
@@ -209,16 +210,17 @@ type <Entity>Tuple = (
 );
 
 // Example from LocationRepository:
+// NOTE: Use HeaplessString with appropriate sizes as per modeling guidelines.
 type <Entity>AuditTuple = (
     Uuid,
     i32,
     i64,
-    String,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Uuid,
-    Option<String>,
+    HeaplessString<100>, // street_line1
+    Option<HeaplessString<100>>, // street_line2
+    Option<HeaplessString<100>>, // street_line3
+    Option<HeaplessString<100>>, // street_line4
+    Uuid, // locality_id
+    Option<HeaplessString<20>>, // postal_code
     Option<Decimal>,
     Option<Decimal>,
     Option<f32>,
@@ -279,12 +281,12 @@ impl BatchRepository<Postgres, <Entity>Model> for <Entity>RepositoryImpl {
 
             <entity>_values.push((
                 item.id,
-                item.street_line1.to_string(),
-                item.street_line2.as_ref().map(|s| s.to_string()),
-                item.street_line3.as_ref().map(|s| s.to_string()),
-                item.street_line4.as_ref().map(|s| s.to_string()),
+                item.street_line1.clone(),
+                item.street_line2.clone(),
+                item.street_line3.clone(),
+                item.street_line4.clone(),
                 item.locality_id,
-                item.postal_code.as_ref().map(|s| s.to_string()),
+                item.postal_code.clone(),
                 item.latitude,
                 item.longitude,
                 item.accuracy_meters,
@@ -297,12 +299,12 @@ impl BatchRepository<Postgres, <Entity>Model> for <Entity>RepositoryImpl {
                 item.id,
                 0i32,
                 idx_model.hash,
-                item.street_line1.to_string(),
-                item.street_line2.as_ref().map(|s| s.to_string()),
-                item.street_line3.as_ref().map(|s| s.to_string()),
-                item.street_line4.as_ref().map(|s| s.to_string()),
+                item.street_line1.clone(),
+                item.street_line2.clone(),
+                item.street_line3.clone(),
+                item.street_line4.clone(),
                 item.locality_id,
-                item.postal_code.as_ref().map(|s| s.to_string()),
+                item.postal_code.clone(),
                 item.latitude,
                 item.longitude,
                 item.accuracy_meters,
@@ -416,12 +418,12 @@ impl BatchRepository<Postgres, <Entity>Model> for <Entity>RepositoryImpl {
 
             <entity>_values.push((
                 item.id,
-                item.street_line1.to_string(),
-                item.street_line2.as_ref().map(|s| s.to_string()),
-                item.street_line3.as_ref().map(|s| s.to_string()),
-                item.street_line4.as_ref().map(|s| s.to_string()),
+                item.street_line1.clone(),
+                item.street_line2.clone(),
+                item.street_line3.clone(),
+                item.street_line4.clone(),
                 item.locality_id,
-                item.postal_code.as_ref().map(|s| s.to_string()),
+                item.postal_code.clone(),
                 item.latitude,
                 item.longitude,
                 item.accuracy_meters,
@@ -434,12 +436,12 @@ impl BatchRepository<Postgres, <Entity>Model> for <Entity>RepositoryImpl {
                 item.id,
                 new_version,
                 new_hash,
-                item.street_line1.to_string(),
-                item.street_line2.as_ref().map(|s| s.to_string()),
-                item.street_line3.as_ref().map(|s| s.to_string()),
-                item.street_line4.as_ref().map(|s| s.to_string()),
+                item.street_line1.clone(),
+                item.street_line2.clone(),
+                item.street_line3.clone(),
+                item.street_line4.clone(),
                 item.locality_id,
-                item.postal_code.as_ref().map(|s| s.to_string()),
+                item.postal_code.clone(),
                 item.latitude,
                 item.longitude,
                 item.accuracy_meters,
@@ -493,12 +495,12 @@ impl BatchRepository<Postgres, <Entity>Model> for <Entity>RepositoryImpl {
                     item.id,
                     idx_model.version,
                     0, // Hash is 0 for deleted record
-                    item.street_line1.to_string(),
-                    item.street_line2.as_ref().map(|s| s.to_string()),
-                    item.street_line3.as_ref().map(|s| s.to_string()),
-                    item.street_line4.as_ref().map(|s| s.to_string()),
+                    item.street_line1.clone(),
+                    item.street_line2.clone(),
+                    item.street_line3.clone(),
+                    item.street_line4.clone(),
                     item.locality_id,
-                    item.postal_code.as_ref().map(|s| s.to_string()),
+                    item.postal_code.clone(),
                     item.latitude,
                     item.longitude,
                     item.accuracy_meters,
@@ -562,10 +564,17 @@ impl <Entity>RepositoryImpl {
                 Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
             ),
             |mut acc, val| {
-                acc.0.push(val.0); acc.1.push(val.1); acc.2.push(val.2);
-                acc.3.push(val.3); acc.4.push(val.4); acc.5.push(val.5);
-                acc.6.push(val.6); acc.7.push(val.7); acc.8.push(val.8);
-                acc.9.push(val.9); acc.10.push(val.10);
+                acc.0.push(val.0);
+                acc.1.push(val.1.to_string());
+                acc.2.push(val.2.as_ref().map(|s| s.to_string()));
+                acc.3.push(val.3.as_ref().map(|s| s.to_string()));
+                acc.4.push(val.4.as_ref().map(|s| s.to_string()));
+                acc.5.push(val.5);
+                acc.6.push(val.6.as_ref().map(|s| s.to_string()));
+                acc.7.push(val.7);
+                acc.8.push(val.8);
+                acc.9.push(val.9);
+                acc.10.push(val.10);
                 acc
             },
         );
@@ -641,10 +650,20 @@ impl <Entity>RepositoryImpl {
                 Vec::new(), Vec::new(),
             ),
             |mut acc, val| {
-                acc.0.push(val.0); acc.1.push(val.1); acc.2.push(val.2); acc.3.push(val.3);
-                acc.4.push(val.4); acc.5.push(val.5); acc.6.push(val.6); acc.7.push(val.7);
-                acc.8.push(val.8); acc.9.push(val.9); acc.10.push(val.10); acc.11.push(val.11);
-                acc.12.push(val.12); acc.13.push(val.13);
+                acc.0.push(val.0);
+                acc.1.push(val.1);
+                acc.2.push(val.2);
+                acc.3.push(val.3.to_string());
+                acc.4.push(val.4.as_ref().map(|s| s.to_string()));
+                acc.5.push(val.5.as_ref().map(|s| s.to_string()));
+                acc.6.push(val.6.as_ref().map(|s| s.to_string()));
+                acc.7.push(val.7);
+                acc.8.push(val.8.as_ref().map(|s| s.to_string()));
+                acc.9.push(val.9);
+                acc.10.push(val.10);
+                acc.11.push(val.11);
+                acc.12.push(val.12);
+                acc.13.push(val.13);
                 acc
             },
         );
@@ -690,10 +709,17 @@ impl <Entity>RepositoryImpl {
                 Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new(),
             ),
             |mut acc, val| {
-                acc.0.push(val.0); acc.1.push(val.1); acc.2.push(val.2);
-                acc.3.push(val.3); acc.4.push(val.4); acc.5.push(val.5);
-                acc.6.push(val.6); acc.7.push(val.7); acc.8.push(val.8);
-                acc.9.push(val.9); acc.10.push(val.10);
+                acc.0.push(val.0);
+                acc.1.push(val.1.to_string());
+                acc.2.push(val.2.as_ref().map(|s| s.to_string()));
+                acc.3.push(val.3.as_ref().map(|s| s.to_string()));
+                acc.4.push(val.4.as_ref().map(|s| s.to_string()));
+                acc.5.push(val.5);
+                acc.6.push(val.6.as_ref().map(|s| s.to_string()));
+                acc.7.push(val.7);
+                acc.8.push(val.8);
+                acc.9.push(val.9);
+                acc.10.push(val.10);
                 acc
             },
         );

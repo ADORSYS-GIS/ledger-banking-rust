@@ -99,15 +99,17 @@ impl CountrySubdivisionRepository<Postgres> for CountrySubdivisionRepositoryImpl
     async fn save(
         &self,
         country_subdivision: CountrySubdivisionModel,
-    ) -> Result<CountrySubdivisionModel, sqlx::Error> {
+    ) -> CountrySubdivisionResult<CountrySubdivisionModel> {
         // Constraint validation using the injected repository
         if !self
             .country_repository
             .exists_by_id(country_subdivision.country_id)
             .await
-            .map_err(|e| sqlx::Error::Configuration(e.into()))?
+            .map_err(|e| CountrySubdivisionRepositoryError::RepositoryError(e.into()))?
         {
-            return Err(sqlx::Error::RowNotFound);
+            return Err(CountrySubdivisionRepositoryError::CountryNotFound(
+                country_subdivision.country_id,
+            ));
         }
 
         // ... rest of the save logic
