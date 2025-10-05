@@ -37,7 +37,7 @@ pub async fn load_batch(
 mod tests {
     use banking_db::models::person::{LocationModel, LocationType};
     use banking_db::repository::{
-        BatchRepository, CountryRepository, CountrySubdivisionRepository, LocationRepository,
+        BatchRepository, CountryRepository, CountrySubdivisionRepository,
         LocalityRepository, PersonRepos,
     };
     use heapless::String as HeaplessString;

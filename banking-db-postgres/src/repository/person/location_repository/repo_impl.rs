@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use banking_api::BankingResult;
 use banking_db::models::person::{
-    LocationAuditModel, LocationIdxModel, LocationIdxModelCache, LocationModel,
+    LocationIdxModel, LocationIdxModelCache, LocationModel,
 };
 use banking_db::repository::{
-    LocalityRepository, LocationRepository, LocationRepositoryError, LocationResult,
+    LocationRepository, LocationResult,
     TransactionAware,
 };
 use crate::repository::executor::Executor;
@@ -13,11 +13,9 @@ use crate::utils::{get_heapless_string, get_optional_heapless_string, TryFromRow
 use sqlx::{postgres::PgRow, Postgres, Row};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::hash::Hasher;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::sync::RwLock as TokioRwLock;
-use twox_hash::XxHash64;
 use uuid::Uuid;
 
 pub struct LocationRepositoryImpl {

@@ -34,10 +34,9 @@ pub async fn load_batch(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use banking_db::models::person::LocalityModel;
     use banking_db::repository::{
-        BatchRepository, CountryRepository, CountrySubdivisionRepository, LocalityRepository, PersonRepos,
+        BatchRepository, CountryRepository, CountrySubdivisionRepository, PersonRepos,
     };
     use heapless::String as HeaplessString;
     use uuid::Uuid;

@@ -52,7 +52,6 @@ pub async fn delete_batch(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::repository::person::test_helpers::create_test_country_model;
     use crate::test_helper::setup_test_context;
     use banking_db::repository::{BatchRepository, CountryRepository, CountrySubdivisionRepository, PersonRepos};

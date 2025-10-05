@@ -6,21 +6,6 @@ use std::hash::Hasher;
 use twox_hash::XxHash64;
 use uuid::Uuid;
 
-type CountrySubdivisionTuple = (
-    Uuid,
-    Uuid,
-    String,
-    String,
-    Option<String>,
-    Option<String>,
-);
-
-type CountrySubdivisionIdxTuple = (
-    Uuid,
-    Uuid,
-    i64,
-);
-
 pub async fn update_batch(
     repo: &CountrySubdivisionRepositoryImpl,
     _items: Vec<CountrySubdivisionModel>,

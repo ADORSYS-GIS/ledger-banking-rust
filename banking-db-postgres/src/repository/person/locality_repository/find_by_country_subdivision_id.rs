@@ -23,7 +23,6 @@ pub async fn find_by_country_subdivision_id(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use banking_db::repository::{CountryRepository, CountrySubdivisionRepository, LocalityRepository, PersonRepos};
     use crate::repository::person::test_helpers::{
         create_test_country_model, create_test_country_subdivision_model, create_test_locality_model,

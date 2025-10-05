@@ -1,7 +1,7 @@
 use crate::repository::person::location_repository::LocationRepositoryImpl;
 use banking_db::models::person::LocationModel;
 use banking_db::repository::{
-    BatchRepository, LocationRepository, LocationRepositoryError,
+    BatchRepository, LocationRepositoryError,
 };
 use std::error::Error;
 use uuid::Uuid;

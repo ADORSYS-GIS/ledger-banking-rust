@@ -59,7 +59,6 @@ pub async fn delete_batch(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use banking_db::models::person::LocalityModel;
     use banking_db::repository::{
         BatchRepository, CountryRepository, CountrySubdivisionRepository, LocalityRepository, PersonRepos,

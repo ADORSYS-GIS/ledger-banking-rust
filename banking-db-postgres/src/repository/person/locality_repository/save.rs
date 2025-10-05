@@ -81,7 +81,6 @@ pub async fn save(repo: &LocalityRepositoryImpl, locality: LocalityModel) -> Loc
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::repository::person::test_helpers::{
         create_test_country_model, create_test_country_subdivision_model, create_test_locality_model,
     };

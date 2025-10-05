@@ -84,6 +84,14 @@ This commit addresses a bug in the `CountrySubdivisionRepositoryImpl::update_bat
 - **Code Cleanup**: Removed unused imports and made minor adjustments to variable mutability, improving code quality and reducing compiler warnings.
 - **Test Validation**: The `test_update_batch` test now passes, confirming the correctness of the fix.
 
+## Key Achievements (October 2025)
+
+### 🎉 Person Sub-Repository Refactoring and Cleanup
+This commit further refines the `Person` domain's sub-repositories (`CountrySubdivision`, `Locality`, `Location`) by performing targeted refactoring and cleanup.
+- **Code Cleanup**: Removed redundant code, simplified logic, and improved readability across several repository methods.
+- **Modularity Enhancement**: Continued decomposition efforts to ensure single responsibility for repository methods.
+- **Reduced Technical Debt**: Addressed minor inconsistencies and optimized existing implementations.
+
 ## Key Achievements (September 2025)
 
 ### 🎉 EntityReference Batch Operations
