@@ -309,3 +309,17 @@ export DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
 
 # Run all integration tests in parallel
 cargo test -p banking-db-postgres -- --test-threads=1
+
+
+---
+
+# Test Updates for Normalization
+
+When the data model is normalized, it is crucial to update all tests that reference the changed fields.
+
+- Update the `#[cfg(test)]` test modules within any modified files. Tests are collocated with the implementation.
+- Pay special attention to tests in:
+  - Service implementations (`banking-logic/src/services/{module_name}/{entity_name}_service_impl.rs`)
+  - Repository implementations (`banking-db-postgres/src/repository/{module_name}/{entity_name}_repository/repo_impl.rs`)
+  - Mappers (`banking-logic/src/mappers/{module_name}_mapper.rs`)
+- Update test data creation and assertions to match the new struct definitions and field names.

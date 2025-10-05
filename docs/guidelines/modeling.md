@@ -160,3 +160,118 @@ pub name_l3: HeaplessString<100>,
 3. **Enums** for status/type fields instead of String
 4. **References (&T)** for function parameters
 5. **PostgreSQL Enum Casting**: Use `$N::enum_name`
+
+---
+
+# Key Patterns from Normalization
+
+## Foreign Key Reference Alignment
+
+### Naming Convention Rules
+
+#### 1. Explicit Entity Reference Required
+When the field name doesn't clearly indicate the target rust file, include the target struct name:
+- `domicile_branch_id: Uuid` → `domicile_agency_branch_id: Uuid` (target: `AgencyBranch`)
+- `updated_by_person_id: Uuid` → `updated_by_person_id: Uuid` (target: `Person`)
+- `controlled_by`  → `controlled_by_person_id: Uuid` (target: `Person`)
+The method comment might indicate the tartget struct:
+-     /// References Person.person_id
+-     `agent_user_id`   → `agent_person_id: Uuid` (target: `Person`)
+
+#### 2. Avoid Unnecessary Type Convertion
+While defining the service and repository traits, keep the struct field natie types as far as possible. e.g. type conversion to string shall happen at the lattest possible location in the code.
+e.g.:
+**Bad Case**
+banking-db/src/repository/person_repository.rs
+```
+    /// Get persons by external identifier
+    async fn get_by_external_identifier(
+        &self,
+        identifier: &str,
+    ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
+
+```
+**Good Case**
+banking-db/src/repository/person_repository.rs
+```
+    /// Get persons by external identifier
+    async fn get_by_external_identifier(
+        &self,
+        identifier: HeaplessString<50>,
+    ) -> Result<Vec<PersonModel>, Box<dyn std::error::Error + Send + Sync>>;
+```
+
+#### 3. Keep Existing When Clear
+When the field name already matches or clearly indicates the target entity:
+- `collateral_id: Option<Uuid>` → **KEEP AS IS** (target: `Collateral`)
+- `customer_id: Uuid` → **KEEP AS IS** (target: `Customer`)
+
+#### 4. Compound Names Exception
+For fields with compound qualifiers that don't have individual target structs:
+- `loan_purpose_id: Option<Uuid>` → **KEEP AS IS** (target: `ReasonAndPurpose`, no `Purpose` struct exists)
+- `transaction_reason_id: Option<Uuid>` → **KEEP AS IS** (target: `ReasonAndPurpose`, no `Reason` struct exists)
+
+#### 5. Person Reference Pattern
+All `*_by` fields reference `Person` and should include explicit `_person_id` suffix:
+- `created_by_person_id: Uuid` → **KEEP AS IS** (already follows correct pattern)
+- `updated_by_person_id: Uuid` → **KEEP AS IS** (already follows correct pattern)
+- `approved_by: Option<Uuid>` → `approved_by_person_id: Option<Uuid>`
+
+#### 6. Preserve Existing Correct Patterns
+Fields that already follow the explicit entity reference pattern should not be modified:
+- If field already includes target entity name (e.g., `created_by_person_id`, `updated_by_person_id`), keep unchanged
+- Only modify fields that lack explicit entity reference (e.g., `approved_by` → `approved_by_person_id`, `imported_by` → `imported_by_person_id`)
+
+### String Alignment
+
+- **String to Enum Conversion**
+```rust
+// BEFORE: String type allowing invalid values
+pub status: String,
+
+// AFTER: Proper enum with validation
+pub status: StatusEnum,
+```
+
+- **Bounded String**
+Always keep HeaplessString, do not change them to String.
+```rust
+// Ensure consistent HeaplessString sizes between API and DB models
+pub field_name: HeaplessString<N>, // Same N in both layers
+```
+Always suggest change of String type to HeaplessString.
+
+### Model Only Struct
+
+Following structs will not have counterpart in the domain:
+- **`<StructName>IdxModel`**: Index models are used to cache indexes in memory. To check if an entity exists, the repository can query the index cache instead of the database. They have a corresponding database table and must include `version` and `hash` fields.
+- **`<StructName>IdxModelCache`**: Cache for index models. They do not have a domain or database representation.
+- **`<StructName>AuditModel`**: Audit models are used to track changes to an entity. They have a corresponding database table and must include `version`, `hash`, and `audit_log_id` fields. They do not have a domain representation.
+
+## Serialization
+
+### Database Models Enum Serialization Pattern
+```rust
+// Custom serialization for database compatibility for {enum_name}
+#[serde(serialize_with = "serialize_{enum_name}", deserialize_with = "deserialize_{enum_name}")]
+pub field_name: EnumType,
+
+fn serialize_enum_name<S>(value: &EnumType, serializer: S) -> Result<S::Ok, S::Error>
+where S: Serializer {
+    let value_str = match value {
+        EnumType::Variant1 => "Variant1",
+        EnumType::Variant2 => "Variant2",
+    };
+    serializer.serialize_str(value_str)
+}
+```
+### Database Models Enum Deserialization Pattern
+Also provide deserializer.
+
+---
+
+# Memory Optimization
+
+- **HeaplessString<N>**: Stack-allocated bounded strings (60-70% heap reduction)
+- **Enum Status Fields**: Type-safe status management vs String
+- **Currency Codes**: ISO 4217 compliant HeaplessString<3>
