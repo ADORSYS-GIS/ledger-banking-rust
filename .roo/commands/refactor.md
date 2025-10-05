@@ -8,11 +8,11 @@
 **Objective**: Orchestrate a complete refactoring of a legacy module, from its original monolithic structure to a modern, entity-based, and feature-rich layout. This workflow schedules the execution of all relevant refactoring operations in the correct sequence.
 
 **Parameters**:
--   `<module_file_path>`: The path to the module file to refactor (e.g., `banking-db/src/models/audit.rs`).
+-   `<module_name>`: The name of the module to refactor (e.g., `audit`).
 
 **Instructions**:
 
-For the module specified by `<module_file_path>`, the orchestrator must schedule and execute the following operations in sequence:
+For the module specified by `<module_name>`, the orchestrator must schedule and execute the following operations in sequence:
 
 1.  **`Refactor Module to Entity Layout`**: Restructure the module into the new entity-based layout.
 2.  **`Refactor Legacy Repository to Chunked Pattern`**: For each new entity repository, refactor it to the chunked pattern.
@@ -29,15 +29,15 @@ For the module specified by `<module_file_path>`, the orchestrator must schedule
 **Objective**: Refactors a module to the new entity-based layout.
 
 **Parameters**:
--   `<module_file_path>`: The path to the module file to refactor (e.g., `banking-db/src/models/audit.rs`).
+-   `<module_name>`: The name of the module to refactor (e.g., `audit`).
 
 **Instructions**:
 
-Refactor the module at `{{module_file_path}}` to follow the entity-based file layout.
+Refactor the module `{{module_name}}` to follow the entity-based file layout.
 
 You must adhere to the following process:
-1.  **Pre-condition Check**: Before refactoring, verify that the module has not already been refactored. If the target entity-specific file structure already exists (e.g., `banking-db/src/models/<module_name>/<entity_name>.rs`), skip this operation.
-2.  Identify all entities within the module by inspecting the contents of `{{module_file_path}}`.
+1.  **Pre-condition Check**: Before refactoring, verify that the module has not already been refactored. If the target entity-specific file structure already exists (e.g., `banking-db/src/models/{{module_name}}/<entity_name>.rs`), skip this operation.
+2.  Identify all entities within the module by inspecting the contents of `banking-db/src/models/{{module_name}}.rs`.
 2.  For each entity, apply the file and directory restructuring pattern across all four relevant crates (`banking-db`, `banking-db-postgres`, `banking-logic`, and `banking-api`).
 3.  Move the contents of the existing monolithic module files into the new, entity-specific files.
 4.  Update all `mod.rs` files to correctly reflect the new module structure.
@@ -90,14 +90,15 @@ For a detailed breakdown of the required file structure and the steps to follow,
 **Objective**: Create a new, chunked PostgreSQL repository implementation for a given domain model.
 
 **Parameters**:
-- `<db_model_path>`: The file path of the database model (e.g., `@banking-db/src/models/{module_name}/{entity_name}.rs`).
+- `<module_name>`: The name of the module (e.g., `person`).
+- `<entity_name>`: The name of the entity (e.g., `country`).
 
 **Instructions**:
-1.  **Pre-condition Check**: Before creating the repository, verify that the target directory (`banking-db-postgres/src/repository/<module>/<entity>_repository/`) does not already exist. If it exists, skip this operation.
-2.  Analyze the database model at the provided path.
+1.  **Pre-condition Check**: Before creating the repository, verify that the target directory (`banking-db-postgres/src/repository/{{module_name}}/{{entity_name}}_repository/`) does not already exist. If it exists, skip this operation.
+2.  Analyze the database model at `banking-db/src/models/{{module_name}}/{{entity_name}}.rs`.
 3.  Create the corresponding repository implementation following the chunked pattern.
 4.  The implementation should include:
-    -   A directory structure: `banking-db-postgres/src/repository/<module>/<entity>_repository/`.
+    -   A directory structure: `banking-db-postgres/src/repository/{{module_name}}/{{entity_name}}_repository/`.
     -   A `repo_impl.rs` file for the main struct and trait implementation.
     -   Separate files for each repository method.
     -   A `mod.rs` file to declare all public modules.
@@ -136,6 +137,7 @@ For a detailed breakdown of the required file structure and the steps to follow,
 **Objective**: Refactor the error handling for a service to improve modularity and align the service layer with the repository's domain-specific errors.
 
 **Parameters**:
+- `<module_name>`: The name of the module (e.g., `person`).
 - `<entity>`: The name of the service struct to refactor.
 
 **Instructions**:
@@ -145,9 +147,9 @@ For a detailed breakdown of the required file structure and the steps to follow,
 Follow these steps precisely:
 
 1.  **Pre-condition Check**: Before applying changes, verify that the domain errors have not already been refactored. Inspect the service implementation; if it already uses domain-specific error patterns (e.g., `map_err(Into::into)`), skip this operation.
-2.  **Define Domain-Specific Repository Errors** in `'banking-db/src/repository/person/<entity>_repository.rs'`.
-3.  **Refactor Service-Level Errors** in `'banking-api/src/service/person/<entity>_service.rs'`.
-3.  **Update Service Implementation** in `'banking-logic/src/services/person/<entity>_service_impl.rs'`.
+2.  **Define Domain-Specific Repository Errors** in `'banking-db/src/repository/{{module_name}}/<entity>_repository.rs'`.
+3.  **Refactor Service-Level Errors** in `'banking-api/src/service/{{module_name}}/<entity>_service.rs'`.
+3.  **Update Service Implementation** in `'banking-logic/src/services/{{module_name}}/<entity>_service_impl.rs'`.
 4.  **Fix Affected Tests**.
 ---
 
@@ -203,11 +205,12 @@ For detailed instructions on each step, refer to the [Repository and Indexing St
 **Objective**: Generates a thread-safe, immutable cache implementation for Rust structs based on caching instructions in comment blocks.
 
 **Parameters**:
--   `<file to process>`: The file containing the Rust structs to generate caches for.
+-   `<module_name>`: The name of the module (e.g., `person`).
+-   `<entity_name>`: The name of the entity (e.g., `country`).
 
 **Instructions**:
 
-This command generates a thread-safe, immutable cache implementation for each Rust struct in a given file, based on caching instructions provided in a `# Cache` comment block.
+This command generates a thread-safe, immutable cache implementation for the entity struct in `banking-db/src/models/{{module_name}}/{{entity_name}}.rs`, based on caching instructions provided in a `# Cache` comment block.
 
 **Rule Precedence:** The generation of an `...IdxModelCache` is driven entirely by the `/// # Cache` comment block on the corresponding `...Model` struct.
 
