@@ -1,9 +1,11 @@
----
-argument-hint: <file to process>
-description: Generates a thread-safe, immutable cache implementation for Rust structs based on caching instructions in comment blocks.
----
+# Command: Generate Immutable Caches
 
-# Prompt for the Generation of Immutable Caches
+**Objective**: Generates a thread-safe, immutable cache implementation for Rust structs based on caching instructions in comment blocks.
+
+**Parameters**:
+-   `<file to process>`: The file containing the Rust structs to generate caches for.
+
+## Instructions
 
 This command generates a thread-safe, immutable cache implementation for each Rust struct in a given file, based on caching instructions provided in a `# Cache` comment block.
 

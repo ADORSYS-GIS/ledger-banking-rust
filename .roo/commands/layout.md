@@ -1,11 +1,12 @@
----
-name: layout
-description: Refactors a module to the new entity-based layout.
-args:
-  - name: module_name
-    description: The name of the module to refactor (e.g., audit).
-    required: true
----
+# Command: Module Layout
+
+**Objective**: Refactors a module to the new entity-based layout.
+
+**Parameters**:
+-   `<module_name>`: The name of the module to refactor (e.g., audit).
+
+## Instructions
+
 Refactor the `{{module_name}}` module to follow the entity-based file layout.
 
 You must adhere to the following process:
