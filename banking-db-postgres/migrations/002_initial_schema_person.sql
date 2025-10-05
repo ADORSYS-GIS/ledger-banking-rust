@@ -180,10 +180,3 @@ CREATE TABLE person_audit (
     audit_log_id UUID NOT NULL,
     PRIMARY KEY (person_id, version)
 );
-
--- Main table for model AuditLogModel
-CREATE TABLE audit_log (
-    id UUID PRIMARY KEY,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_by_person_id UUID NOT NULL
-);

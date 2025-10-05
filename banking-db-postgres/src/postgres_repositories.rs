@@ -8,7 +8,7 @@ use sqlx::{PgPool, Postgres};
 use std::sync::Arc;
 
 use crate::repository::{
-    audit_repository_impl::AuditLogRepositoryImpl,
+    audit::audit_log_repository::AuditLogRepositoryImpl,
     executor::Executor,
     person::{
         country_repository::repo_impl::CountryRepositoryImpl,

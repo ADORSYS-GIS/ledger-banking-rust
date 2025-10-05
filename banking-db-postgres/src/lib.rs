@@ -3,7 +3,7 @@ pub mod repository;
 pub mod utils;
 
 pub use postgres_repositories::PostgresRepositories;
-pub use repository::audit_repository_impl::AuditLogRepositoryImpl;
+pub use repository::audit::audit_log_repository::AuditLogRepositoryImpl;
 pub use repository::person::country_repository::repo_impl::CountryRepositoryImpl;
 pub use repository::person::country_subdivision_repository::CountrySubdivisionRepositoryImpl;
 pub use repository::person::entity_reference_repository::EntityReferenceRepositoryImpl;

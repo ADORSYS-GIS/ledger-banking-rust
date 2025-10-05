@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use banking_db::{
     models::audit::AuditLogModel,
-    repository::audit_repository::{AuditLogRepository, AuditResult},
+    repository::audit_repository::{AuditLogRepository, AuditLogResult},
 };
 use sqlx::{Postgres, Row};
 use uuid::Uuid;
@@ -11,7 +11,7 @@ use crate::repository::executor::Executor;
 
 pub struct AuditLogRepositoryImpl {
     // The struct now holds our generic Executor
-    executor: Executor,
+    pub(crate) executor: Executor,
 }
 
 impl AuditLogRepositoryImpl {
@@ -23,7 +23,7 @@ impl AuditLogRepositoryImpl {
 
 #[async_trait]
 impl AuditLogRepository<Postgres> for AuditLogRepositoryImpl {
-    async fn create(&self, audit_log: &AuditLogModel) -> AuditResult<AuditLogModel> {
+    async fn create(&self, audit_log: &AuditLogModel) -> AuditLogResult<AuditLogModel> {
         let query = sqlx::query(
             r#"
             INSERT INTO audit_log (id, updated_at, updated_by_person_id)
@@ -48,7 +48,7 @@ impl AuditLogRepository<Postgres> for AuditLogRepositoryImpl {
         Ok(audit_log.clone())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> AuditResult<Option<AuditLogModel>> {
+    async fn find_by_id(&self, id: Uuid) -> AuditLogResult<Option<AuditLogModel>> {
         let query = sqlx::query(
             r#"
             SELECT * FROM audit_log WHERE id = $1
