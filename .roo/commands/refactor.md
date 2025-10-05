@@ -3,6 +3,27 @@
 **Objective**: Centralize all repository creation, refactoring, and feature implementation tasks into a single, unified command. This command handles the creation of new chunked repositories, the addition of batch operations, and the refactoring of legacy monolithic repositories.
 
 ---
+## Operation: Full Repository Refactoring Workflow
+
+**Objective**: Orchestrate a complete refactoring of a legacy module, from its original monolithic structure to a modern, entity-based, and feature-rich layout. This workflow schedules the execution of all relevant refactoring operations in the correct sequence.
+
+**Parameters**:
+-   `<module_file_path>`: The path to the module file to refactor (e.g., `banking-db/src/models/audit.rs`).
+
+**Instructions**:
+
+For the module specified by `<module_file_path>`, the orchestrator must schedule and execute the following operations in sequence:
+
+1.  **`Refactor Module to Entity Layout`**: Restructure the module into the new entity-based layout.
+2.  **`Refactor Legacy Repository to Chunked Pattern`**: For each new entity repository, refactor it to the chunked pattern.
+3.  **`Add Batch Implementation`**: For each refactored repository, add a complete batch implementation.
+4.  **`Refactor Domain Errors`**: Refactor the domain error handling for each new service.
+5.  **`Annotate Entity for Generation`**: Analyze and annotate each entity model for code generation.
+6.  **`Generate Application-Managed Indexes`**: Generate application-managed indexes from the annotations.
+7.  **`Generate Immutable Caches`**: Generate immutable caches from the annotations.
+
+---
+
 ## Operation: Refactor Module to Entity Layout
 
 **Objective**: Refactors a module to the new entity-based layout.
@@ -15,7 +36,8 @@
 Refactor the module at `{{module_file_path}}` to follow the entity-based file layout.
 
 You must adhere to the following process:
-1.  Identify all entities within the module by inspecting the contents of `{{module_file_path}}`.
+1.  **Pre-condition Check**: Before refactoring, verify that the module has not already been refactored. If the target entity-specific file structure already exists (e.g., `banking-db/src/models/<module_name>/<entity_name>.rs`), skip this operation.
+2.  Identify all entities within the module by inspecting the contents of `{{module_file_path}}`.
 2.  For each entity, apply the file and directory restructuring pattern across all four relevant crates (`banking-db`, `banking-db-postgres`, `banking-logic`, and `banking-api`).
 3.  Move the contents of the existing monolithic module files into the new, entity-specific files.
 4.  Update all `mod.rs` files to correctly reflect the new module structure.
@@ -33,9 +55,10 @@ For a detailed breakdown of the required file structure and the steps to follow,
 - `<module>`: The module the entity belongs to (e.g., `person`).
 
 **Instructions**:
-1.  **Create Directory Structure**:
+1.  **Pre-condition Check**: Before proceeding, verify that the repository has not already been refactored. If the target directory `banking-db-postgres/src/repository/<module>/<entity>_repository/` already exists, skip this operation.
+2.  **Create Directory Structure**:
     -   Create `banking-db-postgres/src/repository/<module>/<entity>_repository/`.
-2.  **Move and Rename Implementations**:
+3.  **Move and Rename Implementations**:
     -   Move `.../<entity>_repository_impl.rs` to `.../<entity>_repository/repo_impl.rs`.
     -   Move `.../<entity>_repository_batch_impl.rs` to `.../<entity>_repository/batch_impl.rs`.
 3.  **Create `mod.rs`**:
@@ -44,6 +67,7 @@ For a detailed breakdown of the required file structure and the steps to follow,
     -   Add modules for all repository and batch methods.
 4.  **Extract Repository Methods**:
     -   For each method in `repo_impl.rs`, move its implementation to a new file `.../<method_name>.rs`.
+    -   Each new method file *must* include co-located unit tests under a `#[cfg(test)]` block.
     -   Update `repo_impl.rs` to call the new function.
     -   Add the new module to `mod.rs`.
 5.  **Extract Batch Methods**:
@@ -56,6 +80,8 @@ For a detailed breakdown of the required file structure and the steps to follow,
     -   Move tests from the central `banking-db-postgres/tests/suites/` directory into the relevant method files under a `#[cfg(test)]` module.
 8.  **Update Module Exports**:
     -   Update `banking-db-postgres/src/repository/<module>/mod.rs` to refer to the new `<entity>_repository` module.
+9.  **Consult Guidelines**:
+    -   For a detailed explanation of the chunked pattern, refer to the [.docs/guidelines/repository-and-indexing.md](../../.docs/guidelines/repository-and-indexing.md) document.
 
 ---
 
@@ -67,9 +93,10 @@ For a detailed breakdown of the required file structure and the steps to follow,
 - `<db_model_path>`: The file path of the database model (e.g., `@banking-db/src/models/{module_name}/{entity_name}.rs`).
 
 **Instructions**:
-1.  Analyze the database model at the provided path.
-2.  Create the corresponding repository implementation following the chunked pattern.
-3.  The implementation should include:
+1.  **Pre-condition Check**: Before creating the repository, verify that the target directory (`banking-db-postgres/src/repository/<module>/<entity>_repository/`) does not already exist. If it exists, skip this operation.
+2.  Analyze the database model at the provided path.
+3.  Create the corresponding repository implementation following the chunked pattern.
+4.  The implementation should include:
     -   A directory structure: `banking-db-postgres/src/repository/<module>/<entity>_repository/`.
     -   A `repo_impl.rs` file for the main struct and trait implementation.
     -   Separate files for each repository method.
@@ -88,11 +115,12 @@ For a detailed breakdown of the required file structure and the steps to follow,
 - `<module>`: The module the entity belongs to (e.g., `person`).
 
 **Instructions**:
-1.  **Determine Naming Conventions**:
+1.  **Pre-condition Check**: Before adding the implementation, verify that a batch implementation file (`batch_impl.rs`) does not already exist in the target directory. If it exists, skip this operation.
+2.  **Determine Naming Conventions**:
     -   PascalCase: `<Entity>` (e.g., `Country`)
     -   Plural: `<entities>` (e.g., `countries`)
     -   SNAKE_CASE_UPPER: `<ENTITY>` (e.g., `COUNTRY`)
-2.  **Analyze Existing Implementation**: Review `banking-db-postgres/src/repository/<module>/<entity>_repository/repo_impl.rs` to understand existing patterns (auditing, versioning, etc.).
+3.  **Analyze Existing Implementation**: Review `banking-db-postgres/src/repository/<module>/<entity>_repository/repo_impl.rs` to understand existing patterns (auditing, versioning, etc.).
 3.  **Refer to Guidelines**: For detailed instructions and code templates, see [Batch Operations Implementation Guidelines](../../.docs/guidelines/batch_operations.md).
 4.  **Create Files**:
     -   Create the batch implementation file: `banking-db-postgres/src/repository/<module>/<entity>_repository/batch_impl.rs`.
@@ -116,8 +144,9 @@ For a detailed breakdown of the required file structure and the steps to follow,
 
 Follow these steps precisely:
 
-1.  **Define Domain-Specific Repository Errors** in `'banking-db/src/repository/person/<entity>_repository.rs'`.
-2.  **Refactor Service-Level Errors** in `'banking-api/src/service/person/<entity>_service.rs'`.
+1.  **Pre-condition Check**: Before applying changes, verify that the domain errors have not already been refactored. Inspect the service implementation; if it already uses domain-specific error patterns (e.g., `map_err(Into::into)`), skip this operation.
+2.  **Define Domain-Specific Repository Errors** in `'banking-db/src/repository/person/<entity>_repository.rs'`.
+3.  **Refactor Service-Level Errors** in `'banking-api/src/service/person/<entity>_service.rs'`.
 3.  **Update Service Implementation** in `'banking-logic/src/services/person/<entity>_service_impl.rs'`.
 4.  **Fix Affected Tests**.
 ---
@@ -134,8 +163,9 @@ Follow these steps precisely:
 
 This command analyzes an entity's source code and generates structured comments (`/// # ...`) that drive downstream code generation for repositories, indexes, and caches.
 
-1.  **Analyze Entity**: Inspect the struct definition in `banking-db/src/models/{module_name}/{entity_name}.rs`.
-2.  **Infer Conventions**: Identify primary keys, foreign keys, and potential indexable fields based on naming conventions and types.
+1.  **Pre-condition Check**: Before generating annotations, check if the entity struct in the target file already contains structured comments (`/// # ...`). If such annotations are already present, skip this operation.
+2.  **Analyze Entity**: Inspect the struct definition in `banking-db/src/models/{module_name}/{entity_name}.rs`.
+3.  **Infer Conventions**: Identify primary keys, foreign keys, and potential indexable fields based on naming conventions and types.
 3.  **Generate Annotations**: Create comment blocks for the main `...Model` struct and its fields. These annotations should specify:
     -   `# Repository Trait`: The FQN of the corresponding repository trait.
     -   `# Index`: Details for the `...IdxModel`, including the cache type.
@@ -158,8 +188,9 @@ This command analyzes an entity's source code and generates structured comments 
 
 **Rule Precedence:** All generation logic is driven by structured comments within the source `...Model` struct. These in-code instructions always take precedence over general guidelines.
 
-1.  **Generate Index Model from Comment Instructions** in `banking-db/src/models/{module_name}/{entity_name}.rs`.
-2.  **Generate Repository Methods** in `banking-db/src/repository/{module_name}/{entity_name}_repository.rs`.
+1.  **Pre-condition Check**: Before generation, verify that the indexes have not already been created. Check for the existence of an `...IdxModel` struct in the entity's module file and for index-related methods in the repository trait. If they already exist, skip this operation.
+2.  **Generate Index Model from Comment Instructions** in `banking-db/src/models/{module_name}/{entity_name}.rs`.
+3.  **Generate Repository Methods** in `banking-db/src/repository/{module_name}/{entity_name}_repository.rs`.
 3.  **Generate Database Migration Script** in `banking-db-postgres/migrations/<init_order>_initial_schema_{module_name}.sql`.
 4.  **Apply Hashing Strategy** for string-based indexes.
 
