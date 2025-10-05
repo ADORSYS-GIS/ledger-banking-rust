@@ -5,7 +5,7 @@
 //! the need for explicit cleanup operations.
 
 use banking_db::repository::{PersonRepos, UnitOfWork, UnitOfWorkSession};
-use banking_db_postgres::repository::unit_of_work_impl::PostgresUnitOfWork;
+use crate::repository::unit_of_work_impl::PostgresUnitOfWork;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use std::time::Duration;
@@ -45,7 +45,7 @@ impl<S: UnitOfWorkSession<sqlx::Postgres>> TestContext<S> {
 ///     Ok(())
 /// }
 /// ```
-pub async fn setup_test_context() -> Result<TestContext<banking_db_postgres::repository::unit_of_work_impl::PostgresUnitOfWorkSession>, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn setup_test_context() -> Result<TestContext<crate::repository::unit_of_work_impl::PostgresUnitOfWorkSession>, Box<dyn std::error::Error + Send + Sync>> {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/mydb".to_string());
 
@@ -54,6 +54,8 @@ pub async fn setup_test_context() -> Result<TestContext<banking_db_postgres::rep
         .acquire_timeout(Duration::from_secs(30))
         .connect(&database_url)
         .await?;
+
+    sqlx::migrate!().run(&pool).await?;
 
     let uow = PostgresUnitOfWork::new(Arc::new(pool)).await;
     let session = uow.begin().await?;
@@ -76,6 +78,8 @@ pub async fn setup_shared_uow() -> Result<PostgresUnitOfWork, Box<dyn std::error
         .acquire_timeout(Duration::from_secs(30))
         .connect(&database_url)
         .await?;
+
+    sqlx::migrate!().run(&pool).await?;
 
     Ok(PostgresUnitOfWork::new(Arc::new(pool)).await)
 }

@@ -16,14 +16,13 @@ From the parameters, derive the following names:
 
 ## 2. Instructions
 
-1.  **Analyze Existing Implementation**: Before starting, review the existing `banking-db-postgres/src/repository/<module>/<entity>_repository_impl.rs` to understand if the entity uses auditing, versioning, hashing, or other specific patterns.
+1.  **Analyze Existing Implementation**: Before starting, review the existing `banking-db-postgres/src/repository/<module>/<entity>_repository/repo_impl.rs` to understand if the entity uses auditing, versioning, hashing, or other specific patterns.
 
 2.  **Refer to Guidelines**: For detailed instructions and code templates, please refer to the [Batch Operations Implementation Guidelines](../../docs/guidelines/batch_operations.md).
 
 3.  **Create Files**:
-    *   Create the batch implementation file at `banking-db-postgres/src/repository/<module>/<entity>_repository_batch_impl.rs`.
-    *   Create the corresponding test file at `banking-db-postgres/tests/suites/<module>/<entity>_batch_operations_test.rs`.
+    *   Create the batch implementation file at `banking-db-postgres/src/repository/<module>/<entity>_repository/batch_impl.rs`.
+    *   Create the corresponding test file within `batch_impl.rs` under a `#[cfg(test)]` module.
 
 4.  **Update `mod.rs`**:
-    *   Add the new implementation file to `banking-db-postgres/src/repository/<module>/mod.rs`.
-    *   Add the new test file to `banking-db-postgres/tests/suites/<module>/mod.rs`.
+    *   Add the new implementation file to `banking-db-postgres/src/repository/<module>/<entity>_repository/mod.rs`.

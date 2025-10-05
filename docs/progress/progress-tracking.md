@@ -22,7 +22,7 @@
 - **FeeRepositoryImpl** - Complete fee management system (17/17 tests)
 - **ReasonAndPurposeRepositoryImpl** - Regulatory compliance framework (18/18 tests)
 - **ChannelRepositoryImpl** - Banking channel management (15/15 tests)
-- **PersonRepositoryImpl** - Monolithic repository refactored into 7 specialized repositories for improved modularity and maintainability (31+ tests).
+- **PersonRepositoryImpl** - Monolithic repository refactored into 7 specialized repositories under `repository/person/person_repository/` for improved modularity and maintainability (31+ tests).
 - **ComplianceRepositoryImpl** - KYC/AML framework with enum handling
 - **CollateralRepositoryImpl** - Comprehensive collateral management
 - **TransactionRepositoryImpl** - Full transaction processing
@@ -64,6 +64,34 @@
 - **FeeServiceImpl** - 12 todo! fee waiver/automation methods
 - **DailyCollectionServiceImpl** - 50+ todo! collection operations
 
+## Key Achievements (October 2025)
+
+### 🎉 CountryRepository Decomposition and Refactoring
+This commit significantly refactors the `CountryRepositoryImpl` by decomposing its monolithic implementation into individual, single-responsibility files within a dedicated directory.
+- **Code Decomposition**: The large `country_repository_impl.rs` file has been broken down into separate files for each method (e.g., `save.rs`, `load.rs`, `find_by_id.rs`, `batch_impl.rs`), located under `repository/person/country_repository/`.
+- **Improved Modularity**: Each file now focuses on a single database operation, enhancing clarity, maintainability, and testability.
+- **Reduced File Size**: This refactoring drastically reduces the size of individual files, improving readability and LLM performance.
+- **Test Co-location**: Corresponding tests have been adjusted or co-located to align with the new modular structure.
+
+### 🎉 `CountrySubdivision` Repository Refactoring
+- **Chunked Pattern**: Refactored both standard and batch implementations into a unified `chunk-repo` pattern.
+- **Test Co-location**: Co-located tests with their corresponding method implementations for improved clarity.
+- **Standardized Command**: Created a new, standardized `chunk-repo` command to streamline future refactoring work.
+
+### 🎉 CountrySubdivisionRepositoryImpl Update Batch Fix and Code Cleanup
+This commit addresses a bug in the `CountrySubdivisionRepositoryImpl::update_batch` function where updates to non-indexed fields were not being correctly processed. It also incorporates various code cleanups suggested by the Rust compiler.
+- **Bug Fix**: Ensured that all fields of `CountrySubdivisionModel` are updated during batch operations, not just those affecting the index.
+- **Code Cleanup**: Removed unused imports and made minor adjustments to variable mutability, improving code quality and reducing compiler warnings.
+- **Test Validation**: The `test_update_batch` test now passes, confirming the correctness of the fix.
+
+## Key Achievements (October 2025)
+
+### 🎉 Person Sub-Repository Refactoring and Cleanup
+This commit further refines the `Person` domain's sub-repositories (`CountrySubdivision`, `Locality`, `Location`) by performing targeted refactoring and cleanup.
+- **Code Cleanup**: Removed redundant code, simplified logic, and improved readability across several repository methods.
+- **Modularity Enhancement**: Continued decomposition efforts to ensure single responsibility for repository methods.
+- **Reduced Technical Debt**: Addressed minor inconsistencies and optimized existing implementations.
+
 ## Key Achievements (September 2025)
 
 ### 🎉 EntityReference Batch Operations
@@ -72,12 +100,20 @@ This commit introduces batch operations for the `EntityReference` repository, si
 - **Comprehensive Testing**: A new test suite was added to ensure the correctness of all batch operations.
 - **Performance**: These changes leverage PostgreSQL's `UNNEST` for high-performance bulk inserts and updates, reducing network round-trips and database overhead.
 
-### 🎉 Person Domain Refactoring: Batch Operations and Caching
-This commit introduces a significant refactoring of the Person domain, focusing on optimizing batch operations and improving data consistency with transaction-aware caching.
-- **Batch Operations**: The `person_repository_batch_impl` has been heavily refactored for performance and clarity when handling bulk data operations.
+### 🎉 EntityReference Repository Decomposition and Refactoring
+This commit significantly refactors the `EntityReferenceRepositoryImpl` by decomposing its monolithic implementation into individual, single-responsibility files within a dedicated directory.
+- **Code Decomposition**: The large `entity_reference_repository_impl.rs` file has been broken down into separate files for each method (e.g., `save.rs`, `load.rs`, `find_by_id.rs`, `batch_impl.rs`), located under `repository/person/entity_reference_repository/`.
+- **Improved Modularity**: Each file now focuses on a single database operation, enhancing clarity, maintainability, and testability.
+- **Reduced File Size**: This refactoring drastically reduces the size of individual files, improving readability and LLM performance.
+- **Test Co-location**: Corresponding tests have been adjusted or co-located to align with the new modular structure.
+
+### 🎉 Person Domain Refactoring: Repository Decomposition and Cache Optimization
+This commit introduces a significant refactoring of the Person domain, decomposing monolithic repository implementations into modular files and enhancing performance with transaction-aware caching.
+- **Code Decomposition**: The monolithic `person_repository_impl.rs` and `person_repository_batch_impl.rs` files were broken into individual method implementations under `repository/person/person_repository/`.
+- **Batch Operations**: Batch methods (`create_batch`, `load_batch`, `update_batch`, `delete_batch`) are now in separate files, improving clarity and testability.
 - **Transactional Caching**: Implemented transaction-aware caching for `PersonIdxModel` to ensure data consistency between the cache and the database during transactions.
-- **Test Relocation**: The batch operations tests were moved to be co-located with the rest of the person-related tests for better organization.
-- **Code Quality**: These changes improve the maintainability, reliability, and performance of the Person domain.
+- **Test Co-location**: Corresponding tests were moved alongside their implementation files for better organization.
+- **Code Quality**: These changes improve maintainability, reliability, and performance of the Person domain.
 
 ## Key Achievements (August 2025)
 

@@ -45,155 +45,149 @@ sqlx migrate run --source banking-db-postgres/migrations
 
 When a service implementation (e.g., `PersonServiceImpl`) is complete, it is crucial to create a corresponding test suite to ensure its correctness and maintainability. The primary goal is to have a dedicated test for every public method in the service.
 
-### 1. Test File Structure
+### 1. Test File Structure and Co-location
 
-For a service like `PersonService`, located at `banking-logic/src/services/person/person_service_impl.rs`, the corresponding tests should be organized into a dedicated module at `banking-logic/tests/person/`.
+To ensure that tests are closely coupled with the implementation they verify, unit tests for a given function must be co-located within the same file as the function itself. This is achieved by placing the tests inside a `#[cfg(test)]` module at the end of the file.
 
-This modular structure enhances clarity and scalability. The main test file, `banking-logic/tests/person_module_tests.rs`, simply declares the module:
+This approach improves discoverability and makes it easier to maintain tests alongside the code they cover, whether for repository functions or service implementations.
 
-```rust
-// In banking-logic/tests/person_module_tests.rs
-mod person;
-```
-
-The directory structure for the `person` service tests would look like this:
-
-```
-banking-logic/tests/
-├── person_module_tests.rs  // Main test entry point
-└── person/
-    ├── mod.rs                 // Declares all sub-modules
-    ├── common.rs              // Shared test helpers (e.g., service setup)
-    ├── country_tests.rs       // Tests for Country related logic
-    ├── locality_tests.rs      // Tests for Locality related logic
-    ├── ...                    // Other test files for different entities
-    ├── mock_country_repository.rs // Mock implementation for CountryRepository
-    ├── mock_locality_repository.rs// Mock implementation for LocalityRepository
-    └── ...                    // Other mock repository files
-```
-
-The `person/mod.rs` file ties everything together:
+**Example File Structure (`save.rs`):**
 
 ```rust
-// In banking-logic/tests/person/mod.rs
-pub mod common;
-pub mod country_tests;
-pub mod mock_country_repository;
-// ... other modules
+// In banking-db-postgres/src/repository/person/country_repository/save.rs
+
+use crate::repository::executor::Executor;
+// ... other imports
+
+pub(crate) async fn save(
+    repo: &CountryRepositoryImpl,
+    country: CountryModel,
+) -> CountryResult<CountryModel> {
+    // ... function implementation
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::test_helper::setup_test_context;
+    // ... other test imports
+
+    #[tokio::test]
+    async fn test_save_country() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // ... test implementation
+    }
+}
 ```
+
+This co-location strategy is the standard for unit-testing individual functions. Higher-level integration tests that span multiple components or validate complex workflows may still reside in the `tests/` directory.
 
 ### 2. Mocking Dependencies
 
-Service tests must be isolated from the database. This is achieved by creating mock implementations for each repository dependency.
+Service tests must be isolated from the database. This is achieved by creating mock implementations for each repository dependency directly within the test module of the service file.
 
-Each mock repository should reside in its own file within the test module. For example, `MockCountryRepository` is located in `banking-logic/tests/person/mock_country_repository.rs`.
+**Co-located Mock Implementation:**
 
-**Mock Repository Implementation:**
+By defining mocks inside the `#[cfg(test)]` block, they are kept private to the test environment and live alongside the service implementation that uses them.
 
 ```rust
-// In banking-logic/tests/person/mock_country_repository.rs
+// In banking-logic/src/services/person/person_service_impl.rs
 
-use std::sync::Mutex;
-// ... other necessary imports
+// ... service implementation ...
 
-#[derive(Default)]
-pub struct MockCountryRepository {
-    countries: Mutex<Vec<CountryModel>>,
-    country_ixes: Mutex<Vec<CountryIdxModel>>,
-}
+#[cfg(test)]
+mod tests {
+    // ... other test imports
 
-#[async_trait]
-impl CountryRepository<Postgres> for MockCountryRepository {
-    async fn save(&self, country: CountryModel) -> CountryResult<CountryModel> {
-        // ... implementation to save to in-memory Vecs
+    #[derive(Default)]
+    struct MockCountryRepository {
+        // ... mock fields
     }
 
-    // ... other required trait methods
-}
-
-// Helper for creating test data can also be included here
-pub fn create_test_country() -> Country {
-    // ...
+    #[async_trait]
+    impl CountryRepository<Postgres> for MockCountryRepository {
+        async fn save(&self, country: CountryModel) -> CountryResult<CountryModel> {
+            // ... mock implementation
+        }
+        // ... other mocked methods
+    }
 }
 ```
 
-This approach ensures that each mock is self-contained and easy to locate.
-
 ### 3. Test Setup Helpers
 
-To keep tests clean, a `common.rs` file within the test module centralizes setup logic.
+With co-located tests, setup logic is also defined within the `#[cfg(test)]` module. This eliminates the need for a separate `common.rs` file and keeps test helpers close to the tests that use them.
 
-**Service Instantiation (`common.rs`):**
+**Co-located Service Instantiation:**
 
-This file contains a `TestServices` struct and a helper function to instantiate all services with their mocked dependencies.
+A helper function can create an instance of the service with its mocked dependencies for use in tests.
 
 ```rust
-// In banking-logic/tests/person/common.rs
+// In banking-logic/src/services/person/person_service_impl.rs
 
-// ... imports for all services and mock repositories
+#[cfg(test)]
+mod tests {
+    // ... imports and mock definitions ...
 
-pub struct TestServices {
-    pub country_service: CountryServiceImpl<Postgres>,
-    // ... other services
-}
+    fn setup_test_service() -> (PersonServiceImpl<Postgres>, Arc<MockPersonRepository>) {
+        let mock_person_repo = Arc::new(MockPersonRepository::default());
+        
+        let repositories = Repositories {
+            person_repository: mock_person_repo.clone(),
+            // ... other mocked repositories initialized as needed
+        };
 
-pub fn create_test_services() -> TestServices {
-    let repositories = Repositories {
-        country_repository: Arc::new(MockCountryRepository::default()),
-        // ... other mocked repositories
-    };
-    TestServices {
-        country_service: CountryServiceImpl::new(repositories.clone()),
-        // ... instantiating other services
+        let service = PersonServiceImpl::new(repositories);
+        (service, mock_person_repo)
     }
-}
 
-// Other common helpers like creating an audit log
-pub fn create_test_audit_log() -> banking_api::domain::AuditLog {
-    // ...
+    // Other local helpers can be defined here
+    fn create_test_person() -> Person {
+        // ...
+    }
 }
 ```
 
 ### 4. Writing Unit Tests
 
-Each entity or logical group of functions within the service gets its own test file (e.g., `country_tests.rs`).
+Tests are written as standard functions within the `tests` module, following the Arrange-Act-Assert pattern.
 
 **Test Structure (Arrange-Act-Assert):**
 
 ```rust
-// In banking-logic/tests/person/country_tests.rs
+// In banking-logic/src/services/person/person_service_impl.rs
 
-use crate::person::common::create_test_services;
-use crate::person::mock_country_repository::create_test_country;
-use banking_api::service::CountryService;
+#[cfg(test)]
+mod tests {
+    // ... imports, mocks, and helpers ...
 
-#[tokio::test]
-async fn test_create_country() {
-    // 1. Arrange: Set up the services and test data
-    let services = create_test_services();
-    let country = create_test_country();
+    #[tokio::test]
+    async fn test_create_person() {
+        // 1. Arrange: Set up the service and test data
+        let (service, mock_repo) = setup_test_service();
+        let person = create_test_person();
 
-    // 2. Act: Call the service method
-    let created_country = services
-        .country_service
-        .create_country(country.clone())
-        .await
-        .unwrap();
+        // 2. Act: Call the service method
+        let created_person = service
+            .create_person(person.clone())
+            .await
+            .unwrap();
 
-    // 3. Assert: Verify the outcome
-    assert_eq!(country.id, created_country.id);
+        // 3. Assert: Verify the outcome
+        assert_eq!(person.id, created_person.id);
+        // Optionally, assert that mock was called
+        assert_eq!(mock_repo.calls.lock().unwrap().len(), 1);
+    }
 }
 ```
 
 ### 5. Running Tests
 
-Run the tests for the specific service from the project root:
+With tests co-located in the source files, you can run all tests for a crate using a standard cargo command from the project root.
 
 ```bash
-cargo test -p banking-logic --test person_module_tests
+cargo test -p banking-logic
 ```
 
-This modular structure keeps the test suite organized, maintainable, and easy to navigate, even as the number of tests grows.
+Cargo will automatically discover and run all functions annotated with `#[test]`, including those inside `#[cfg(test)]` modules.
 
 ## Repository Integration Testing
 
@@ -201,39 +195,9 @@ Repository tests are integration tests that validate the PostgreSQL implementati
 
 ### 1. Test File Structure
 
-For repositories related to a specific domain, like `person`, tests are organized into a dedicated module. For a repository like `PersonRepositoryImpl`, the tests are located at `banking-db-postgres/tests/suites/person/`.
+Unit tests for repository functions are co-located in the same file as the implementation. This is the standard for testing individual database operations like `save`, `load`, or `find_by_id`.
 
-The main test file for the suites, `banking-db-postgres/tests/suites/mod.rs`, declares the `person` module:
-
-```rust
-// In banking-db-postgres/tests/suites/mod.rs
-#[path = "person/mod.rs"]
-pub mod person;
-// ... other suite modules
-```
-
-The directory structure for the `person` repository tests is as follows:
-
-```
-banking-db-postgres/tests/suites/
-├── mod.rs       // Main suite entry point, declares the person module
-└── person/
-    ├── mod.rs   // Declares all repository test sub-modules
-    ├── helpers.rs // Shared helper functions for creating test models
-    ├── person_repository_tests.rs
-    ├── country_repository_tests.rs
-    └── ...      // Other repository test files
-```
-
-The `person/mod.rs` file includes all the individual test files:
-
-```rust
-// In banking-db-postgres/tests/suites/person/mod.rs
-pub mod helpers;
-pub mod person_repository_tests;
-pub mod country_repository_tests;
-// ... other modules
-```
+The `banking-db-postgres/tests/suites/` directory is reserved for higher-level integration tests that validate complex interactions, batch operations, or workflows spanning multiple repository methods.
 
 ### 2. Database Connection and Isolation
 
@@ -261,66 +225,77 @@ async fn test_my_repository() -> Result<(), Box<dyn std::error::Error + Send + S
 
 ### 3. Test Data Generation
 
-To promote reusability and maintainability, test data generation follows a modular, co-located pattern. This approach is preferred over a single, monolithic `helpers.rs` file, as it keeps test data generation logic close to the tests that use it.
+Reusable test data helpers should be placed in a dedicated `test_helpers.rs` file within the same module as the repository implementation.
 
--   **Co-location**: For each primary entity, a public `setup_test_<entity>` function is defined within its corresponding test file (e.g., `country_repository_tests.rs` or `country_batch_operations_test.rs`). This function is responsible for creating a valid model instance.
--   **Reusability**: By marking the setup function as `pub`, it can be imported and reused by other tests that have a dependency on that entity. For example, `locality_batch_operations_test.rs` can import and use `setup_test_country` and `setup_test_country_subdivision`.
--   **Dependencies**: If an entity depends on another (e.g., a `Locality` needs a `CountrySubdivision`), the setup function should accept the parent's ID as a parameter.
+-   **Centralization**: A `test_helpers.rs` file in a module (e.g., `country_repository/`) can contain `pub` functions to create test models (`setup_test_country`).
+-   **Reusability**: These public helper functions can be easily imported and used by the co-located unit tests for `save.rs`, `load.rs`, etc., as well as by higher-level integration tests in the `tests/suites` directory.
 
 ```rust
-// In banking-db-postgres/tests/suites/person/country_batch_operations_test.rs
+// In banking-db-postgres/src/repository/person/country_repository/test_helpers.rs
 use banking_db::models::person::CountryModel;
 // ... other imports
 
 pub async fn setup_test_country() -> CountryModel {
-    // ... implementation
+    // ... implementation to create a valid CountryModel
 }
 
-// In banking-db-postgres/tests/suites/person/locality_batch_operations_test.rs
-use crate::suites::person::country_batch_operations_test::setup_test_country;
-use crate::suites::person::country_subdivision_batch_operations_test::setup_test_country_subdivision;
+// In banking-db-postgres/src/repository/person/country_repository/load.rs
+#[cfg(test)]
+mod tests {
+    use crate::repository::person::country_repository::test_helpers::setup_test_country;
+    use crate::test_helper::setup_test_context;
+    // ...
 
-// Inside a test function:
-let country = setup_test_country().await;
-country_repo.save(country.clone()).await?;
-
-let subdivision = setup_test_country_subdivision(country.id).await;
-country_subdivision_repo.save(subdivision.clone()).await?;
-
-let locality = setup_test_locality(subdivision.id).await;
-// ...
+    #[tokio::test]
+    async fn test_load_country() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let ctx = setup_test_context().await?;
+        let country_repo = ctx.person_repos().countries();
+        let mut country_model = setup_test_country().await;
+        // ...
+    }
+}
 ```
 
 ### 4. Writing Repository Tests
 
-Structure tests using the **Arrange-Act-Assert** pattern. A single test function can validate multiple methods of the same repository for efficiency.
+Structure co-located tests using the **Arrange-Act-Assert** pattern. Each test function should be focused on a single behavior of the repository function in that file.
 
 ```rust
-use crate::suites::test_helper::setup_test_context;
-use crate::suites::person::helpers::create_test_person_model;
-use banking_db::repository::PersonRepository;
-use uuid::Uuid;
+// In banking-db-postgres/src/repository/person/country_repository/save.rs
 
-#[tokio::test]
-async fn test_person_repository() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // 1. Arrange: Set up the transactional context and repository
-    let ctx = setup_test_context().await?;
-    let repo = ctx.person_repos().persons();
+#[cfg(test)]
+mod tests {
+    use crate::repository::person::country_repository::test_helpers::setup_test_country;
+    use crate::test_helper::setup_test_context;
+    use banking_db::repository::person::country_repository::{
+        CountryRepository, CountryRepositoryError,
+    };
+    use banking_db::repository::PersonRepos;
 
-    // 2. Act & 3. Assert for the 'save' and 'find_by_id' methods
-    let new_person = create_test_person_model("John Doe");
-    let saved_person = repo.save(new_person.clone(), Uuid::new_v4()).await?;
-    assert_eq!(new_person.id, saved_.id);
+    #[tokio::test]
+    async fn test_save_country() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 1. Arrange
+        let ctx = setup_test_context().await?;
+        let country_repo = ctx.person_repos().countries();
+        let country_model = setup_test_country().await;
 
-    let found_person = repo.find_by_id(new_person.id).await?.unwrap();
-    assert_eq!(new_person.id, found_person.person_id);
+        // 2. Act
+        let saved_country = country_repo.save(country_model.clone()).await?;
 
-    // Act & Assert for the 'exists_by_id' method
-    assert!(repo.exists_by_id(new_person.id).await?);
-    assert!(!repo.exists_by_id(Uuid::new_v4()).await?);
+        // 3. Assert
+        assert_eq!(saved_country.id, country_model.id);
 
-    // ... continue testing other repository methods
-    Ok(())
+        // Arrange for failure case
+        let result = country_repo.save(country_model).await;
+        
+        // Assert failure case
+        assert!(matches!(
+            result,
+            Err(CountryRepositoryError::DuplicateCountryISO2(_))
+        ));
+
+        Ok(())
+    }
 }
 ```
 
