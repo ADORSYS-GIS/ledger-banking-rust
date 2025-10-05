@@ -9,15 +9,15 @@ This document provides a structured approach for analyzing changes and creating 
     -   Run `git diff --stat` to understand the scope of changes.
     -   Identify the primary purpose and scope of the changes.
 
-2.  **Update `docs/progress/progress-tracking.md`** (IMPORTANT):
+2.  **Update `.docs/progress/progress-tracking.md`** (IMPORTANT):
     -   **Always check if the commit includes new repository implementations.**
     -   Update completion percentages (e.g., 92% → 95%).
     -   Update test counts (e.g., 39+ tests → 42+ tests).
     -   Move completed repositories from "Remaining" to "Complete" sections.
     -   Update "Next Steps" to reflect new priority order.
     -   Add achievement documentation in "Recent Achievements" section.
-    -   This ensures `docs/progress/progress-tracking.md` accurately reflects the current implementation state.
-    -   **Add `docs/progress/progress-tracking.md`** to the commit.
+    -   This ensures `.docs/progress/progress-tracking.md` accurately reflects the current implementation state.
+    -   **Add `.docs/progress/progress-tracking.md`** to the commit.
 
 3.  **Create Commit Template**:
     -   Generate a comprehensive commit template.

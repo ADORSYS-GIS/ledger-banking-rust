@@ -14,7 +14,7 @@ This command combines three normalization tasks:
 2.  **Model-to-Domain Alignment**: Aligns API domain models with database models.
 3.  **Enum Refactoring**: Decouples domain enums from database enums.
 
-For detailed guidelines on modeling, foreign key conventions, and serialization, refer to the [Modeling Guidelines](../../docs/guidelines/modeling.md).
+For detailed guidelines on modeling, foreign key conventions, and serialization, refer to the [Modeling Guidelines](../../.docs/guidelines/modeling.md).
 
 ### Usage
 
@@ -56,7 +56,7 @@ Upon approval, perform changes as indicated in the generated mapping and proposa
 5.  **Update Repository Traits (Comment-Driven)** (`banking-db/src/repository/{module_name}/{entity_name}_repository.rs`)
 6.  **Update Repository Implementation** (`banking-db-postgres/src/repository/{module_name}/{entity_name}_repository/repo_impl.rs`)
 7.  **Update Service Implementations** (`banking-logic/src/services/{module_name}/{entity_name}_service_impl.rs`)
-8.  **Update Tests**: Update all affected tests to reflect the changes. For detailed instructions, refer to the [Testing Guidelines](../../docs/guidelines/testing.md).
+8.  **Update Tests**: Update all affected tests to reflect the changes. For detailed instructions, refer to the [Testing Guidelines](../../.docs/guidelines/testing.md).
 
 ### Validation Checklist
 

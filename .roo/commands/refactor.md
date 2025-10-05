@@ -8,19 +8,19 @@
 **Objective**: Refactors a module to the new entity-based layout.
 
 **Parameters**:
--   `<module_name>`: The name of the module to refactor (e.g., audit).
+-   `<module_file_path>`: The path to the module file to refactor (e.g., `banking-db/src/models/audit.rs`).
 
 **Instructions**:
 
-Refactor the `{{module_name}}` module to follow the entity-based file layout.
+Refactor the module at `{{module_file_path}}` to follow the entity-based file layout.
 
 You must adhere to the following process:
-1.  Identify all entities within the `{{module_name}}` module by inspecting the contents of `banking-db/src/models/{{module_name}}.rs`.
+1.  Identify all entities within the module by inspecting the contents of `{{module_file_path}}`.
 2.  For each entity, apply the file and directory restructuring pattern across all four relevant crates (`banking-db`, `banking-db-postgres`, `banking-logic`, and `banking-api`).
 3.  Move the contents of the existing monolithic module files into the new, entity-specific files.
 4.  Update all `mod.rs` files to correctly reflect the new module structure.
 
-For a detailed breakdown of the required file structure and the steps to follow, you must use the guide located at: `docs/guidelines/module_2_entity_layout.md`. Use the `audit` module in that guide as a concrete example of the expected outcome.
+For a detailed breakdown of the required file structure and the steps to follow, you must use the guide located at: `.docs/guidelines/module_2_entity_layout.md`. Use the `audit` module in that guide as a concrete example of the expected outcome.
 
 ---
 
@@ -75,7 +75,7 @@ For a detailed breakdown of the required file structure and the steps to follow,
     -   Separate files for each repository method.
     -   A `mod.rs` file to declare all public modules.
     -   Co-located unit tests within each method file.
-4.  Refer to the [Repository and Indexing Strategy](../../docs/guidelines/repository-and-indexing.md) for detailed patterns.
+4.  Refer to the [Repository and Indexing Strategy](../../.docs/guidelines/repository-and-indexing.md) for detailed patterns.
 
 ---
 
@@ -93,7 +93,7 @@ For a detailed breakdown of the required file structure and the steps to follow,
     -   Plural: `<entities>` (e.g., `countries`)
     -   SNAKE_CASE_UPPER: `<ENTITY>` (e.g., `COUNTRY`)
 2.  **Analyze Existing Implementation**: Review `banking-db-postgres/src/repository/<module>/<entity>_repository/repo_impl.rs` to understand existing patterns (auditing, versioning, etc.).
-3.  **Refer to Guidelines**: For detailed instructions and code templates, see [Batch Operations Implementation Guidelines](../../docs/guidelines/batch_operations.md).
+3.  **Refer to Guidelines**: For detailed instructions and code templates, see [Batch Operations Implementation Guidelines](../../.docs/guidelines/batch_operations.md).
 4.  **Create Files**:
     -   Create the batch implementation file: `banking-db-postgres/src/repository/<module>/<entity>_repository/batch_impl.rs`.
     -   Create the corresponding test file within `batch_impl.rs` under a `#[cfg(test)]` module.
@@ -112,7 +112,7 @@ For a detailed breakdown of the required file structure and the steps to follow,
 
 **Instructions**:
 
-**Before you begin, you must read and follow the instructions outlined in `'docs/guidelines/repo-error-handling.md'`.**
+**Before you begin, you must read and follow the instructions outlined in `'.docs/guidelines/repo-error-handling.md'`.**
 
 Follow these steps precisely:
 
@@ -148,7 +148,7 @@ This command analyzes an entity's source code and generates structured comments 
 
 ## Operation: Generate Application-Managed Indexes
 
-**Objective**: Apply the rules defined in 'docs/guidelines/repository-and-indexing.md' to generate the necessary code and database schema for application-managed indexes for a given module.
+**Objective**: Apply the rules defined in '.docs/guidelines/repository-and-indexing.md' to generate the necessary code and database schema for application-managed indexes for a given module.
 
 **Parameters**:
 -   `<module_name>`: The name of the module (e.g., `person`).
@@ -163,7 +163,7 @@ This command analyzes an entity's source code and generates structured comments 
 3.  **Generate Database Migration Script** in `banking-db-postgres/migrations/<init_order>_initial_schema_{module_name}.sql`.
 4.  **Apply Hashing Strategy** for string-based indexes.
 
-For detailed instructions on each step, refer to the [Repository and Indexing Strategy](../../docs/guidelines/repository-and-indexing.md).
+For detailed instructions on each step, refer to the [Repository and Indexing Strategy](../../.docs/guidelines/repository-and-indexing.md).
 
 ---
 
@@ -180,4 +180,4 @@ This command generates a thread-safe, immutable cache implementation for each Ru
 
 **Rule Precedence:** The generation of an `...IdxModelCache` is driven entirely by the `/// # Cache` comment block on the corresponding `...Model` struct.
 
-For detailed instructions on the generation process, refer to the [Repository and Indexing Strategy](../../docs/guidelines/repository-and-indexing.md).
+For detailed instructions on the generation process, refer to the [Repository and Indexing Strategy](../../.docs/guidelines/repository-and-indexing.md).
