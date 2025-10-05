@@ -1,6 +1,6 @@
 ---
 description: This template provides a structured approach for aligning domain models with database models, refactoring enums, and normalizing foreign key references in the ledger-banking-rust project.
-argument-hint: <file_name to process> <tasks>?
+argument-hint: <module_name> <entity_name> <tasks>?
 ---
 
 # Code Normalization Template
@@ -14,17 +14,17 @@ This command combines three normalization tasks:
 
 ## Usage
 
-Replace `{file_name}` with the actual module name (e.g., customer, account, transaction, etc.)
+Replace `{module_name}` with the actual module name (e.g., `person`, `account`) and `{entity_name}` with the entity name (e.g., `person`, `country`).
 
 Replace `<tasks>` with the target tasks. e.g.:
-    - `/normalize person` or `/normalize person 1..3` will execute all tasks
-    - `/normalize person 2` will perform only task 2
-    - `/normalize person 1,3` will perform only tasks 1 and 3
+    - `/normalize person person` or `/normalize person person 1..3` will execute all tasks
+    - `/normalize person country 2` will perform only task 2
+    - `/normalize person country 1,3` will perform only tasks 1 and 3
 
 ## Prompt Template
 
 ```
-Using the database models in @banking-db/src/models/{file_name}.rs as the source of truth, align their counterpart domain models in @banking-api/src/domain/{file_name}.rs. Provided or modify service traits in @/banking-api/src/service/{file_name}_service.rs to use domain structs and enums. Provide or modify mappers for structs and enums in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects. Also modify @banking-db-postgres/migrations/*.sql to fit the new data definition. Modify repository definition in @/banking-db/src/repository/{file_name}_repository.rs and the corresponding implementation @/banking-db-postgres/src/repository/{file_name}_repository_impl.rs. Modify the service implementation in @/banking-logic/src/services/{file_name}_service_impl.rs. 
+Using the database models in @banking-db/src/models/{module_name}/{entity_name}.rs as the source of truth, align their counterpart domain models in @banking-api/src/domain/{module_name}/{entity_name}.rs. Provided or modify service traits in @/banking-api/src/service/{module_name}/{entity_name}_service.rs to use domain structs and enums. Provide or modify mappers for structs and enums in @/banking-logic/src/mappers/{module_name}_mapper.rs to fit with domain and model objects. Also modify @banking-db-postgres/migrations/*.sql to fit the new data definition. Modify repository definition in @/banking-db/src/repository/{module_name}/{entity_name}_repository.rs and the corresponding implementation @/banking-db-postgres/src/repository/{module_name}/{entity_name}_repository/repo_impl.rs. Modify the service implementation in @/banking-logic/src/services/{module_name}/{entity_name}_service_impl.rs. 
 ```
 
 ## Rule Precedence
@@ -32,13 +32,13 @@ Using the database models in @banking-db/src/models/{file_name}.rs as the source
 
 ## Steps Performed : Analysis
 
-1.  **Read Database Model (`banking-db/src/models/{file_name}.rs`) as Source of Truth**
+1.  **Read Database Model (`banking-db/src/models/{module_name}/{entity_name}.rs`) as Source of Truth**
     -   Identify all `...Model` structs and their fields.
     -   Document all database enums and their variants.
     -   Note field types, especially HeaplessString sizes and enum types.
     -   Identify model-only structs (e.g., `...IdxModel`, `...IdxModelCache`, `...AuditModel`) that should not have a domain counterpart.
 
-2.  **Read API Domain Model (`banking-api/src/domain/{file_name}.rs`) for Comparison**
+2.  **Read API Domain Model (`banking-api/src/domain/{module_name}/{entity_name}.rs`) for Comparison**
     -   Compare with the database model to identify discrepancies.
     -   Note any missing structs or enums that need to be created.
     -   Identify fields with mismatched types that need alignment.
@@ -49,16 +49,16 @@ Using the database models in @banking-db/src/models/{file_name}.rs as the source
     -   Look for constraints that reflect enum values
     -   Update CHECK constraints for enum validation
 
-4.  **Produce Mapping Tables** (`target/modules/{file_name}.md`)
-    -   create or update the mapping file `target/modules/{file_name}.md`
+4.  **Produce Mapping Tables** (`target/modules/{module_name}/{entity_name}.md`)
+    -   create or update the mapping file `target/modules/{module_name}/{entity_name}.md`
     -   in the first table, list the target state of mapping between domain structs, database model, database tables. also display model object that are not existent as domain struct. Indicate if any flattening will occur and show list domain object flattened.
 
-| Domain Struct (`banking-api/src/domain/{file_name}.rs`) | Database Model (`banking-db/src/models/{file_name}.rs`) | database tables | Flattened / Details | Changed |
+| Domain Struct (`banking-api/src/domain/{module_name}/{entity_name}.rs`) | Database Model (`banking-db/src/models/{module_name}/{entity_name}.rs`) | database tables | Flattened / Details | Changed |
 |---|---|---|---|---|---|
 | `Account` | `AccountModel` | `accounts` | none | Direct mapping. As Is |
 
 
-    -   in the second table for each struct `{struct_name}` in a file named (`target/modules/{file_name}/{StructName}.md`), list field in domain, database model and database init script.
+    -   in the second table for each struct `{struct_name}` in a file named (`target/modules/{module_name}/{entity_name}/{StructName}.md`), list field in domain, database model and database init script.
 
 | `{struct_name}` | Domain Field | Domain Type | DB Field | DB Type | DB column | column type | Description | Change to Perform |
 |---|---|---|---|---|---|---|---| ---|
@@ -66,7 +66,7 @@ Using the database models in @banking-db/src/models/{file_name}.rs as the source
 
 5. **Foreign Key Reference Analysis**
 
-    1.1 Analyze the domain structs file: `banking-api/src/domain/{file_name}.rs`. Do not process other files if not explicitely requested.
+    1.1 Analyze the domain structs file: `banking-api/src/domain/{module_name}/{entity_name}.rs`. Do not process other files if not explicitely requested.
     1.2. Identify all fields ending with `_id: Uuid` or `_id: Option<Uuid>`
     1.3. Identify all fields ending with `_by: Uuid` or `_by: Option<Uuid>`
     1.4. For each field, determine:
@@ -76,7 +76,7 @@ Using the database models in @banking-db/src/models/{file_name}.rs as the source
         - Proposed new field name (if applicable)
 
 6. **Proposal Generation**
-Create/update proposal in `target/modules/{file_name}/{StructName}.md` with:
+Create/update proposal in `target/modules/{module_name}/{entity_name}/{StructName}.md` with:
 
 ## Fields Requiring Changes
 | Current Field | Source Struct |Target Struct | Target Location | Proposed Field | Reason |
@@ -85,22 +85,22 @@ Create/update proposal in `target/modules/{file_name}/{StructName}.md` with:
 
 7.  **Prompt User to Approve files**
     -   prompt the user to review, modify and approve 
-        - `target/modules/{file_name}.md`
-        - `target/modules/{file_name}/{StructName}.md`
+        - `target/modules/{module_name}/{entity_name}.md`
+        - `target/modules/{module_name}/{entity_name}/{StructName}.md`
 
 ## Steps Performed : Changes
 **Idempotency:** All update operations must be idempotent. Before applying any change, the script must verify that the target code is not already in the desired state. For example, do not attempt to rename a field that has already been renamed, or add a struct that already exists.
 
-Upon approval, perform changes as indicated in the files `target/modules/{file_name}.md` and `target/modules/{file_name}/{StructName}.md`.
+Upon approval, perform changes as indicated in the files `target/modules/{module_name}/{entity_name}.md` and `target/modules/{module_name}/{entity_name}/{StructName}.md`.
 
 8.  **Update Domain Model to Align with Database Model**
-    -   Using the database model as the single source of truth, align all corresponding structs and enums in `@banking-api/src/domain/{file_name}.rs`.
+    -   Using the database model as the single source of truth, align all corresponding structs and enums in `@banking-api/src/domain/{module_name}/{entity_name}.rs`.
     -   For each `...Model` struct in `banking-db`, ensure a corresponding domain struct exists in `banking-api`, unless it is a model-only struct (e.g., `...IdxModel`, `...IdxModelCache`, `...AuditModel`).
     -   Add any missing structs or enums to the domain layer to match the database model layer.
     -   Update fields and enum variants in the domain layer to match the types and definitions in the database model layer.
 
 9.  **Update Service Traits**
-    - Provided or modify service traits in @/banking-api/src/service/{file_name}_service.rs to use domain structs and enums.
+    - Provided or modify service traits in @/banking-api/src/service/{module_name}/{entity_name}_service.rs to use domain structs and enums.
 
 10.  **Update Database Schema** (`banking-db-postgres/migrations/*.sql`)
     -   Also modify @banking-db-postgres/migrations/.sql to fit the new data definition. 
@@ -108,18 +108,18 @@ Upon approval, perform changes as indicated in the files `target/modules/{file_n
     -   Ensure constraints reflect enum values
     -   Update CHECK constraints for enum validation
 
-11.  **Update Mappers** (`banking-logic/src/mappers/{file_name}_mapper.rs`)
-    -   Provide or modify mappers for enums in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects.
-    -   Provide or modify mappers for structs in @/banking-logic/src/mappers/{file_name}_mapper.rs to fit with domain and model objects.
+11.  **Update Mappers** (`banking-logic/src/mappers/{module_name}_mapper.rs`)
+    -   Provide or modify mappers for enums in @/banking-logic/src/mappers/{module_name}_mapper.rs to fit with domain and model objects.
+    -   Provide or modify mappers for structs in @/banking-logic/src/mappers/{module_name}_mapper.rs to fit with domain and model objects.
     -   Ensure bidirectional mapping works correctly
 
 12.  **Update Service Traits** (if needed)
-    -   Modify the service traits in banking-api/src/service/{file_name}_service.rs to have method parameters alling with struct field types. Process instruction on service traits and trait method in the code comment, as they have precedence over general conventions. e.g. comments in the following code block indicate the target service traits and trait methods
+    -   Modify the service traits in banking-api/src/service/{module_name}/{entity_name}_service.rs to have method parameters alling with struct field types. Process instruction on service traits and trait method in the code comment, as they have precedence over general conventions. e.g. comments in the following code block indicate the target service traits and trait methods
 
-banking-api/src/domain/person.rs
+banking-api/src/domain/person/country.rs
 ```
 /// # Service Trait
-/// - FQN: banking-api/src/service/person_person_service.rs/PersonService
+/// - FQN: banking-api/src/service/person/country_service.rs/CountryService
 /// ...
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Country {
@@ -140,17 +140,17 @@ pub struct Country {
 ```
 
 13. **Update Repository Traits (Comment-Driven)**
-    -   **Source of Truth:** The definition of repository traits is now driven by structured comments within the database model files (`banking-db/src/models/{file_name}.rs`).
+    -   **Source of Truth:** The definition of repository traits is now driven by structured comments within the database model files (`banking-db/src/models/{module_name}/{entity_name}.rs`).
     -   **Parsing Logic:**
         -   A `/// # Repository Trait` block on a model struct specifies the target repository trait.
         -   `/// # Trait method` comments on individual fields define the methods to be generated in that trait (e.g., `find_by_id`, `find_ids_by_iso2`).
         -   The method signature is derived from the field's type. For `find_ids_by_...` methods, the return type should be `Result<Vec<Uuid>, ...>`.
-    -   **Action:** Modify the repository traits in `banking-db/src/repository/{file_name}_repository.rs` to exactly match the methods, names, and types defined in the model's comments. This ensures the trait is always synchronized with its model's declared intentions.
+    -   **Action:** Modify the repository traits in `banking-db/src/repository/{module_name}/{entity_name}_repository.rs` to exactly match the methods, names, and types defined in the model's comments. This ensures the trait is always synchronized with its model's declared intentions.
 
-    **Example from `banking-db/src/models/person.rs`:**
+    **Example from `banking-db/src/models/person/country.rs`:**
     ```rust
     /// # Repository Trait
-    /// - FQN: banking-db/src/repository/person_country_repository.rs/CountryRepository
+    /// - FQN: banking-db/src/repository/person/country_repository.rs/CountryRepository
     #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
     pub struct CountryModel {
         /// # Trait method
@@ -167,10 +167,10 @@ pub struct Country {
     This configuration will generate a `CountryRepository` trait with methods like `find_by_id(&self, id: Uuid)` and `find_ids_by_iso2(&self, iso2: &HeaplessString<2>)`.
 
 14. **Update Repository Implementation**
-    -   Modify repository implementation in banking-db-postgres/src/repository/{file_name}_repository_impl.rs to allign with the repository trait
+    -   Modify repository implementation in banking-db-postgres/src/repository/{module_name}/{entity_name}_repository/repo_impl.rs to allign with the repository trait
 
-13.  **Update Service Implementations** (if needed)
-    -   Modify the service implementation in banking-logic/src/services/{file_name}_service_impl.rs to allign with the service trait
+15.  **Update Service Implementations** (if needed)
+    -   Modify the service implementation in banking-logic/src/services/{module_name}/{entity_name}_service_impl.rs to allign with the service trait
 
 # Key Patterns
 
@@ -280,12 +280,12 @@ Also provide deserializer.
 ## Tests
 
 ### Test Updates
-- Update all test files that reference the changed fields:
-  - `banking-logic/src/services/tests/{file_name}_tests.rs`
-  - `banking-db-postgres/tests/{file_name}_repository_tests*.rs`
-  - Any integration tests
-- Update test data creation
-- Update assertions and validations
+- Update the `#[cfg(test)]` test modules within any modified files. Tests are collocated with the implementation.
+- Pay special attention to tests in:
+  - Service implementations (`banking-logic/src/services/{module_name}/{entity_name}_service_impl.rs`)
+  - Repository implementations (`banking-db-postgres/src/repository/{module_name}/{entity_name}_repository/repo_impl.rs`)
+  - Mappers (`banking-logic/src/mappers/{module_name}_mapper.rs`)
+- Update test data creation and assertions to match the new struct definitions and field names.
 
 ## Benefits
 

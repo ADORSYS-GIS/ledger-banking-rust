@@ -197,18 +197,18 @@ Repository tests are integration tests that validate the PostgreSQL implementati
 
 Unit tests for repository functions are co-located in the same file as the implementation. This is the standard for testing individual database operations like `save`, `load`, or `find_by_id`.
 
-The `banking-db-postgres/tests/suites/` directory is reserved for higher-level integration tests that validate complex interactions, batch operations, or workflows spanning multiple repository methods.
+The `banking-db-postgres/tests/` directory is reserved for higher-level integration tests that validate complex interactions, batch operations, or workflows spanning multiple repository methods.
 
 ### 2. Database Connection and Isolation
 
-All repository tests are isolated using the **Unit of Work** pattern. The `setup_test_context` helper function, located in `banking-db-postgres/tests/suites/test_helper.rs`, provides a transactional session for each test.
+All repository tests are isolated using the **Unit of Work** pattern. The `setup_test_context` helper function, located in `banking-db-postgres/src/repository/person/test_helpers.rs`, provides a transactional session for each test.
 
 -   **Transactional Context**: Call `setup_test_context().await?` at the beginning of each test to get a `TestContext`.
 -   **Error Handling**: Test functions should return `Result<(), Box<dyn std::error::Error + Send + Sync>>` and use the `?` operator for concise error propagation. This avoids using `.unwrap()` and provides consistent error handling across the test suite.
 -   **Automatic Rollback**: The transaction is automatically rolled back when the `TestContext` goes out of scope, ensuring a clean database state for subsequent tests.
 
 ```rust
-use crate::suites::test_helper::setup_test_context;
+use crate::repository::person::test_helpers::setup_test_context;
 
 #[tokio::test]
 async fn test_my_repository() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -228,7 +228,7 @@ async fn test_my_repository() -> Result<(), Box<dyn std::error::Error + Send + S
 Reusable test data helpers should be placed in a dedicated `test_helpers.rs` file within the same module as the repository implementation.
 
 -   **Centralization**: A `test_helpers.rs` file in a module (e.g., `country_repository/`) can contain `pub` functions to create test models (`setup_test_country`).
--   **Reusability**: These public helper functions can be easily imported and used by the co-located unit tests for `save.rs`, `load.rs`, etc., as well as by higher-level integration tests in the `tests/suites` directory.
+-   **Reusability**: These public helper functions can be easily imported and used by the co-located unit tests for `save.rs`, `load.rs`, etc., as well as by higher-level integration tests in the `tests/` directory.
 
 ```rust
 // In banking-db-postgres/src/repository/person/country_repository/test_helpers.rs
@@ -243,7 +243,7 @@ pub async fn setup_test_country() -> CountryModel {
 #[cfg(test)]
 mod tests {
     use crate::repository::person::country_repository::test_helpers::setup_test_country;
-    use crate::test_helper::setup_test_context;
+    use crate::repository::person::test_helpers::setup_test_context;
     // ...
 
     #[tokio::test]
@@ -266,7 +266,7 @@ Structure co-located tests using the **Arrange-Act-Assert** pattern. Each test f
 #[cfg(test)]
 mod tests {
     use crate::repository::person::country_repository::test_helpers::setup_test_country;
-    use crate::test_helper::setup_test_context;
+    use crate::repository::person::test_helpers::setup_test_context;
     use banking_db::repository::person::country_repository::{
         CountryRepository, CountryRepositoryError,
     };
@@ -308,5 +308,4 @@ Repository tests can now be run in parallel, thanks to transaction-based isolati
 export DATABASE_URL="postgresql://user:password@localhost:5432/mydb"
 
 # Run all integration tests in parallel
-cargo test -p banking-db-postgres --test integration
-```
+cargo test -p banking-db-postgres -- --test-threads=1

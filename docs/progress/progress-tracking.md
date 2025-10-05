@@ -168,7 +168,7 @@ This commit introduces a major architectural refactoring of the Person repositor
 This commit introduces a major overhaul of the testing strategy, including comprehensive guidelines and the first full suite of service-level unit tests using mock repositories.
 - **New Testing Guidelines**: The `docs/guidelines/testing.md` document now provides a detailed, step-by-step guide for writing both repository integration tests and service-level unit tests.
 - **Service-Level Mocking**: Introduced a complete suite of mock repositories for the `PersonService` tests, enabling true unit testing of the service layer in isolation from the database.
-- **`PersonService` Test Suite**: Added a comprehensive test suite for `PersonServiceImpl` in `banking-logic/tests/person_service_tests.rs`, with over 35 tests covering every public method.
+- **`PersonService` Test Suite**: Added a comprehensive test suite for `PersonServiceImpl` in `banking-logic/src/services/person/person_service_impl.rs`, with over 35 tests covering every public method.
 - **Enhanced Repository Tests**: The `person_repository_tests` have been refactored for clarity and now follow the new testing guidelines.
 - **Code Quality**: This establishes a clear pattern for future service-level testing, significantly improving the project's test coverage and reliability.
 

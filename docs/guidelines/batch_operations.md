@@ -171,12 +171,12 @@ When implementing batch operations for a new entity, use the following templates
 
 ### 1. Batch Implementation File Template
 
-Create the file `banking-db-postgres/src/repository/<module>/<entity>_repository_batch_impl.rs`.
+Create the file `banking-db-postgres/src/repository/<module>/<entity>_repository/batch_impl.rs`.
 
 **Note**: You must manually fill in the `// TODO:` sections based on the entity's model definition. Adapt the template below based on your analysis of the existing repository.
 
 ```rust
-// FILE: banking-db-postgres/src/repository/<module>/<entity>_repository_batch_impl.rs
+// FILE: banking-db-postgres/src/repository/<module>/<entity>_repository/batch_impl.rs
 
 use crate::repository::<module>::<entity>_repository_impl::<Entity>RepositoryImpl;
 use crate::utils::TryFromRow;
@@ -775,7 +775,7 @@ impl <Entity>RepositoryImpl {
 
 ### 2. Batch Test File Template
 
-Create the file `banking-db-postgres/tests/suites/<module>/<entity>_batch_operations_test.rs` with the following content.
+Tests for batch operations are co-located within the `batch_impl.rs` file inside a `#[cfg(test)]` module.
 
 #### Test Data Setup
 
@@ -786,130 +786,135 @@ To ensure tests are DRY (Don't Repeat Yourself) and maintainable, test data setu
 -   **Dependencies**: If an entity requires a foreign key from another entity, the setup function should accept the parent ID as an argument (e.g., `setup_test_locality(country_subdivision_id: Uuid)`).
 
 ```rust
-// FILE: banking-db-postgres/tests/suites/<module>/<entity>_batch_operations_test.rs
+// FILE: banking-db-postgres/src/repository/<module>/<entity>_repository/batch_impl.rs
 
-use banking_db::models::<module>::<Entity>Model;
-use banking_db::repository::{BatchRepository, <Entity>Repository, <Module>Repos};
-use heapless::String as HeaplessString;
-use uuid::Uuid;
+// ... (implementation code) ...
 
-use crate::suites::test_helper::setup_test_context;
-// TODO: If this entity has dependencies, import their setup functions.
-// Example:
-// use crate::suites::person::country_batch_operations_test::setup_test_country;
+#[cfg(test)]
+mod tests {
+    use banking_db::models::<module>::<Entity>Model;
+    use banking_db::repository::{BatchRepository, <Entity>Repository, <Module>Repos};
+    use heapless::String as HeaplessString;
+    use uuid::Uuid;
 
-// A public setup function allows this entity to be easily created as a dependency in other tests.
-// TODO: Add parameters for any foreign key IDs this entity depends on.
-pub async fn setup_test_<entity>(/* dependency_id: Uuid */) -> <Entity>Model {
-    <Entity>Model {
-        id: Uuid::new_v4(),
-        // dependency_id,
-        display_name: HeaplessString::try_from("Test <Entity>").unwrap(),
-        external_identifier: Some(HeaplessString::try_from("EXT001").unwrap()),
-        // ... other fields with default values
-    }
-}
+    use crate::suites::test_helper::setup_test_context;
+    // TODO: If this entity has dependencies, import their setup functions.
+    // Example:
+    // use crate::repository::person::country_repository::test_helpers::setup_test_country;
 
-#[tokio::test]
-async fn test_create_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let ctx = setup_test_context().await?;
-    let <entity>_repo = ctx.<module>_repos().<entities>();
-    // TODO: If this entity has dependencies, get their repositories.
-    // let <dependency>_repo = ctx.<module>_repos().<dependencies>();
-
-    // TODO: Create and save any required dependency records first.
-    // let dependency = setup_test_<dependency>().await;
-    // <dependency>_repo.save(dependency.clone()).await?;
-
-    let mut <entities> = Vec::new();
-    for i in 0..5 {
-        // Pass the dependency ID to the setup function.
-        // let mut <entity> = setup_test_<entity>(dependency.id).await;
-        let mut <entity> = setup_test_<entity>().await; // Use this if no dependency
-        <entity>.display_name =
-            HeaplessString::try_from(format!("Test <Entity> {i}").as_str()).unwrap();
-        <entity>.external_identifier =
-            Some(HeaplessString::try_from(format!("EXT{i:03}").as_str()).unwrap());
-        <entities>.push(<entity>);
+    // A public setup function allows this entity to be easily created as a dependency in other tests.
+    // TODO: Add parameters for any foreign key IDs this entity depends on.
+    pub async fn setup_test_<entity>(/* dependency_id: Uuid */) -> <Entity>Model {
+        <Entity>Model {
+            id: Uuid::new_v4(),
+            // dependency_id,
+            display_name: HeaplessString::try_from("Test <Entity>").unwrap(),
+            external_identifier: Some(HeaplessString::try_from("EXT001").unwrap()),
+            // ... other fields with default values
+        }
     }
 
-    // The audit_log_id is required by the BatchRepository trait, even if not used by the implementation.
-    let audit_log_id = Uuid::new_v4();
+    #[tokio::test]
+    async fn test_create_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let ctx = setup_test_context().await?;
+        let <entity>_repo = ctx.<module>_repos().<entities>();
+        // TODO: If this entity has dependencies, get their repositories.
+        // let <dependency>_repo = ctx.<module>_repos().<dependencies>();
 
-    let saved_<entities> = <entity>_repo
-        .create_batch(<entities>.clone(), audit_log_id)
-        .await?;
+        // TODO: Create and save any required dependency records first.
+        // let dependency = setup_test_<dependency>().await;
+        // <dependency>_repo.save(dependency.clone()).await?;
 
-    assert_eq!(saved_<entities>.len(), 5);
+        let mut <entities> = Vec::new();
+        for i in 0..5 {
+            // Pass the dependency ID to the setup function.
+            // let mut <entity> = setup_test_<entity>(dependency.id).await;
+            let mut <entity> = setup_test_<entity>().await; // Use this if no dependency
+            <entity>.display_name =
+                HeaplessString::try_from(format!("Test <Entity> {i}").as_str()).unwrap();
+            <entity>.external_identifier =
+                Some(HeaplessString::try_from(format!("EXT{i:03}").as_str()).unwrap());
+            <entities>.push(<entity>);
+        }
 
-    for <entity> in &saved_<entities> {
-        assert!(<entity>_repo.exists_by_id(<entity>.id).await?);
+        // The audit_log_id is required by the BatchRepository trait, even if not used by the implementation.
+        let audit_log_id = Uuid::new_v4();
+
+        let saved_<entities> = <entity>_repo
+            .create_batch(<entities>.clone(), audit_log_id)
+            .await?;
+
+        assert_eq!(saved_<entities>.len(), 5);
+
+        for <entity> in &saved_<entities> {
+            assert!(<entity>_repo.exists_by_id(<entity>.id).await?);
+        }
+
+        Ok(())
     }
 
-    Ok(())
-}
+    #[tokio::test]
+    async fn test_load_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let ctx = setup_test_context().await?;
+        let <entity>_repo = ctx.<module>_repos().<entities>();
+        let mut <entities> = Vec::new();
+        for i in 0..3 {
+            let mut <entity> = setup_test_<entity>().await;
+            <entity>.display_name = HeaplessString::try_from(format!("Test <Entity> {i}")).unwrap();
+            <entities>.push(<entity>);
+        }
+        <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
+        let ids: Vec<Uuid> = <entities>.iter().map(|e| e.id).collect();
+        let loaded = <entity>_repo.load_batch(&ids).await?;
+        assert_eq!(loaded.len(), 3);
+        assert!(loaded.iter().all(|item| item.is_some()));
+        Ok(())
+    }
 
-#[tokio::test]
-async fn test_load_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let ctx = setup_test_context().await?;
-    let <entity>_repo = ctx.<module>_repos().<entities>();
-    let mut <entities> = Vec::new();
-    for i in 0..3 {
-        let mut <entity> = setup_test_<entity>().await;
-        <entity>.display_name = HeaplessString::try_from(format!("Test <Entity> {i}")).unwrap();
-        <entities>.push(<entity>);
+    #[tokio::test]
+    async fn test_update_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let ctx = setup_test_context().await?;
+        let <entity>_repo = ctx.<module>_repos().<entities>();
+        let mut <entities> = Vec::new();
+        for i in 0..3 {
+            let mut <entity> = setup_test_<entity>().await;
+            <entity>.display_name = HeaplessString::try_from(format!("Original {i}")).unwrap();
+            <entities>.push(<entity>);
+        }
+        let saved = <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
+        let mut to_update = saved.clone();
+        for (i, item) in to_update.iter_mut().enumerate() {
+            item.display_name = HeaplessString::try_from(format!("Updated {i}")).unwrap();
+        }
+        let updated = <entity>_repo.update_batch(to_update, Uuid::new_v4()).await?;
+        assert_eq!(updated.len(), 3);
+        for item in updated {
+            assert!(item.display_name.starts_with("Updated"));
+        }
+        Ok(())
     }
-    <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
-    let ids: Vec<Uuid> = <entities>.iter().map(|e| e.id).collect();
-    let loaded = <entity>_repo.load_batch(&ids).await?;
-    assert_eq!(loaded.len(), 3);
-    assert!(loaded.iter().all(|item| item.is_some()));
-    Ok(())
-}
 
-#[tokio::test]
-async fn test_update_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let ctx = setup_test_context().await?;
-    let <entity>_repo = ctx.<module>_repos().<entities>();
-    let mut <entities> = Vec::new();
-    for i in 0..3 {
-        let mut <entity> = setup_test_<entity>().await;
-        <entity>.display_name = HeaplessString::try_from(format!("Original {i}")).unwrap();
-        <entities>.push(<entity>);
+    #[tokio::test]
+    async fn test_delete_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let ctx = setup_test_context().await?;
+        let <entity>_repo = ctx.<module>_repos().<entities>();
+        let mut <entities> = Vec::new();
+        for i in 0..4 {
+            let <entity> = setup_test_<entity>().await;
+            <entities>.push(<entity>);
+        }
+        let saved = <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
+        let ids: Vec<Uuid> = saved.iter().map(|e| e.id).collect();
+        let deleted_count = <entity>_repo.delete_batch(&ids).await?;
+        assert_eq!(deleted_count, 4);
+        let loaded = <entity>_repo.load_batch(&ids).await?;
+        assert_eq!(loaded.len(), 4);
+        assert!(loaded.iter().all(|item| item.is_none()));
+        Ok(())
     }
-    let saved = <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
-    let mut to_update = saved.clone();
-    for (i, item) in to_update.iter_mut().enumerate() {
-        item.display_name = HeaplessString::try_from(format!("Updated {i}")).unwrap();
-    }
-    let updated = <entity>_repo.update_batch(to_update, Uuid::new_v4()).await?;
-    assert_eq!(updated.len(), 3);
-    for item in updated {
-        assert!(item.display_name.starts_with("Updated"));
-    }
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_delete_batch() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let ctx = setup_test_context().await?;
-    let <entity>_repo = ctx.<module>_repos().<entities>();
-    let mut <entities> = Vec::new();
-    for i in 0..4 {
-        let <entity> = setup_test_<entity>().await;
-        <entities>.push(<entity>);
-    }
-    let saved = <entity>_repo.create_batch(<entities>.clone(), Uuid::new_v4()).await?;
-    let ids: Vec<Uuid> = saved.iter().map(|e| e.id).collect();
-    let deleted_count = <entity>_repo.delete_batch(&ids).await?;
-    assert_eq!(deleted_count, 4);
-    let loaded = <entity>_repo.load_batch(&ids).await?;
-    assert_eq!(loaded.len(), 4);
-    assert!(loaded.iter().all(|item| item.is_none()));
-    Ok(())
 }
 ```
 
 ### 3. Update `mod.rs` files
 
-Remember to add the new batch implementation file to the appropriate `mod.rs` in `banking-db-postgres/src/repository/<module>/` and the test file to the `mod.rs` in `banking-db-postgres/tests/suites/<module>/`.
+Remember to add the new batch implementation file to the appropriate `mod.rs` in `banking-db-postgres/src/repository/<module>/<entity>_repository/`.

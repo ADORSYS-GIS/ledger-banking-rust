@@ -5,7 +5,8 @@ Apply the rules defined in 'docs/guidelines/development.md' to generate the nece
 **Rule Precedence:** All generation logic is driven by structured comments within the source `...Model` struct. These in-code instructions always take precedence over general guidelines.
 
 **Inputs:**
--   `<file_name>`: The name of the module (e.g., `person`).
+-   `<module_name>`: The name of the module (e.g., `person`).
+-   `<entity_name>`: The name of the entity (e.g., `country`).
 
 **Infered Parameter**
 -   `<ModelName>`: stands for each struct `<ModelName>Model` defined in the module (e.g. PersonModel, LocationModel). 
@@ -15,7 +16,7 @@ Apply the rules defined in 'docs/guidelines/development.md' to generate the nece
 
 ### Step 1: Generate Index Model from Comment Instructions
 
-**File:** `banking-db/src/models/person/<file_name>.rs`
+**File:** `banking-db/src/models/{module_name}/{entity_name}.rs`
 
 For each main model (e.g., `CountryModel`), generate the corresponding `<ModelName>IdxModel` struct based on structured comments within the main model's definition. The generation is triggered by a top-level `/// # Index: <ModelName>IdxModel` comment.
 
@@ -29,7 +30,7 @@ For each main model (e.g., `CountryModel`), generate the corresponding `<ModelNa
     *   Otherwise, use the field name and type as is.
 6.  **Decoration:** The generated struct must be decorated with `#[derive(Debug, Clone, FromRow)]`.
 
-**Example (Derived from `CountryModel` in `person.rs`):**
+**Example (Derived from `CountryModel` in `person/country.rs`):**
 
 **Source Comments in `CountryModel`:**
 ```rust
@@ -69,13 +70,13 @@ pub struct CountryIdxModel {
 
 ### Step 2: Generate Repository Methods
 
-**File:** `banking-db/src/repository/person/<file_name>_repository.rs`
+**File:** `banking-db/src/repository/{module_name}/{entity_name}_repository.rs`
 
 Update the repository trait for the module to include methods for referential integrity checks and index-based finders, as per the "Application-Layer Referential Integrity" and "Repository Trait Design" sections of the guidelines.
 
 **Requirements:**
 1. Use comment instructions to specify that index is managed by the same repositoy and the corresponding model object. e.g.
-banking-db/src/models/person.rs:1023-1040
+banking-db/src/models/person/person.rs
 ```
 /// # Repository Trait
 /// - FQN: banking-db/src/repository/person/person_repository.rs/PersonModelRepository
@@ -110,7 +111,7 @@ add postgress PostgreSQL users: LISTEN/NOTIFY functionality, for the listed data
 
 ### Step 3: Generate Database Migration Script
 
-**File:** `banking-db-postgres/migrations/<init_order>_initial_schema_person.sql`
+**File:** `banking-db-postgres/migrations/<init_order>_initial_schema_{module_name}.sql`
 
 Create a new SQL migration file to define the schema for the main table and its corresponding index table.
 
