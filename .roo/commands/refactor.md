@@ -92,7 +92,7 @@ This command analyzes an entity's source code and generates structured comments 
     -   `# Index`: Details for the `...IdxModel`, including the cache type. Only generate this instruction if you find a comment `# Indexable` in the struct comment.
     -   `# Audit`: Details for the `...AuditModel` if applicable. Only generate this instruction if you find a comment `# Auditable` in the struct comment.
     -   `# Trait method`: Repository methods related to specific fields.
-    -   `# Index`: Field-specific index properties (primary, secondary, unique). Infer the field and guess which one could an index field.
+    -   `# Index`: Field-specific index properties (primary, secondary, unique). Infer the field and guess which one could have an index field.
 4.  **Require Review**: Present the generated annotations as a diff. A human developer must review, adjust, and approve these annotations before they are applied to the source file. This step is crucial for validating strategic decisions like cache types and index uniqueness.
 
 ---
