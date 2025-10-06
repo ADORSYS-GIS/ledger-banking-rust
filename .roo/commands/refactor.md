@@ -82,17 +82,17 @@ Follow these steps precisely:
 
 **Instructions**:
 
-This command analyzes an entity's source code and generates structured comments (`/// # ...`) that drive downstream code generation for repositories, indexes, and caches.
+This command analyzes an entity's source code and generates structured comments (`/// # ...`) that drive downstream code generation for repositories, audit, indexes, and caches.
 
-1.  **Pre-condition Check**: Before generating annotations, check if the entity struct in the target file already contains structured comments (`/// # ...`). If such annotations are already present, skip this operation.
-2.  **Analyze Entity**: Inspect the struct definition in `banking-db/src/models/{module_name}/{entity_name}.rs`.
+1.  **Pre-condition Check**: Before generating annotations, check if the entity struct in the target file already contains the intended comments (e.g. `/// # Index`, `/// # Audit`). If an annotation are already present, skip the attempt to generate that annotation again.
+2.  **Analyze Entity**: Inspect the struct definition in `banking-db/src/models/{module_name}/{entity_name}.rs`. A concrete example is found in `banking-db/src/models/person/person.rs`
 3.  **Infer Conventions**: Identify primary keys, foreign keys, and potential indexable fields based on naming conventions and types.
 3.  **Generate Annotations**: Create comment blocks for the main `...Model` struct and its fields. These annotations should specify:
     -   `# Repository Trait`: The FQN of the corresponding repository trait.
-    -   `# Index`: Details for the `...IdxModel`, including the cache type.
-    -   `# Audit`: Details for the `...AuditModel` if applicable.
+    -   `# Index`: Details for the `...IdxModel`, including the cache type. Only generate this instruction if you find a comment `# Indexable` in the struct comment.
+    -   `# Audit`: Details for the `...AuditModel` if applicable. Only generate this instruction if you find a comment `# Auditable` in the struct comment.
     -   `# Trait method`: Repository methods related to specific fields.
-    -   `# Index`: Field-specific index properties (primary, secondary, unique).
+    -   `# Index`: Field-specific index properties (primary, secondary, unique). Infer the field and guess which one could an index field.
 4.  **Require Review**: Present the generated annotations as a diff. A human developer must review, adjust, and approve these annotations before they are applied to the source file. This step is crucial for validating strategic decisions like cache types and index uniqueness.
 
 ---
