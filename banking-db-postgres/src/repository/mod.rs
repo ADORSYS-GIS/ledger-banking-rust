@@ -28,5 +28,5 @@ pub mod person;
 // pub mod channel_repository_impl;
 // #[cfg(feature = "product")]
 // pub mod product_repository_impl;
-pub mod audit_repository_impl;
+pub mod audit;
 pub mod unit_of_work_impl;

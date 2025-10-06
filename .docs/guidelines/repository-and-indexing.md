@@ -194,7 +194,7 @@ The core idea is to maintain a lightweight, in-memory cache of an "index model" 
 
 ##### Data Models (`banking-db/src/models/`)
 
-- **`Model`**: The main data model. It should **not** contain `version`, `hash`, or `audit_log_id` fields.
+- **`Model`**: The main data model. It should **not** contain `version`, `hash`, `audit_log_id`, `created_at`, `updated_at`, `created_by_person_id`, or `updated_by_person_id` fields. If these fields are in the main data model, remove them.
 - **`ModelAudit`**: The audit model. It **must** contain `version`, `hash`, and `audit_log_id` fields.
 - **`IdxModel`**: The index model. It **must** contain `version` and `hash` fields, along with the primary key and any other indexed fields.
 
@@ -474,7 +474,7 @@ CREATE TABLE person_idx (
 
 ## Step 4: Hashing String-Based Indexes
 
-For string-based index fields, apply the hashing strategy as defined in the "Hashing String-Based Indexes" section of `docs/guidelines/development.md`. This involves using a fast hashing algorithm (e.g., `xxhash`), storing the hash in the index table, and handling potential collisions in the repository.
+For string-based index fields, apply the hashing strategy as defined in the "Hashing String-Based Indexes" section of `.docs/guidelines/development.md`. This involves using a fast hashing algorithm (e.g., `xxhash`), storing the hash in the index table, and handling potential collisions in the repository.
 
 ---
 

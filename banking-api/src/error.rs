@@ -21,7 +21,7 @@ pub enum BankingError {
     #[error("Locality service error: {0}")]
     LocalityServiceError(#[from] crate::service::LocalityServiceError),
     #[error("Audit service error: {0}")]
-    AuditServiceError(#[from] crate::service::AuditServiceError),
+    AuditLogServiceError(#[from] crate::service::audit::audit_log_service::AuditLogServiceError),
     // Account-related errors
     #[error("Account not found: {0}")]
     AccountNotFound(Uuid),

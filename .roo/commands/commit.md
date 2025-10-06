@@ -4,7 +4,7 @@
 
 ## Instructions
 
-For detailed instructions on the commit workflow, message structure, and signing requirements, refer to the [Commit Guidelines](../../docs/guidelines/commit-guidelines.md).
+For detailed instructions on the commit workflow, message structure, and signing requirements, refer to the [Commit Guidelines](../../.docs/guidelines/commit-guidelines.md).
 
 Use this prompt when you need to:
 - Analyze all pending changes in the git working directory.

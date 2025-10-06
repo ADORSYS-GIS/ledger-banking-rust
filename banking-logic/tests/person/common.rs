@@ -12,7 +12,7 @@ use crate::person::mock_location_repository::MockLocationRepository;
 use crate::person::mock_entity_reference_repository::MockEntityReferenceRepository;
 use crate::person::mock_person_repository::MockPersonRepository;
 use banking_db::models::audit::AuditLogModel;
-use banking_db::repository::audit_repository::{AuditDomainError, AuditLogRepository};
+use banking_db::repository::audit_repository::{AuditLogRepository, AuditLogRepositoryError};
 use sqlx::Postgres;
 use std::sync::Mutex;
 use async_trait::async_trait;
@@ -34,12 +34,12 @@ struct MockAuditLogRepository {
 
 #[async_trait]
 impl AuditLogRepository<Postgres> for MockAuditLogRepository {
-    async fn create(&self, audit_log: &AuditLogModel) -> Result<AuditLogModel, AuditDomainError> {
+    async fn create(&self, audit_log: &AuditLogModel) -> Result<AuditLogModel, AuditLogRepositoryError> {
         self.audit_logs.lock().unwrap().push(audit_log.clone());
         Ok(audit_log.clone())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<AuditLogModel>, AuditDomainError> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<AuditLogModel>, AuditLogRepositoryError> {
         Ok(self
             .audit_logs
             .lock()
